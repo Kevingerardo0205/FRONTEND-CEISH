@@ -1,0 +1,29 @@
+// src/styles/_variables.scss
+
+// Colores Institucionales ESPOCH
+$color-primary: #003366;       // Azul Marino ESPOCH
+$color-primary-light: #1a5287; // Azul Claro
+$color-primary-dark: #001f3f;  // Azul Oscuro
+
+$color-secondary: #dc2626;     // Rojo (Alertas/Eliminar)
+$color-secondary-hover: #b91c1c;
+
+$color-accent: #ea580c;        // Naranja (Edición/Advertencias)
+$color-accent-hover: #c2410c;
+
+$color-success: #16a34a;       // Verde (Éxito)
+$color-success-bg: #dcfce7;
+
+// Escala de Grises
+$color-bg-body: #f8fafc;
+$color-bg-surface: #ffffff;
+$color-text-main: #1e293b;
+$color-text-muted: #64748b;
+$color-border: #e2e8f0;
+
+// Tipografía y Espaciado
+$font-family-base: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$border-radius: 8px;
+$transition-speed: 0.3s;
+$shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+$shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);

@@ -1,0 +1,45 @@
+// src/styles/styles.scss
+@use 'variables' as v;
+@use 'themes' as t;
+
+// Reset básico
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: v.$font-family-base;
+  background-color: v.$color-bg-body;
+  color: v.$color-text-main;
+  line-height: 1.6;
+}
+
+// Utilidades de Layout (Opcional pero muy útil)
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.text-center { text-align: center; }
+.mt-1 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 1rem; }
+.mb-2 { margin-bottom: 2rem; }
+.gap-1 { gap: 1rem; }
+
+// Encabezado principal ESPOCH
+.header-espoch {
+  background-color: v.$color-primary;
+  color: white;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: v.$shadow-md;
+  
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+}

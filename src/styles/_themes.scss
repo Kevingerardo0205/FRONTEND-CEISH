@@ -1,0 +1,85 @@
+// src/styles/_themes.scss
+@use 'variables' as v;
+
+// Estilos globales de botones
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: v.$border-radius;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all v.$transition-speed ease;
+  font-family: v.$font-family-base;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.btn-primary {
+    background-color: v.$color-primary;
+    color: white;
+    &:hover:not(:disabled) { background-color: v.$color-primary-dark; }
+  }
+
+  &.btn-danger {
+    background-color: v.$color-secondary;
+    color: white;
+    &:hover:not(:disabled) { background-color: v.$color-secondary-hover; }
+  }
+
+  &.btn-warning {
+    background-color: v.$color-accent;
+    color: white;
+    &:hover:not(:disabled) { background-color: v.$color-accent-hover; }
+  }
+
+  &.btn-outline {
+    background-color: transparent;
+    border: 1px solid v.$color-border;
+    color: v.$color-text-main;
+    &:hover:not(:disabled) { background-color: v.$color-bg-body; }
+  }
+}
+
+// Estilos globales de formularios
+.form-control {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid v.$color-border;
+  border-radius: v.$border-radius;
+  font-family: v.$font-family-base;
+  color: v.$color-text-main;
+  transition: border-color v.$transition-speed;
+
+  &:focus {
+    outline: none;
+    border-color: v.$color-primary-light;
+    box-shadow: 0 0 0 3px rgba(26, 82, 135, 0.1);
+  }
+
+  &:read-only, &:disabled {
+    background-color: v.$color-bg-body;
+    cursor: not-allowed;
+  }
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: v.$color-text-main;
+  font-size: 0.9rem;
+}
+
+// Tarjetas tipo "Card"
+.card {
+  background: v.$color-bg-surface;
+  border-radius: v.$border-radius;
+  box-shadow: v.$shadow-md;
+  border: 1px solid v.$color-border;
+  padding: 1.5rem;
+}
