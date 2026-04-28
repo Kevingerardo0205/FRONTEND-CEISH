@@ -44,6 +44,7 @@ export class DashboardPage implements OnInit {
 
   // State
   isMobile = false;
+  currentDate = signal(new Date());
   
   // Derived state from AuthFacade
   user = this.authFacade.currentUser;
@@ -69,7 +70,7 @@ export class DashboardPage implements OnInit {
     { label: 'Evaluaciones', icon: 'gavel', path: '/dashboard/evaluations' },
   ];
 
-  @HostListener('window:resize', ['$event'])
+  @HostListener('window:resize')
   onResize() {
     this.checkScreenSize();
   }

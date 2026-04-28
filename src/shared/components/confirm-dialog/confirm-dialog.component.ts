@@ -40,7 +40,7 @@ export interface ConfirmDialogData {
       </div>
     </div>
   `,
-  styleUrls: ['./confirm-dialog.component.scss'] // ✅ CORRECTO
+  styleUrls: ['../../../styles/confirm-dialog.component.scss']
 })
 export class ConfirmDialogComponent {
 

@@ -10,7 +10,6 @@ interface StatCard {
   value: string | number;
   icon: string;
   color: string;
-  trend?: string;
 }
 
 @Component({
@@ -18,134 +17,168 @@ interface StatCard {
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
   template: `
-    <div class="welcome-section">
-      <h1>Bienvenido, {{ userName() }}</h1>
-      <p>Aquí tienes un resumen de la actividad reciente en el CEISH.</p>
+    <div class="minimal-welcome">
+      <div class="welcome-text">
+        <h1>Hola, {{ userName() }}</h1>
+        <p>Resumen de actividad institucional</p>
+      </div>
+      <div class="date-chip">
+        {{ currentDate }}
+      </div>
     </div>
 
-    <div class="stats-grid">
+    <div class="stats-row">
       @for (stat of stats; track stat.title) {
-        <mat-card class="stat-card">
-          <mat-card-content>
-            <div class="stat-icon" [style.background-color]="stat.color">
-              <mat-icon>{{ stat.icon }}</mat-icon>
-            </div>
-            <div class="stat-info">
-              <span class="stat-label">{{ stat.title }}</span>
-              <h3 class="stat-value">{{ stat.value }}</h3>
-              @if (stat.trend) {
-                <span class="stat-trend">{{ stat.trend }}</span>
-              }
-            </div>
-          </mat-card-content>
-        </mat-card>
+        <div class="minimal-stat-card">
+          <div class="stat-icon-wrapper" [style.color]="stat.color">
+            <mat-icon>{{ stat.icon }}</mat-icon>
+          </div>
+          <div class="stat-content">
+            <span class="label">{{ stat.title }}</span>
+            <span class="value">{{ stat.value }}</span>
+          </div>
+        </div>
       }
     </div>
 
-    <div class="dashboard-grid mt-2">
-      <mat-card class="main-card flex-2">
-        <mat-card-header>
-          <mat-card-title>Protocolos Recientes</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="empty-placeholder">
-            <mat-icon>description</mat-icon>
-            <p>No hay protocolos recientes para mostrar.</p>
+    <div class="grid-layout">
+      <section class="main-section">
+        <header class="section-header">
+          <h2>Protocolos recientes</h2>
+          <button mat-button color="primary">Ver todos</button>
+        </header>
+        
+        <div class="empty-state">
+          <div class="empty-icon-box">
+            <mat-icon>folder_open</mat-icon>
           </div>
-        </mat-card-content>
-      </mat-card>
+          <h3>Sin actividad reciente</h3>
+          <p>Los protocolos que gestiones aparecerán aquí.</p>
+        </div>
+      </section>
 
-      <mat-card class="side-card flex-1">
-        <mat-card-header>
-          <mat-card-title>Próximas Sesiones</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="empty-placeholder small">
-            <mat-icon>event</mat-icon>
-            <p>No hay sesiones programadas.</p>
-          </div>
-        </mat-card-content>
-      </mat-card>
+      <section class="side-section">
+        <header class="section-header">
+          <h2>Agenda</h2>
+        </header>
+        <div class="agenda-list">
+          <p class="empty-msg">No hay eventos para hoy</p>
+        </div>
+      </section>
     </div>
   `,
   styles: [`
-    .welcome-section {
-      margin-bottom: 2rem;
-      h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #0f172a; }
-      p { margin: 0.25rem 0 0; color: #64748b; }
+    .minimal-welcome {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 3rem;
+
+      h1 { margin: 0; font-size: 2rem; font-weight: 700; color: #0f172a; letter-spacing: -1px; }
+      p { margin: 0.25rem 0 0; color: #94a3b8; font-weight: 500; }
     }
 
-    .stats-grid {
+    .date-chip {
+      padding: 0.5rem 1rem;
+      background-color: #f1f5f9;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+      margin-bottom: 4rem;
     }
 
-    .stat-card {
-      border-radius: 12px;
-      border: none;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-      
-      mat-card-content {
+    .minimal-stat-card {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1rem 0;
+
+      .stat-icon-wrapper {
+        width: 44px;
+        height: 44px;
         display: flex;
         align-items: center;
-        padding: 1.5rem !important;
+        justify-content: center;
+        background-color: #ffffff;
+        border: 1px solid #f1f5f9;
+        border-radius: 12px;
+        mat-icon { font-size: 22px; width: 22px; height: 22px; }
+      }
+
+      .stat-content {
+        display: flex;
+        flex-direction: column;
+        .label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
       }
     }
 
-    .stat-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 3rem;
+    }
+
+    .section-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      margin-right: 1.25rem;
-      
-      mat-icon { color: white; }
+      margin-bottom: 1.5rem;
+      h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; }
     }
 
-    .stat-info {
-      display: flex;
-      flex-direction: column;
-      
-      .stat-label { font-size: 0.875rem; color: #64748b; font-weight: 500; }
-      .stat-value { margin: 0.125rem 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
-      .stat-trend { font-size: 0.75rem; color: #10b981; }
+    .empty-state {
+      padding: 5rem 2rem;
+      background-color: #ffffff;
+      border: 1px solid #f1f5f9;
+      border-radius: 20px;
+      text-align: center;
+
+      .empty-icon-box {
+        width: 60px;
+        height: 60px;
+        background-color: #f8fafc;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        mat-icon { color: #cbd5e1; font-size: 28px; width: 28px; height: 28px; }
+      }
+
+      h3 { margin: 0; font-size: 1rem; font-weight: 600; color: #1e293b; }
+      p { margin: 0.5rem 0 0; font-size: 0.875rem; color: #94a3b8; }
     }
 
-    .dashboard-grid {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
+    .agenda-list {
+      padding: 2rem;
+      border: 1px dashed #e2e8f0;
+      border-radius: 20px;
+      text-align: center;
+      .empty-msg { font-size: 0.8rem; color: #94a3b8; font-weight: 500; margin: 0; }
     }
 
-    .main-card { flex: 2; min-width: 300px; border-radius: 12px; }
-    .side-card { flex: 1; min-width: 250px; border-radius: 12px; }
-    .mt-2 { margin-top: 2rem; }
-
-    .empty-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 4rem 2rem;
-      color: #94a3b8;
-      
-      mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 1rem; }
-      &.small { padding: 2rem 1rem; }
+    @media (max-width: 1024px) {
+      .grid-layout { grid-template-columns: 1fr; }
     }
   `]
 })
 export class DashboardHomePage {
   private readonly authFacade = inject(AuthFacade);
   
-  userName = computed(() => this.authFacade.currentUser()?.nombre || 'Usuario');
+  userName = computed(() => this.authFacade.currentUser()?.nombre?.split(' ')[0] || 'Usuario');
+  currentDate = new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(new Date());
 
   stats: StatCard[] = [
-    { title: 'Protocolos Activos', value: 12, icon: 'assignment', color: '#3b82f6', trend: '+2 esta semana' },
-    { title: 'En Evaluación', value: 5, icon: 'pending_actions', color: '#f59e0b' },
-    { title: 'Aprobados', value: 124, icon: 'check_circle', color: '#10b981', trend: '+15 este mes' },
-    { title: 'Usuarios', value: 8, icon: 'people', color: '#6366f1' },
+    { title: 'Activos', value: 12, icon: 'bolt', color: '#2563eb' },
+    { title: 'En Revisión', value: 5, icon: 'visibility', color: '#f59e0b' },
+    { title: 'Finalizados', value: 124, icon: 'done_all', color: '#10b981' },
   ];
 }

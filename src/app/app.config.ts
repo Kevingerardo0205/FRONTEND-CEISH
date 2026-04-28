@@ -8,6 +8,8 @@ import { JwtInterceptor } from '@infrastructure/interceptors/jwt.interceptor';
 import { ErrorInterceptor } from '@infrastructure/interceptors/error.interceptor';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { AuthApiAdapter } from '@infrastructure/adapters/auth-api.adapter';
+import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.port';
+import { UserAdminApiAdapter } from '@infrastructure/adapters/user-admin-api.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -16,7 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptorsFromDi()),
     { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
-    { provide: IAuthRepositoryPort, useClass: AuthApiAdapter }
+    { provide: IAuthRepositoryPort, useClass: AuthApiAdapter },
+    { provide: IUserAdminRepositoryPort, useClass: UserAdminApiAdapter }
   ]
 };
-
