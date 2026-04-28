@@ -1,63 +1,50 @@
-import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { environment } from 'src/environments/environment';
+import { ApiClientService } from './api-client.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export abstract class BaseApiService {
-  protected readonly baseUrl = environment.apiUrl;
 
-  constructor(protected http: HttpClient) {}
+  constructor(protected apiClient: ApiClientService) {}
 
   protected get<T>(endpoint: string, params?: any): Observable<T> {
-    const httpParams = this.createParams(params);
-    return this.http.get<T>(`${this.baseUrl}${endpoint}`, { params: httpParams }).pipe(
+    return this.apiClient.get<T>(endpoint, { params }).pipe(
       catchError(this.handleError)
     );
   }
 
   protected post<T>(endpoint: string, body: any): Observable<T> {
-    return this.http.post<T>(`${this.baseUrl}${endpoint}`, body).pipe(
+    return this.apiClient.post<T>(endpoint, body).pipe(
       catchError(this.handleError)
     );
   }
 
   protected put<T>(endpoint: string, body: any): Observable<T> {
-    return this.http.put<T>(`${this.baseUrl}${endpoint}`, body).pipe(
+    return this.apiClient.put<T>(endpoint, body).pipe(
       catchError(this.handleError)
     );
   }
 
   protected delete<T>(endpoint: string): Observable<T> {
-    return this.http.delete<T>(`${this.baseUrl}${endpoint}`).pipe(
+    return this.apiClient.delete<T>(endpoint).pipe(
       catchError(this.handleError)
     );
   }
 
-  private createParams(params?: any): HttpParams {
-    let httpParams = new HttpParams();
-    if (params) {
-      Object.keys(params).forEach(key => {
-        if (params[key] !== undefined && params[key] !== null) {
-          httpParams = httpParams.set(key, params[key].toString());
-        }
-      });
-    }
-    return httpParams;
-  }
-
-  private handleError(error: HttpErrorResponse) {
+  private handleError(error: any) {
     let errorMessage = 'Ocurrió un error inesperado';
-    if (error.error instanceof ErrorEvent) {
-      // Error del lado del cliente
-      errorMessage = `Error: ${error.error.message}`;
+    
+    if (error.response) {
+      errorMessage = error.response.data?.message || `Error ${error.response.status}`;
+    } else if (error.request) {
+      errorMessage = 'No se pudo conectar con el servidor';
     } else {
-      // Error del lado del servidor
-      errorMessage = error.error?.message || `Código de error: ${error.status}`;
+      errorMessage = error.message;
     }
+    
     return throwError(() => new Error(errorMessage));
   }
 }

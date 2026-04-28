@@ -1,0 +1,92 @@
+@use 'variables' as v;
+
+.modern-dialog {
+  overflow: hidden;
+  border-radius: 20px;
+  background: v.$color-bg-surface;
+  position: relative;
+}
+
+.dialog-header-accent {
+  height: 6px;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.primary .dialog-header-accent { background: v.$color-primary; }
+.warn .dialog-header-accent { background: v.$color-secondary; }
+.info .dialog-header-accent { background: v.$color-primary-light; }
+.success .dialog-header-accent { background: v.$color-success; }
+
+.dialog-body {
+  padding: 2.5rem 2rem 1.5rem;
+  text-align: center;
+}
+
+.icon-container {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+}
+
+.primary .icon-container { background: rgba(0, 51, 102, 0.1); color: v.$color-primary; }
+.warn .icon-container { background: rgba(220, 38, 38, 0.1); color: v.$color-secondary; }
+.info .icon-container { background: rgba(26, 82, 135, 0.1); color: v.$color-primary-light; }
+.success .icon-container { background: rgba(22, 163, 74, 0.1); color: v.$color-success; }
+
+.dialog-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: v.$color-text-main;
+  letter-spacing: -0.02em;
+}
+
+.dialog-message {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: v.$color-text-muted;
+}
+
+.dialog-actions {
+  padding: 1.5rem 2rem 2rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.dialog-actions button {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all v.$transition-speed ease;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  color: v.$color-text-main;
+}
+
+.btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+@media (max-width: 480px) {
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+}

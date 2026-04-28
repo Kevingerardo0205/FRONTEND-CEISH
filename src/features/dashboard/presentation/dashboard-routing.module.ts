@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { DashboardPage } from '../components/dashboard.page';
+import { DashboardPage } from './pages/dashboard.page';
 import { UserManagementPage } from './pages/user-management.page';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';

@@ -1,8 +1,10 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { UserListComponent } from '../../../auth/components/login/login.component';
-import { RegisterComponent } from '../../../auth/components/register/register.component';
+import { UserListComponent } from '@features/auth/presentation/components/user-list/user-list.component';
+import { UserFormComponent } from '@features/auth/presentation/components/user-form/user-form.component';
 import { User } from '@domain/entities/user.entity';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-user-management',
@@ -10,28 +12,56 @@ import { User } from '@domain/entities/user.entity';
   imports: [
     CommonModule,
     UserListComponent,
-    RegisterComponent
+    UserFormComponent,
+    MatIconModule,
+    MatButtonModule
   ],
   template: `
-    <div class="user-management-container">
-      <div class="grid">
-        <div class="col-list">
-          <app-user-list #userList (editUser)="onEditUser($event)"></app-user-list>
-        </div>
-        <div class="col-form">
-          <app-user-register 
-            [userToEdit]="selectedUser" 
-            (saved)="onSaved()" 
-            (cancel)="onCancel()">
-          </app-user-register>
-        </div>
+    <div class="page-header">
+      <div class="header-content">
+        <h1>Gestión de Usuarios</h1>
+        <p>Administre los accesos y roles del personal institucional.</p>
+      </div>
+      <button mat-flat-button color="primary" (click)="onNewUser()">
+        <mat-icon>person_add</mat-icon>
+        Nuevo Usuario
+      </button>
+    </div>
+
+    <div class="user-management-grid">
+      <div class="list-section">
+        <app-user-list #userList (editUser)="onEditUser($event)"></app-user-list>
+      </div>
+      <div class="form-section">
+        <app-user-form 
+          [userToEdit]="selectedUser" 
+          (saved)="onSaved()" 
+          (cancel)="onCancel()">
+        </app-user-form>
       </div>
     </div>
   `,
   styles: [`
-    .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; align-items: start; }
-    @media (max-width: 1024px) {
-      .grid { grid-template-columns: 1fr; }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+
+      h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+      p { margin: 0.25rem 0 0; color: #64748b; }
+    }
+
+    .user-management-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1280px) {
+      .user-management-grid { grid-template-columns: 1fr; }
+      .form-section { order: -1; }
     }
   `]
 })
@@ -41,6 +71,12 @@ export class UserManagementPage {
 
   onEditUser(user: User) {
     this.selectedUser = user;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  onNewUser() {
+    this.selectedUser = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onSaved() {

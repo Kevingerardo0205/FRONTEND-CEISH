@@ -1,19 +1,17 @@
-import { environment } from 'src/environments/environment';
-
 export const ENDPOINTS = {
   AUTH: {
-    LOGIN: `${environment.apiUrl}/auth/login`,
-    REGISTER: `${environment.apiUrl}/auth/register`,
-    PROFILE: `${environment.apiUrl}/auth/profile`,
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    PROFILE: '/auth/profile',
   },
   PROTOCOLS: {
-    BASE: `${environment.apiUrl}/protocols`,
-    BY_ID: (id: string) => `${environment.apiUrl}/protocols/${id}`,
+    BASE: '/protocols',
+    BY_ID: (id: string) => `/protocols/${id}`,
   },
   DOCUMENTS: {
-    BASE: `${environment.apiUrl}/documents`,
-    UPLOAD: `${environment.apiUrl}/documents/upload`,
-    BY_ID: (id: string) => `${environment.apiUrl}/documents/${id}`,
+    BASE: '/documents',
+    UPLOAD: '/documents/upload',
+    BY_ID: (id: string) => `/documents/${id}`,
   },
-  HEALTH: `${environment.apiUrl}/`
+  HEALTH: '/'
 };

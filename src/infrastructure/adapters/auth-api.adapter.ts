@@ -1,17 +1,17 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, of, delay } from 'rxjs';
 import { catchError, switchMap, map } from 'rxjs/operators';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { BaseApiService } from '@infrastructure/api/base-api.service';
+import { ApiClientService } from '@infrastructure/api/api-client.service';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPort {
   
-  constructor(http: HttpClient) {
-    super(http);
+  constructor(apiClient: ApiClientService) {
+    super(apiClient);
   }
 
   private mapBackendUser(data: any): User {
@@ -28,7 +28,7 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       id: data.id || data.Usuario_id,
       email: data.email || data.email_institucional || data.Usuario_email_institucional,
       nombre: data.nombre || data.full_name || 'Usuario CEISH',
-      rol: roleName.toUpperCase(),
+      rol: roleName.toUpperCase() as UserRole,
       activo: data.activo !== undefined ? data.activo : true
     };
   }

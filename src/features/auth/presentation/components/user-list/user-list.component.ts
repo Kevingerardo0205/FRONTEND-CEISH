@@ -1,12 +1,13 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { GetUsersUseCase, DeleteUserUseCase } from '../../use-cases';
-import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
+import { MatChipsModule } from '@angular/material/chips';
+import { GetUsersUseCase, DeleteUserUseCase } from '../../../use-cases';
+import { User } from '@domain/entities/user.entity';
 
 @Component({
   selector: 'app-user-list',
@@ -17,12 +18,14 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
     MatTableModule,
     MatButtonModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatChipsModule
   ],
   template: `
-    <mat-card class="mat-elevation-z4">
+    <mat-card class="user-list-card mat-elevation-z2">
       <mat-card-header>
         <mat-card-title>Usuarios Registrados</mat-card-title>
+        <mat-card-subtitle>Gestión y control de accesos al sistema</mat-card-subtitle>
       </mat-card-header>
       
       <mat-card-content>
@@ -31,7 +34,12 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
             
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef> Nombre </th>
-              <td mat-cell *matCellDef="let user"> {{user.nombre}} </td>
+              <td mat-cell *matCellDef="let user"> 
+                <div class="user-info-cell">
+                  <span class="user-name">{{user.nombre}}</span>
+                  <span class="user-id">ID: {{user.id?.substring(0,8)}}</span>
+                </div>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="email">
@@ -47,8 +55,8 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
             </ng-container>
 
             <ng-container matColumnDef="acciones">
-              <th mat-header-cell *matHeaderCellDef> Acciones </th>
-              <td mat-cell *matCellDef="let user">
+              <th mat-header-cell *matHeaderCellDef class="text-right"> Acciones </th>
+              <td mat-cell *matCellDef="let user" class="text-right">
                 <button mat-icon-button color="primary" (click)="onEdit(user)" matTooltip="Editar usuario">
                   <mat-icon>edit</mat-icon>
                 </button>
@@ -62,7 +70,10 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
             
             <tr class="mat-row" *matNoDataRow>
-              <td class="mat-cell text-center" colspan="4" style="padding: 2rem;">No hay usuarios registrados.</td>
+              <td class="mat-cell text-center" colspan="4" style="padding: 3rem;">
+                <mat-icon class="empty-state-icon">group_off</mat-icon>
+                <p>No hay usuarios registrados en el sistema.</p>
+              </td>
             </tr>
           </table>
         </div>
@@ -70,39 +81,40 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
     </mat-card>
   `,
   styles: [`
-    .full-width-table {
-      width: 100%;
-    }
-    .table-container {
-      overflow-x: auto;
-      margin-top: 1rem;
-    }
-    .text-center {
-      text-align: center;
-    }
+    .user-list-card { border-radius: 12px; overflow: hidden; }
+    .full-width-table { width: 100%; }
+    .table-container { overflow-x: auto; margin-top: 1rem; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    
+    .user-info-cell { display: flex; flex-direction: column; }
+    .user-name { font-weight: 600; color: #1e293b; }
+    .user-id { font-size: 0.7rem; color: #94a3b8; }
+
     .role-badge {
       padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 500;
-      letter-spacing: 0.5px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
-    .admin { background-color: #e0e7ff; color: #0f172a; }
+    .admin { background-color: #e0e7ff; color: #3730a3; }
     .investigador { background-color: #dbeafe; color: #1e40af; }
     .evaluador { background-color: #dcfce7; color: #166534; }
-    .secretaria { background-color: #fef3c7; color: #166534; }
-    .presidenta { background-color: #fae8ff; color: #854d0e; }
+    .secretaria { background-color: #fef3c7; color: #92400e; }
+    .presidenta { background-color: #fae8ff; color: #86198f; }
+
+    .empty-state-icon { font-size: 48px; width: 48px; height: 48px; color: #cbd5e1; margin-bottom: 1rem; }
   `]
 })
 export class UserListComponent implements OnInit {
+  private readonly getUsersUseCase = inject(GetUsersUseCase);
+  private readonly deleteUserUseCase = inject(DeleteUserUseCase);
+
   users: User[] = [];
   displayedColumns: string[] = ['nombre', 'email', 'rol', 'acciones'];
   @Output() editUser = new EventEmitter<User>();
-
-  constructor(
-    private getUsersUseCase: GetUsersUseCase,
-    private deleteUserUseCase: DeleteUserUseCase
-  ) {}
 
   ngOnInit(): void {
     this.refresh();

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -7,11 +7,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { RegisterUserUseCase, UpdateUserUseCase } from '../../use-cases';
-import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
+import { RegisterUserUseCase, UpdateUserUseCase } from '../../../use-cases';
+import { User, UserRole } from '@domain/entities/user.entity';
 
 @Component({
-  selector: 'app-user-register',
+  selector: 'app-user-form',
   standalone: true,
   imports: [
     CommonModule,
@@ -24,14 +24,14 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
     MatProgressSpinnerModule
   ],
   template: `
-    <mat-card class="mat-elevation-z4">
+    <mat-card class="user-form-card mat-elevation-z2">
       <mat-card-header>
-        <mat-card-title>{{ editMode ? 'Editar Usuario' : 'Registro de Nuevo Usuario' }}</mat-card-title>
-        <mat-card-subtitle>{{ editMode ? 'Modificar datos del usuario seleccionado' : 'Completar los datos para un nuevo registro' }}</mat-card-subtitle>
+        <mat-card-title>{{ editMode ? 'Editar Usuario' : 'Nuevo Usuario' }}</mat-card-title>
+        <mat-card-subtitle>{{ editMode ? 'Actualice la información del perfil' : 'Complete los datos de registro' }}</mat-card-subtitle>
       </mat-card-header>
       
       <mat-card-content>
-        <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="register-form mt-1">
+        <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="user-form mt-1">
           
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Nombre Completo</mat-label>
@@ -46,39 +46,41 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
             <mat-icon matPrefix>email</mat-icon>
             <mat-error *ngIf="userForm.get('email')?.hasError('required')">El email es requerido</mat-error>
             <mat-error *ngIf="userForm.get('email')?.hasError('email') || userForm.get('email')?.hasError('pattern')">
-              Debe ser un correo válido @espoch.edu.ec
+              Debe ser un correo @espoch.edu.ec
             </mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Rol</mat-label>
-            <mat-select formControlName="rol">
-              <mat-option *ngFor="let rol of roles" [value]="rol">{{rol}}</mat-option>
-            </mat-select>
-            <mat-icon matPrefix>badge</mat-icon>
-            <mat-error *ngIf="userForm.get('rol')?.hasError('required')">El rol es requerido</mat-error>
-          </mat-form-field>
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="flex-1">
+              <mat-label>Rol</mat-label>
+              <mat-select formControlName="rol">
+                <mat-option *ngFor="let rol of roles" [value]="rol">{{rol}}</mat-option>
+              </mat-select>
+              <mat-icon matPrefix>badge</mat-icon>
+              <mat-error *ngIf="userForm.get('rol')?.hasError('required')">Requerido</mat-error>
+            </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Perfil / Cargo</mat-label>
-            <input matInput formControlName="perfil" placeholder="Ej: Docente Investigador">
-            <mat-icon matPrefix>work</mat-icon>
-            <mat-error *ngIf="userForm.get('perfil')?.hasError('required')">El perfil es requerido</mat-error>
-          </mat-form-field>
+            <mat-form-field appearance="outline" class="flex-2">
+              <mat-label>Perfil / Cargo</mat-label>
+              <input matInput formControlName="perfil" placeholder="Ej: Docente">
+              <mat-icon matPrefix>work</mat-icon>
+              <mat-error *ngIf="userForm.get('perfil')?.hasError('required')">Requerido</mat-error>
+            </mat-form-field>
+          </div>
 
           <div *ngIf="message" class="message-container" [ngClass]="isError ? 'error-msg' : 'success-msg'">
             <mat-icon>{{ isError ? 'error_outline' : 'check_circle' }}</mat-icon>
             <span>{{ message }}</span>
           </div>
 
-          <div class="actions gap-1 mt-1">
-            <button mat-raised-button color="primary" type="submit" [disabled]="userForm.invalid || loading" class="flex-1">
+          <div class="actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="userForm.invalid || loading" class="submit-btn">
               <mat-icon *ngIf="!loading">{{ editMode ? 'save' : 'person_add' }}</mat-icon>
               <mat-spinner *ngIf="loading" diameter="20" class="spinner-inline"></mat-spinner>
-              {{ editMode ? 'Actualizar' : 'Registrar' }}
+              {{ editMode ? 'Guardar Cambios' : 'Registrar Usuario' }}
             </button>
             
-            <button mat-button type="button" *ngIf="editMode" (click)="onCancel()" class="flex-1">
+            <button mat-button type="button" *ngIf="editMode" (click)="onCancel()" class="cancel-btn">
               Cancelar
             </button>
           </div>
@@ -87,34 +89,37 @@ import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain
     </mat-card>
   `,
   styles: [`
-    .register-form {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
+    .user-form-card { border-radius: 12px; }
+    .user-form { display: flex; flex-direction: column; gap: 0.25rem; }
     .full-width { width: 100%; }
-    .mt-1 { margin-top: 1rem; }
-    .actions {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
+    .form-row { display: flex; gap: 1rem; }
     .flex-1 { flex: 1; }
+    .flex-2 { flex: 2; }
+    .mt-1 { margin-top: 1rem; }
+    
+    .actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1.5rem; }
+    .submit-btn { height: 48px; border-radius: 8px; font-weight: 600; }
+    .cancel-btn { height: 40px; }
+
     .message-container {
       display: flex;
       align-items: center;
       gap: 0.5rem;
       padding: 0.75rem;
-      border-radius: 4px;
-      margin-bottom: 1rem;
-      font-size: 0.9rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.85rem;
     }
-    .error-msg { background-color: #fce8e8; color: #a94442; }
-    .success-msg { background-color: #d4edda; color: #3c763d; }
+    .error-msg { background-color: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
+    .success-msg { background-color: #f0fdf4; color: #166534; border: 1px solid #dcfce7; }
     .spinner-inline { display: inline-block; margin-right: 8px; }
   `]
 })
-export class RegisterComponent implements OnChanges {
+export class UserFormComponent implements OnChanges {
+  private readonly fb = inject(FormBuilder);
+  private readonly registerUseCase = inject(RegisterUserUseCase);
+  private readonly updateUserUseCase = inject(UpdateUserUseCase);
+
   @Input() userToEdit: User | null = null;
   @Output() saved = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
@@ -126,11 +131,7 @@ export class RegisterComponent implements OnChanges {
   editMode = false;
   roles: UserRole[] = ['SECRETARIA', 'EVALUADOR', 'INVESTIGADOR', 'PRESIDENTA', 'ADMIN'];
 
-  constructor(
-    private fb: FormBuilder,
-    private registerUseCase: RegisterUserUseCase,
-    private updateUserUseCase: UpdateUserUseCase
-  ) {
+  constructor() {
     this.userForm = this.fb.group({
       nombre: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email, Validators.pattern(/^[a-zA-Z0-9._%+-]+@espoch\.edu\.ec$/)]],
@@ -158,7 +159,7 @@ export class RegisterComponent implements OnChanges {
     obs.subscribe({
       next: () => {
         this.loading = false;
-        this.message = this.editMode ? 'Actualizado con éxito' : 'Registrado con éxito';
+        this.message = this.editMode ? 'Usuario actualizado' : 'Usuario registrado';
         this.isError = false;
         this.reset();
         this.saved.emit();
@@ -166,7 +167,7 @@ export class RegisterComponent implements OnChanges {
       },
       error: (err: any) => {
         this.loading = false;
-        this.message = err.message || 'Error al procesar la solicitud';
+        this.message = err.message || 'Error en la operación';
         this.isError = true;
       }
     });
