@@ -1,4 +1,5 @@
 // src/styles/styles.scss
+@use '@angular/material/prebuilt-themes/indigo-pink.css';
 @use 'variables' as v;
 @use 'themes' as t;
 
@@ -9,8 +10,12 @@
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
-  font-family: v.$font-family-base;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
   background-color: v.$color-bg-body;
   color: v.$color-text-main;
   line-height: 1.6;
@@ -42,4 +47,27 @@ body {
     font-weight: 600;
     letter-spacing: 0.5px;
   }
+}
+
+// Estilos para iconos de Logo
+.login-logo-container, .sidenav-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.login-icon, .sidenav-logo-icon {
+  font-size: 80px !important;
+  width: 80px !important;
+  height: 80px !important;
+  color: #1e3c72;
+}
+
+.sidenav-logo-icon {
+  color: white !important;
+  font-size: 60px !important;
+  width: 60px !important;
+  height: 60px !important;
 }

@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://localhost:3002/api' // Change this for production deployment
+  apiUrl: 'http://192.168.1.105:3002/api',
+  wsUrl: 'http://192.168.1.105.192:3001'
 };

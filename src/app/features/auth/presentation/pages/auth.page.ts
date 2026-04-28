@@ -6,69 +6,116 @@ import { LoginUseCase } from '../../application/use-cases/login.use-case';
 @Component({
   selector: 'app-auth-page',
   template: `
-    <div class="login-page">
-      <div class="login-card card">
-        <div class="text-center mb-2">
-          <img src="assets/icons/espoch_logo.png" alt="Logo ESPOCH" style="height: 100px; margin-bottom: 1rem;">
-          <h2>CEISH - ESPOCH</h2>
-          <p class="text-muted">Inicia sesión para acceder al sistema</p>
-        </div>
-
-        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-          <div class="mb-1">
-            <label class="form-label">Email Institucional</label>
-            <input 
-              type="email" 
-              class="form-control" 
-              formControlName="email"
-              placeholder="usuario@espoch.edu.ec"
-              [class.is-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
-            >
+    <div class="login-container">
+      <mat-card class="login-card mat-elevation-z8">
+        <mat-card-header class="login-header">
+          <div class="login-logo-container">
+            <mat-icon class="login-icon">verified_user</mat-icon>
           </div>
+          <mat-card-title>CEISH - ESPOCH</mat-card-title>
+          <mat-card-subtitle>Inicia sesión para acceder al sistema</mat-card-subtitle>
+        </mat-card-header>
 
-          <div class="mb-1">
-            <label class="form-label">Contraseña</label>
-            <input 
-              type="password" 
-              class="form-control" 
-              formControlName="password"
-              placeholder="••••••••"
-              [class.is-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
-            >
-          </div>
+        <mat-card-content>
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email Institucional</mat-label>
+              <input matInput type="email" formControlName="email" placeholder="usuario@espoch.edu.ec">
+              <mat-icon matPrefix>email</mat-icon>
+              <mat-error *ngIf="loginForm.get('email')?.hasError('required')">El email es requerido</mat-error>
+              <mat-error *ngIf="loginForm.get('email')?.hasError('email')">Formato de email inválido</mat-error>
+            </mat-form-field>
 
-          <!-- Mensaje de Retroalimentación Mejorado -->
-          <div *ngIf="errorMessage" class="alert alert-danger mt-1">
-            <i class="fas fa-exclamation-circle"></i> {{ errorMessage }}
-          </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Contraseña</mat-label>
+              <input matInput type="password" formControlName="password" placeholder="••••••••">
+              <mat-icon matPrefix>lock</mat-icon>
+              <mat-error *ngIf="loginForm.get('password')?.hasError('required')">La contraseña es requerida</mat-error>
+            </mat-form-field>
 
-          <button 
-            type="submit" 
-            class="btn btn-primary mt-1" 
-            style="width: 100%;"
-            [disabled]="loginForm.invalid || isLoading || isLocked"
-          >
-            {{ isLoading ? 'Procesando...' : (isLocked ? 'Cuenta Bloqueada' : 'Iniciar Sesión') }}
-          </button>
-        </form>
+            <div *ngIf="errorMessage" class="error-message">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorMessage }}</span>
+            </div>
 
-        <div class="text-center mt-1">
-          <p *ngIf="attempts > 0 && !isLocked" class="text-muted" style="font-size: 0.8rem;">
-            Intentos fallidos: {{ attempts }} de 3
-          </p>
-          <a href="#" class="text-muted" style="font-size: 0.85rem;">¿Olvidaste tu contraseña?</a>
-        </div>
-      </div>
+            <button mat-raised-button color="primary" type="submit" class="full-width submit-btn" [disabled]="loginForm.invalid || isLoading || isLocked">
+              <span *ngIf="!isLoading">{{ isLocked ? 'Cuenta Bloqueada' : 'Iniciar Sesión' }}</span>
+              <mat-spinner *ngIf="isLoading" diameter="24"></mat-spinner>
+            </button>
+          </form>
+        </mat-card-content>
+
+        <mat-card-footer class="login-footer">
+          <p *ngIf="attempts > 0 && !isLocked" class="attempts-text">Intentos fallidos: {{ attempts }} de 3</p>
+          <a mat-button color="accent" href="#">¿Olvidaste tu contraseña?</a>
+        </mat-card-footer>
+      </mat-card>
     </div>
   `,
   styles: [`
-    .login-page { 
-      min-height: 100vh; display: flex; align-items: center; justify-content: center; 
-      background: linear-gradient(135deg, #003366 0%, #001f3f 100%);
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      padding: 1rem;
     }
-    .login-card { width: 400px; padding: 2.5rem; }
-    h2 { color: #003366; }
-    .alert-danger { background-color: #fce8e8; color: #a94442; border: 1px solid #ebccd1; padding: 10px; border-radius: 4px; }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 2rem 1rem;
+      border-radius: 12px;
+    }
+    .login-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .login-logo {
+      height: 90px;
+      margin-bottom: 1rem;
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .full-width {
+      width: 100%;
+    }
+    .submit-btn {
+      height: 48px;
+      font-size: 1.1rem;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .error-message {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: #fce8e8;
+      color: #a94442;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .login-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 1.5rem;
+    }
+    .attempts-text {
+      color: #666;
+      font-size: 0.85rem;
+      margin: 0;
+    }
   `],
   standalone: false
 })
@@ -96,17 +143,18 @@ export class AuthPage {
       this.errorMessage = '';
 
       this.loginUseCase.execute(this.loginForm.value).subscribe({
-        next: () => {
+        next: (response) => {
+          console.log('Login exitoso, navegando al dashboard...', response);
           this.isLoading = false;
-          // Forzar navegación al dashboard
-          this.router.navigate(['/auth/admin-usuarios']).then(nav => {
-            if (!nav) console.error('Fallo en la navegación');
-          });
+          this.router.navigate(['/dashboard/admin/users']).then(
+            success => console.log('Navegación exitosa:', success),
+            error => console.error('Error de navegación:', error)
+          );
         },
         error: (err) => {
           this.isLoading = false;
           this.attempts++;
-          this.errorMessage = err.message; // Mensaje mejorado desde el repositorio
+          this.errorMessage = err.message;
 
           if (this.attempts >= 3) {
             this.isLocked = true;

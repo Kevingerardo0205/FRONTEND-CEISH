@@ -7,51 +7,94 @@ import { User, UserRole } from '../../../domain/entities/user.entity';
 @Component({
   selector: 'app-user-register',
   template: `
-    <div class="card">
-      <h2 class="mb-1">{{ editMode ? 'Editar' : 'Registro de Nuevo' }} Usuario</h2>
+    <mat-card class="mat-elevation-z4">
+      <mat-card-header>
+        <mat-card-title>{{ editMode ? 'Editar Usuario' : 'Registro de Nuevo Usuario' }}</mat-card-title>
+        <mat-card-subtitle>{{ editMode ? 'Modificar datos del usuario seleccionado' : 'Completar los datos para un nuevo registro' }}</mat-card-subtitle>
+      </mat-card-header>
       
-      <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
-        <div class="mb-1">
-          <label class="form-label">Nombre Completo</label>
-          <input type="text" class="form-control" formControlName="nombre" placeholder="Ej: Juan Pérez">
-        </div>
-
-        <div class="mb-1">
-          <label class="form-label">Email Institucional</label>
-          <input type="email" class="form-control" formControlName="email" [readonly]="editMode" placeholder="usuario@espoch.edu.ec">
-        </div>
-
-        <div class="mb-1">
-          <label class="form-label">Rol</label>
-          <select class="form-control" formControlName="rol">
-            <option *ngFor="let rol of roles" [value]="rol">{{rol}}</option>
-          </select>
-        </div>
-
-        <div class="mb-1">
-          <label class="form-label">Perfil / Cargo</label>
-          <input type="text" class="form-control" formControlName="perfil" placeholder="Ej: Docente Investigador">
-        </div>
-
-        <div class="actions gap-1 mt-1" style="display: flex;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;" [disabled]="userForm.invalid || loading">
-            {{ editMode ? 'Actualizar' : 'Registrar' }}
-          </button>
+      <mat-card-content>
+        <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="register-form mt-1">
           
-          <button type="button" *ngIf="editMode" class="btn btn-outline" style="flex: 1;" (click)="onCancel()">
-            Cancelar
-          </button>
-        </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Nombre Completo</mat-label>
+            <input matInput formControlName="nombre" placeholder="Ej: Juan Pérez">
+            <mat-icon matPrefix>person</mat-icon>
+            <mat-error *ngIf="userForm.get('nombre')?.hasError('required')">El nombre es requerido</mat-error>
+          </mat-form-field>
 
-        <div *ngIf="message" [ngClass]="isError ? 'error-text' : 'success-text'" class="mt-1 text-center">
-          <strong>{{ message }}</strong>
-        </div>
-      </form>
-    </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Email Institucional</mat-label>
+            <input matInput type="email" formControlName="email" [readonly]="editMode" placeholder="usuario@espoch.edu.ec">
+            <mat-icon matPrefix>email</mat-icon>
+            <mat-error *ngIf="userForm.get('email')?.hasError('required')">El email es requerido</mat-error>
+            <mat-error *ngIf="userForm.get('email')?.hasError('email') || userForm.get('email')?.hasError('pattern')">
+              Debe ser un correo válido @espoch.edu.ec
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Rol</mat-label>
+            <mat-select formControlName="rol">
+              <mat-option *ngFor="let rol of roles" [value]="rol">{{rol}}</mat-option>
+            </mat-select>
+            <mat-icon matPrefix>badge</mat-icon>
+            <mat-error *ngIf="userForm.get('rol')?.hasError('required')">El rol es requerido</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Perfil / Cargo</mat-label>
+            <input matInput formControlName="perfil" placeholder="Ej: Docente Investigador">
+            <mat-icon matPrefix>work</mat-icon>
+            <mat-error *ngIf="userForm.get('perfil')?.hasError('required')">El perfil es requerido</mat-error>
+          </mat-form-field>
+
+          <div *ngIf="message" class="message-container" [ngClass]="isError ? 'error-msg' : 'success-msg'">
+            <mat-icon>{{ isError ? 'error_outline' : 'check_circle' }}</mat-icon>
+            <span>{{ message }}</span>
+          </div>
+
+          <div class="actions gap-1 mt-1">
+            <button mat-raised-button color="primary" type="submit" [disabled]="userForm.invalid || loading" class="flex-1">
+              <mat-icon *ngIf="!loading">{{ editMode ? 'save' : 'person_add' }}</mat-icon>
+              <mat-spinner *ngIf="loading" diameter="20" class="spinner-inline"></mat-spinner>
+              {{ editMode ? 'Actualizar' : 'Registrar' }}
+            </button>
+            
+            <button mat-button type="button" *ngIf="editMode" (click)="onCancel()" class="flex-1">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
   `,
   styles: [`
-    .error-text { color: var(--color-secondary, #dc2626); }
-    .success-text { color: var(--color-success, #16a34a); }
+    .register-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .full-width { width: 100%; }
+    .mt-1 { margin-top: 1rem; }
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .flex-1 { flex: 1; }
+    .message-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .error-msg { background-color: #fce8e8; color: #a94442; }
+    .success-msg { background-color: #d4edda; color: #3c763d; }
+    .spinner-inline { display: inline-block; margin-right: 8px; }
   `],
   standalone: false
 })
@@ -103,6 +146,7 @@ export class RegisterComponent implements OnChanges {
         this.isError = false;
         this.reset();
         this.saved.emit();
+        setTimeout(() => this.message = '', 3000);
       },
       error: (err) => {
         this.loading = false;
@@ -121,5 +165,8 @@ export class RegisterComponent implements OnChanges {
     this.editMode = false;
     this.userToEdit = null;
     this.userForm.reset({ rol: 'INVESTIGADOR' });
+    Object.keys(this.userForm.controls).forEach(key => {
+      this.userForm.get(key)?.setErrors(null);
+    });
   }
 }

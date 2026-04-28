@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { Observable, of, throwError, delay } from 'rxjs';
 import { AuthResponse, User } from '../models/user.model';
 import { TokenService } from './token.service';
 
@@ -14,10 +15,17 @@ export class AuthService {
   }
 
   setAuth(auth: AuthResponse): void {
-    this.tokenService.saveToken(auth.token);
+    this.tokenService.saveToken(auth.accessToken);
     this.tokenService.saveRefreshToken(auth.refreshToken);
-    this.currentUserSignal.set(auth.user);
-    localStorage.setItem('user', JSON.stringify(auth.user));
+    if (auth.user) {
+      this.currentUserSignal.set(auth.user);
+      localStorage.setItem('user', JSON.stringify(auth.user));
+    }
+  }
+
+  setUser(user: User): void {
+    this.currentUserSignal.set(user);
+    localStorage.setItem('user', JSON.stringify(user));
   }
 
   logout(): void {
@@ -35,5 +43,16 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     return !!this.tokenService.getToken();
+  }
+
+  refreshToken(): Observable<any> {
+    const refreshToken = this.tokenService.getRefreshToken();
+    if (!refreshToken) {
+      return throwError(() => new Error('No refresh token available'));
+    }
+    
+    // En producción esto iría al backend
+    // Simulamos éxito si tenemos el token
+    return of({ accessToken: 'new-mock-access-token' }).pipe(delay(500));
   }
 }
