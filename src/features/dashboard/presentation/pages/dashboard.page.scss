@@ -14,44 +14,79 @@
 
 .dashboard-content {
   background-color: vars.$color-bg-body;
-  
-.dashboard-toolbar {
-    background-color: rgba(vars.$color-bg-surface, 0.85);
-    backdrop-filter: blur(12px);
-    color: vars.$color-text-main;
-    border-bottom: 1px solid vars.$color-border; 
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .dashboard-toolbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
     height: 72px;
-    padding: 0 2rem;
-    box-shadow: none;
+    min-height: 72px;
+    padding: 0 2.5rem;
     display: flex;
+    align-items: center;
     justify-content: space-between;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 1000;
+    position: sticky;
+    top: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+
+    &.mat-toolbar {
+      display: flex;
+      flex-direction: row;
+      white-space: nowrap;
+    }
 
     .toolbar-left {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 1.5rem;
+      flex: 1;
 
       .menu-toggle-btn {
-        color: vars.$color-text-muted;
-        &:hover { color: vars.$color-primary; background-color: vars.$color-bg-body; }
+        width: 42px;
+        height: 42px;
+        color: #64748b;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: vars.$color-primary;
+          background: #f1f5f9;
+          transform: translateY(-1px);
+        }
+        
+        mat-icon { font-size: 22px; width: 22px; height: 22px; }
       }
 
       .header-breadcrumb {
         display: flex;
-        flex-direction: column;
-        line-height: 1.2;
+        align-items: center;
+        gap: 1rem;
 
         .toolbar-title {
           font-weight: 800;
-          font-size: 1rem;
-          color: vars.$color-primary;
+          font-size: 1.25rem;
+          color: #1e293b;
           letter-spacing: -0.5px;
         }
 
+        .breadcrumb-separator {
+          width: 4px;
+          height: 4px;
+          background: #cbd5e1;
+          border-radius: 50%;
+        }
+
         .toolbar-date {
-          font-size: 0.75rem;
-          color: vars.$color-text-muted;
-          font-weight: 500;
+          font-size: 0.9rem;
+          color: #94a3b8;
+          font-weight: 600;
           text-transform: capitalize;
         }
       }
@@ -60,119 +95,145 @@
     .toolbar-actions {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 1rem;
+      flex-shrink: 0;
+
+      .search-box {
+        display: flex;
+        align-items: center;
+        background: #f8fafc;
+        padding: 0.6rem 1.25rem;
+        border-radius: 14px;
+        width: 280px;
+        transition: all 0.3s ease;
+        border: 1px solid #f1f5f9;
+
+        &:focus-within {
+          background: white;
+          border-color: vars.$color-primary;
+          width: 340px;
+        }
+
+        mat-icon { font-size: 20px; width: 20px; height: 20px; color: #94a3b8; margin-right: 0.75rem; }
+        input { border: none; background: transparent; outline: none; font-size: 0.9rem; font-weight: 500; width: 100%; }
+      }
 
       .notification-btn {
-        color: vars.$color-text-muted;
-        position: relative;
-        
-        &:hover { color: vars.$color-primary; background-color: vars.$color-bg-body; }
-
-        .notification-badge {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 8px;
-          height: 8px;
-          background-color: vars.$color-secondary;
-          border: 2px solid vars.$color-bg-surface;
-          border-radius: 50%;
-        }
+        color: #64748b;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        &:hover { color: vars.$color-primary; background-color: #f8fafc; }
+        .notification-badge { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; background-color: #ef4444; border: 2px solid white; border-radius: 50%; }
       }
 
-      .toolbar-divider {
-        height: 32px;
-        margin: 0 0.5rem;
-        border-color: vars.$color-border;
-      }
+      .toolbar-divider { height: 32px; margin: 0 0.5rem; border-color: #f1f5f9; }
     }
 
     .user-profile-button {
       background-color: transparent;
-      padding: 0.5rem;
-      height: 48px;
-      border-radius: 12px;
+      padding: 0.3rem 0.5rem;
+      height: 52px;
+      border-radius: 14px;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.4rem; // Espacio reducido entre avatar e icono
       transition: all 0.2s ease;
 
       &:hover {
-        background-color: vars.$color-bg-body;
+        background-color: #f8fafc;
+        transform: translateY(-1px);
       }
 
-      .user-info-text {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        line-height: 1.2;
-
-        .user-name {
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: vars.$color-text-main;
+      .user-avatar-container {
+        position: relative;
+        .user-avatar { 
+          width: 40px; 
+          height: 40px; 
+          background: vars.$color-primary; 
+          color: white; 
+          border-radius: 12px; 
+          font-weight: 800; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          box-shadow: 0 4px 10px rgba(vars.$color-primary, 0.2);
         }
-        .user-role {
-          font-size: 0.7rem;
-          font-weight: 600;
-          color: vars.$color-text-muted;
-          text-transform: uppercase;
-          letter-spacing: 0.3px;
+        .status-indicator { 
+          position: absolute; 
+          bottom: -1px; 
+          right: -1px; 
+          width: 11px; 
+          height: 11px; 
+          background: #10b981; 
+          border: 2px solid white; 
+          border-radius: 50%; 
         }
-      }
-
-      .user-avatar {
-        width: 36px;
-        height: 36px;
-        background-color: vars.$color-primary;
-        color: #ffffff;
-        border-radius: 10px;
-        font-weight: 700;
-        font-size: 0.8rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px rgba(0, 51, 102, 0.15);
       }
 
       .expand-icon {
-        color: vars.$color-text-muted;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+        color: #94a3b8;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
         margin: 0;
       }
     }
   }
 
   .content-body {
-    padding: 3rem 2rem;
-    max-width: 1200px;
+    padding: 2.5rem;
+    max-width: 1600px;
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
+    flex: 1;
   }
 }
 
-.user-menu-panel {
-  border-radius: 12px !important;
-  border: 1px solid vars.$color-border !important;
-  box-shadow: vars.$shadow-md !important;
-  margin-top: 10px !important;
+// --- USER MENU PANEL ---
+::ng-deep .user-menu-panel {
+  width: 280px !important;
+  max-width: 280px !important;
+  min-width: 280px !important;
+  border-radius: 20px !important;
+  margin-top: 12px !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+  overflow: hidden !important;
+
+  .mat-mdc-menu-content { padding: 0 !important; }
 
   .menu-header {
-    padding: 16px 20px;
-    .menu-user-name { font-size: 0.875rem; font-weight: 700; color: vars.$color-text-main; }
-    .menu-user-email { font-size: 0.75rem; color: vars.$color-text-muted; }
-  }
-  
-  .mat-mdc-menu-item {
-    font-size: 0.8125rem;
-    color: vars.$color-text-main;
-    mat-icon { font-size: 18px; width: 18px; height: 18px; color: vars.$color-text-muted; }
-    
-    &:hover {
-      background-color: vars.$color-bg-body;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+    .menu-user-details {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      .menu-avatar { width: 48px; height: 48px; background: white; color: vars.$color-primary; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; border: 1px solid #e2e8f0; }
+      .menu-text {
+        display: flex; flex-direction: column; overflow: hidden;
+        .menu-user-name { font-size: 1rem; font-weight: 800; color: #1e293b; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .menu-user-email { font-size: 0.8rem; color: #64748b; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+      }
     }
+    .role-badge { display: inline-block; padding: 0.3rem 0.8rem; background: rgba(77, 182, 172, 0.12); color: #00796b; border-radius: 8px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
   }
+
+  .menu-items-group, .menu-footer { padding: 0.6rem; }
+  .custom-menu-item {
+    height: 48px !important; border-radius: 12px !important; margin-bottom: 2px; padding: 0 1rem !important;
+    &:hover { background-color: #f1f5f9 !important; }
+    .menu-item-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem; background: #f8fafc; transition: all 0.2s ease; mat-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; } }
+    span { font-size: 0.9rem; font-weight: 600; color: #334155; }
+    &:hover .menu-item-icon { background: white; transform: scale(1.05); }
+  }
+  .logout-menu-item { @extend .custom-menu-item; &:hover { background-color: #fff1f2 !important; span { color: #e11d48 !important; } .logout-icon mat-icon { color: #e11d48 !important; } } }
+}
+
+@media (max-width: 1024px) {
+  .dashboard-toolbar { padding: 0 1rem !important; height: 64px !important; .toolbar-title { font-size: 1rem !important; } .toolbar-date { display: none; } }
 }

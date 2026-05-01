@@ -1,172 +1,304 @@
 import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-
-interface StatCard {
-  title: string;
-  value: string | number;
-  icon: string;
-  color: string;
-}
+import { StatCardComponent } from '../components/stat-card/stat-card.component';
 
 @Component({
   selector: 'app-dashboard-home',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, StatCardComponent],
   template: `
-    <div class="minimal-welcome">
-      <div class="welcome-text">
-        <h1>Hola, {{ userName() }}</h1>
-        <p>Resumen de actividad institucional</p>
+    <div class="dashboard-header">
+      <div class="welcome-container">
+        <span class="greeting-chip">{{ greeting() }}</span>
+        <h1 class="welcome-title">Hola, {{ userName() }}</h1>
+        <p class="welcome-subtitle">Resumen de actividad institucional</p>
       </div>
-      <div class="date-chip">
-        {{ currentDate }}
+      <div class="header-actions">
+        <div class="date-display">
+          <mat-icon>calendar_today</mat-icon>
+          <span>{{ currentDate }}</span>
+        </div>
       </div>
     </div>
 
-    <div class="stats-row">
+    <div class="stats-grid">
       @for (stat of stats; track stat.title) {
-        <div class="minimal-stat-card">
-          <div class="stat-icon-wrapper" [style.color]="stat.color">
-            <mat-icon>{{ stat.icon }}</mat-icon>
-          </div>
-          <div class="stat-content">
-            <span class="label">{{ stat.title }}</span>
-            <span class="value">{{ stat.value }}</span>
-          </div>
-        </div>
+        <app-stat-card
+          [label]="stat.title"
+          [value]="stat.value"
+          [icon]="stat.icon"
+          [color]="stat.color"
+        />
       }
     </div>
 
-    <div class="grid-layout">
-      <section class="main-section">
-        <header class="section-header">
-          <h2>Protocolos recientes</h2>
-          <button mat-button color="primary">Ver todos</button>
-        </header>
-        
-        <div class="empty-state">
-          <div class="empty-icon-box">
-            <mat-icon>folder_open</mat-icon>
+    <div class="content-layout">
+      <section class="main-content">
+        <div class="section-card">
+          <header class="section-header">
+            <div class="header-title">
+              <mat-icon>history</mat-icon>
+              <h2>Protocolos recientes</h2>
+            </div>
+            <button mat-button color="primary" class="view-all-btn">
+              Ver todos <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </header>
+          
+          <div class="empty-state">
+            <div class="empty-illustration">
+              <mat-icon>folder_off</mat-icon>
+              <div class="ripple"></div>
+            </div>
+            <h3>Sin actividad reciente</h3>
+            <p>Los protocolos que gestiones aparecerán aquí de forma automática.</p>
+            <button mat-stroked-button color="primary" class="action-btn">
+              Crear nuevo protocolo
+            </button>
           </div>
-          <h3>Sin actividad reciente</h3>
-          <p>Los protocolos que gestiones aparecerán aquí.</p>
         </div>
       </section>
 
-      <section class="side-section">
-        <header class="section-header">
-          <h2>Agenda</h2>
-        </header>
-        <div class="agenda-list">
-          <p class="empty-msg">No hay eventos para hoy</p>
+      <section class="side-content">
+        <div class="section-card agenda-card">
+          <header class="section-header">
+            <div class="header-title">
+              <mat-icon>event</mat-icon>
+              <h2>Agenda</h2>
+            </div>
+          </header>
+          <div class="agenda-content">
+            <div class="empty-agenda">
+              <p>No hay eventos para hoy</p>
+              <span>Mantente al día con tus revisiones</span>
+            </div>
+          </div>
         </div>
       </section>
     </div>
   `,
   styles: [`
-    .minimal-welcome {
+    :host {
+      display: block;
+      padding-bottom: 2rem;
+    }
+
+    .dashboard-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 3rem;
+      align-items: flex-start;
+      margin-bottom: 2.5rem;
 
-      h1 { margin: 0; font-size: 2rem; font-weight: 700; color: #0f172a; letter-spacing: -1px; }
-      p { margin: 0.25rem 0 0; color: #94a3b8; font-weight: 500; }
+      .greeting-chip {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: rgba(77, 182, 172, 0.1);
+        color: #00897B;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.75rem;
+      }
+
+      .welcome-title {
+        margin: 0;
+        font-size: 2.25rem;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -1px;
+        line-height: 1.2;
+      }
+
+      .welcome-subtitle {
+        margin: 0.5rem 0 0;
+        color: #64748b;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
     }
 
-    .date-chip {
-      padding: 0.5rem 1rem;
-      background-color: #f1f5f9;
-      border-radius: 100px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 2rem;
-      margin-bottom: 4rem;
-    }
-
-    .minimal-stat-card {
+    .date-display {
       display: flex;
       align-items: center;
-      gap: 1.25rem;
-      padding: 1rem 0;
+      gap: 0.75rem;
+      padding: 0.75rem 1.25rem;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #f1f5f9;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 
-      .stat-icon-wrapper {
-        width: 44px;
-        height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #ffffff;
-        border: 1px solid #f1f5f9;
-        border-radius: 12px;
-        mat-icon { font-size: 22px; width: 22px; height: 22px; }
-      }
-
-      .stat-content {
-        display: flex;
-        flex-direction: column;
-        .label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #94a3b8;
       }
     }
 
-    .grid-layout {
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .content-layout {
       display: grid;
       grid-template-columns: 2fr 1fr;
-      gap: 3rem;
+      gap: 2rem;
+    }
+
+    .section-card {
+      background: white;
+      border-radius: 24px;
+      padding: 1.75rem;
+      border: 1px solid #f1f5f9;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.03);
+      height: 100%;
     }
 
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5rem;
-      h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+      margin-bottom: 2rem;
+
+      .header-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        
+        mat-icon {
+          color: #4DB6AC;
+          font-size: 22px;
+          width: 22px;
+          height: 22px;
+        }
+
+        h2 {
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+          letter-spacing: -0.3px;
+        }
+      }
+
+      .view-all-btn {
+        font-weight: 600;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
     }
 
     .empty-state {
-      padding: 5rem 2rem;
-      background-color: #ffffff;
-      border: 1px solid #f1f5f9;
-      border-radius: 20px;
+      padding: 4rem 2rem;
       text-align: center;
 
-      .empty-icon-box {
-        width: 60px;
-        height: 60px;
-        background-color: #f8fafc;
+      .empty-illustration {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        background: #f8fafc;
         border-radius: 50%;
-        display: inline-flex;
+        display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 1.5rem;
-        mat-icon { color: #cbd5e1; font-size: 28px; width: 28px; height: 28px; }
+        margin: 0 auto 1.5rem;
+
+        mat-icon {
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+          color: #cbd5e1;
+          z-index: 2;
+        }
+
+        .ripple {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border: 1px solid #e2e8f0;
+          border-radius: 50%;
+          animation: ripple 3s infinite;
+        }
       }
 
-      h3 { margin: 0; font-size: 1rem; font-weight: 600; color: #1e293b; }
-      p { margin: 0.5rem 0 0; font-size: 0.875rem; color: #94a3b8; }
+      h3 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      p {
+        margin: 0.75rem 0 2rem;
+        color: #94a3b8;
+        font-size: 0.95rem;
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .action-btn {
+        border-radius: 12px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+      }
     }
 
-    .agenda-list {
-      padding: 2rem;
-      border: 1px dashed #e2e8f0;
-      border-radius: 20px;
+    .agenda-card {
+      background: linear-gradient(135deg, #ffffff 0%, #fcfdfd 100%);
+    }
+
+    .empty-agenda {
+      padding: 2rem 1rem;
       text-align: center;
-      .empty-msg { font-size: 0.8rem; color: #94a3b8; font-weight: 500; margin: 0; }
+      border: 2px dashed #f1f5f9;
+      border-radius: 20px;
+
+      p {
+        margin: 0;
+        font-weight: 700;
+        color: #475569;
+        font-size: 0.9rem;
+      }
+
+      span {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: #94a3b8;
+      }
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.5); opacity: 0; }
     }
 
     @media (max-width: 1024px) {
-      .grid-layout { grid-template-columns: 1fr; }
+      .content-layout { grid-template-columns: 1fr; }
+      .dashboard-header {
+        flex-direction: column;
+        gap: 1.5rem;
+      }
     }
   `]
 })
@@ -174,9 +306,22 @@ export class DashboardHomePage {
   private readonly authFacade = inject(AuthFacade);
   
   userName = computed(() => this.authFacade.currentUser()?.nombre?.split(' ')[0] || 'Usuario');
-  currentDate = new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(new Date());
+  
+  currentDate = new Intl.DateTimeFormat('es-ES', { 
+    weekday: 'long', 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  }).format(new Date());
 
-  stats: StatCard[] = [
+  greeting = computed(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días';
+    if (hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  });
+
+  stats = [
     { title: 'Activos', value: 12, icon: 'bolt', color: '#2563eb' },
     { title: 'En Revisión', value: 5, icon: 'visibility', color: '#f59e0b' },
     { title: 'Finalizados', value: 124, icon: 'done_all', color: '#10b981' },

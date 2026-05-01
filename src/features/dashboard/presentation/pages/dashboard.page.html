@@ -9,34 +9,40 @@
   <mat-sidenav-content class="dashboard-content">
     <mat-toolbar class="dashboard-toolbar">
       <div class="toolbar-left">
-        <button mat-icon-button (click)="sidenav.toggle()" class="menu-toggle-btn">
+        <button mat-icon-button (click)="sidenav.toggle()" class="menu-toggle-btn" aria-label="Toggle sidenav">
           <mat-icon>menu_open</mat-icon>
         </button>
         <div class="header-breadcrumb">
           <span class="toolbar-title">Panel de Gestión</span>
-          <span class="toolbar-date">{{ currentDate() | date:'fullDate':'':'es' }}</span>
+          <div class="breadcrumb-separator"></div>
+          <span class="toolbar-date">{{ currentDate() | date:'EEEE, d MMMM':'':'es' }}</span>
         </div>
       </div>
       
       <span class="spacer"></span>
 
       <div class="toolbar-actions">
+        <!-- Search -->
+        <div class="search-box" *ngIf="!isMobile">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Buscar protocolos...">
+        </div>
+
         <!-- Notifications -->
-        <button mat-icon-button class="notification-btn">
-          <mat-icon>notifications_none</mat-icon>
+        <button mat-icon-button class="notification-btn" aria-label="Notificaciones">
+          <mat-icon>notifications</mat-icon>
           <span class="notification-badge"></span>
         </button>
 
         <mat-divider vertical class="toolbar-divider"></mat-divider>
 
-        <!-- User Profile Menu -->
+        <!-- User Profile Menu (CLEANER VERSION: Text removed for better distribution) -->
         <button mat-button [matMenuTriggerFor]="userMenu" class="user-profile-button">
-          <div class="user-info-text" *ngIf="!isMobile">
-            <span class="user-name">{{ userName() }}</span>
-            <span class="user-role">{{ userRole() }}</span>
-          </div>
-          <div class="user-avatar">
-            {{ userInitials() }}
+          <div class="user-avatar-container">
+            <div class="user-avatar">
+              {{ userInitials() }}
+            </div>
+            <div class="status-indicator"></div>
           </div>
           <mat-icon class="expand-icon">expand_more</mat-icon>
         </button>
@@ -44,23 +50,43 @@
 
       <mat-menu #userMenu="matMenu" xPosition="before" class="user-menu-panel">
         <div class="menu-header">
-          <span class="menu-user-name">{{ userName() }}</span>
-          <span class="menu-user-email">{{ userEmail() }}</span>
+          <div class="menu-user-details">
+            <div class="menu-avatar">{{ userInitials() }}</div>
+            <div class="menu-text">
+              <span class="menu-user-name">{{ userName() }}</span>
+              <span class="menu-user-email">{{ userEmail() }}</span>
+            </div>
+          </div>
+          <div class="role-badge">{{ userRole() }}</div>
         </div>
         
-        <button mat-menu-item>
-          <mat-icon>person</mat-icon>
-          <span>Mi Perfil</span>
-        </button>
-        <button mat-menu-item>
-          <mat-icon>settings</mat-icon>
-          <span>Configuración</span>
-        </button>
         <mat-divider></mat-divider>
-        <button mat-menu-item (click)="onLogout()">
-          <mat-icon color="warn">logout</mat-icon>
-          <span>Cerrar Sesión</span>
-        </button>
+
+        <div class="menu-items-group">
+          <button mat-menu-item class="custom-menu-item">
+            <div class="menu-item-icon profile-icon">
+              <mat-icon>person_outline</mat-icon>
+            </div>
+            <span>Mi Perfil</span>
+          </button>
+          <button mat-menu-item class="custom-menu-item">
+            <div class="menu-item-icon settings-icon">
+              <mat-icon>settings_suggest</mat-icon>
+            </div>
+            <span>Configuración</span>
+          </button>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="menu-footer">
+          <button mat-menu-item (click)="onLogout()" class="logout-menu-item">
+            <div class="menu-item-icon logout-icon">
+              <mat-icon>logout</mat-icon>
+            </div>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
       </mat-menu>
     </mat-toolbar>
 
