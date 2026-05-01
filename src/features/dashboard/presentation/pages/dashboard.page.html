@@ -2,28 +2,7 @@
   
   <!-- SIDEBAR -->
   <mat-sidenav #sidenav [mode]="isMobile ? 'over' : 'side'" [opened]="!isMobile" class="dashboard-sidenav">
-    <div class="sidenav-header">
-      <mat-icon class="sidenav-logo-icon">medical_services</mat-icon>
-      <h2>CEISH Espoch</h2>
-      <p>Comité de Ética</p>
-    </div>
-
-    <div class="nav-section-title">Menu Principal</div>
-    <mat-nav-list>
-      @for (item of menuItems; track item.path) {
-        <a mat-list-item [routerLink]="item.path" routerLinkActive="active-link" (click)="onNavClick()">
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          <div matListItemTitle>{{ item.label }}</div>
-        </a>
-      }
-    </mat-nav-list>
-
-    <div class="sidenav-footer">
-      <button mat-button class="logout-button" (click)="onLogout()">
-        <mat-icon>logout</mat-icon>
-        <span>Cerrar Sesión</span>
-      </button>
-    </div>
+    <app-sidebar [isMobile]="isMobile" (navClick)="onNavClick()"></app-sidebar>
   </mat-sidenav>
 
   <!-- MAIN CONTENT -->

@@ -1,21 +1,14 @@
 import { Component, computed, inject, ViewChild, signal, HostListener, OnInit } from '@angular/core';
-import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-
-interface MenuItem {
-  label: string;
-  icon: string;
-  path: string;
-  roles?: string[];
-}
+import { SidebarComponent } from '../components/sidebar/sidebar.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -23,15 +16,13 @@ interface MenuItem {
   imports: [
     CommonModule,
     RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
     MatSidenavModule,
     MatToolbarModule,
-    MatListModule,
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
-    MatDividerModule
+    MatDividerModule,
+    SidebarComponent
   ],
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss']
@@ -61,14 +52,6 @@ export class DashboardPage implements OnInit {
       .join('')
       .toUpperCase();
   });
-
-  // Navigation Items
-  menuItems: MenuItem[] = [
-    { label: 'Dashboard', icon: 'dashboard', path: '/dashboard/home' },
-    { label: 'Usuarios', icon: 'group', path: '/dashboard/admin/users', roles: ['ADMIN'] },
-    { label: 'Protocolos', icon: 'description', path: '/dashboard/protocols' },
-    { label: 'Evaluaciones', icon: 'gavel', path: '/dashboard/evaluations' },
-  ];
 
   @HostListener('window:resize')
   onResize() {

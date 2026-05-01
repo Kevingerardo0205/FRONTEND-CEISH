@@ -1,0 +1,35 @@
+<div class="sidebar-wrapper">
+  <div class="sidenav-header">
+    <div class="logo-container">
+      <mat-icon class="sidenav-logo-icon">medical_services</mat-icon>
+      <div class="logo-text">
+        <h2>CEISH Espoch</h2>
+        <p>Comité de Ética</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-section-title">Director del menú</div>
+  
+  <mat-nav-list class="menu-list">
+    @for (item of menuItems; track item.path) {
+      <a mat-list-item 
+         [routerLink]="item.path" 
+         routerLinkActive="active-link" 
+         (click)="onNavClick()"
+         class="menu-item">
+        <mat-icon matListItemIcon class="menu-icon">{{ item.icon }}</mat-icon>
+        <span matListItemTitle class="menu-label">{{ item.label }}</span>
+      </a>
+    }
+  </mat-nav-list>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="sidenav-footer">
+    <button mat-button class="logout-button" (click)="onLogout()">
+      <mat-icon>logout</mat-icon>
+      <span>Cerrar Sesión</span>
+    </button>
+  </div>
+</div>

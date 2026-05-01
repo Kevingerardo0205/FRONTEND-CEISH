@@ -1,0 +1,131 @@
+@use 'variables' as vars;
+
+.sidebar-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: vars.$color-bg-surface;
+}
+
+.sidenav-header {
+  padding: 2.5rem 1.5rem 2rem;
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .sidenav-logo-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: vars.$color-primary;
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+
+      h2 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 800;
+        color: vars.$color-primary;
+        letter-spacing: -0.5px;
+        line-height: 1.2;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.65rem;
+        color: vars.$color-text-muted;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+}
+
+.nav-section-title {
+  padding: 1.5rem 1.5rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: vars.$color-text-muted;
+  letter-spacing: 1px;
+}
+
+.menu-list {
+  padding: 0 0.75rem;
+  flex: 0;
+
+  .menu-item {
+    height: 48px;
+    margin: 4px 0;
+    border-radius: 12px;
+    color: vars.$color-text-muted;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: vars.$color-bg-body;
+      color: vars.$color-primary;
+    }
+
+    &.active-link {
+      background-color: rgba(vars.$color-primary, 0.08);
+      color: vars.$color-primary;
+      font-weight: 700;
+
+      .menu-icon {
+        color: vars.$color-primary;
+      }
+      
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 12px;
+        bottom: 12px;
+        width: 4px;
+        background-color: vars.$color-primary;
+        border-radius: 0 4px 4px 0;
+      }
+    }
+
+    .menu-icon {
+      color: vars.$color-text-muted;
+      margin-right: 12px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .menu-label {
+      font-size: 0.9rem;
+      letter-spacing: -0.2px;
+    }
+  }
+}
+
+.sidebar-spacer {
+  flex: 1;
+}
+
+.sidenav-footer {
+  padding: 1.5rem;
+  border-top: 1px solid vars.$color-border;
+  
+  .logout-button {
+    width: 100%;
+    justify-content: flex-start;
+    height: 44px;
+    border-radius: 12px;
+    color: vars.$color-text-muted;
+    font-size: 0.85rem;
+    font-weight: 600;
+    
+    mat-icon { margin-right: 12px; font-size: 18px; width: 18px; height: 18px; }
+    &:hover { color: vars.$color-secondary; background-color: rgba(vars.$color-secondary, 0.05); }
+  }
+}
