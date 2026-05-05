@@ -4,9 +4,10 @@ export interface User {
   id?: string;
   nombre: string;
   email: string;
-  rol: string; // Changed to string for flexibility from backend
+  rol: string; 
   perfil?: string;
   activo: boolean;
+  emailVerificado: boolean;
   fechaCreacion?: Date;
   ultimoAcceso?: Date;
 }

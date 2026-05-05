@@ -2,7 +2,11 @@ export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
-    PROFILE: '/auth/profile',
+    PROFILE: '/auth/me',
+    VERIFY_OTP: '/auth/confirm-email',
+    RESEND_OTP: '/auth/resend-confirmation',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
   },
   PROTOCOLS: {
     BASE: '/protocols',

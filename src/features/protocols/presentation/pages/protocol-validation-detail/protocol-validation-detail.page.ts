@@ -29,7 +29,7 @@ import { ProtocolType } from '@domain/enums/protocol-type.enum';
   template: `
     <div class="detail-container">
       <header class="page-header">
-        <button mat-icon-button routerLink="/dashboard/protocols/validate">
+        <button mat-icon-button routerLink="/dashboard/protocols/validation/list">
           <mat-icon>arrow_back</mat-icon>
         </button>
         <div class="title-area">
@@ -219,14 +219,14 @@ export class ProtocolValidationDetailPage implements OnInit {
   onApprove() {
     this.validateUseCase.execute(this.protocolId, true).subscribe(() => {
       alert('Protocolo Validado con éxito. Código institucional generado.');
-      this.router.navigate(['/dashboard/protocols/validate']);
+      this.router.navigate(['/dashboard/protocols/validation/list']);
     });
   }
 
   onObserve() {
     this.validateUseCase.execute(this.protocolId, false, this.observations).subscribe(() => {
       alert('Observaciones enviadas al investigador.');
-      this.router.navigate(['/dashboard/protocols/validate']);
+      this.router.navigate(['/dashboard/protocols/validation/list']);
     });
   }
 }

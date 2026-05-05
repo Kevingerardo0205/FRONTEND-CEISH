@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
@@ -9,6 +9,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { LoginUseCase } from '../../use-cases';
+
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { OtpVerificationDialogComponent } from '../components/otp-verification/otp-verification-dialog.component';
 
 @Component({
   selector: 'app-login-page',
@@ -21,7 +24,9 @@ import { LoginUseCase } from '../../use-cases';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatDialogModule,
+    RouterLink
   ],
   template: `
     <div class="login-container">
@@ -36,7 +41,6 @@ import { LoginUseCase } from '../../use-cases';
 
         <mat-card-content>
           <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-            
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email Institucional</mat-label>
               <input matInput type="email" formControlName="email" placeholder="usuario@espoch.edu.ec">
@@ -64,6 +68,11 @@ import { LoginUseCase } from '../../use-cases';
               <span *ngIf="!isLoading">{{ isLocked ? 'Cuenta Bloqueada' : 'Iniciar Sesión' }}</span>
               <mat-spinner *ngIf="isLoading" diameter="24" class="spinner-inline"></mat-spinner>
             </button>
+
+            <div class="register-link mt-4 text-center">
+              <span class="text-muted small">¿Aún no tienes cuenta? </span>
+              <a routerLink="/auth/register" class="fw-bold text-primary small text-decoration-none">regístrate</a>
+            </div>
           </form>
         </mat-card-content>
 
@@ -72,7 +81,7 @@ import { LoginUseCase } from '../../use-cases';
           <a mat-button color="accent" href="#" class="forgot-btn">¿Olvidaste tu contraseña?</a>
         </mat-card-footer>
       </mat-card>
-      
+
       <div class="login-background-text">
         <span>ESPOCH</span>
         <span>CEISH</span>
@@ -92,7 +101,7 @@ import { LoginUseCase } from '../../use-cases';
       position: relative;
       overflow: hidden;
     }
-    
+
     .login-card {
       width: 100%;
       max-width: 440px;
@@ -101,18 +110,18 @@ import { LoginUseCase } from '../../use-cases';
       z-index: 10;
       border: 1px solid rgba(255,255,255,0.1);
     }
-    
+
     .login-header {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
       margin-bottom: 2.5rem;
-      
+
       mat-card-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px; color: #1e293b; }
       mat-card-subtitle { margin-top: 0.5rem; color: #64748b; font-size: 1rem; }
     }
-    
+
     .login-logo-container {
       width: 64px;
       height: 64px;
@@ -122,13 +131,13 @@ import { LoginUseCase } from '../../use-cases';
       align-items: center;
       justify-content: center;
       margin-bottom: 1.25rem;
-      
+
       .login-icon { font-size: 32px; width: 32px; height: 32px; color: #2563eb; }
     }
-    
+
     .login-form { display: flex; flex-direction: column; gap: 0.75rem; }
     .full-width { width: 100%; }
-    
+
     .submit-btn {
       height: 52px;
       font-size: 1.1rem;
@@ -136,9 +145,9 @@ import { LoginUseCase } from '../../use-cases';
       margin-top: 1.5rem;
       border-radius: 12px;
     }
-    
+
     .spinner-inline { display: inline-block; }
-    
+
     .error-message {
       display: flex;
       align-items: center;
@@ -151,15 +160,19 @@ import { LoginUseCase } from '../../use-cases';
       font-size: 0.9rem;
       border: 1px solid #fee2e2;
     }
-    
+
     .login-footer {
       display: flex;
       flex-direction: column;
       align-items: center;
       padding-top: 2rem;
-      
+
       .attempts-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem; }
       .forgot-btn { font-weight: 500; }
+    }
+
+    .register-link {
+      a { transition: all 0.2s ease; &:hover { color: #1d4ed8 !important; } }
     }
 
     .login-background-text {
@@ -181,6 +194,7 @@ export class LoginPage {
   private readonly fb = inject(FormBuilder);
   private readonly loginUseCase = inject(LoginUseCase);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
   loginForm: FormGroup;
   isLoading = false;
@@ -202,12 +216,29 @@ export class LoginPage {
       this.errorMessage = '';
 
       this.loginUseCase.execute(this.loginForm.value).subscribe({
-        next: () => {
+        next: (response) => {
           this.isLoading = false;
-          this.router.navigate(['/dashboard']);
+          
+          // Redirección basada en roles
+          const user = response.user;
+          const userRole = user?.rol?.toUpperCase();
+
+          if (userRole === 'INVESTIGADOR') {
+            this.router.navigate(['/investigador']);
+          } else {
+            this.router.navigate(['/dashboard']);
+          }
         },
         error: (err: any) => {
           this.isLoading = false;
+          
+          // Detectar si el error es por falta de verificación de correo
+          const errorMsg = err.message || '';
+          if (errorMsg.includes('verificar') || errorMsg.includes('verify') || err.status === 403) {
+            this.openOtpDialog(this.loginForm.value.email);
+            return;
+          }
+
           this.attempts++;
           this.errorMessage = err.message || 'Credenciales incorrectas';
 
@@ -218,5 +249,20 @@ export class LoginPage {
         }
       });
     }
+  }
+
+  private openOtpDialog(email: string): void {
+    const dialogRef = this.dialog.open(OtpVerificationDialogComponent, {
+      width: '400px',
+      disableClose: true,
+      data: { email }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Si se verificó con éxito, intentamos el login de nuevo automáticamente
+        this.onSubmit();
+      }
+    });
   }
 }

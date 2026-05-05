@@ -7,6 +7,8 @@ import { ApiClientService } from '@infrastructure/api/api-client.service';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { User, UserRole, UserDTO, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
 
+import { RegisterInvestigadorRequest } from '@features/auth/domain/entities/register.request';
+
 @Injectable({ providedIn: 'root' })
 export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPort {
   
@@ -14,38 +16,46 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
     super(apiClient);
   }
 
+  registerInvestigador(data: RegisterInvestigadorRequest): Observable<any> {
+    return this.post<any>(ENDPOINTS.AUTH.REGISTER, data);
+  }
+
+  verifyOTP(email: string, code: string): Observable<any> {
+    return this.post<any>(ENDPOINTS.AUTH.VERIFY_OTP, { email, code });
+  }
+
   private mapBackendUser(data: any): User {
-    const roles = data.roles || data.Usuario_roles || [];
+    const rolesArray = data.roles || [];
     let roleName = 'INVESTIGADOR';
 
-    if (Array.isArray(roles) && roles.length > 0) {
-      roleName = roles[0].nombre || roles[0];
-    } else if (data.rol) {
-      roleName = data.rol;
+    if (Array.isArray(rolesArray) && rolesArray.length > 0) {
+      // Priorizar el primer rol del array
+      roleName = typeof rolesArray[0] === 'string' ? rolesArray[0] : (rolesArray[0].nombre || rolesArray[0].name || 'INVESTIGADOR');
     }
 
     return {
       id: data.id || data.Usuario_id,
-      email: data.email || data.email_institucional || data.Usuario_email_institucional,
-      nombre: data.nombre || data.full_name || 'Usuario CEISH',
+      email: data.institutionalEmail || data.email || data.email_institucional || '',
+      nombre: data.fullName || data.nombre || data.nombres_completos || 'Usuario CEISH',
       rol: roleName.toUpperCase() as UserRole,
-      activo: data.activo !== undefined ? data.activo : true
+      activo: data.isActive !== undefined ? data.isActive : (data.activo !== undefined ? data.activo : true),
+      emailVerificado: data.isEmailVerified !== undefined ? data.isEmailVerified : (data.email_verificado || false)
     };
   }
 
   login(credentials: LoginCredentials): Observable<AuthResponse> {
     const loginPayload = {
       email: credentials.email,
-      username: credentials.email,
       password: credentials.password
     };
 
     return this.post<any>(ENDPOINTS.AUTH.LOGIN, loginPayload).pipe(
       map(response => {
+        // El backend ahora envía { access_token, user }
         const payload = response.data || response; 
         return {
-          accessToken: payload.accessToken || payload.token || payload.access_token,
-          refreshToken: payload.refreshToken || payload.refresh_token,
+          accessToken: payload.access_token || payload.accessToken || payload.token,
+          refreshToken: payload.refresh_token || payload.refreshToken,
           user: payload.user ? this.mapBackendUser(payload.user) : undefined
         };
       }),
@@ -72,7 +82,7 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
 
   getUsers(): Observable<User[]> {
     const mockUsers: User[] = [
-      { id: '1', nombre: 'Admin Sistema', email: 'admin@espoch.edu.ec', rol: 'ADMIN', activo: true }
+      { id: '1', nombre: 'Admin Sistema', email: 'admin@espoch.edu.ec', rol: 'ADMIN', activo: true, emailVerificado: true }
     ];
     return of(mockUsers).pipe(delay(300));
   }

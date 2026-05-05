@@ -80,9 +80,25 @@ export class AuthFacade {
   }
 
   private loadUserFromStorage(): void {
+    const token = this.tokenService.getToken();
     const userStr = localStorage.getItem('user');
+
     if (userStr) {
       this.currentUserSignal.set(JSON.parse(userStr));
+    }
+
+    // Si hay token, validar y refrescar datos del usuario desde el servidor
+    if (token) {
+      this.authRepository.getUserById('me').subscribe({
+        next: (user) => {
+          this.currentUserSignal.set(user);
+          localStorage.setItem('user', JSON.stringify(user));
+        },
+        error: () => {
+          // Si el token es inválido o expiró, cerrar sesión
+          this.logout();
+        }
+      });
     }
   }
 

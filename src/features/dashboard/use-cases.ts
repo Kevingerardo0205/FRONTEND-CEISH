@@ -20,9 +20,33 @@ export class RegisterUserAdminUseCase {
 }
 
 @Injectable({ providedIn: 'root' })
+export class UpdateUserAdminUseCase {
+  private repository = inject(IUserAdminRepositoryPort);
+  execute(id: string, user: Partial<UserAdmin>): Observable<UserAdmin> {
+    return this.repository.update(id, user);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
 export class DeleteUserAdminUseCase {
   private repository = inject(IUserAdminRepositoryPort);
   execute(id: string): Observable<void> {
     return this.repository.delete(id);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class GetRolesUseCase {
+  private repository = inject(IUserAdminRepositoryPort);
+  execute(): Observable<any[]> {
+    return this.repository.getRoles();
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class UpdateUserRolesUseCase {
+  private repository = inject(IUserAdminRepositoryPort);
+  execute(id: string, roles: string[]): Observable<void> {
+    return this.repository.updateRoles(id, roles);
   }
 }

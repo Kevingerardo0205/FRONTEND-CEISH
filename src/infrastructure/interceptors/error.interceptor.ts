@@ -20,6 +20,11 @@ export class ErrorInterceptor implements HttpInterceptor {
         }
         
         if (error instanceof HttpErrorResponse && error.status === 403) {
+          const userEmail = error.error?.email || '';
+          if (error.error?.message?.includes('verificar') || error.error?.message?.includes('OTP')) {
+            this.router.navigate(['/auth/confirm-email'], { queryParams: { email: userEmail } });
+            return throwError(() => new Error('Su cuenta no ha sido verificada. Ingrese el código enviado a su correo.'));
+          }
           this.router.navigate(['/dashboard']);
           return throwError(() => new Error('No tienes permisos para acceder a este recurso.'));
         }

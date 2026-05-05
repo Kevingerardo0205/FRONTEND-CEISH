@@ -1,0 +1,470 @@
+<div class="dashboard-register-layout">
+  <!-- HEADER TOOLBAR -->
+  <mat-toolbar class="register-toolbar shadow-sm">
+    <div class="toolbar-content">
+      <div class="brand-section">
+        <div class="logo-box">
+          <mat-icon>verified_user</mat-icon>
+        </div>
+        <div class="brand-text">
+          <span class="main-title">CEISH - ESPOCH</span>
+          <span class="sub-title">Gestión de Investigaciones Éticas</span>
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <button mat-button color="primary" routerLink="/investigador/mis-protocolos" class="back-btn">
+        <mat-icon>arrow_back</mat-icon> VOLVER AL LISTADO
+      </button>
+    </div>
+  </mat-toolbar>
+
+  <main class="register-main-content">
+    <div class="content-header animate-fade-in">
+      <h1 class="page-title">Nuevo Protocolo Anexo 2</h1>
+      <p class="page-subtitle">Siga los pasos técnicos para registrar su proyecto de investigación ante el CEISH.</p>
+    </div>
+
+    <mat-card class="register-stepper-card shadow-soft animate-fade-in">
+      <mat-stepper [linear]="true" #stepper class="custom-stepper">
+        
+        <!-- PASO 1: DATOS GENERALES -->
+        <mat-step [stepControl]="step1Form" [editable]="true">
+          <ng-template matStepLabel>General</ng-template>
+          <div class="step-content">
+            <div class="section-info mb-5">
+              <mat-icon class="section-icon">info</mat-icon>
+              <div>
+                <h3>Información Inicial</h3>
+                <p class="text-muted small">Identifique su investigación y el alcance del estudio.</p>
+              </div>
+            </div>
+
+            <form [formGroup]="step1Form" class="row g-4">
+              <div class="col-12">
+                <label class="field-label">Título de la investigación (Población, Lugar y Período)</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="titulo" rows="3" placeholder="Ej: Frecuencia de anemia en niños de 5-10 años en la ciudad de Riobamba durante el período 2024."></textarea>
+                  <mat-hint align="end">{{step1Form.get('titulo')?.value?.length || 0}}/200</mat-hint>
+                  <mat-error *ngIf="step1Form.get('titulo')?.hasError('required')">El título es obligatorio</mat-error>
+                  <mat-error *ngIf="step1Form.get('titulo')?.hasError('minlength')">Debe tener al menos 20 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="col-md-6">
+                <label class="field-label">Tipo de investigación</label>
+                <mat-form-field appearance="outline">
+                  <mat-select formControlName="tipoEstudio" placeholder="--- SELECCIONE ---">
+                    <mat-option value="OBSERVACIONAL">Investigación Observacional</mat-option>
+                    <mat-option value="INTERVENCION">Estudio de Intervención / Ensayo Clínico</mat-option>
+                  </mat-select>
+                  <mat-error>Seleccione un tipo de estudio</mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="col-md-6">
+                <label class="field-label">Cobertura geográfica</label>
+                <mat-form-field appearance="outline">
+                  <mat-select formControlName="coberturaGeografica" placeholder="--- SELECCIONE ---">
+                    <mat-option *ngFor="let c of coberturas" [value]="c">{{c}}</mat-option>
+                  </mat-select>
+                  <mat-error>Campo requerido</mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="col-md-4">
+                <label class="field-label">Monto total (USD)</label>
+                <mat-form-field appearance="outline">
+                  <span matPrefix>$&nbsp;</span>
+                  <input matInput type="number" formControlName="montoTotal" placeholder="0.00" (keypress)="onKeyPressNumber($event)">
+                  <mat-error>Ingrese un monto válido</mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="col-md-4">
+                <label class="field-label">Fuente de financiamiento</label>
+                <mat-form-field appearance="outline">
+                  <input matInput formControlName="fuenteFinanciamiento" placeholder="Ej: ESPOCH o Autofinanciado">
+                  <mat-error>Mínimo 3 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="col-md-4">
+                <label class="field-label">Duración estimada (meses)</label>
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" formControlName="duracionMeses" placeholder="Ej: 12" (keypress)="onKeyPressNumber($event)">
+                  <mat-error>Rango: 1 - 120 meses</mat-error>
+                </mat-form-field>
+              </div>
+            </form>
+
+            <div class="step-actions mt-5 d-flex justify-content-end">
+              <button mat-flat-button color="primary" matStepperNext class="next-btn">
+                SIGUIENTE <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-step>
+
+        <!-- PASO 2: PATROCINADOR Y EQUIPO -->
+        <mat-step [stepControl]="step2Form">
+          <ng-template matStepLabel>Equipo</ng-template>
+          <div class="step-content">
+            <div class="section-info mb-5">
+              <mat-icon class="section-icon">groups</mat-icon>
+              <div>
+                <h3>Patrocinio y Talento Humano</h3>
+                <p class="text-muted small">Regístrese al responsable financiero y al equipo científico.</p>
+              </div>
+            </div>
+
+            <form [formGroup]="step2Form">
+              <!-- Patrocinador -->
+              <div class="sponsor-card-inner p-4 mb-5 border shadow-sm">
+                <h4 class="fw-bold mb-4 small text-uppercase text-primary d-flex align-items-center">
+                  <mat-icon class="me-2" style="font-size: 20px;">business</mat-icon> Datos del Patrocinador
+                </h4>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="field-label">Nombre del patrocinador</label>
+                    <mat-form-field appearance="outline">
+                      <input matInput formControlName="nombrePatrocinador" placeholder="Nombre completo o Institución">
+                      <mat-error>Requerido</mat-error>
+                    </mat-form-field>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="field-label">Cédula / RUC</label>
+                    <mat-form-field appearance="outline">
+                      <input matInput formControlName="identificacionPatrocinador" maxlength="13" placeholder="Ej: 0600000000" (keypress)="onKeyPressNumber($event)">
+                      <mat-error>ID inválido (10 o 13 dígitos)</mat-error>
+                    </mat-form-field>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="field-label">Correo institucional</label>
+                    <mat-form-field appearance="outline">
+                      <input matInput formControlName="correoPatrocinador" type="email" placeholder="correo@ejemplo.com">
+                      <mat-error>Email inválido</mat-error>
+                    </mat-form-field>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="field-label">Teléfono institucional</label>
+                    <mat-form-field appearance="outline">
+                      <input matInput formControlName="telefonoPatrocinador" maxlength="10" placeholder="Ej: 032222222" (keypress)="onKeyPressNumber($event)">
+                      <mat-error>Formato no válido</mat-error>
+                    </mat-form-field>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="field-label">Dirección</label>
+                    <mat-form-field appearance="outline">
+                      <input matInput formControlName="direccionPatrocinador" placeholder="Calle principal y secundaria">
+                      <mat-error>Mínimo 5 caracteres</mat-error>
+                    </mat-form-field>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Equipo Investigador -->
+              <div class="team-section-inner">
+                <div class="section-header-inline mb-4">
+                  <h4><mat-icon>person_add</mat-icon> Equipo Investigador</h4>
+                  <button type="button" mat-stroked-button color="primary" class="btn-add-member" (click)="addMiembro()">
+                    <mat-icon class="me-1">add</mat-icon> AÑADIR MIEMBRO
+                  </button>
+                </div>
+
+                <div formArrayName="equipoInvestigador">
+                  <div *ngFor="let item of equipoInvestigador.controls; let i=index" [formGroupName]="i" 
+                       class="team-member-card animate-fade-in shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="card-badge">Integrante #{{i + 1}}</span>
+                      <div class="delete-btn-wrapper" *ngIf="i > 0">
+                        <button type="button" mat-icon-button color="warn" (click)="removeMiembro(i)" matTooltip="Eliminar integrante">
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <label class="field-label">Función</label>
+                        <mat-form-field appearance="outline">
+                          <mat-select formControlName="funcion">
+                            <mat-option *ngFor="let f of funcionesEquipo" [value]="f">{{f}}</mat-option>
+                          </mat-select>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-md-5">
+                        <label class="field-label">Nombre Completo</label>
+                        <mat-form-field appearance="outline">
+                          <input matInput formControlName="nombreCompleto" placeholder="Apellidos y Nombres">
+                          <mat-error>Requerido (min 5 carac.)</mat-error>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="field-label">Cédula</label>
+                        <mat-form-field appearance="outline">
+                          <input matInput formControlName="cedula" maxlength="10" placeholder="10 dígitos" (keypress)="onKeyPressNumber($event)">
+                          <mat-error>Cédula inválida</mat-error>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="field-label">Formación Académica</label>
+                        <mat-form-field appearance="outline">
+                          <input matInput formControlName="formacion" placeholder="Ej: Doctorado, Máster en Ciencias...">
+                          <mat-error>Campo requerido</mat-error>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="field-label">Entidad / Institución</label>
+                        <mat-form-field appearance="outline">
+                          <input matInput formControlName="entidad" placeholder="Ej: ESPOCH">
+                          <mat-error>Requerido</mat-error>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="field-label">Correo Electrónico</label>
+                        <mat-form-field appearance="outline">
+                          <input matInput formControlName="correo" type="email" placeholder="usuario@espoch.edu.ec">
+                          <mat-error>Email no válido</mat-error>
+                        </mat-form-field>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="field-label">Celular</label>
+                        <mat-form-field appearance="outline">
+                          <input matInput formControlName="celular" maxlength="10" placeholder="09XXXXXXXX" (keypress)="onKeyPressNumber($event)">
+                          <mat-error>Debe tener 10 dígitos</mat-error>
+                        </mat-form-field>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+
+            <div class="step-actions mt-5 d-flex gap-2">
+              <button mat-stroked-button matStepperPrevious class="next-btn" style="border-color: #cbd5e1;">
+                <mat-icon>arrow_back</mat-icon> ATRÁS
+              </button>
+              <button mat-flat-button color="primary" matStepperNext class="next-btn">
+                SIGUIENTE <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-step>
+
+        <!-- PASO 3: DETALLES -->
+        <mat-step [stepControl]="step3Form">
+          <ng-template matStepLabel>Detalles</ng-template>
+          <div class="step-content">
+            <div class="section-info mb-5">
+              <mat-icon class="section-icon">description</mat-icon>
+              <div>
+                <h3>Cuerpo del Proyecto</h3>
+                <p class="text-muted small">Desarrolle la base teórica y objetivos del estudio.</p>
+              </div>
+            </div>
+
+            <div [formGroup]="step3Form" class="row g-4">
+              <div class="col-12">
+                <label class="field-label">Resumen estructurado (Mínimo 100 caracteres)</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="resumenEstructurado" rows="6" placeholder="Resuma la introducción, objetivos, métodos y resultados esperados."></textarea>
+                  <mat-error>Incompleto o demasiado corto</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-md-6">
+                <label class="field-label">Problema de investigación</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="problemaInvestigacion" rows="4" placeholder="Plantee el problema expresando relación entre variables."></textarea>
+                  <mat-error>Mínimo 50 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-md-6">
+                <label class="field-label">Justificación</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="justificacion" rows="4" placeholder="Razones científicas y sociales para realizar el estudio."></textarea>
+                  <mat-error>Mínimo 50 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-12">
+                <label class="field-label">Marco teórico (Estado del arte)</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="marcoTeorico" rows="6" placeholder="Antecedentes y bases científicas actuales del tema."></textarea>
+                  <mat-error>Mínimo 100 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-md-6">
+                <label class="field-label">Objetivo General</label>
+                <mat-form-field appearance="outline">
+                  <input matInput formControlName="objetivoGeneral" placeholder="Un solo verbo en infinitivo.">
+                  <mat-error>Mínimo 20 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-md-6">
+                <label class="field-label">Objetivos Específicos</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="objetivosEspecificos" rows="2" placeholder="Objetivos medibles que derivan del general."></textarea>
+                  <mat-error>Mínimo 20 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="step-actions mt-5 d-flex gap-2">
+              <button mat-stroked-button matStepperPrevious class="next-btn" style="border-color: #cbd5e1;">ATRÁS</button>
+              <button mat-flat-button color="primary" matStepperNext class="next-btn">SIGUIENTE</button>
+            </div>
+          </div>
+        </mat-step>
+
+        <!-- PASO 4: METODOLOGÍA -->
+        <mat-step [stepControl]="step4Form">
+          <ng-template matStepLabel>Metodología</ng-template>
+          <div class="step-content">
+            <div class="section-info mb-5">
+              <mat-icon class="section-icon">biotech</mat-icon>
+              <div>
+                <h3>Diseño Científico</h3>
+                <p class="text-muted small">Defina rigurosamente los métodos y procedimientos.</p>
+              </div>
+            </div>
+
+            <div [formGroup]="step4Form" class="row g-4">
+              <div class="col-md-8">
+                <label class="field-label">Diseño del estudio</label>
+                <mat-form-field appearance="outline">
+                  <input matInput formControlName="disenoEstudio" placeholder="Ej: Cohorte prospectivo, Transversal analítico...">
+                  <mat-error>Campo requerido</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-md-4">
+                <label class="field-label">Paquete Estadístico</label>
+                <mat-form-field appearance="outline">
+                  <input matInput formControlName="paqueteEstadistico" placeholder="Ej: SPSS v25, R, Stata">
+                  <mat-error>Campo requerido</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-12">
+                <label class="field-label">Población, Tamaño Muestral y Fórmula</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="descripcionPoblacion" rows="4" placeholder="Describa la población y detalle la fórmula utilizada."></textarea>
+                  <mat-error>Requerido (min 50 carac.)</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-12">
+                <label class="field-label">Criterios de Inclusión y Exclusión</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="criteriosInclusionExclusion" rows="3" placeholder="Defina quiénes participan y quiénes no."></textarea>
+                  <mat-error>Requerido</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-12">
+                <label class="field-label">Variables (Operacionalización)</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="operacionalizacionVariables" rows="4" placeholder="Variable / Definición / Indicador / Escala / Tipo"></textarea>
+                  <mat-error>Requerido</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-12">
+                <label class="field-label">Descripción detallada de procedimientos</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="procedimientosDetallados" rows="6" placeholder="Paso a paso de las actividades para cumplir objetivos."></textarea>
+                  <mat-error>Requerido</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="step-actions mt-5 d-flex gap-2">
+              <button mat-stroked-button matStepperPrevious class="next-btn" style="border-color: #cbd5e1;">ATRÁS</button>
+              <button mat-flat-button color="primary" matStepperNext class="next-btn">SIGUIENTE</button>
+            </div>
+          </div>
+        </mat-step>
+
+        <!-- PASO 5: ÉTICA -->
+        <mat-step [stepControl]="step5Form">
+          <ng-template matStepLabel>Ética</ng-template>
+          <div class="step-content">
+            <div class="section-info mb-5">
+              <mat-icon class="section-icon">policy</mat-icon>
+              <div>
+                <h3>Ética y Bibliografía</h3>
+                <p class="text-muted small">Cumplimiento bioético y referencias Vancouver.</p>
+              </div>
+            </div>
+
+            <div [formGroup]="step5Form" class="row g-4">
+              <div class="col-md-6">
+                <label class="field-label">Proceso de anonimizacion y confidencialidad</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="procesoAnonimizacion" rows="4" placeholder="Describa el resguardo de datos y codificación."></textarea>
+                  <mat-error>Mínimo 50 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-md-6">
+                <label class="field-label">Balance Riesgo-Beneficio</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="balanceRiesgoBeneficio" rows="4" placeholder="Riesgos físicos/psicológicos vs beneficios sociales."></textarea>
+                  <mat-error>Mínimo 50 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-12">
+                <label class="field-label">Resultados Esperados</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="resultadosEsperados" rows="3" placeholder="Relevancia, limitaciones y cómo superarlas."></textarea>
+                  <mat-error>Mínimo 50 caracteres</mat-error>
+                </mat-form-field>
+              </div>
+              <div class="col-12">
+                <label class="field-label">Referencias Bibliográficas (Vancouver)</label>
+                <mat-form-field appearance="outline">
+                  <textarea matInput formControlName="referenciasBibliograficas" rows="6" placeholder="Numere sus citas por orden de aparición..."></textarea>
+                  <mat-error>Obligatorio (mínimo 50 caracteres)</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="step-actions mt-5 d-flex gap-2">
+              <button mat-stroked-button matStepperPrevious class="next-btn" style="border-color: #cbd5e1;">ATRÁS</button>
+              <button mat-flat-button color="primary" matStepperNext class="next-btn">SIGUIENTE</button>
+            </div>
+          </div>
+        </mat-step>
+
+        <!-- PASO 6: ENVIAR -->
+        <mat-step>
+          <ng-template matStepLabel>Enviar</ng-template>
+          <div class="step-content p-5 text-center">
+            <div class="mb-4">
+              <mat-icon color="primary" style="font-size: 80px; width: 80px; height: 80px;">verified_user</mat-icon>
+            </div>
+            <h2 class="fw-bold mb-3">Finalizar Solicitud</h2>
+            <p class="text-muted mx-auto mb-5" style="max-width: 550px;">
+              Usted está por enviar su protocolo de investigación para la revisión del CEISH. 
+              Recuerde que no se admiten protocolos cuya ejecución ya haya iniciado.
+            </p>
+
+            <div class="legal-box p-4 rounded-4 text-start shadow-sm mb-5">
+              <h4 class="fw-bold small mb-3 text-uppercase">DECLARACIÓN JURADA</h4>
+              <mat-checkbox color="primary" #confirmCheck>
+                <span class="small-text fw-bold">DECLARO BAJO JURAMENTO QUE LA INVESTIGACIÓN NO HA INICIADO SU FASE DE CAMPO Y QUE LA INFORMACIÓN PROPORCIONADA ES VERAZ.</span>
+              </mat-checkbox>
+            </div>
+
+            <div class="step-actions d-flex gap-3 justify-content-center border-0 p-0">
+              <button mat-stroked-button matStepperPrevious style="height: 54px; padding: 0 2rem; border-color: #cbd5e1; font-weight: 700;">REVISAR DATOS</button>
+              <button mat-flat-button color="primary" class="submit-btn flex-grow-1" 
+                      [disabled]="!confirmCheck.checked || isLoading" (click)="onEnviar()">
+                <span *ngIf="!isLoading">FIRMAR Y ENVIAR PROTOCOLO</span>
+                <mat-progress-spinner *ngIf="isLoading" diameter="24" mode="indeterminate" class="mx-auto"></mat-progress-spinner>
+              </button>
+            </div>
+          </div>
+        </mat-step>
+
+      </mat-stepper>
+    </mat-card>
+
+    <footer class="register-footer mt-5 text-center py-4">
+      <p class="text-muted small m-0">&copy; 2026 Escuela Superior Politécnica de Chimborazo. Todos los derechos reservados.</p>
+    </footer>
+  </main>
+</div>

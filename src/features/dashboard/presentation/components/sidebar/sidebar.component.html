@@ -12,7 +12,7 @@
   <div class="nav-section-title">Director del menú</div>
   
   <mat-nav-list class="menu-list">
-    @for (item of menuItems; track item.path) {
+    @for (item of filteredMenuItems(); track item.path) {
       <a mat-list-item 
          [routerLink]="item.path" 
          routerLinkActive="active-link" 

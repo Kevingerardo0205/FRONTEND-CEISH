@@ -50,7 +50,7 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef class="text-right"> Gestión </th>
             <td mat-cell *matCellDef="let p" class="text-right">
-              <button mat-flat-button class="review-btn" [routerLink]="['/dashboard/protocols/validate', p.id]">
+              <button mat-flat-button class="review-btn" [routerLink]="['/dashboard/protocols/validation/detail', p.id]">
                 <mat-icon>fact_check</mat-icon>
                 Revisar
               </button>

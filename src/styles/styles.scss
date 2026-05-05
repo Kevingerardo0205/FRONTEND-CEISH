@@ -15,59 +15,79 @@ html, body {
 }
 
 body {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: v.$font-family-base;
   background-color: v.$color-bg-body;
   color: v.$color-text-main;
   line-height: 1.6;
 }
 
-// Utilidades de Layout (Opcional pero muy útil)
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
+// Utilidades Modernas
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
-.text-center { text-align: center; }
-.mt-1 { margin-top: 1rem; }
-.mb-1 { margin-bottom: 1rem; }
-.mb-2 { margin-bottom: 2rem; }
-.gap-1 { gap: 1rem; }
+.shadow-soft { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+.border-dashed { border-style: dashed !important; border-width: 2px !important; }
 
-// Encabezado principal ESPOCH
-.header-espoch {
-  background-color: v.$color-primary;
-  color: white;
-  padding: 1.5rem;
-  text-align: center;
-  box-shadow: v.$shadow-md;
+// Animaciones
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+// Botones Institucionales
+.btn-espoch {
+  background-color: v.$color-primary !important;
+  color: white !important;
+  border-radius: 8px !important;
+  padding: 0.5rem 1.5rem !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
   
-  h1 {
-    font-size: 1.8rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+  &:hover:not(:disabled) {
+    background-color: v.$color-primary-light !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);
   }
 }
 
-// Estilos para iconos de Logo
-.login-logo-container, .sidenav-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
+// Badge de Estados
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  
+  &.pending { background-color: #fef3c7; color: #92400e; }
+  &.review { background-color: #dbeafe; color: #1e40af; }
+  &.approved { background-color: #dcfce7; color: #166534; }
+  &.rejected { background-color: #fee2e2; color: #991b1b; }
 }
 
-.login-icon, .sidenav-logo-icon {
-  font-size: 80px !important;
-  width: 80px !important;
-  height: 80px !important;
-  color: #1e3c72;
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
-.sidenav-logo-icon {
-  color: white !important;
-  font-size: 60px !important;
-  width: 60px !important;
-  height: 60px !important;
+// Snackbar Personalizados
+.snackbar-success {
+  --mdc-snackbar-container-color: #16a34a;
+  --mdc-snackbar-supporting-text-color: white;
+  .mat-mdc-button { color: white !important; }
 }
+
+.snackbar-error {
+  --mdc-snackbar-container-color: #dc2626;
+  --mdc-snackbar-supporting-text-color: white;
+  .mat-mdc-button { color: white !important; }
+}
+

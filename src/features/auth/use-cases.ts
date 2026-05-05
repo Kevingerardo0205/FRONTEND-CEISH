@@ -4,6 +4,30 @@ import { User, UserDTO, AuthResponse, LoginCredentials } from '../../domain/enti
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { AuthFacade } from './facades/auth.facade';
 
+import { RegisterInvestigadorRequest } from './domain/entities/register.request';
+
+@Injectable({ providedIn: 'root' })
+export class RegisterInvestigadorUseCase {
+  constructor(private authRepository: IAuthRepositoryPort) {}
+
+  execute(data: RegisterInvestigadorRequest): Observable<any> {
+    return this.authRepository.registerInvestigador(data).pipe(
+      tap(() => this.authRepository.logAudit('INVESTIGADOR_REGISTRATION', `Registro de investigador: ${data.email}`).subscribe())
+    );
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class VerifyOtpUseCase {
+  constructor(private authRepository: IAuthRepositoryPort) {}
+
+  execute(email: string, code: string): Observable<any> {
+    return this.authRepository.verifyOTP(email, code).pipe(
+      tap(() => this.authRepository.logAudit('OTP_VERIFICATION', `Verificación de correo: ${email}`).subscribe())
+    );
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class LoginUseCase {
   constructor(
