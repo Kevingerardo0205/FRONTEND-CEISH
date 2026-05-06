@@ -38,8 +38,8 @@ import { SuggestEvaluatorsUseCase } from '../../../application/suggest-evaluator
           <h1>Dashboard de Evaluaciones</h1>
           <p>Gestión de carga y sugerencias de evaluadores</p>
         </div>
-        <div class="role-badge presidente">
-          PRESIDENTE
+        <div class="role-badge" [ngClass]="userRole().toLowerCase()">
+          {{ userRole() }}
         </div>
       </header>
 
@@ -120,9 +120,12 @@ import { SuggestEvaluatorsUseCase } from '../../../application/suggest-evaluator
   `]
 })
 export class AssignmentPage implements OnInit {
+  private authFacade = inject(AuthFacade);
   private snackBar = inject(MatSnackBar);
   private getDashboardUC = inject(GetEvaluatorsDashboardUseCase);
   private suggestUC = inject(SuggestEvaluatorsUseCase);
+
+  userRole = computed(() => this.authFacade.currentUser()?.rol || 'PRESIDENTE');
 
   displayedColumns = ['protocol', 'evaluators', 'actions'];
   

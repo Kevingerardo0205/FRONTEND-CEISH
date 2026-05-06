@@ -422,7 +422,7 @@ export class DashboardHomePage {
           ],
           quickActions: [
             { label: 'Validar Documentos', icon: 'rule', link: '/dashboard/protocols/validation/list' },
-            { label: 'Asignar Evaluadores', icon: 'people_alt', link: '/dashboard/evaluations/assignment', color: 'accent' }
+            { label: 'Confirmar Asignaciones', icon: 'people_alt', link: '/dashboard/evaluations/confirm-assignment', color: 'accent' }
           ],
           recentTitle: 'Trámites recibidos hoy',
           emptyMessage: 'No hay trámites nuevos pendientes de validación.',
@@ -445,6 +445,7 @@ export class DashboardHomePage {
         };
 
       case 'PRESIDENTA':
+      case 'PRESIDENTE':
         return {
           greeting: 'Decisiones finales y firmas de actas',
           stats: [
@@ -453,8 +454,9 @@ export class DashboardHomePage {
             { title: 'Sesiones Próximas', value: 1, icon: 'groups', color: '#2563eb' },
           ],
           quickActions: [
-            { label: 'Generar Resoluciones', icon: 'gavel', link: '/dashboard/resolutions/generator' },
-            { label: 'Ver Reportes', icon: 'insights', link: '/dashboard/reports', color: 'accent' }
+            { label: 'Asignar Evaluadores', icon: 'people_alt', link: '/dashboard/evaluations/assignment' },
+            { label: 'Generar Resoluciones', icon: 'gavel', link: '/dashboard/resolutions/generator', color: 'accent' },
+            { label: 'Ver Reportes', icon: 'insights', link: '/dashboard/reports', color: 'primary' }
           ],
           recentTitle: 'Resoluciones pendientes de firma',
           emptyMessage: 'No hay resoluciones pendientes de firma en este momento.',

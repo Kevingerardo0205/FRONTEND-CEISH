@@ -10,32 +10,32 @@ export const EVALUATION_ROUTES: Routes = [
     path: '',
     children: [
       {
-        path: 'dashboard',
+        path: 'assignment',
         component: AssignmentPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['PRESIDENTE'] }
+        data: { roles: ['PRESIDENTE', 'PRESIDENTA', 'ADMIN'] }
       },
       {
         path: 'confirm-assignment',
         component: EvaluationListPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['SECRETARIA'] }
+        data: { roles: ['SECRETARIA', 'ADMIN'] }
       },
       {
-        path: 'my-tasks',
+        path: 'list',
         component: EvaluationListPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['EVALUADOR'] }
+        data: { roles: ['EVALUADOR', 'ADMIN'] }
       },
       {
         path: 'evaluate/:id',
         component: EvaluationFormPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['EVALUADOR'] }
+        data: { roles: ['EVALUADOR', 'ADMIN'] }
       },
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'list',
         pathMatch: 'full'
       }
     ]

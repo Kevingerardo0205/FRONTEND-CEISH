@@ -45,7 +45,8 @@ export class SidebarComponent {
     
     // Secretaría y Admin
     { label: 'Validación', icon: 'fact_check', path: '/dashboard/protocols/validation/list', roles: ['SECRETARIA', 'ADMIN'] },
-    { label: 'Asignación', icon: 'assignment_ind', path: '/dashboard/evaluations/assignment', roles: ['SECRETARIA', 'ADMIN'] },
+    { label: 'Asignación', icon: 'assignment_ind', path: '/dashboard/evaluations/assignment', roles: ['PRESIDENTE', 'PRESIDENTA', 'ADMIN'] },
+    { label: 'Asignación', icon: 'assignment_ind', path: '/dashboard/evaluations/confirm-assignment', roles: ['SECRETARIA'] },
     
     // Evaluador
     { label: 'Mis Evaluaciones', icon: 'gavel', path: '/dashboard/evaluations/list', roles: ['EVALUADOR', 'ADMIN'] },
