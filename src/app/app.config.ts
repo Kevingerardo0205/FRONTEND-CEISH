@@ -12,7 +12,7 @@ import { AuthApiAdapter } from '@infrastructure/adapters/auth-api.adapter';
 import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.port';
 import { UserAdminApiAdapter } from '@infrastructure/adapters/user-admin-api.adapter';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
-import { EvaluationMockAdapter } from '@infrastructure/adapters/evaluation-mock.adapter';
+import { EvaluationApiAdapter } from '@infrastructure/adapters/evaluation-api.adapter';
 import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
 import { EvaluatorMockAdapter } from '@infrastructure/adapters/evaluator-mock.adapter';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
@@ -28,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
     { provide: IAuthRepositoryPort, useClass: AuthApiAdapter },
     { provide: IUserAdminRepositoryPort, useClass: UserAdminApiAdapter },
-    { provide: IEvaluationRepositoryPort, useClass: EvaluationMockAdapter },
+    { provide: IEvaluationRepositoryPort, useClass: EvaluationApiAdapter },
     { provide: IEvaluatorRepositoryPort, useClass: EvaluatorMockAdapter },
     { provide: IProtocolRepositoryPort, useClass: ProtocolMockAdapter }
   ]

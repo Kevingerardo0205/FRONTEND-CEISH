@@ -50,7 +50,7 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
       <div class="sticky-header shadow-soft">
         <div class="header-content container-fluid">
           <div class="d-flex align-items-center gap-3">
-            <button mat-icon-button routerLink="/dashboard/evaluations/list" class="back-btn" [disabled]="isSubmitting()">
+            <button mat-icon-button routerLink="/dashboard/evaluations/my-tasks" class="back-btn" [disabled]="isSubmitting()">
               <mat-icon>arrow_back</mat-icon>
             </button>
             <div class="protocol-meta">
@@ -64,7 +64,7 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
               Ver Documentos PI
             </mat-slide-toggle>
             <div class="v-divider"></div>
-            <button mat-stroked-button color="warn" routerLink="/dashboard/evaluations/list" [disabled]="isSubmitting()">Salir</button>
+            <button mat-stroked-button color="warn" routerLink="/dashboard/evaluations/my-tasks" [disabled]="isSubmitting()">Salir</button>
           </div>
         </div>
         <mat-progress-bar [mode]="isSubmitting() ? 'indeterminate' : 'determinate'" [value]="progressValue()"></mat-progress-bar>
@@ -294,7 +294,13 @@ export class EvaluationFormPage implements OnInit {
 
   onStepChange(event: any) { this.progressValue.set(((event.selectedIndex + 1) / 3) * 100); }
 
-  onFileUpload(files: File[]) { if (files.length > 0) this.isSigned.set(true); }
+  selectedFile: File | null = null;
+  onFileUpload(files: File[]) { 
+    if (files.length > 0) {
+      this.selectedFile = files[0];
+      this.isSigned.set(true); 
+    }
+  }
 
   canSubmit() {
     return this.formGeneral.valid && this.formEtica.valid && this.isSigned() && this.finalVerdict();
@@ -304,26 +310,43 @@ export class EvaluationFormPage implements OnInit {
     if (!this.canSubmit()) return;
     this.isSubmitting.set(true);
 
-    const evaluation: Partial<EvaluationEntity> = {
-      protocolId: this.protocolInfo().id,
-      verdict: this.finalVerdict()!,
-      technicalObservations: this.obsTecnica,
-      ethicalObservations: this.obsEtica,
-      evaluationDate: new Date()
+    const formData = new FormData();
+    
+    // 1. Recopilar datos según estructura requerida (Anexo 10)
+    const evaluationData = {
+      assignmentId: this.evaluationId, // El ID que viene en la ruta
+      annex10: {
+        protocolInfo: {
+          id: this.protocolInfo().id,
+          code: this.protocolInfo().code,
+          title: this.protocolInfo().title
+        },
+        tecnica: {
+          criteria: this.formGeneral.value,
+          observations: this.obsTecnica
+        },
+        etica: {
+          criteria: this.formEtica.value,
+          observations: this.obsEtica
+        },
+        juridica: {
+          criteria: this.formJuridica.value
+        }
+      },
+      result: this.finalVerdict() // 'FAVORABLE', 'OBSERVED', etc.
     };
 
-    this.submitEvaluationUC.execute(evaluation).subscribe({
-      next: () => {
-        this.snackBar.open('✅ Informe enviado con éxito. Secretaría ha sido notificada.', 'Cerrar', { duration: 5000 });
-        
-        // Notificar a Secretaría (HU-013)
-        this.notificationBroker.publish('EVALUATION_COMPLETED', {
-          protocolCode: this.protocolInfo().code,
-          evaluatorName: 'Dr. Evaluador Mock',
-          verdict: this.finalVerdict()
-        });
+    formData.append('evaluationData', JSON.stringify(evaluationData));
 
-        this.router.navigate(['/dashboard/evaluations/list']);
+    // 2. Adjuntar el archivo PDF (Informe)
+    if (this.selectedFile) {
+      formData.append('report', this.selectedFile);
+    }
+
+    this.submitEvaluationUC.execute(formData).subscribe({
+      next: () => {
+        this.snackBar.open('✅ Informe enviado con éxito.', 'Cerrar', { duration: 5000 });
+        this.router.navigate(['/dashboard/evaluations/my-tasks']);
       },
       error: () => {
         this.isSubmitting.set(false);

@@ -59,4 +59,35 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     const filtered = this.mockEvaluations.filter(e => e.evaluatorId === evaluatorId);
     return of(filtered).pipe(delay(500));
   }
+
+  getEvaluatorsDashboard(): Observable<any> {
+    return of({
+      pendingProtocols: [
+        { protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba' }
+      ],
+      evaluators: [
+        { id: 'ev-1', nombre: 'Evaluador Mock 1', perfil: 'SALUD', cargaActiva: 2 }
+      ],
+      suggestedEvaluations: []
+    }).pipe(delay(500));
+  }
+
+  suggestEvaluators(payload: { protocolId: string; evaluatorIds: string[] }): Observable<void> {
+    console.log('Mock: Sugiriendo evaluadores', payload);
+    return of(undefined).pipe(delay(500));
+  }
+
+  confirmAssignment(payload: { evaluationId: string; deadline: string }): Observable<void> {
+    console.log('Mock: Confirmando asignación', payload);
+    return of(undefined).pipe(delay(500));
+  }
+
+  getMyAssignments(): Observable<any[]> {
+    return of(this.mockEvaluations).pipe(delay(500));
+  }
+
+  submitEvaluation(data: FormData): Observable<void> {
+    console.log('Mock: Enviando evaluación (FormData)');
+    return of(undefined).pipe(delay(1000));
+  }
 }

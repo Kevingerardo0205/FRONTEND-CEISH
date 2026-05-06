@@ -52,6 +52,13 @@ export class ApiClientService {
     );
   }
 
+  // Método genérico para peticiones PATCH
+  patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Observable<T> {
+    return from(this.axiosInstance.patch<T>(url, data, config)).pipe(
+      map((response: AxiosResponse<T>) => response.data)
+    );
+  }
+
   // Método genérico para peticiones DELETE
   delete<T>(url: string, config?: AxiosRequestConfig): Observable<T> {
     return from(this.axiosInstance.delete<T>(url, config)).pipe(

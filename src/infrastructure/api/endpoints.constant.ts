@@ -17,5 +17,12 @@ export const ENDPOINTS = {
     UPLOAD: '/documents/upload',
     BY_ID: (id: string) => `/documents/${id}`,
   },
+  EVALUATIONS: {
+    DASHBOARD: '/evaluations/evaluators/dashboard',
+    SUGGEST: '/evaluations/suggest',
+    CONFIRM: '/evaluations/confirm-assignment',
+    MY_ASSIGNMENTS: '/evaluations/my-assignments',
+    SUBMIT: '/evaluations/submit',
+  },
   HEALTH: '/'
 };
