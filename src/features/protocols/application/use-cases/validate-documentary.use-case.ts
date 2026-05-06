@@ -1,31 +1,39 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { ProtocolCode } from '@domain/value-objects/protocol-code.vo';
+import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ValidateDocumentaryUseCase {
   private repository = inject(IProtocolRepositoryPort);
+  private notificationBroker = inject(NotificationBrokerService);
 
   execute(protocolId: string, isComplete: boolean, observations?: string): Observable<ProtocolEntity> {
     if (!isComplete) {
-      // Si está incompleto, se marca como OBSERVADO (HU-003)
-      return this.repository.save({
-        id: protocolId,
-        status: ProtocolStatus.OBSERVED,
-        // En un caso real aquí se dispararía el plazo de 15 días
-      } as any);
+      return this.repository.getById(protocolId).pipe(
+        map(protocol => ({
+          ...protocol,
+          status: ProtocolStatus.OBSERVED,
+        })),
+        tap(protocol => {
+          this.repository.save(protocol).subscribe();
+          this.notificationBroker.publish('PROTOCOL_OBSERVED', {
+            investigatorId: protocol.investigatorId,
+            protocolCode: protocol.code || 'S/N',
+            observations: observations
+          });
+        })
+      );
     }
 
-    // Si está completo, se genera el código oficial
     return this.repository.getById(protocolId).pipe(
       map(protocol => {
-        // Simulamos una secuencia obtenida del backend (ej: 42)
         const sequence = Math.floor(Math.random() * 900) + 1;
         const officialCode = ProtocolCode.create(protocol.type, sequence).getValue();
 
@@ -36,9 +44,13 @@ export class ValidateDocumentaryUseCase {
           validationDate: new Date()
         };
       }),
-      map(updatedProtocol => {
+      tap(updatedProtocol => {
         this.repository.save(updatedProtocol).subscribe();
-        return updatedProtocol as ProtocolEntity;
+        this.notificationBroker.publish('PROTOCOL_VALIDATED', {
+          investigatorId: updatedProtocol.investigatorId,
+          protocolCode: updatedProtocol.code,
+          message: 'Su protocolo ha sido validado documentalmente y ha pasado a la etapa de asignación.'
+        });
       })
     );
   }
