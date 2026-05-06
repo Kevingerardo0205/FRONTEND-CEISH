@@ -14,41 +14,43 @@ export enum EstadoProtocolo {
 }
 
 export interface InvestigadorEquipo {
-  funcion: string;
-  nombreCompleto: string;
-  cedula: string;
-  formacion: string;
-  entidad: string;
-  correo: string;
-  celular: string;
+  fullName: string;
+  identification: string;
+  position: string;
+  institution: string;
+  email: string;
+  phone: string;
+  education: string;
+  role: string;
 }
 
 export interface InstitucionParticipante {
-  nombre: string;
-  tipo: 'PUBLICA' | 'PRIVADA';
-  direccion: string;
-  contacto: string;
+  name: string;
+  type: 'PUBLIC' | 'PRIVATE';
+  address: string;
+  contactPerson: string;
 }
 
 export interface CrearProtocoloDto {
-  titulo: string;
-  tipoEstudio: TipoEstudio;
-  riskLevelId: number; // Nuevo campo para nivel de riesgo
-  coberturaGeografica: string;
-  duracionMeses: number;
+  title: string;
+  principalInvestigatorId?: number; // Cambiado a number
+  studyTypeId: number;
+  riskLevelId: number;
+  geographicCoverage: string;
+  studyDurationMonths: number;
   usesBiologicalSamples: boolean;
   isVulnerablePopulation: boolean;
   isMulticentric: boolean;
-  isExternal: boolean;
+  hasExternalInstitutions: boolean;
   sponsorRuc: string;
   sponsorPhone: string;
   sponsorAddress: string;
   sponsorWeb?: string;
-  executingOrgan: string;
-  amount: number;
-  equipoInvestigador: InvestigadorEquipo[];
-  instituciones: InstitucionParticipante[];
+  sponsorExecutingAgency: string;
+  financingAmount: number;
   isAffidavitAccepted: boolean;
+  investigators: InvestigadorEquipo[];
+  institutions: InstitucionParticipante[];
   lugarEjecucion?: string;
   fechaInicioEstimada?: string;
   fechaFinEstimada?: string;
@@ -80,4 +82,6 @@ export interface ProtocoloDetalle extends CrearProtocoloDto {
   resumen?: string;
   disenoEstudio?: string;
   institucionPatrocinadora?: string;
+  titulo: string;
+  tipoEstudio?: string;
 }
