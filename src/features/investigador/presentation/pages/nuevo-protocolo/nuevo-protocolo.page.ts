@@ -22,7 +22,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { CrearProtocoloDto, InvestigadorEquipo, InstitucionParticipante, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-import { TipoEstudio, RequisitoDocumento } from '../../../constants/anexos-pet.constants';
+import { TipoEstudio, RequisitoDocumento, getRequisitosPorTipoEstudio } from '../../../constants/anexos-pet.constants';
 import { forkJoin, of } from 'rxjs';
 
 // --- Validadores Técnicos ---
@@ -70,7 +70,7 @@ export class NuevoProtocoloPage implements OnInit {
   readonly funcionesEquipo = ['Investigador Principal', 'Coinvestigador', 'Tutor / Director', 'Asistente de Investigación', 'Estudiante'];
   
   tiposEstudio: any[] = [];
-  nivelesRiesgo: any[] = []; // Nueva lista para niveles de riesgo
+  nivelesRiesgo: any[] = [];
   documentosRequeridos: RequisitoDocumento[] = [];
   documentUploadStatus: { [key: string]: string } = {};
   archivosCargados: { [key: string]: string } = {};
@@ -78,7 +78,7 @@ export class NuevoProtocoloPage implements OnInit {
   generalForm = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(200)]],
     tipoEstudio: ['', Validators.required],
-    riskLevelId: ['', Validators.required], // Nuevo campo
+    riskLevelId: ['', Validators.required],
     coberturaGeografica: ['', Validators.required],
     duracionMeses: [1, [Validators.required, Validators.min(1), Validators.max(120)]],
     usesBiologicalSamples: [false],
@@ -114,7 +114,7 @@ export class NuevoProtocoloPage implements OnInit {
     this.addInvestigadorPrincipal();
     this.addInstitucion();
     this.loadStudyTypes();
-    this.loadRiskLevels(); // Cargar riesgos al iniciar
+    this.loadRiskLevels();
 
     this.generalForm.get('tipoEstudio')?.valueChanges.subscribe(() => this.loadRequirements());
     this.generalForm.get('usesBiologicalSamples')?.valueChanges.subscribe(() => this.loadRequirements());
@@ -194,35 +194,109 @@ export class NuevoProtocoloPage implements OnInit {
     }
 
     this.isLoading = true;
-    const payload: CrearProtocoloDto = {
-      ...this.generalForm.value as any,
-      equipoInvestigador: this.equipoInvestigador.getRawValue(),
-      instituciones: this.instituciones.value,
-      isAffidavitAccepted: true,
-      lugarEjecucion: this.generalForm.value.coberturaGeografica || 'Ecuador'
+
+    const user = this.authFacade.currentUser();
+
+    const coverageMap: { [key: string]: string } = {
+      'Local (Cantonal)': 'LOCAL',
+      'Provincial (Chimborazo)': 'PROVINCIAL',
+      'Regional': 'PROVINCIAL',
+      'Nacional': 'NACIONAL',
+      'Internacional': 'INTERNACIONAL'
     };
 
+    const formVal = this.generalForm.getRawValue();
+
+    const payload: CrearProtocoloDto = {
+      title: formVal.titulo!,
+      principalInvestigatorId: Number(user?.id), // CORRECCIÓN: Forzar Number
+      studyTypeId: Number(formVal.tipoEstudio),
+      riskLevelId: Number(formVal.riskLevelId),
+      geographicCoverage: coverageMap[formVal.coberturaGeografica!] || 'LOCAL',
+      studyDurationMonths: Number(formVal.duracionMeses),
+      usesBiologicalSamples: !!formVal.usesBiologicalSamples,
+      isVulnerablePopulation: !!formVal.isVulnerablePopulation,
+      isMulticentric: !!formVal.isMulticentric,
+      hasExternalInstitutions: !!formVal.isExternal,
+      sponsorRuc: formVal.sponsorRuc!,
+      sponsorPhone: formVal.sponsorPhone!,
+      sponsorAddress: formVal.sponsorAddress!,
+      sponsorWeb: formVal.sponsorWeb || '',
+      sponsorExecutingAgency: formVal.executingOrgan!,
+      financingAmount: Number(formVal.amount),
+      isAffidavitAccepted: true,
+      
+      investigators: this.equipoInvestigador.getRawValue()
+        .filter((_, index) => index > 0) 
+        .map(inv => ({
+          fullName: inv.nombreCompleto,
+          identification: inv.cedula,
+          position: inv.funcion,
+          institution: inv.entidad,
+          email: inv.correo,
+          phone: inv.celular,
+          education: inv.formacion,
+          role: 'CO_INVESTIGADOR'
+        })),
+      
+      institutions: this.instituciones.getRawValue().map(inst => ({
+        name: inst.nombre,
+        type: inst.tipo === 'PUBLICA' ? 'PUBLIC' : 'PRIVATE',
+        address: inst.direccion,
+        contactPerson: inst.contacto
+      }))
+    };
+
+    console.log('Enviando Payload Corregido:', payload);
+
     this.protocoloService.guardarProtocoloInicial(payload).subscribe({
-      next: (res) => {
-        this.protocolId = res.id;
-        this.uploadAllCVs(res.id);
+      next: (res: any) => {
+        const id = res?.id || res?.data?.id;
+        if (id) {
+          this.protocolId = id;
+          this.uploadAllCVs(id);
+          // Refrescamos requisitos ahora que el protocolo existe
+          this.loadRequirements(id);
+        } else {
+          this.isLoading = false;
+          this.snackBar.open('❌ Error: El servidor no devolvió un ID válido.', 'Cerrar');
+        }
       },
       error: (err) => {
         this.isLoading = false;
-        this.snackBar.open('Error al registrar protocolo.', 'Cerrar');
+        console.log('--- ERROR DEL BACKEND ---');
+        console.table(err.error?.message || err.error);
+        
+        const backendError = err.response?.data || err.error;
+        const serverMessage = backendError?.message;
+        const errorToShow = Array.isArray(serverMessage) ? serverMessage[0] : (serverMessage || 'Error de validación');
+
+        this.snackBar.open('❌ Error: ' + errorToShow, 'Cerrar', { duration: 10000 });
       }
     });
   }
 
   private uploadAllCVs(protocolId: number) {
+    if (!protocolId) {
+      this.isLoading = false;
+      return;
+    }
+
+    // ID real del catálogo de documentos para los CVs
+    const CV_TYPE_ID = 4;
+
     const uploads = this.equipoInvestigador.controls.map((control, index) => {
       const file = control.get('cvFile')?.value;
       if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('protocolId', protocolId.toString());
-        formData.append('documentTypeId', `cv_investigador_${index}`);
-        return this.protocoloService.subirDocumento(formData);
+        // ENVIAMOS JSON EN LUGAR DE FORMDATA
+        const payload = {
+          protocolId: protocolId,
+          fileName: file.name,
+          path: `/uploads/protocols/${protocolId}/cv_${index}_${file.name}`,
+          sizeBytes: file.size,
+          documentTypeId: CV_TYPE_ID
+        };
+        return this.protocoloService.subirDocumento(payload);
       }
       return of(null);
     });
@@ -230,39 +304,76 @@ export class NuevoProtocoloPage implements OnInit {
     forkJoin(uploads).subscribe({
       next: () => {
         this.isLoading = false;
+        this.snackBar.open('Información y CVs guardados exitosamente.', 'OK', { duration: 3000 });
         this.stepper.next();
       },
-      error: () => {
+      error: (err) => {
         this.isLoading = false;
+        console.error('Error subiendo CVs:', err);
+        this.snackBar.open('Protocolo creado pero falló la subida de algunos CVs. ' + (err.error?.message || ''), 'Cerrar');
         this.stepper.next();
       }
     });
   }
 
-  private loadRequirements() {
-    const tipo = this.generalForm.get('tipoEstudio')?.value;
-    if (!tipo) return;
+  private loadRequirements(protocolId?: number) {
+    const studyTypeId = this.generalForm.get('tipoEstudio')?.value;
+    if (!studyTypeId) return;
 
-    const muestras = this.generalForm.get('usesBiologicalSamples')?.value || false;
-    const vulnerable = this.generalForm.get('isVulnerablePopulation')?.value || false;
+    // BUSCAR EL CÓDIGO (IO, EI, EC) basado en el ID seleccionado
+    const selectedType = this.tiposEstudio.find(t => t.id === Number(studyTypeId));
+    const codigoTipo = selectedType ? (selectedType.codigo || selectedType.code) : '';
 
-    this.protocoloService.getRequisitos(tipo, muestras, vulnerable).subscribe({
+    if (!codigoTipo) {
+      console.warn('No se encontró el código para el tipo de estudio:', studyTypeId);
+      return;
+    }
+
+    const muestras = !!this.generalForm.get('usesBiologicalSamples')?.value;
+    const vulnerable = !!this.generalForm.get('isVulnerablePopulation')?.value;
+
+    console.log('Cargando requisitos para:', { codigoTipo, muestras, vulnerable, protocolId });
+
+    // Si ya tenemos protocolId, intentamos traerlos del protocolo específico
+    const request = protocolId 
+      ? this.protocoloService.obtenerRequisitosDeProtocolo(protocolId)
+      : this.protocoloService.getRequisitos(codigoTipo, muestras, vulnerable);
+
+    request.subscribe({
       next: (reqs: any) => {
-        const requirementsArray = Array.isArray(reqs) ? reqs : (reqs?.data || []);
+        // Forzamos que se reconozca el array
+        let requirementsArray = Array.isArray(reqs) ? reqs : (reqs?.data || []);
         
-        if (requirementsArray.length > 0) {
-          this.documentosRequeridos = requirementsArray;
-          requirementsArray.forEach((doc: any) => {
+        // Mapeo si vienen con nombres de campos de base de datos (codigo_requisito -> id)
+        if (requirementsArray.length > 0 && requirementsArray[0].codigo_requisito) {
+          requirementsArray = requirementsArray.map((r: any) => ({
+            id: r.id || r.codigo_requisito,
+            nombre: r.nombre_requisito || r.nombre,
+            anexo: r.anexo || 'Requisito',
+            formatosAceptados: ['application/pdf'],
+            maxSizeMB: 10
+          }));
+        }
+
+        // FALLBACK LOCAL SI EL BACKEND SIGUE VACÍO
+        if (requirementsArray.length === 0) {
+          console.warn('Backend devolvió requisitos vacíos, usando fallback local.');
+          requirementsArray = getRequisitosPorTipoEstudio(codigoTipo as TipoEstudio);
+        }
+
+        this.documentosRequeridos = requirementsArray;
+        console.log('Documentos cargados:', this.documentosRequeridos);
+
+        if (this.documentosRequeridos.length > 0) {
+          this.documentosRequeridos.forEach((doc: any) => {
             if (!this.documentUploadStatus[doc.id]) this.documentUploadStatus[doc.id] = 'pendiente';
           });
-        } else {
-          this.documentosRequeridos = [];
         }
       },
       error: (err) => {
-        console.error('Error cargando requisitos dinámicos:', err);
-        this.documentosRequeridos = [];
-        this.snackBar.open('Error al conectar con el servicio de requisitos.', 'Cerrar');
+        console.error('Error cargando requisitos:', err);
+        // Fallback local en caso de error
+        this.documentosRequeridos = getRequisitosPorTipoEstudio(codigoTipo as TipoEstudio);
       }
     });
   }
@@ -272,18 +383,31 @@ export class NuevoProtocoloPage implements OnInit {
     if (!file || !this.protocolId) return;
 
     this.documentUploadStatus[docId] = 'subiendo';
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('protocolId', this.protocolId.toString());
-    formData.append('documentTypeId', docId);
+    
+    // Mapeo manual de IDs locales (strings) a IDs de backend (números)
+    // Intentamos parsear a número, si no, usamos 1 como default (o mapeamos según código si supiéramos)
+    const numericDocId = parseInt(docId);
+    
+    // ENVIAMOS JSON EN LUGAR DE FORMDATA para que el backend lo entienda sin Multer
+    const payload = {
+      protocolId: this.protocolId,
+      fileName: file.name,
+      path: `/uploads/protocols/${this.protocolId}/${file.name}`, // Ruta simulada
+      sizeBytes: file.size,
+      documentTypeId: isNaN(numericDocId) ? 1 : numericDocId 
+    };
 
-    this.protocoloService.subirDocumento(formData).subscribe({
+    console.log('Subiendo documento:', payload);
+
+    this.protocoloService.subirDocumento(payload).subscribe({
       next: () => {
         this.documentUploadStatus[docId] = 'exito';
         this.archivosCargados[docId] = file.name;
       },
-      error: () => {
+      error: (err) => {
         this.documentUploadStatus[docId] = 'error';
+        console.error('Error subiendo documento:', err);
+        this.snackBar.open('Error al subir documento técnico.', 'Cerrar');
       }
     });
   }
@@ -300,9 +424,13 @@ export class NuevoProtocoloPage implements OnInit {
     this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
       next: () => {
         this.isLoading = false;
+        this.snackBar.open('✅ Solicitud enviada al CEISH. Código generado.', 'Cerrar', { duration: 5000 });
         this.router.navigate(['/investigador/mis-protocolos']);
       },
-      error: () => this.isLoading = false
+      error: (err) => {
+        this.isLoading = false;
+        this.snackBar.open('Error final: ' + (err.error?.message || 'No se pudo completar el registro'), 'Cerrar');
+      }
     });
   }
 

@@ -71,7 +71,7 @@
                 </mat-form-field>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="field-label">Duración estimada (meses)</label>
                 <mat-form-field appearance="outline">
                   <input matInput type="number" formControlName="duracionMeses" (keypress)="onKeyPressNumber($event)">
@@ -145,9 +145,9 @@
             <form [formGroup]="teamForm">
               <div formArrayName="equipoInvestigador">
                 <div *ngFor="let item of equipoInvestigador.controls; let i=index" [formGroupName]="i" 
-                     class="team-member-card p-3 mb-3 border rounded shadow-sm bg-white animate-fade-in">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="badge bg-secondary">{{item.get('funcion')?.value}}</span>
+                     class="team-member-card p-4 mb-4 border rounded shadow-sm bg-white animate-fade-in">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-secondary px-3 py-2">{{item.get('funcion')?.value}}</span>
                     <button type="button" mat-icon-button color="warn" (click)="removeMiembro(i)" *ngIf="i > 0"><mat-icon>delete</mat-icon></button>
                   </div>
                   <div class="row g-3">
@@ -166,11 +166,30 @@
                       <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="cedula" maxlength="10" (keypress)="onKeyPressNumber($event)"></mat-form-field>
                     </div>
                     <div class="col-md-4">
+                      <label class="field-label">Formación Académica</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="formacion" placeholder="Ej: Médico, Máster..."></mat-form-field>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="field-label">Entidad / Institución</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="entidad"></mat-form-field>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="field-label">Correo Electrónico</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="correo" type="email"></mat-form-field>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="field-label">Celular</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="celular" maxlength="10" (keypress)="onKeyPressNumber($event)"></mat-form-field>
+                    </div>
+                    <div class="col-md-8">
                       <label class="field-label">Hoja de Vida (PDF)</label>
-                      <div class="d-flex align-items-center gap-2">
-                        <button type="button" mat-stroked-button color="primary" (click)="cvIn.click()"><mat-icon>upload</mat-icon> SUBIR CV</button>
+                      <div class="d-flex align-items-center gap-3 p-2 border rounded bg-light">
+                        <button type="button" mat-flat-button color="accent" (click)="cvIn.click()"><mat-icon>upload</mat-icon> SELECCIONAR CV</button>
                         <input type="file" #cvIn hidden (change)="onFileSelected($event, i)" accept=".pdf">
-                        <span class="small text-muted text-truncate" style="max-width: 150px;" *ngIf="item.get('cvFile')?.value">{{item.get('cvFile')?.value.name}}</span>
+                        <span class="small text-muted text-truncate" style="max-width: 250px;" *ngIf="item.get('cvFile')?.value">
+                          {{ item.get('cvFile')?.value.name }}
+                        </span>
+                        <span class="small text-danger fw-bold" *ngIf="!item.get('cvFile')?.value">Requerido *</span>
                       </div>
                     </div>
                   </div>
@@ -189,9 +208,12 @@
         <mat-step [stepControl]="institutionsForm">
           <ng-template matStepLabel>Instituciones</ng-template>
           <div class="step-content">
-            <div class="section-header-inline mb-4 d-flex justify-content-between align-items-center">
-              <h3>Instituciones Participantes</h3>
-              <button type="button" mat-stroked-button color="primary" (click)="addInstitucion()"><mat-icon>add</mat-icon> AÑADIR SEDE</button>
+            <div class="section-info mb-4">
+              <mat-icon class="section-icon">location_city</mat-icon>
+              <div>
+                <h3>Instituciones Participantes</h3>
+                <p class="text-muted small">Agregue las instituciones donde se llevará a cabo la investigación.</p>
+              </div>
             </div>
 
             <form [formGroup]="institutionsForm">
@@ -205,17 +227,33 @@
                   <div class="row g-3">
                     <div class="col-md-6">
                       <label class="field-label">Nombre de la Institución</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="nombre"></mat-form-field>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <input matInput formControlName="nombre">
+                      </mat-form-field>
                     </div>
                     <div class="col-md-6">
                       <label class="field-label">Tipo</label>
-                      <mat-form-field appearance="outline" class="w-100"><mat-select formControlName="tipo"><mat-option value="PUBLICA">Pública</mat-option><mat-option value="PRIVADA">Privada</mat-option></mat-select></mat-form-field>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <mat-select formControlName="tipo">
+                          <mat-option value="PUBLICA">Pública</mat-option>
+                          <mat-option value="PRIVADA">Privada</mat-option>
+                        </mat-select>
+                      </mat-form-field>
                     </div>
-                    <div class="col-md-12">
-                      <label class="field-label">Dirección y Contacto</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="direccion" placeholder="Calle principal, teléf, encargado..."></mat-form-field>
+                    <div class="col-md-6">
+                      <label class="field-label">Dirección</label>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <input matInput formControlName="direccion">
+                      </mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Persona de Contacto</label>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <input matInput formControlName="contacto" placeholder="Nombre y Cargo">
+                      </mat-form-field>
                     </div>
                   </div>
+
                 </div>
               </div>
             </form>

@@ -28,12 +28,17 @@ export class ProtocoloService extends BaseApiService {
 
   /**
    * 1. Obtener lista dinámica de documentos requeridos
+   * Ahora usa el código del tipo de estudio (IO, EI, EC)
+   * Enviamos varios formatos de parámetros para asegurar compatibilidad
    */
-  getRequisitos(tipo: string, muestras: boolean, vulnerable: boolean): Observable<RequisitoDocumento[]> {
+  getRequisitos(codigoTipo: string, muestras: boolean, vulnerable: boolean): Observable<RequisitoDocumento[]> {
     const params = {
-      tipo,
-      muestras: muestras.toString(),
-      vulnerable: vulnerable.toString()
+      tipo: codigoTipo,
+      studyType: codigoTipo,
+      muestras: muestras ? 1 : 0,
+      vulnerable: vulnerable ? 1 : 0,
+      hasSamples: muestras,
+      isVulnerable: vulnerable
     };
     
     return this.get<RequisitoDocumento[]>('/protocols/requirements', params);
@@ -48,9 +53,10 @@ export class ProtocoloService extends BaseApiService {
 
   /**
    * 3. Subida de Archivos (Paso 4)
+   * AHORA RECIBE JSON (Simulación hasta que backend tenga Multer)
    */
-  subirDocumento(formData: FormData): Observable<any> {
-    return this.post<any>('/documents', formData);
+  subirDocumento(data: any): Observable<any> {
+    return this.post<any>('/documents', data);
   }
 
   /**
@@ -64,8 +70,15 @@ export class ProtocoloService extends BaseApiService {
     return this.get<ProtocoloResumen[]>('/protocols/mis-protocolos');
   }
 
-  obtenerProtocolo(codigo: string): Observable<ProtocoloDetalle> {
+  obtenerProtocolo(codigo: string | number): Observable<ProtocoloDetalle> {
     return this.get<ProtocoloDetalle>(`/protocols/${codigo}`);
+  }
+
+  /**
+   * Obtener requisitos específicos de un protocolo ya creado
+   */
+  obtenerRequisitosDeProtocolo(protocolId: number): Observable<any[]> {
+    return this.get<any[]>(`/protocols/${protocolId}/requirements`);
   }
 
   /**
