@@ -1,12 +1,14 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, delay } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { Observable, of, delay, tap } from 'rxjs';
 import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
 import { EvaluatorEntity } from '@domain/entities/evaluator.entity';
+import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EvaluatorMockAdapter extends IEvaluatorRepositoryPort {
+  private notificationBroker = inject(NotificationBrokerService);
   
   getEvaluatorsWithLoad(): Observable<EvaluatorEntity[]> {
     const mockEvaluators: EvaluatorEntity[] = [
@@ -21,12 +23,33 @@ export class EvaluatorMockAdapter extends IEvaluatorRepositoryPort {
 
   suggestEvaluators(protocolId: string, evaluatorIds: string[]): Observable<void> {
     console.log(`Presidenta sugirió evaluadores ${evaluatorIds} para protocolo ${protocolId}`);
-    return of(undefined).pipe(delay(1000));
+    return of(undefined).pipe(
+      delay(1000),
+      tap(() => {
+        this.notificationBroker.publish('ASSIGNMENT_SUGGESTED', {
+          protocolId,
+          evaluatorIds,
+          message: 'La Presidenta ha enviado una sugerencia de evaluadores.'
+        });
+      })
+    );
   }
 
   confirmAssignment(protocolId: string, evaluatorIds: string[], deadlineDays: number): Observable<void> {
     console.log(`Secretaria confirmó asignación para protocolo ${protocolId} con plazo de ${deadlineDays} días`);
-    return of(undefined).pipe(delay(1000));
+    return of(undefined).pipe(
+      delay(1000),
+      tap(() => {
+        evaluatorIds.forEach(id => {
+          this.notificationBroker.publish('EVALUATOR_ASSIGNED', {
+            evaluatorId: id,
+            protocolId,
+            deadline: deadlineDays,
+            message: `Se le ha asignado un nuevo protocolo para evaluación. Plazo: ${deadlineDays} días.`
+          });
+        });
+      })
+    );
   }
 
   getProtocolsForAssignment(): Observable<any[]> {

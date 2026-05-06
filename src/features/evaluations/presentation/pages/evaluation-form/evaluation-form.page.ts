@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, ViewChild } from '@angular/core';
+import { Component, inject, signal, OnInit, ViewChild, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule, FormControl } from '@angular/forms';
@@ -17,6 +17,10 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { FileUploaderComponent } from '@shared/components/file-uploader/file-uploader.component';
 import { SubmitEvaluationUseCase } from '../../../application/submit-evaluation.use-case';
 import { EvaluationVerdict, EvaluationEntity, CriteriaResult } from '@domain/entities/evaluation.entity';
+import { ANEXOS_EVALUACION, AnexoEvaluacion, getAnexoPorTipo, CampoEvaluacion } from '../../constants/anexos-evaluacion.constants';
+import { ProtocolType } from '@domain/enums/protocol-type.enum';
+import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 
 @Component({
   selector: 'app-evaluation-form',
@@ -50,193 +54,118 @@ import { EvaluationVerdict, EvaluationEntity, CriteriaResult } from '@domain/ent
               <mat-icon>arrow_back</mat-icon>
             </button>
             <div class="protocol-meta">
-              <span class="code">{{ protocolInfo().code | protocolCode }}</span>
-              <h2 class="title">{{ protocolInfo().title }}</h2>
+              <span class="code">{{ protocolInfo()?.code | protocolCode }}</span>
+              <h2 class="title">{{ protocolInfo()?.title }}</h2>
+              <span class="badge-anexo">{{ currentAnexo()?.anexo }}: {{ currentAnexo()?.titulo }}</span>
             </div>
           </div>
           <div class="header-actions">
-            <div class="preview-toggle-wrapper">
-              <mat-slide-toggle [checked]="showPreview()" (change)="showPreview.set($event.checked)" color="primary" [disabled]="isSubmitting()">
-                Modo Side-by-Side
-              </mat-slide-toggle>
-              <mat-icon matTooltip="Ver documentos del protocolo mientras evalúa" class="info-icon">info_outline</mat-icon>
-            </div>
+            <mat-slide-toggle [checked]="showPreview()" (change)="showPreview.set($event.checked)" color="primary" [disabled]="isSubmitting()">
+              Ver Documentos PI
+            </mat-slide-toggle>
             <div class="v-divider"></div>
-            <div class="save-status">
-              <mat-icon class="saving-icon">sync</mat-icon>
-              <span>Borrador protegido</span>
-            </div>
-            <button mat-stroked-button color="warn" class="exit-btn" routerLink="/dashboard/evaluations/list" [disabled]="isSubmitting()">
-              Salir
-            </button>
+            <button mat-stroked-button color="warn" routerLink="/dashboard/evaluations/list" [disabled]="isSubmitting()">Salir</button>
           </div>
         </div>
         <mat-progress-bar [mode]="isSubmitting() ? 'indeterminate' : 'determinate'" [value]="progressValue()"></mat-progress-bar>
       </div>
 
       <div class="main-layout">
-        <!-- Formulario Principal -->
+        <!-- Formulario Dinámico PET -->
         <div class="form-body container py-4">
-          <mat-stepper [linear]="false" orientation="vertical" #stepper class="custom-stepper" (selectionChange)="onStepChange($event)">
+          <mat-stepper [linear]="true" orientation="vertical" #stepper class="custom-stepper" (selectionChange)="onStepChange($event)">
             
-            <!-- Sección 1: Rigurosidad Técnica -->
-            <mat-step [stepControl]="technicalForm">
-              <ng-template matStepLabel>
-                <div class="step-label">
-                  <span class="step-num">01</span>
-                  <div class="step-text">
-                    <span class="step-title">Rigurosidad Técnica</span>
-                    <span class="step-desc">Metodología, diseño y objetivos</span>
+            <!-- SECCION GENERAL / METODOLOGICA -->
+            <mat-step [stepControl]="formGeneral">
+              <ng-template matStepLabel>Dictamen Metodológico (Técnico)</ng-template>
+              <div class="step-card glass-card">
+                <div class="criteria-section" *ngFor="let campo of getCamposPorSeccion('TECNICA')">
+                  <div class="criteria-header">
+                    <h4>{{ campo.label }}</h4>
+                    <p *ngIf="campo.descripcion">{{ campo.descripcion }}</p>
                   </div>
-                </div>
-              </ng-template>
-              
-              <form [formGroup]="technicalForm" class="step-card glass-card shadow-soft">
-                <div class="criteria-grid">
-                  <div class="criteria-item" *ngFor="let item of technicalCriteria">
-                    <div class="criteria-question">
-                      <h3>{{ item.label }}</h3>
-                      <p>{{ item.desc }}</p>
-                    </div>
-                    <div class="selection-box-group">
-                      <div class="selection-box" 
-                           [class.active]="technicalForm.get(item.key)?.value === 'YES'"
-                           (click)="!isSubmitting() && setSelection('technical', item.key, 'YES')">
-                        <mat-icon>check_circle</mat-icon>
-                        <span>Cumple</span>
-                      </div>
-                      <div class="selection-box" 
-                           [class.active]="technicalForm.get(item.key)?.value === 'NO'"
-                           (click)="!isSubmitting() && setSelection('technical', item.key, 'NO')">
-                        <mat-icon>cancel</mat-icon>
-                        <span>No Cumple</span>
-                      </div>
-                    </div>
+                  <div class="selection-group">
+                    <button type="button" class="select-box" [class.active]="formGeneral.get(campo.id)?.value === 'YES'" (click)="formGeneral.get(campo.id)?.setValue('YES')">CUMPLE</button>
+                    <button type="button" class="select-box no" [class.active]="formGeneral.get(campo.id)?.value === 'NO'" (click)="formGeneral.get(campo.id)?.setValue('NO')">NO CUMPLE</button>
                   </div>
                 </div>
 
-                <div class="observations-area mt-4">
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Observaciones y Justificación Técnica</mat-label>
-                    <textarea matInput formControlName="observations" rows="4"></textarea>
-                    <mat-icon matPrefix>edit_note</mat-icon>
-                  </mat-form-field>
-                </div>
+                <mat-form-field appearance="outline" class="full-width mt-4">
+                  <mat-label>Observaciones Técnicas / Metodológicas</mat-label>
+                  <textarea matInput rows="3" [(ngModel)]="obsTecnica"></textarea>
+                </mat-form-field>
 
-                <div class="step-actions mt-4">
-                  <button mat-flat-button color="primary" class="next-btn" matStepperNext [disabled]="isSubmitting()">
-                    Continuar a Ética <mat-icon>arrow_forward</mat-icon>
-                  </button>
+                <div class="step-actions mt-3">
+                  <button mat-flat-button color="primary" matStepperNext>Siguiente: Ética</button>
                 </div>
-              </form>
+              </div>
             </mat-step>
 
-            <!-- Sección 2: Criterios Éticos -->
-            <mat-step [stepControl]="ethicalForm">
-              <ng-template matStepLabel>
-                <div class="step-label">
-                  <span class="step-num">02</span>
-                  <div class="step-text">
-                    <span class="step-title">Criterios Éticos</span>
-                    <span class="step-desc">Consentimiento y Bioética</span>
+            <!-- SECCION ETICA -->
+            <mat-step [stepControl]="formEtica">
+              <ng-template matStepLabel>Dictamen Ético (Bioética)</ng-template>
+              <div class="step-card glass-card">
+                <div class="criteria-section" *ngFor="let campo of getCamposPorSeccion('ETICA')">
+                  <div class="criteria-header">
+                    <h4>{{ campo.label }}</h4>
                   </div>
-                </div>
-              </ng-template>
-
-              <form [formGroup]="ethicalForm" class="step-card glass-card shadow-soft">
-                <div class="criteria-grid">
-                  <div class="criteria-item" *ngFor="let item of ethicalCriteria">
-                    <div class="criteria-question">
-                      <h3>{{ item.label }}</h3>
-                      <p>{{ item.desc }}</p>
-                    </div>
-                    <div class="selection-box-group">
-                      <div class="selection-box" 
-                           [class.active]="ethicalForm.get(item.key)?.value === 'YES'"
-                           (click)="!isSubmitting() && setSelection('ethical', item.key, 'YES')">
-                        <mat-icon>verified_user</mat-icon>
-                        <span>Adecuado</span>
-                      </div>
-                      <div class="selection-box" 
-                           [class.active]="ethicalForm.get(item.key)?.value === 'NO'"
-                           (click)="!isSubmitting() && setSelection('ethical', item.key, 'NO')">
-                        <mat-icon>report_problem</mat-icon>
-                        <span>Inadecuado</span>
-                      </div>
-                    </div>
+                  <div class="selection-group">
+                    <button type="button" class="select-box" [class.active]="formEtica.get(campo.id)?.value === 'YES'" (click)="formEtica.get(campo.id)?.setValue('YES')">ADECUADO</button>
+                    <button type="button" class="select-box no" [class.active]="formEtica.get(campo.id)?.value === 'NO'" (click)="formEtica.get(campo.id)?.setValue('NO')">INADECUADO</button>
                   </div>
                 </div>
 
-                <div class="observations-area mt-4">
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Observaciones sobre Bioética y Derechos</mat-label>
-                    <textarea matInput formControlName="observations" rows="4"></textarea>
-                    <mat-icon matPrefix>gavel</mat-icon>
-                  </mat-form-field>
-                </div>
+                <mat-form-field appearance="outline" class="full-width mt-4">
+                  <mat-label>Observaciones sobre Ética y Bioética</mat-label>
+                  <textarea matInput rows="3" [(ngModel)]="obsEtica"></textarea>
+                </mat-form-field>
 
-                <div class="step-actions mt-4">
-                  <button mat-button matStepperPrevious [disabled]="isSubmitting()">Atrás</button>
-                  <button mat-flat-button color="primary" class="next-btn" matStepperNext [disabled]="isSubmitting()">
-                    Dictamen y Firma <mat-icon>done_all</mat-icon>
-                  </button>
+                <div class="step-actions mt-3">
+                  <button mat-button matStepperPrevious>Atrás</button>
+                  <button mat-flat-button color="primary" matStepperNext>Siguiente: Jurídico</button>
                 </div>
-              </form>
+              </div>
             </mat-step>
 
-            <!-- Sección 3: Dictamen y Firma -->
+            <!-- SECCION JURIDICA Y FINAL -->
             <mat-step>
-              <ng-template matStepLabel>
-                <div class="step-label">
-                  <span class="step-num">03</span>
-                  <div class="step-text">
-                    <span class="step-title">Dictamen y Firma</span>
-                    <span class="step-desc">Firma del acta y envío final</span>
-                  </div>
-                </div>
-              </ng-template>
-
-              <div class="step-card final-card glass-card shadow-soft">
-                <h2 class="decision-title">Resolución Sugerida</h2>
-                <div class="decision-cards">
-                  <div class="decision-card favorable" [class.active]="finalDecision() === 'FAVORABLE'" (click)="!isSubmitting() && finalDecision.set(verdicts.FAVORABLE)">
-                    <div class="card-icon"><mat-icon>thumb_up</mat-icon></div>
-                    <h3>Favorable</h3>
-                  </div>
-                  <div class="decision-card observed" [class.active]="finalDecision() === 'OBSERVED'" (click)="!isSubmitting() && finalDecision.set(verdicts.OBSERVED)">
-                    <div class="card-icon"><mat-icon>edit_calendar</mat-icon></div>
-                    <h3>Observado</h3>
-                  </div>
-                  <div class="decision-card negative" [class.active]="finalDecision() === 'NEGATIVE'" (click)="!isSubmitting() && finalDecision.set(verdicts.NEGATIVE)">
-                    <div class="card-icon"><mat-icon>thumb_down</mat-icon></div>
-                    <h3>No Favorable</h3>
+              <ng-template matStepLabel>Dictamen Jurídico y Resolución Final</ng-template>
+              <div class="step-card glass-card">
+                <div class="criteria-section" *ngFor="let campo of getCamposPorSeccion('JURIDICA')">
+                  <div class="criteria-header"><h4>{{ campo.label }}</h4></div>
+                  <div class="selection-group">
+                    <button type="button" class="select-box" [class.active]="formJuridica.get(campo.id)?.value === 'YES'" (click)="formJuridica.get(campo.id)?.setValue('YES')">SI</button>
+                    <button type="button" class="select-box no" [class.active]="formJuridica.get(campo.id)?.value === 'NO'" (click)="formJuridica.get(campo.id)?.setValue('NO')">NO</button>
                   </div>
                 </div>
 
-                <div class="signature-section mt-5">
-                  <div class="section-header">
-                    <mat-icon>assignment_turned_in</mat-icon>
-                    <h3>Carga de Acta Técnica Firmada</h3>
-                    <p>Por favor, suba el documento final con su firma electrónica o física escaneada.</p>
+                <h3 class="mt-4 mb-3">RESOLUCIÓN FINAL DEL EVALUADOR</h3>
+                <div class="verdict-grid">
+                  <div class="verdict-card favorable" [class.selected]="finalVerdict() === 'FAVORABLE'" (click)="finalVerdict.set(verdicts.FAVORABLE)">
+                    <mat-icon>check_circle</mat-icon><span>FAVORABLE</span>
                   </div>
-                  <app-file-uploader (upload)="onFileUpload($event)"></app-file-uploader>
-                  <div class="file-status-chip" *ngIf="isSigned()">
-                    <mat-icon>verified</mat-icon>
-                    Acta cargada correctamente
+                  <div class="verdict-card observed" [class.selected]="finalVerdict() === 'OBSERVED'" (click)="finalVerdict.set(verdicts.OBSERVED)">
+                    <mat-icon>error_outline</mat-icon><span>OBSERVADO</span>
                   </div>
+                  <div class="verdict-card negative" [class.selected]="finalVerdict() === 'NEGATIVE'" (click)="finalVerdict.set(verdicts.NEGATIVE)">
+                    <mat-icon>cancel</mat-icon><span>NO FAVORABLE</span>
+                  </div>
+                </div>
+
+                <div class="upload-section mt-5">
+                   <h4>Adjuntar Informe / Acta Firmada (PDF)</h4>
+                   <app-file-uploader (upload)="onFileUpload($event)"></app-file-uploader>
+                   <div class="file-chip" *ngIf="isSigned()">
+                     <mat-icon>description</mat-icon><span>Documento listo para envío</span>
+                   </div>
                 </div>
 
                 <div class="final-actions mt-5">
-                  <button mat-button matStepperPrevious [disabled]="isSubmitting()">Revisar</button>
-                  <button mat-flat-button class="submit-btn shadow-lg" [disabled]="!canSubmit() || isSubmitting()" (click)="onSubmit()">
-                    <ng-container *ngIf="!isSubmitting()">
-                      <mat-icon>send</mat-icon>
-                      Firmar y Enviar Informe
-                    </ng-container>
-                    <ng-container *ngIf="isSubmitting()">
-                      <mat-spinner diameter="24" color="accent"></mat-spinner>
-                      <span>Enviando...</span>
-                    </ng-container>
+                  <button mat-button matStepperPrevious>Revisar</button>
+                  <button mat-flat-button class="submit-btn" [disabled]="!canSubmit() || isSubmitting()" (click)="onSubmit()">
+                    <mat-icon *ngIf="!isSubmitting()">send</mat-icon>
+                    <mat-spinner *ngIf="isSubmitting()" diameter="20" color="accent"></mat-spinner>
+                    {{ isSubmitting() ? 'ENVIANDO...' : 'ENVIAR INFORME A SECRETARÍA' }}
                   </button>
                 </div>
               </div>
@@ -244,37 +173,16 @@ import { EvaluationVerdict, EvaluationEntity, CriteriaResult } from '@domain/ent
           </mat-stepper>
         </div>
 
-        <!-- Panel Lateral de Documentos (Preview) -->
-        <aside class="preview-panel animate-slide-left" *ngIf="showPreview()">
-          <div class="panel-header">
-            <h3>Documentos del Protocolo</h3>
-            <button mat-icon-button (click)="showPreview.set(false)"><mat-icon>close</mat-icon></button>
-          </div>
+        <!-- Sidebar Documentos -->
+        <aside class="preview-panel" *ngIf="showPreview()">
+          <div class="panel-header"><h3>Expediente del Protocolo</h3></div>
           <div class="panel-content">
-            <mat-accordion multi>
-              <mat-expansion-panel [expanded]="true">
-                <mat-expansion-panel-header>
-                  <mat-panel-title>Anexos y Formularios</mat-panel-title>
-                </mat-expansion-panel-header>
-                <div class="doc-list">
-                  <div class="doc-item" *ngFor="let doc of protocolDocs">
-                    <div class="doc-icon"><mat-icon>insert_drive_file</mat-icon></div>
-                    <div class="doc-info">
-                      <span class="doc-name">{{ doc.name }}</span>
-                      <span class="doc-type">{{ doc.type }}</span>
-                    </div>
-                    <button mat-icon-button color="primary" matTooltip="Abrir Documento">
-                      <mat-icon>open_in_new</mat-icon>
-                    </button>
-                  </div>
-                </div>
-              </mat-expansion-panel>
-            </mat-accordion>
-
-            <div class="protocol-quick-summary glass-card mt-4">
-              <h4>Resumen Ejecutivo</h4>
-              <p>El estudio busca determinar la correlación entre las horas de guardia y el nivel de ansiedad autoperceptiva...</p>
-              <button mat-button color="primary">Ver Resumen Completo</button>
+            <div class="doc-list">
+              <div class="doc-item" *ngFor="let d of protocolDocs">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <div class="d-info"><span class="n">{{ d.name }}</span><span class="t">{{ d.type }}</span></div>
+                <button mat-icon-button color="primary"><mat-icon>open_in_new</mat-icon></button>
+              </div>
             </div>
           </div>
         </aside>
@@ -282,196 +190,145 @@ import { EvaluationVerdict, EvaluationEntity, CriteriaResult } from '@domain/ent
     </div>
   `,
   styles: [`
-    .evaluation-container { background: #f8fafc; min-height: 100vh; overflow-x: hidden; }
-
-    /* Layout Side-by-Side */
-    .main-layout { display: flex; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    .evaluation-container.side-by-side {
-      .form-body { flex: 0 0 60%; max-width: 60%; }
-      .preview-panel { flex: 0 0 40%; border-left: 1px solid #e2e8f0; }
+    .evaluation-container { background: #f8fafc; min-height: 100vh; }
+    .sticky-header { position: sticky; top: 0; z-index: 1000; background: white; border-bottom: 1px solid #e2e8f0; 
+      .header-content { padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
     }
-    .form-body { flex: 1; transition: all 0.4s ease; max-width: 900px; margin: 0 auto; }
-
-    /* Sticky Header */
-    .sticky-header {
-      position: sticky; top: 0; z-index: 1000; background: white; border-bottom: 1px solid #e2e8f0;
-      .header-content { padding: 0.75rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .protocol-meta { display: flex; flex-direction: column; .code { font-weight: 800; color: #003366; font-size: 0.75rem; } 
+      .title { font-size: 1.1rem; font-weight: 700; margin: 2px 0; }
+      .badge-anexo { font-size: 0.7rem; color: #64748b; font-weight: 800; text-transform: uppercase; }
     }
-
-    .preview-toggle-wrapper {
-      display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 6px 16px; border-radius: 12px;
-      .info-icon { font-size: 18px; color: #94a3b8; }
-    }
-
-    .v-divider { width: 1px; height: 32px; background: #e2e8f0; margin: 0 1rem; }
-    .save-status { display: flex; align-items: center; gap: 8px; color: #10b981; font-size: 0.8rem; font-weight: 600; margin-right: 1.5rem; }
-
-    /* Stepper & Cards */
-    .custom-stepper { background: transparent !important; }
-    .step-card { padding: 2rem; border-radius: 24px; margin-top: 1rem; }
+    .main-layout { display: flex; }
+    .form-body { flex: 1; max-width: 1000px; }
+    .preview-panel { width: 400px; background: white; border-left: 1px solid #e2e8f0; height: calc(100vh - 80px); position: sticky; top: 80px; padding: 1.5rem; }
     
-    .criteria-grid { display: flex; flex-direction: column; gap: 1rem; }
-    .criteria-item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1.5rem; border-bottom: 1px dashed #e2e8f0; padding-bottom: 1rem; }
-    .selection-box-group { display: flex; gap: 0.75rem; }
-    .selection-box {
-      width: 100px; padding: 8px; border-radius: 12px; border: 1.5px solid #e2e8f0; 
-      display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: all 0.2s;
-      mat-icon { font-size: 20px; color: #94a3b8; }
-      span { font-size: 0.65rem; font-weight: 800; }
-      &.active { background: #003366; color: white; mat-icon { color: white; } }
+    .step-card { padding: 2rem; border-radius: 20px; border: 1px solid #e2e8f0; background: white; }
+    .criteria-section { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px dashed #e2e8f0; 
+      .criteria-header { h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; } p { font-size: 0.8rem; color: #64748b; margin: 0; } }
+    }
+    .selection-group { display: flex; gap: 8px; }
+    .select-box { padding: 8px 16px; border-radius: 8px; border: 1.5px solid #e2e8f0; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.2s;
+      &.active { background: #10b981; color: white; border-color: #10b981; }
+      &.no.active { background: #ef4444; color: white; border-color: #ef4444; }
     }
 
-    /* Decision Cards */
-    .decision-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; }
-    .decision-card {
-      padding: 1.5rem; border-radius: 16px; border: 2px solid #f1f5f9; cursor: pointer; text-align: center; transition: all 0.3s;
-      .card-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; }
-      h3 { font-size: 0.9rem; font-weight: 800; margin: 0; }
-      &.active { border-color: #003366; background: #f8fbff; transform: scale(1.05); }
+    .verdict-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .verdict-card { padding: 1.5rem; border-radius: 12px; border: 2px solid #f1f5f9; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px;
+      mat-icon { font-size: 32px; width: 32px; height: 32px; } span { font-weight: 800; font-size: 0.8rem; }
+      &.favorable { color: #10b981; &.selected { background: #10b981; color: white; } }
+      &.observed { color: #f59e0b; &.selected { background: #f59e0b; color: white; } }
+      &.negative { color: #ef4444; &.selected { background: #ef4444; color: white; } }
     }
 
-    /* Preview Panel */
-    .preview-panel {
-      background: #ffffff; height: calc(100vh - 70px); position: sticky; top: 70px; display: flex; flex-direction: column;
-      .panel-header { padding: 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; h3 { font-weight: 800; margin: 0; } }
-      .panel-content { padding: 1.5rem; overflow-y: auto; flex: 1; }
+    .submit-btn { background: #003366 !important; color: white !important; font-weight: 800; height: 50px; border-radius: 12px; padding: 0 2rem; width: 100%; }
+    .doc-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px;
+      .d-info { flex: 1; display: flex; flex-direction: column; .n { font-size: 0.85rem; font-weight: 700; } .t { font-size: 0.7rem; color: #94a3b8; } }
     }
-
-    .doc-list { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 0; }
-    .doc-item {
-      display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 12px;
-      .doc-icon { color: #003366; }
-      .doc-info { display: flex; flex-direction: column; flex: 1; .doc-name { font-weight: 700; font-size: 0.85rem; } .doc-type { font-size: 0.7rem; color: #94a3b8; font-weight: 600; } }
-    }
-
-    /* Signature Section */
-    .signature-section {
-      background: #fdfdfd; border: 2px dashed #e2e8f0; border-radius: 20px; padding: 2rem;
-      .section-header { text-align: center; margin-bottom: 1.5rem; mat-icon { font-size: 40px; width: 40px; height: 40px; color: #003366; } h3 { font-weight: 800; } p { color: #64748b; font-size: 0.9rem; } }
-    }
-
-    .file-status-chip { display: inline-flex; align-items: center; gap: 8px; background: #dcfce7; color: #15803d; padding: 8px 16px; border-radius: 100px; font-weight: 700; font-size: 0.85rem; margin-top: 1rem; }
-
-    .submit-btn { background: #003366 !important; color: white !important; padding: 0 2rem; height: 50px; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    
-    .animate-slide-left { animation: slideLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    @keyframes slideLeft { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   `]
 })
 export class EvaluationFormPage implements OnInit {
-  private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private protocolRepo = inject(IProtocolRepositoryPort);
   private submitEvaluationUC = inject(SubmitEvaluationUseCase);
+  private notificationBroker = inject(NotificationBrokerService);
 
   @ViewChild('stepper') stepper!: MatStepper;
 
+  protocolId = '';
+  evaluationId = '';
+  protocolInfo = signal<any>(null);
+  currentAnexo = signal<AnexoEvaluacion | null>(null);
+  
   showPreview = signal(false);
   isSigned = signal(false);
   isSubmitting = signal(false);
-  progressValue = signal(10);
-  finalDecision = signal<EvaluationVerdict | null>(null);
+  progressValue = signal(33);
+  finalVerdict = signal<EvaluationVerdict | null>(null);
   verdicts = EvaluationVerdict;
 
-  protocolInfo = signal({ id: 'p-001', code: '2026-IO-001', title: 'Ansiedad en Estudiantes de Medicina', type: 'IO' });
+  formGeneral: FormGroup = this.fb.group({});
+  formEtica: FormGroup = this.fb.group({});
+  formJuridica: FormGroup = this.fb.group({});
+
+  obsTecnica = '';
+  obsEtica = '';
   
   protocolDocs = [
-    { name: 'Protocolo_Investigacion_v2.pdf', type: 'Protocolo Principal' },
-    { name: 'Consentimiento_Informado.pdf', type: 'Anexo Técnico' },
-    { name: 'Instrumentos_Recoleccion.docx', type: 'Metodología' }
+    { name: 'Protocolo_V1.pdf', type: 'Documento Técnico' },
+    { name: 'Anexo_3_Consentimiento.pdf', type: 'Ética' },
+    { name: 'Certificacion_Tutor.pdf', type: 'Legal' }
   ];
 
-  technicalCriteria = [
-    { key: 'methodology', label: 'Metodología', desc: 'Diseño adecuado para los objetivos' },
-    { key: 'sample', label: 'Muestra', desc: 'Justificación del tamaño y selección' }
-  ];
-
-  ethicalCriteria = [
-    { key: 'consent', label: 'Consentimiento', desc: 'Claridad y descripción de riesgos' },
-    { key: 'risks', label: 'Riesgo/Beneficio', desc: 'Equilibrio ético del estudio' }
-  ];
-
-  technicalForm = this.fb.group({
-    methodology: ['', Validators.required],
-    sample: ['', Validators.required],
-    observations: ['', [Validators.required, Validators.minLength(10)]]
-  });
-
-  ethicalForm = this.fb.group({
-    consent: ['', Validators.required],
-    risks: ['', Validators.required],
-    observations: ['', [Validators.required, Validators.minLength(10)]]
-  });
-
-  ngOnInit() {}
-
-  setSelection(formType: 'technical' | 'ethical', key: string, value: string) {
-    if (formType === 'technical') {
-      const control = this.technicalForm.get(key);
-      if (control) control.setValue(value);
-    } else {
-      const control = this.ethicalForm.get(key);
-      if (control) control.setValue(value);
-    }
-    this.updateProgress();
+  ngOnInit() {
+    this.evaluationId = this.route.snapshot.params['id'];
+    this.loadInitialData();
   }
 
-  onStepChange(event: any) { this.updateProgress(); }
-
-  updateProgress() {
-    const totalSteps = 3;
-    const currentStep = this.stepper?.selectedIndex || 0;
-    this.progressValue.set(((currentStep + 1) / totalSteps) * 100);
+  loadInitialData() {
+    // Simulación: en un caso real buscaríamos el protocolo asociado a la evaluación
+    this.protocolRepo.getById('1').subscribe(protocol => {
+      this.protocolInfo.set(protocol);
+      this.currentAnexo.set(getAnexoPorTipo(protocol.type));
+      this.initForms();
+    });
   }
 
-  onFileUpload(files: File[]) {
-    if (files.length > 0) {
-      this.isSigned.set(true);
-      this.snackBar.open('Acta cargada correctamente', 'Cerrar', { duration: 2000 });
-    }
+  initForms() {
+    const anexo = this.currentAnexo();
+    if (!anexo) return;
+
+    anexo.campos.forEach(campo => {
+      const control = new FormControl('', campo.obligatorio ? Validators.required : null);
+      if (campo.seccion === 'TECNICA' || campo.seccion === 'GENERAL') this.formGeneral.addControl(campo.id, control);
+      else if (campo.seccion === 'ETICA') this.formEtica.addControl(campo.id, control);
+      else if (campo.seccion === 'JURIDICA') this.formJuridica.addControl(campo.id, control);
+    });
   }
 
-  canSubmit(): boolean {
-    return !!this.finalDecision() && this.isSigned() && this.technicalForm.valid && this.ethicalForm.valid;
+  getCamposPorSeccion(seccion: string) {
+    return this.currentAnexo()?.campos.filter(c => c.seccion === seccion) || [];
+  }
+
+  onStepChange(event: any) { this.progressValue.set(((event.selectedIndex + 1) / 3) * 100); }
+
+  onFileUpload(files: File[]) { if (files.length > 0) this.isSigned.set(true); }
+
+  canSubmit() {
+    return this.formGeneral.valid && this.formEtica.valid && this.isSigned() && this.finalVerdict();
   }
 
   onSubmit() {
     if (!this.canSubmit()) return;
-
     this.isSubmitting.set(true);
 
     const evaluation: Partial<EvaluationEntity> = {
       protocolId: this.protocolInfo().id,
-      technicalCriteria: this.mapCriteria(this.technicalForm, this.technicalCriteria),
-      technicalObservations: this.technicalForm.value.observations || '',
-      ethicalCriteria: this.mapCriteria(this.ethicalForm, this.ethicalCriteria),
-      ethicalObservations: this.ethicalForm.value.observations || '',
-      verdict: this.finalDecision()!
+      verdict: this.finalVerdict()!,
+      technicalObservations: this.obsTecnica,
+      ethicalObservations: this.obsEtica,
+      evaluationDate: new Date()
     };
 
     this.submitEvaluationUC.execute(evaluation).subscribe({
       next: () => {
-        this.snackBar.open('Evaluación finalizada y enviada al CEISH', 'Éxito', { 
-          duration: 5000, 
-          panelClass: ['snackbar-success'] 
+        this.snackBar.open('✅ Informe enviado con éxito. Secretaría ha sido notificada.', 'Cerrar', { duration: 5000 });
+        
+        // Notificar a Secretaría (HU-013)
+        this.notificationBroker.publish('EVALUATION_COMPLETED', {
+          protocolCode: this.protocolInfo().code,
+          evaluatorName: 'Dr. Evaluador Mock',
+          verdict: this.finalVerdict()
         });
+
         this.router.navigate(['/dashboard/evaluations/list']);
       },
       error: () => {
         this.isSubmitting.set(false);
-        this.snackBar.open('Error al enviar la evaluación. Intente nuevamente.', 'Cerrar', { 
-          duration: 3000, 
-          panelClass: ['snackbar-error'] 
-        });
+        this.snackBar.open('❌ Error al enviar el informe.', 'Cerrar', { duration: 3000 });
       }
     });
-  }
-
-  private mapCriteria(form: FormGroup, criteria: any[]): CriteriaResult[] {
-    return criteria.map(c => ({
-      key: c.key,
-      value: form.get(c.key)?.value as 'YES' | 'NO'
-    }));
   }
 }

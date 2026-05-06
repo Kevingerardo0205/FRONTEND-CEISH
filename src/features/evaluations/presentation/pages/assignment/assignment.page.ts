@@ -192,8 +192,8 @@ export class AssignmentPage implements OnInit {
   isSecretaria = computed(() => this.userRole() === 'SECRETARIA');
 
   subtitle = computed(() => this.isPresidenta() 
-    ? 'Proponga los evaluadores para los protocolos validados' 
-    : 'Confirme la asignación y establezca los plazos de entrega');
+    ? 'Proponga los evaluadores según la carga y especialidad' 
+    : 'Valide y confirme las sugerencias de evaluadores enviadas por la Presidenta');
 
   displayedColumns = computed(() => {
     const base = ['protocol', 'status', 'evaluators'];
@@ -226,14 +226,18 @@ export class AssignmentPage implements OnInit {
 
   onSuggest(protocol: any) {
     this.evaluatorRepo.suggestEvaluators(protocol.id, protocol.selectedEvaluators).subscribe(() => {
-      this.snackBar.open(`Sugerencia para ${protocol.code} enviada a Secretaria`, 'Cerrar', { duration: 3000 });
+      this.snackBar.open(`✅ Sugerencia para ${protocol.code} enviada a Secretaria`, 'Cerrar', { duration: 3000 });
       this.loadData();
     });
   }
 
   onConfirm(protocol: any) {
+    if (!protocol.selectedEvaluators?.length) {
+      this.snackBar.open('⚠️ Debe seleccionar al menos un evaluador', 'Cerrar', { duration: 3000 });
+      return;
+    }
     this.evaluatorRepo.confirmAssignment(protocol.id, protocol.selectedEvaluators, protocol.deadline).subscribe(() => {
-      this.snackBar.open(`Asignación para ${protocol.code} confirmada. Notificaciones enviadas.`, 'Cerrar', { duration: 3000 });
+      this.snackBar.open(`✅ Asignación para ${protocol.code} confirmada. Notificaciones enviadas a evaluadores.`, 'Cerrar', { duration: 4000 });
       this.pendingProtocols.update(list => list.filter(p => p.id !== protocol.id));
     });
   }

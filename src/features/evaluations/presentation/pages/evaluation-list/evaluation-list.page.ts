@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -8,6 +8,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
+import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 
 @Component({
   selector: 'app-evaluation-list',
@@ -33,7 +35,7 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
           <p class="page-subtitle">Gestione los protocolos asignados para su revisión técnica y ética</p>
         </div>
         <div class="header-actions">
-           <button mat-stroked-button color="primary" class="refresh-btn shadow-sm">
+           <button mat-stroked-button color="primary" class="refresh-btn shadow-sm" (click)="loadEvaluations()">
              <mat-icon>refresh</mat-icon>
              Actualizar Bandeja
            </button>
@@ -42,10 +44,19 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
 
       <!-- Métricas Rápidas -->
       <div class="stats-grid mb-4">
-        <app-stat-card label="Pendientes" [value]="3" icon="rate_review" color="#2563eb"></app-stat-card>
-        <app-stat-card label="Por Vencer" [value]="2" icon="timer" color="#f59e0b"></app-stat-card>
+        <app-stat-card label="Pendientes" [value]="pendingCount()" icon="rate_review" color="#2563eb"></app-stat-card>
+        <app-stat-card label="Por Vencer (Alertas)" [value]="urgentCount()" icon="timer" color="#ef4444"></app-stat-card>
         <app-stat-card label="Completadas" [value]="12" icon="task_alt" color="#10b981"></app-stat-card>
-        <app-stat-card label="Puntaje Promedio" value="95" icon="verified" color="#6366f1"></app-stat-card>
+        <app-stat-card label="Promedio Resolución" value="8 días" icon="speed" color="#6366f1"></app-stat-card>
+      </div>
+
+      <!-- Alerta Crítica si hay plazos por vencer -->
+      <div class="alert-banner critical mb-4 animate-shake" *ngIf="urgentCount() > 0">
+        <mat-icon>warning</mat-icon>
+        <div class="alert-content">
+          <strong>¡ATENCIÓN EVALUADOR!</strong>
+          <span>Tiene {{ urgentCount() }} protocolos con el plazo por vencer (menos de 2 días). Priorice estas revisiones.</span>
+        </div>
       </div>
 
       <!-- Lista de Evaluaciones -->
@@ -70,7 +81,7 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
                 <div class="protocol-info-cell">
                   <div class="code-wrapper">
                     <span class="code">{{ ev.protocolCode | protocolCode }}</span>
-                    <span class="type-tag" [ngClass]="ev.type.toLowerCase()">{{ ev.type }}</span>
+                    <span class="type-tag" [ngClass]="ev.protocolType?.toLowerCase()">{{ ev.protocolType }}</span>
                   </div>
                   <span class="title" [matTooltip]="ev.protocolTitle">{{ ev.protocolTitle }}</span>
                   <div class="investigator-info">
@@ -91,7 +102,7 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
                   </div>
                   <div class="deadline-detail">
                     <mat-icon>{{ getSLAIcon(ev.deadline) }}</mat-icon>
-                    <span>{{ ev.deadline | date:'dd MMM' }}</span>
+                    <span>{{ ev.deadline | date:'dd MMM, yyyy' }}</span>
                   </div>
                 </div>
               </td>
@@ -111,12 +122,9 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
               <th mat-header-cell *matHeaderCellDef class="text-end"> Acciones </th>
               <td mat-cell *matCellDef="let ev" class="text-end">
                 <div class="actions-wrapper">
-                  <button mat-icon-button color="primary" matTooltip="Vista Previa" class="action-btn preview">
-                    <mat-icon>visibility</mat-icon>
-                  </button>
                   <button mat-flat-button color="primary" class="eval-btn shadow-sm" [routerLink]="['/dashboard/evaluations/form', ev.id]">
                     <mat-icon>gavel</mat-icon>
-                    Evaluar
+                    Iniciar Informe
                   </button>
                 </div>
               </td>
@@ -154,203 +162,95 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
       gap: 1.5rem;
     }
 
+    /* Alert Banner */
+    .alert-banner {
+      display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-radius: 16px;
+      &.critical { background: #fee2e2; border: 1.5px solid #ef4444; color: #b91c1c; 
+        mat-icon { color: #ef4444; font-size: 32px; width: 32px; height: 32px; }
+      }
+      .alert-content { display: flex; flex-direction: column; strong { font-size: 1rem; } span { font-size: 0.9rem; font-weight: 500; } }
+    }
+
     .content-card {
-      background: white;
-      border-radius: 28px;
-      border: 1px solid #f1f5f9;
-      overflow: hidden;
-      transition: all 0.3s ease;
+      background: white; border-radius: 28px; border: 1px solid #f1f5f9; overflow: hidden; transition: all 0.3s ease;
     }
 
     .table-toolbar {
-      border-bottom: 1px solid #f1f5f9;
-      background: #ffffff;
-      padding: 1.5rem !important;
-
+      border-bottom: 1px solid #f1f5f9; background: #ffffff; padding: 1.5rem !important;
       .section-title { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
-      .badge-count {
-        background: #f1f5f9;
-        color: #475569;
-        padding: 4px 12px;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 700;
-      }
+      .badge-count { background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; }
     }
 
     .search-box {
-      background: #f8fafc;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 8px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 350px;
-      transition: all 0.2s ease;
-      
-      &:focus-within { border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-      mat-icon { font-size: 20px; width: 20px; height: 20px; color: #94a3b8; }
+      background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 8px 16px; display: flex; align-items: center; gap: 12px; width: 350px;
       input { border: none; background: transparent; outline: none; font-size: 0.9rem; width: 100%; color: #1e293b; font-weight: 500; }
     }
 
     .modern-table {
       width: 100%;
-      th { background: #f8fafc; color: #64748b; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 1.25rem 1.5rem; }
+      th { background: #f8fafc; color: #64748b; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; padding: 1.25rem 1.5rem; }
       td { padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     }
 
-    .table-row {
-      transition: background 0.2s ease;
-      &:hover { background: #fcfdfe; }
-    }
-
     .protocol-info-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-width: 500px;
-
-      .code-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        .code { font-family: 'Fira Code', monospace; font-weight: 800; color: #003366; font-size: 0.8rem; letter-spacing: 0.5px; }
-        .type-tag {
-          font-size: 0.65rem;
-          font-weight: 800;
-          padding: 2px 8px;
-          border-radius: 6px;
-          text-transform: uppercase;
-          &.ei { background: #fee2e2; color: #b91c1c; }
-          &.ec { background: #dcfce7; color: #15803d; }
-          &.io { background: #e0f2fe; color: #0369a1; }
+      display: flex; flex-direction: column; gap: 6px; max-width: 500px;
+      .code-wrapper { display: flex; align-items: center; gap: 8px; .code { font-weight: 800; color: #003366; font-size: 0.8rem; }
+        .type-tag { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;
+          &.ei { background: #fee2e2; color: #b91c1c; } &.ec { background: #dcfce7; color: #15803d; } &.io { background: #e0f2fe; color: #0369a1; }
         }
       }
-
       .title { font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.4; }
-      .investigator-info {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: #64748b;
-        font-size: 0.8rem;
-        font-weight: 500;
-        mat-icon { font-size: 14px; width: 14px; height: 14px; }
-      }
+      .investigator-info { display: flex; align-items: center; gap: 6px; color: #64748b; font-size: 0.8rem; }
     }
 
     .sla-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      
-      .days-remaining {
-        display: flex;
-        align-items: baseline;
-        gap: 2px;
-        .value { font-size: 1.25rem; font-weight: 800; }
-        .label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-      }
-
-      .deadline-detail {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        mat-icon { font-size: 14px; width: 14px; height: 14px; }
-      }
-
-      &.critical { color: #ef4444; .days-remaining { animation: pulse 2s infinite; } }
-      &.warning { color: #f59e0b; }
-      &.safe { color: #10b981; }
+      display: flex; flex-direction: column; gap: 4px;
+      .days-remaining { display: flex; align-items: baseline; gap: 2px; .value { font-size: 1.25rem; font-weight: 800; } .label { font-size: 0.7rem; font-weight: 700; } }
+      &.critical { color: #ef4444; } &.warning { color: #f59e0b; } &.safe { color: #10b981; }
     }
 
     .status-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 12px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      .dot { width: 8px; height: 8px; border-radius: 50%; }
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;
       &.pending { background: #eff6ff; color: #1e40af; .dot { background: #3b82f6; } }
       &.in_progress { background: #fff7ed; color: #9a3412; .dot { background: #f59e0b; } }
+      .dot { width: 8px; height: 8px; border-radius: 50%; }
     }
 
-    .actions-wrapper {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-    }
+    .eval-btn { border-radius: 14px; font-weight: 700; padding: 0 20px; height: 44px; }
 
-    .action-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      transition: all 0.2s ease;
-      &:hover { background: #f1f5f9; transform: translateY(-2px); }
-    }
-
-    .eval-btn {
-      border-radius: 14px;
-      font-weight: 700;
-      padding: 0 20px;
-      height: 44px;
-      mat-icon { margin-right: 8px; font-size: 20px; width: 20px; height: 20px; }
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.7; }
-      100% { opacity: 1; }
-    }
-
-    .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+    .animate-shake { animation: shake 0.5s ease-in-out; }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   `]
 })
 export class EvaluationListPage implements OnInit {
-  displayedColumns = ['protocol', 'deadline', 'status', 'actions'];
-  
-  evaluations = signal<any[]>([
-    { 
-      id: 'ev1', 
-      protocolCode: '2026-IO-001', 
-      type: 'IO',
-      protocolTitle: 'Prevalencia de trastornos de ansiedad en estudiantes de medicina durante el internado rotativo', 
-      investigator: 'Dr. Marco Vinicio',
-      deadline: new Date(2026, 4, 10), // Cerca de hoy
-      status: 'PENDING' 
-    },
-    { 
-      id: 'ev2', 
-      protocolCode: '2026-EC-002', 
-      type: 'EC',
-      protocolTitle: 'Estudio comparativo de la eficacia de dos protocolos de rehabilitación post-infarto', 
-      investigator: 'Dra. Elena Proaño',
-      deadline: new Date(2026, 4, 18), 
-      status: 'IN_PROGRESS' 
-    },
-    { 
-      id: 'ev3', 
-      protocolCode: '2026-EI-003', 
-      type: 'EI',
-      protocolTitle: 'Evaluación del impacto de la telemedicina en el control glicémico de pacientes rurales con DM2', 
-      investigator: 'Dr. Roberto Carlos',
-      deadline: new Date(2026, 3, 28), // Vencido o crítico
-      status: 'PENDING' 
-    }
-  ]);
+  private authFacade = inject(AuthFacade);
+  private evaluationRepo = inject(IEvaluationRepositoryPort);
 
-  ngOnInit() {}
+  displayedColumns = ['protocol', 'deadline', 'status', 'actions'];
+  evaluations = signal<any[]>([]);
+  
+  pendingCount = computed(() => this.evaluations().filter(e => e.status === 'PENDING').length);
+  urgentCount = computed(() => this.evaluations().filter(e => this.getDaysLeft(e.deadline) <= 2).length);
+
+  ngOnInit() {
+    this.loadEvaluations();
+  }
+
+  loadEvaluations() {
+    const user = this.authFacade.currentUser();
+    if (!user) return;
+
+    // Usamos el ID del evaluador (en mock será eval-123 para las pruebas)
+    this.evaluationRepo.getByEvaluatorId('eval-123').subscribe(data => {
+      this.evaluations.set(data);
+    });
+  }
 
   getDaysLeft(deadline: Date): number {
     const today = new Date();
-    const diff = deadline.getTime() - today.getTime();
+    const diff = new Date(deadline).getTime() - today.getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   }
 

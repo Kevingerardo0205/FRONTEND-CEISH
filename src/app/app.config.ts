@@ -19,6 +19,8 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 import { EvaluationMockAdapter } from '@infrastructure/adapters/evaluation-mock.adapter';
 import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
 import { EvaluatorMockAdapter } from '@infrastructure/adapters/evaluator-mock.adapter';
+import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { ProtocolMockAdapter } from '@infrastructure/adapters/protocol-mock.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,6 +33,7 @@ export const appConfig: ApplicationConfig = {
     { provide: IAuthRepositoryPort, useClass: AuthApiAdapter },
     { provide: IUserAdminRepositoryPort, useClass: UserAdminApiAdapter },
     { provide: IEvaluationRepositoryPort, useClass: EvaluationMockAdapter },
-    { provide: IEvaluatorRepositoryPort, useClass: EvaluatorMockAdapter }
+    { provide: IEvaluatorRepositoryPort, useClass: EvaluatorMockAdapter },
+    { provide: IProtocolRepositoryPort, useClass: ProtocolMockAdapter }
   ]
 };
