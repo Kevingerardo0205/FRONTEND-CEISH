@@ -1,10 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule, FormArray, AbstractControl, ValidationErrors, FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 
 // Angular Material
-import { MatStepperModule } from '@angular/material/stepper';
+import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -17,11 +17,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import { CrearProtocoloDto } from '../../../domain/dtos/crear-protocolo.dto';
+import { CrearProtocoloDto, InvestigadorEquipo, InstitucionParticipante, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-import { TipoEstudio, getRequisitosPorTipoEstudio, RequisitoDocumento } from '../../../constants/anexos-pet.constants';
+import { TipoEstudio, RequisitoDocumento } from '../../../constants/anexos-pet.constants';
+import { forkJoin, of } from 'rxjs';
 
 // --- Validadores Técnicos ---
 
@@ -47,12 +49,14 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
     MatSelectModule, MatButtonModule, MatIconModule, 
     MatCardModule, MatCheckboxModule, MatSnackBarModule,
     MatProgressSpinnerModule, MatDividerModule,
-    MatToolbarModule, MatTooltipModule
+    MatToolbarModule, MatTooltipModule, MatProgressBarModule
   ],
   templateUrl: './nuevo-protocolo.page.html',
   styleUrls: ['./nuevo-protocolo.page.scss']
 })
 export class NuevoProtocoloPage implements OnInit {
+  @ViewChild('stepper') stepper!: MatStepper;
+
   private readonly fb = inject(FormBuilder);
   private readonly protocoloService = inject(ProtocoloService);
   private readonly authFacade = inject(AuthFacade);
@@ -60,65 +64,79 @@ export class NuevoProtocoloPage implements OnInit {
   private readonly router = inject(Router);
 
   isLoading = false;
+  protocolId: number | null = null;
+  
   readonly coberturas = ['Local (Cantonal)', 'Provincial (Chimborazo)', 'Regional', 'Nacional', 'Internacional'];
   readonly funcionesEquipo = ['Investigador Principal', 'Coinvestigador', 'Tutor / Director', 'Asistente de Investigación', 'Estudiante'];
   
+  tiposEstudio: any[] = [];
+  nivelesRiesgo: any[] = []; // Nueva lista para niveles de riesgo
   documentosRequeridos: RequisitoDocumento[] = [];
-  archivosDocumentos: { [key: string]: File } = {};
+  documentUploadStatus: { [key: string]: string } = {};
+  archivosCargados: { [key: string]: string } = {};
 
-  // 1. Datos Generales
-  step1Form = this.fb.group({
+  generalForm = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(200)]],
+    tipoEstudio: ['', Validators.required],
+    riskLevelId: ['', Validators.required], // Nuevo campo
     coberturaGeografica: ['', Validators.required],
     duracionMeses: [1, [Validators.required, Validators.min(1), Validators.max(120)]],
+    usesBiologicalSamples: [false],
+    isVulnerablePopulation: [false],
+    isMulticentric: [false],
+    isExternal: [false],
+    sponsorRuc: ['', [Validators.required, ecuadorianIdValidator]],
+    sponsorPhone: ['', [Validators.required, ecuadorianPhoneValidator]],
+    sponsorAddress: ['', [Validators.required, Validators.minLength(5)]],
+    sponsorWeb: [''],
+    executingOrgan: ['', Validators.required],
+    amount: [0, [Validators.required, Validators.min(0)]]
   });
 
-  // 2. Equipo de Investigación
-  step2Form = this.fb.group({
+  teamForm = this.fb.group({
     equipoInvestigador: this.fb.array([])
   });
 
-  // 3. Subir Documentos
-  step3Form = this.fb.group({
-    tipoEstudio: ['', Validators.required]
+  institutionsForm = this.fb.group({
+    instituciones: this.fb.array([])
   });
 
-  get equipoInvestigador() {
-    return this.step2Form.get('equipoInvestigador') as FormArray;
-  }
+  documentsForm = this.fb.group({});
+
+  finishForm = this.fb.group({
+    isAffidavitAccepted: [false, Validators.requiredTrue]
+  });
+
+  get equipoInvestigador() { return this.teamForm.get('equipoInvestigador') as FormArray; }
+  get instituciones() { return this.institutionsForm.get('instituciones') as FormArray; }
 
   ngOnInit(): void {
     this.addInvestigadorPrincipal();
-    
-    // Escuchar cambios en tipo de estudio para actualizar documentos requeridos
-    this.step3Form.get('tipoEstudio')?.valueChanges.subscribe(tipo => {
-      if (tipo) {
-        this.documentosRequeridos = getRequisitosPorTipoEstudio(tipo as TipoEstudio);
-        this.archivosDocumentos = {}; // Reiniciar archivos al cambiar tipo
-      }
+    this.addInstitucion();
+    this.loadStudyTypes();
+    this.loadRiskLevels(); // Cargar riesgos al iniciar
+
+    this.generalForm.get('tipoEstudio')?.valueChanges.subscribe(() => this.loadRequirements());
+    this.generalForm.get('usesBiologicalSamples')?.valueChanges.subscribe(() => this.loadRequirements());
+    this.generalForm.get('isVulnerablePopulation')?.valueChanges.subscribe(() => this.loadRequirements());
+  }
+
+  private loadStudyTypes() {
+    this.protocoloService.getStudyTypes().subscribe({
+      next: (types: any) => {
+        this.tiposEstudio = Array.isArray(types) ? types : (types?.data || []);
+      },
+      error: () => this.snackBar.open('Error al cargar tipos de estudio.', 'Cerrar')
     });
   }
 
-  onKeyPressNumber(event: KeyboardEvent) {
-    const pattern = /[0-9]/;
-    const inputChar = String.fromCharCode(event.charCode);
-    if (!pattern.test(inputChar)) {
-      event.preventDefault();
-    }
-  }
-
-  onFileSelected(event: any, index: number) {
-    const file = event.target.files[0];
-    if (file) {
-      this.equipoInvestigador.at(index).get('cvFile')?.setValue(file);
-    }
-  }
-
-  onDocumentSelected(event: any, docId: string) {
-    const file = event.target.files[0];
-    if (file) {
-      this.archivosDocumentos[docId] = file;
-    }
+  private loadRiskLevels() {
+    this.protocoloService.getRiskLevels().subscribe({
+      next: (levels: any) => {
+        this.nivelesRiesgo = Array.isArray(levels) ? levels : (levels?.data || []);
+      },
+      error: () => this.snackBar.open('Error al cargar niveles de riesgo.', 'Cerrar')
+    });
   }
 
   private addInvestigadorPrincipal() {
@@ -148,85 +166,149 @@ export class NuevoProtocoloPage implements OnInit {
     }));
   }
 
-  removeMiembro(index: number) {
-    if (index > 0) this.equipoInvestigador.removeAt(index);
+  removeMiembro(index: number) { if (index > 0) this.equipoInvestigador.removeAt(index); }
+
+  onFileSelected(event: any, index: number) {
+    const file = event.target.files[0];
+    if (file) this.equipoInvestigador.at(index).get('cvFile')?.setValue(file);
   }
 
-  onEnviar(): void {
-    this.step1Form.markAllAsTouched();
-    this.step2Form.markAllAsTouched();
-    this.step3Form.markAllAsTouched();
+  addInstitucion() {
+    this.instituciones.push(this.fb.group({
+      nombre: ['', Validators.required],
+      tipo: ['PUBLICA', Validators.required],
+      direccion: ['', Validators.required],
+      contacto: ['', [Validators.required, Validators.minLength(5)]]
+    }));
+  }
 
-    if (this.isFormInvalid()) {
-      this.snackBar.open('⚠️ Existen campos con errores o incompletos. Por favor revise cada sección.', 'Revisar', { 
-        duration: 5000,
-        panelClass: ['snackbar-error']
-      });
+  removeInstitucion(index: number) { if (this.instituciones.length > 1) this.instituciones.removeAt(index); }
+
+  guardarInicial(): void {
+    if (this.generalForm.invalid || this.teamForm.invalid || this.institutionsForm.invalid) {
+      this.generalForm.markAllAsTouched();
+      this.teamForm.markAllAsTouched();
+      this.institutionsForm.markAllAsTouched();
+      this.snackBar.open('Complete todos los campos obligatorios.', 'Cerrar');
       return;
     }
-
-    // Validar que todos los documentos requeridos estén cargados
-    const faltanDocumentos = this.documentosRequeridos.some(doc => !this.archivosDocumentos[doc.id]);
-    if (faltanDocumentos) {
-      this.snackBar.open('⚠️ Debe subir todos los documentos requeridos.', 'Cerrar', { 
-        duration: 5000,
-        panelClass: ['snackbar-error']
-      });
-      return;
-    }
-
-    if (this.isLoading) return;
-
-    const protocolData: Partial<CrearProtocoloDto> = {
-      ...this.step1Form.value as any,
-      ...this.step2Form.getRawValue() as any,
-      ...this.step3Form.value as any,
-      lugarEjecucion: this.step1Form.value.coberturaGeografica || 'Ecuador', 
-      fechaInicioEstimada: new Date().toISOString(),
-      fechaFinEstimada: new Date().toISOString(),
-      poblacionVulnerable: false,
-      utilizaMuestrasBiologicas: false,
-      multicentrico: false
-    };
 
     this.isLoading = true;
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(protocolData));
+    const payload: CrearProtocoloDto = {
+      ...this.generalForm.value as any,
+      equipoInvestigador: this.equipoInvestigador.getRawValue(),
+      instituciones: this.instituciones.value,
+      isAffidavitAccepted: true,
+      lugarEjecucion: this.generalForm.value.coberturaGeografica || 'Ecuador'
+    };
 
-    // Adjuntar archivos CV
-    this.equipoInvestigador.controls.forEach((control, index) => {
-      const file = control.get('cvFile')?.value;
-      if (file) {
-        formData.append(`cv_investigador_${index}`, file);
-      }
-    });
-
-    // Adjuntar documentos del protocolo
-    Object.keys(this.archivosDocumentos).forEach(key => {
-      formData.append(key, this.archivosDocumentos[key]);
-    });
-
-    this.protocoloService.crearProtocolo(formData).subscribe({
-      next: () => {
-        this.isLoading = false;
-        this.snackBar.open('✅ Protocolo registrado con éxito.', 'Cerrar', { 
-          duration: 5000,
-          panelClass: ['snackbar-success']
-        });
-        this.router.navigate(['/investigador/mis-protocolos']);
+    this.protocoloService.guardarProtocoloInicial(payload).subscribe({
+      next: (res) => {
+        this.protocolId = res.id;
+        this.uploadAllCVs(res.id);
       },
       error: (err) => {
         this.isLoading = false;
-        console.error('Error enviando protocolo:', err);
-        this.snackBar.open('❌ Error crítico al enviar el formulario.', 'Cerrar', { 
-          duration: 5000,
-          panelClass: ['snackbar-error']
-        });
+        this.snackBar.open('Error al registrar protocolo.', 'Cerrar');
       }
     });
   }
 
-  private isFormInvalid(): boolean {
-    return this.step1Form.invalid || this.step2Form.invalid || this.step3Form.invalid;
+  private uploadAllCVs(protocolId: number) {
+    const uploads = this.equipoInvestigador.controls.map((control, index) => {
+      const file = control.get('cvFile')?.value;
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('protocolId', protocolId.toString());
+        formData.append('documentTypeId', `cv_investigador_${index}`);
+        return this.protocoloService.subirDocumento(formData);
+      }
+      return of(null);
+    });
+
+    forkJoin(uploads).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.stepper.next();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.stepper.next();
+      }
+    });
+  }
+
+  private loadRequirements() {
+    const tipo = this.generalForm.get('tipoEstudio')?.value;
+    if (!tipo) return;
+
+    const muestras = this.generalForm.get('usesBiologicalSamples')?.value || false;
+    const vulnerable = this.generalForm.get('isVulnerablePopulation')?.value || false;
+
+    this.protocoloService.getRequisitos(tipo, muestras, vulnerable).subscribe({
+      next: (reqs: any) => {
+        const requirementsArray = Array.isArray(reqs) ? reqs : (reqs?.data || []);
+        
+        if (requirementsArray.length > 0) {
+          this.documentosRequeridos = requirementsArray;
+          requirementsArray.forEach((doc: any) => {
+            if (!this.documentUploadStatus[doc.id]) this.documentUploadStatus[doc.id] = 'pendiente';
+          });
+        } else {
+          this.documentosRequeridos = [];
+        }
+      },
+      error: (err) => {
+        console.error('Error cargando requisitos dinámicos:', err);
+        this.documentosRequeridos = [];
+        this.snackBar.open('Error al conectar con el servicio de requisitos.', 'Cerrar');
+      }
+    });
+  }
+
+  onDocumentSelected(event: any, docId: string) {
+    const file = event.target.files[0];
+    if (!file || !this.protocolId) return;
+
+    this.documentUploadStatus[docId] = 'subiendo';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('protocolId', this.protocolId.toString());
+    formData.append('documentTypeId', docId);
+
+    this.protocoloService.subirDocumento(formData).subscribe({
+      next: () => {
+        this.documentUploadStatus[docId] = 'exito';
+        this.archivosCargados[docId] = file.name;
+      },
+      error: () => {
+        this.documentUploadStatus[docId] = 'error';
+      }
+    });
+  }
+
+  onEnviarFinal(): void {
+    if (!this.protocolId) return;
+    const requiredPending = this.documentosRequeridos.some(d => !d.esCondicional && this.documentUploadStatus[d.id] !== 'exito');
+    if (requiredPending) {
+      this.snackBar.open('Debe subir todos los documentos obligatorios.', 'Cerrar');
+      return;
+    }
+
+    this.isLoading = true;
+    this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.router.navigate(['/investigador/mis-protocolos']);
+      },
+      error: () => this.isLoading = false
+    });
+  }
+
+  onKeyPressNumber(event: KeyboardEvent) {
+    const pattern = /[0-9]/;
+    const inputChar = String.fromCharCode(event.charCode);
+    if (!pattern.test(inputChar)) event.preventDefault();
   }
 }

@@ -1,8 +1,12 @@
-import { ApplicationConfig } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-// import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
+import { registerLocaleData } from '@angular/common';
+import localeEs from '@angular/common/locales/es';
+
+// Registrar datos de localización para español
+registerLocaleData(localeEs);
 
 import { routes } from './app.routes';
 import { JwtInterceptor } from '@infrastructure/interceptors/jwt.interceptor';
@@ -21,7 +25,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimations(),
     provideHttpClient(withInterceptorsFromDi()),
-    // provideCharts(withDefaultRegisterables()),
+    { provide: LOCALE_ID, useValue: 'es' },
     { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
     { provide: IAuthRepositoryPort, useClass: AuthApiAdapter },

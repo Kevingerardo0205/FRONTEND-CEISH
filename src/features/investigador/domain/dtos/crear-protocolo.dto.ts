@@ -23,23 +23,35 @@ export interface InvestigadorEquipo {
   celular: string;
 }
 
+export interface InstitucionParticipante {
+  nombre: string;
+  tipo: 'PUBLICA' | 'PRIVADA';
+  direccion: string;
+  contacto: string;
+}
+
 export interface CrearProtocoloDto {
-  // 1. Datos Generales
   titulo: string;
   tipoEstudio: TipoEstudio;
+  riskLevelId: number; // Nuevo campo para nivel de riesgo
   coberturaGeografica: string;
   duracionMeses: number;
-
-  // 2. Equipo Investigador
+  usesBiologicalSamples: boolean;
+  isVulnerablePopulation: boolean;
+  isMulticentric: boolean;
+  isExternal: boolean;
+  sponsorRuc: string;
+  sponsorPhone: string;
+  sponsorAddress: string;
+  sponsorWeb?: string;
+  executingOrgan: string;
+  amount: number;
   equipoInvestigador: InvestigadorEquipo[];
-
-  // Metadatos de control (heredados o necesarios)
-  lugarEjecucion: string;
-  fechaInicioEstimada: string;
-  fechaFinEstimada: string;
-  poblacionVulnerable: boolean;
-  utilizaMuestrasBiologicas: boolean;
-  multicentrico: boolean;
+  instituciones: InstitucionParticipante[];
+  isAffidavitAccepted: boolean;
+  lugarEjecucion?: string;
+  fechaInicioEstimada?: string;
+  fechaFinEstimada?: string;
 }
 
 export interface ProtocoloCreadoResponse {
