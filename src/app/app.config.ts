@@ -13,6 +13,8 @@ import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.po
 import { UserAdminApiAdapter } from '@infrastructure/adapters/user-admin-api.adapter';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { EvaluationMockAdapter } from '@infrastructure/adapters/evaluation-mock.adapter';
+import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
+import { EvaluatorMockAdapter } from '@infrastructure/adapters/evaluator-mock.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,6 +26,7 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
     { provide: IAuthRepositoryPort, useClass: AuthApiAdapter },
     { provide: IUserAdminRepositoryPort, useClass: UserAdminApiAdapter },
-    { provide: IEvaluationRepositoryPort, useClass: EvaluationMockAdapter }
+    { provide: IEvaluationRepositoryPort, useClass: EvaluationMockAdapter },
+    { provide: IEvaluatorRepositoryPort, useClass: EvaluatorMockAdapter }
   ]
 };

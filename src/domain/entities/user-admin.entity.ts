@@ -1,10 +1,11 @@
 import { Observable } from 'rxjs';
+import { UserRole } from './user.entity';
 
 export interface UserAdmin {
   id?: string;
   nombre: string;
   email: string;
-  rol: 'ADMIN' | 'INVESTIGADOR' | 'EVALUADOR' | 'SECRETARIA' | 'PRESIDENTA';
+  rol: UserRole;
   perfil: string;
   activo: boolean;
 }

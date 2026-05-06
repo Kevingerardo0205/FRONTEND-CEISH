@@ -6,6 +6,7 @@ import { RouterModule } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { StatCardComponent } from '../components/stat-card/stat-card.component';
 import { UserRole } from '@domain/entities/user.entity';
+import { EvaluatorLoadComponent } from '../components/evaluator-load/evaluator-load.component';
 
 interface DashboardConfig {
   greeting: string;
@@ -15,12 +16,13 @@ interface DashboardConfig {
   emptyMessage: string;
   emptyActionLabel?: string;
   emptyActionLink?: string;
+  showEvaluatorLoad?: boolean;
 }
 
 @Component({
   selector: 'app-dashboard-home',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, StatCardComponent, RouterModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, StatCardComponent, RouterModule, EvaluatorLoadComponent],
   template: `
     <div class="dashboard-header">
       <div class="welcome-container">
@@ -57,9 +59,9 @@ interface DashboardConfig {
       }
     </div>
 
-    <div class="content-layout">
+    <div class="content-layout" [ngClass]="{'single-col': !config().showEvaluatorLoad}">
       <section class="main-content">
-        <div class="section-card">
+        <div class="section-card" *ngIf="!config().showEvaluatorLoad">
           <header class="section-header">
             <div class="header-title">
               <mat-icon>history</mat-icon>
@@ -81,6 +83,11 @@ interface DashboardConfig {
               {{ config().emptyActionLabel }}
             </button>
           </div>
+        </div>
+
+        <!-- Nueva sección para Presidenta/Secretaria -->
+        <div *ngIf="config().showEvaluatorLoad" class="mb-4">
+           <app-evaluator-load></app-evaluator-load>
         </div>
       </section>
 
@@ -196,6 +203,7 @@ interface DashboardConfig {
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 2rem;
+      &.single-col { grid-template-columns: 2fr 1fr; }
     }
 
     .section-card {
@@ -342,6 +350,7 @@ interface DashboardConfig {
         gap: 1.5rem;
       }
     }
+    .mb-4 { margin-bottom: 1rem; }
   `]
 })
 export class DashboardHomePage {
@@ -416,7 +425,8 @@ export class DashboardHomePage {
             { label: 'Asignar Evaluadores', icon: 'people_alt', link: '/dashboard/evaluations/assignment', color: 'accent' }
           ],
           recentTitle: 'Trámites recibidos hoy',
-          emptyMessage: 'No hay trámites nuevos pendientes de validación.'
+          emptyMessage: 'No hay trámites nuevos pendientes de validación.',
+          showEvaluatorLoad: true
         };
 
       case 'EVALUADOR':
@@ -447,7 +457,8 @@ export class DashboardHomePage {
             { label: 'Ver Reportes', icon: 'insights', link: '/dashboard/reports', color: 'accent' }
           ],
           recentTitle: 'Resoluciones pendientes de firma',
-          emptyMessage: 'No hay resoluciones pendientes de firma en este momento.'
+          emptyMessage: 'No hay resoluciones pendientes de firma en este momento.',
+          showEvaluatorLoad: true
         };
 
       default:

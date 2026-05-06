@@ -65,4 +65,7 @@ export interface ProtocoloDetalle extends CrearProtocoloDto {
   estado: EstadoProtocolo;
   fechaCreacion: string;
   investigadorPrincipal: string;
+  resumen?: string;
+  disenoEstudio?: string;
+  institucionPatrocinadora?: string;
 }
