@@ -41,6 +41,16 @@ import { UserAdmin } from '@domain/entities/user-admin.entity';
           </td>
         </ng-container>
 
+        <ng-container matColumnDef="estado">
+          <th mat-header-cell *matHeaderCellDef> Estado </th>
+          <td mat-cell *matCellDef="let user"> 
+            <div class="status-chip" [ngClass]="user.activo !== false ? 'active' : 'inactive'">
+              <span class="dot"></span>
+              {{ user.activo !== false ? 'Activo' : 'Revocado' }}
+            </div>
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="acciones">
           <th mat-header-cell *matHeaderCellDef class="text-right"> Gestión </th>
           <td mat-cell *matCellDef="let user" class="text-right">
@@ -48,7 +58,7 @@ import { UserAdmin } from '@domain/entities/user-admin.entity';
               <mat-icon>edit_note</mat-icon>
             </button>
             <button mat-icon-button class="action-btn delete" (click)="delete.emit(user)" matTooltip="Revocar acceso">
-              <mat-icon>remove_circle_outline</mat-icon>
+              <mat-icon>{{ user.activo !== false ? 'remove_circle_outline' : 'settings_backup_restore' }}</mat-icon>
             </button>
           </td>
         </ng-container>
@@ -127,6 +137,23 @@ import { UserAdmin } from '@domain/entities/user-admin.entity';
       &.admin { background: #e0f2f1; color: #00796b; }
       &.investigador { background: #e3f2fd; color: #1565c0; }
       &.evaluador { background: #fff3e0; color: #e65100; }
+      &.secretaria { background: #f3e5f5; color: #7b1fa2; }
+      &.presidenta { background: #efebe9; color: #4e342e; }
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+
+      .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+      &.active { background: #f0fdf4; color: #166534; .dot { background: #10b981; } }
+      &.inactive { background: #fef2f2; color: #991b1b; .dot { background: #ef4444; } }
     }
 
     .action-btn {
@@ -143,5 +170,5 @@ export class UserTableComponent {
   users = input.required<UserAdmin[]>();
   edit = output<UserAdmin>();
   delete = output<UserAdmin>();
-  displayedColumns = ['nombre', 'email', 'rol', 'acciones'];
+  displayedColumns = ['nombre', 'email', 'rol', 'estado', 'acciones'];
 }

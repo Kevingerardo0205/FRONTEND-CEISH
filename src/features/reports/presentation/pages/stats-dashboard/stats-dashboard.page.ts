@@ -7,10 +7,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { NgChartsModule } from 'ng2-charts';
-import { Chart, registerables } from 'chart.js';
-Chart.register(...registerables);
-
-import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
+import { ChartConfiguration, ChartData } from 'chart.js';
 import { ReportsUseCase } from '@features/reports/application/use-cases/reports.use-case';
 import { SummaryStats, ProtocolStats, StatusStats, EvaluationTimeStats, WorkloadStats } from '@features/reports/domain/entities/report.entity';
 

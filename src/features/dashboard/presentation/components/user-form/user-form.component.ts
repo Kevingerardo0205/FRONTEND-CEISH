@@ -1,4 +1,4 @@
-import { Component, input, output, inject, effect, signal } from '@angular/core';
+import { Component, input, output, inject, effect, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
@@ -6,6 +6,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { UserAdmin } from '@domain/entities/user-admin.entity';
 import { GetRolesUseCase } from '@features/dashboard/use-cases';
 
@@ -19,7 +20,8 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
     MatSelectModule, 
     MatButtonModule, 
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatSlideToggleModule
   ],
   template: `
     <div class="high-end-card">
@@ -72,6 +74,16 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
             <mat-icon matSuffix class="text-muted">work_outline</mat-icon>
             <mat-error>Campo requerido</mat-error>
           </mat-form-field>
+        </div>
+
+        <div class="field-container d-flex align-items-center justify-content-between py-2" *ngIf="userToEdit()">
+          <label class="field-label m-0">Estado de la cuenta</label>
+          <div class="d-flex align-items-center gap-2">
+            <span [class.text-primary]="userForm.get('activo')?.value" [class.text-muted]="!userForm.get('activo')?.value" class="small fw-bold">
+              {{ userForm.get('activo')?.value ? 'ACTIVA' : 'REVOCADA' }}
+            </span>
+            <mat-slide-toggle formControlName="activo" color="primary"></mat-slide-toggle>
+          </div>
         </div>
 
         <div class="actions-stack mt-4">
@@ -188,7 +200,8 @@ export class UserRegistrationFormComponent implements OnInit {
     nombre: ['', [Validators.required, Validators.minLength(5)]],
     email: ['', [Validators.required, Validators.email]],
     rol: ['', [Validators.required]],
-    perfil: ['', [Validators.required]]
+    perfil: ['', [Validators.required]],
+    activo: [true]
   });
 
   constructor() {
@@ -199,10 +212,11 @@ export class UserRegistrationFormComponent implements OnInit {
           nombre: user.nombre,
           email: user.email,
           rol: user.rol,
-          perfil: user.perfil
+          perfil: user.perfil,
+          activo: user.activo !== false
         });
       } else {
-        this.userForm.reset({ rol: '' });
+        this.userForm.reset({ rol: '', activo: true });
       }
     });
   }

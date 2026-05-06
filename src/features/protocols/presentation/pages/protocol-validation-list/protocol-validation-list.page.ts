@@ -3,130 +3,211 @@ import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
 
 @Component({
   selector: 'app-protocol-validation-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, RouterLink],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, StatCardComponent],
   template: `
-    <div class="validation-container">
-      <header class="page-header">
-        <div class="title-area">
-          <h1>Validación Documental</h1>
-          <p>Bandeja de protocolos pendientes de revisión técnica (PET 2023)</p>
+    <div class="dashboard-page animate-fade-in">
+      <!-- Header Seccion -->
+      <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="title-section">
+          <div class="breadcrumb-chip">CEISH / Secretaría / Validación</div>
+          <h1 class="page-title">Validación Documental</h1>
+          <p class="page-subtitle">Revise y valide la integridad de los protocolos ingresados (PET 2023)</p>
         </div>
-      </header>
+        <div class="header-actions">
+           <button mat-stroked-button color="primary" class="refresh-btn">
+             <mat-icon>refresh</mat-icon>
+             Actualizar
+           </button>
+        </div>
+      </div>
 
-      <div class="table-card">
-        <table mat-table [dataSource]="protocols()">
-          
-          <ng-container matColumnDef="fecha">
-            <th mat-header-cell *matHeaderCellDef> Envío </th>
-            <td mat-cell *matCellDef="let p"> {{ p.submissionDate | date:'shortDate' }} </td>
-          </ng-container>
+      <!-- Métricas Rápidas -->
+      <div class="stats-grid mb-4">
+        <app-stat-card label="Pendientes" [value]="2" icon="pending_actions" color="#f59e0b"></app-stat-card>
+        <app-stat-card label="Observados" [value]="1" icon="assignment_late" color="#ef4444"></app-stat-card>
+        <app-stat-card label="Validados Hoy" [value]="5" icon="task_alt" color="#10b981"></app-stat-card>
+        <app-stat-card label="Total Mes" [value]="24" icon="assessment" color="#2563eb"></app-stat-card>
+      </div>
 
-          <ng-container matColumnDef="titulo">
-            <th mat-header-cell *matHeaderCellDef> Título del Proyecto </th>
-            <td mat-cell *matCellDef="let p"> 
-              <div class="title-cell">
-                <span class="main-title">{{ p.title }}</span>
-                <span class="sub-info">{{ p.investigator }}</span>
-              </div>
-            </td>
-          </ng-container>
+      <!-- Lista de Protocolos -->
+      <div class="content-card shadow-soft">
+        <div class="table-toolbar p-3 d-flex justify-content-between align-items-center">
+          <h2 class="section-title m-0">Protocolos por Validar</h2>
+          <div class="search-box">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Filtrar por código o título...">
+          </div>
+        </div>
 
-          <ng-container matColumnDef="tipo">
-            <th mat-header-cell *matHeaderCellDef> Tipo </th>
-            <td mat-cell *matCellDef="let p"> 
-              <mat-chip-set>
-                <mat-chip class="type-chip" [ngClass]="p.type.toLowerCase()">{{ p.type }}</mat-chip>
-              </mat-chip-set>
-            </td>
-          </ng-container>
+        <div class="table-responsive">
+          <table mat-table [dataSource]="protocols()" class="modern-table">
+            
+            <ng-container matColumnDef="fecha">
+              <th mat-header-cell *matHeaderCellDef> Fecha Envío </th>
+              <td mat-cell *matCellDef="let p"> 
+                <div class="date-cell">
+                  <mat-icon>calendar_today</mat-icon>
+                  <span>{{ p.submissionDate | date:'dd MMM, yyyy' }}</span>
+                </div>
+              </td>
+            </ng-container>
 
-          <ng-container matColumnDef="acciones">
-            <th mat-header-cell *matHeaderCellDef class="text-right"> Gestión </th>
-            <td mat-cell *matCellDef="let p" class="text-right">
-              <button mat-flat-button class="review-btn" [routerLink]="['/dashboard/protocols/validation/detail', p.id]">
-                <mat-icon>fact_check</mat-icon>
-                Revisar
-              </button>
-            </td>
-          </ng-container>
+            <ng-container matColumnDef="titulo">
+              <th mat-header-cell *matHeaderCellDef> Información del Proyecto </th>
+              <td mat-cell *matCellDef="let p"> 
+                <div class="project-cell">
+                  <span class="main-title">{{ p.title }}</span>
+                  <div class="investigator-info">
+                    <mat-icon>person</mat-icon>
+                    <span>{{ p.investigator }}</span>
+                  </div>
+                </div>
+              </td>
+            </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef> Tipo de Estudio </th>
+              <td mat-cell *matCellDef="let p"> 
+                <span class="type-badge" [ngClass]="p.type.toLowerCase()">
+                  {{ p.type === 'IO' ? 'Observacional' : p.type === 'EC' ? 'Ensayo Clínico' : 'Intervención' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acciones">
+              <th mat-header-cell *matHeaderCellDef class="text-end"> Gestión </th>
+              <td mat-cell *matCellDef="let p" class="text-end">
+                <button mat-flat-button color="primary" class="review-btn" [routerLink]="['/dashboard/protocols/validation/detail', p.id]">
+                  <mat-icon>verified</mat-icon>
+                  Validar
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+          </table>
+        </div>
       </div>
     </div>
   `,
   styles: [`
-    .validation-container { animation: fadeIn 0.4s ease-out; }
-    
-    .page-header {
-      margin-bottom: 2.5rem;
-      h1 { margin: 0; font-size: 1.75rem; font-weight: 800; color: #003366; }
-      p { margin: 0.25rem 0 0; color: #64748b; }
+    .dashboard-page { padding: 1rem; }
+
+    .breadcrumb-chip {
+      background: rgba(0, 51, 102, 0.05);
+      color: #003366;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: inline-block;
+      margin-bottom: 0.5rem;
     }
 
-    .table-card {
+    .page-title { font-size: 1.85rem; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.5px; }
+    .page-subtitle { color: #64748b; font-size: 0.95rem; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .content-card {
       background: white;
       border-radius: 24px;
-      padding: 1rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f1f5f9;
+      overflow: hidden;
+    }
+
+    .table-toolbar {
+      border-bottom: 1px solid #f1f5f9;
+      .section-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+    }
+
+    .search-box {
+      background: #f8fafc;
       border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 300px;
+      
+      mat-icon { font-size: 18px; width: 18px; height: 18px; color: #94a3b8; }
+      input { border: none; background: transparent; outline: none; font-size: 0.85rem; width: 100%; }
     }
 
-    table { width: 100%; }
-
-    th { 
-      color: #94a3b8; 
-      font-size: 0.75rem; 
-      text-transform: uppercase; 
-      font-weight: 700; 
-      padding: 1.5rem 1rem;
+    .modern-table {
+      width: 100%;
+      th { background: #f8fafc; color: #64748b; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; padding: 1.25rem 1rem; }
+      td { padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; }
     }
 
-    td { padding: 1.5rem 1rem; border-bottom: 1px solid #f1f5f9; }
+    .date-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #475569;
+      font-weight: 600;
+      font-size: 0.85rem;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; }
+    }
 
-    .title-cell {
+    .project-cell {
       display: flex;
       flex-direction: column;
-      .main-title { font-weight: 700; color: #1e293b; font-size: 0.9rem; }
-      .sub-info { font-size: 0.75rem; color: #94a3b8; }
+      gap: 4px;
+      .main-title { font-weight: 700; color: #1e293b; font-size: 0.9rem; line-height: 1.4; }
+      .investigator-info {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      }
     }
 
-    .type-chip {
-      &.io { background: #e0f2f1; color: #00796b; }
-      &.ei { background: #e3f2fd; color: #1565c0; }
-      &.ec { background: #fff3e0; color: #e65100; }
+    .type-badge {
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      
+      &.io { background: #eff6ff; color: #2563eb; }
+      &.ec { background: #fff7ed; color: #f59e0b; }
+      &.ei { background: #f0fdf4; color: #10b981; }
     }
 
     .review-btn {
-      background-color: #003366;
-      color: white;
       border-radius: 10px;
-      font-weight: 600;
-      mat-icon { font-size: 20px; width: 20px; height: 20px; }
+      font-weight: 700;
+      font-size: 0.85rem;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 6px; }
     }
 
-    .text-right { text-align: right; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   `]
 })
 export class ProtocolValidationListPage {
   displayedColumns = ['fecha', 'titulo', 'tipo', 'acciones'];
   
-  // Mock data for display
   protocols = signal([
-    { id: '1', title: 'Impacto del COVID-19 en la salud mental docente', investigator: 'Dra. Ana Lucía', type: 'IO', submissionDate: new Date() },
-    { id: '2', title: 'Ensayo clínico fase III: Nuevo tratamiento hipertensión', investigator: 'Ing. Roberto Carlos', type: 'EC', submissionDate: new Date() }
+    { id: '1', title: 'Prevalencia de trastornos de ansiedad en estudiantes de medicina durante el internado rotativo', investigator: 'Dra. Ana María Lucía', type: 'IO', submissionDate: new Date() },
+    { id: '2', title: 'Estudio comparativo de la eficacia de dos protocolos de rehabilitación post-infarto', investigator: 'Dr. Roberto Carlos Espinoza', type: 'EC', submissionDate: new Date() }
   ]);
 }

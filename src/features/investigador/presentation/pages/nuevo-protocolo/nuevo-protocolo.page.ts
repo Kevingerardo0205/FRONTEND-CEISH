@@ -16,10 +16,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { CrearProtocoloDto } from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { TipoEstudio, getRequisitosPorTipoEstudio, RequisitoDocumento } from '../../../constants/anexos-pet.constants';
 
 // --- Validadores Técnicos ---
 
@@ -45,7 +47,7 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
     MatSelectModule, MatButtonModule, MatIconModule, 
     MatCardModule, MatCheckboxModule, MatSnackBarModule,
     MatProgressSpinnerModule, MatDividerModule,
-    MatToolbarModule
+    MatToolbarModule, MatTooltipModule
   ],
   templateUrl: './nuevo-protocolo.page.html',
   styleUrls: ['./nuevo-protocolo.page.scss']
@@ -60,54 +62,25 @@ export class NuevoProtocoloPage implements OnInit {
   isLoading = false;
   readonly coberturas = ['Local (Cantonal)', 'Provincial (Chimborazo)', 'Regional', 'Nacional', 'Internacional'];
   readonly funcionesEquipo = ['Investigador Principal', 'Coinvestigador', 'Tutor / Director', 'Asistente de Investigación', 'Estudiante'];
+  
+  documentosRequeridos: RequisitoDocumento[] = [];
+  archivosDocumentos: { [key: string]: File } = {};
 
   // 1. Datos Generales
   step1Form = this.fb.group({
     titulo: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(200)]],
-    tipoEstudio: ['', Validators.required],
     coberturaGeografica: ['', Validators.required],
-    montoTotal: [0, [Validators.required, Validators.min(0)]],
-    fuenteFinanciamiento: ['', [Validators.required, Validators.minLength(3)]],
     duracionMeses: [1, [Validators.required, Validators.min(1), Validators.max(120)]],
   });
 
-  // 2. Patrocinador e Equipo
+  // 2. Equipo de Investigación
   step2Form = this.fb.group({
-    nombrePatrocinador: ['', [Validators.required, Validators.minLength(3)]],
-    identificacionPatrocinador: ['', [Validators.required, ecuadorianIdValidator]],
-    correoPatrocinador: ['', [Validators.required, Validators.email]],
-    telefonoPatrocinador: ['', [Validators.required, ecuadorianPhoneValidator]],
-    direccionPatrocinador: ['', [Validators.required, Validators.minLength(5)]],
     equipoInvestigador: this.fb.array([])
   });
 
-  // 3. Detalle de la Investigación
+  // 3. Subir Documentos
   step3Form = this.fb.group({
-    resumenEstructurado: ['', [Validators.required, Validators.minLength(100)]],
-    problemaInvestigacion: ['', [Validators.required, Validators.minLength(50)]],
-    justificacion: ['', [Validators.required, Validators.minLength(50)]],
-    marcoTeorico: ['', [Validators.required, Validators.minLength(100)]],
-    objetivoGeneral: ['', [Validators.required, Validators.minLength(20)]],
-    objetivosEspecificos: ['', [Validators.required, Validators.minLength(20)]],
-    hipotesis: ['']
-  });
-
-  // 4. Metodología
-  step4Form = this.fb.group({
-    disenoEstudio: ['', [Validators.required, Validators.minLength(10)]],
-    descripcionPoblacion: ['', [Validators.required, Validators.minLength(50)]],
-    criteriosInclusionExclusion: ['', [Validators.required, Validators.minLength(20)]],
-    operacionalizacionVariables: ['', [Validators.required, Validators.minLength(50)]],
-    procedimientosDetallados: ['', [Validators.required, Validators.minLength(100)]],
-    paqueteEstadistico: ['', Validators.required]
-  });
-
-  // 5. Ética y Resultados
-  step5Form = this.fb.group({
-    procesoAnonimizacion: ['', [Validators.required, Validators.minLength(50)]],
-    balanceRiesgoBeneficio: ['', [Validators.required, Validators.minLength(50)]],
-    resultadosEsperados: ['', [Validators.required, Validators.minLength(50)]],
-    referenciasBibliograficas: ['', [Validators.required, Validators.minLength(50)]]
+    tipoEstudio: ['', Validators.required]
   });
 
   get equipoInvestigador() {
@@ -116,6 +89,14 @@ export class NuevoProtocoloPage implements OnInit {
 
   ngOnInit(): void {
     this.addInvestigadorPrincipal();
+    
+    // Escuchar cambios en tipo de estudio para actualizar documentos requeridos
+    this.step3Form.get('tipoEstudio')?.valueChanges.subscribe(tipo => {
+      if (tipo) {
+        this.documentosRequeridos = getRequisitosPorTipoEstudio(tipo as TipoEstudio);
+        this.archivosDocumentos = {}; // Reiniciar archivos al cambiar tipo
+      }
+    });
   }
 
   onKeyPressNumber(event: KeyboardEvent) {
@@ -123,6 +104,20 @@ export class NuevoProtocoloPage implements OnInit {
     const inputChar = String.fromCharCode(event.charCode);
     if (!pattern.test(inputChar)) {
       event.preventDefault();
+    }
+  }
+
+  onFileSelected(event: any, index: number) {
+    const file = event.target.files[0];
+    if (file) {
+      this.equipoInvestigador.at(index).get('cvFile')?.setValue(file);
+    }
+  }
+
+  onDocumentSelected(event: any, docId: string) {
+    const file = event.target.files[0];
+    if (file) {
+      this.archivosDocumentos[docId] = file;
     }
   }
 
@@ -135,7 +130,8 @@ export class NuevoProtocoloPage implements OnInit {
       formacion: ['', [Validators.required, Validators.minLength(3)]],
       entidad: [{value: 'ESPOCH', disabled: false}, Validators.required],
       correo: [user?.email || '', [Validators.required, Validators.email]],
-      celular: ['', [Validators.required, ecuadorianPhoneValidator]]
+      celular: ['', [Validators.required, ecuadorianPhoneValidator]],
+      cvFile: [null, Validators.required]
     }));
   }
 
@@ -147,7 +143,8 @@ export class NuevoProtocoloPage implements OnInit {
       formacion: ['', [Validators.required, Validators.minLength(3)]],
       entidad: ['', Validators.required],
       correo: ['', [Validators.required, Validators.email]],
-      celular: ['', [Validators.required, ecuadorianPhoneValidator]]
+      celular: ['', [Validators.required, ecuadorianPhoneValidator]],
+      cvFile: [null, Validators.required]
     }));
   }
 
@@ -159,11 +156,19 @@ export class NuevoProtocoloPage implements OnInit {
     this.step1Form.markAllAsTouched();
     this.step2Form.markAllAsTouched();
     this.step3Form.markAllAsTouched();
-    this.step4Form.markAllAsTouched();
-    this.step5Form.markAllAsTouched();
 
     if (this.isFormInvalid()) {
       this.snackBar.open('⚠️ Existen campos con errores o incompletos. Por favor revise cada sección.', 'Revisar', { 
+        duration: 5000,
+        panelClass: ['snackbar-error']
+      });
+      return;
+    }
+
+    // Validar que todos los documentos requeridos estén cargados
+    const faltanDocumentos = this.documentosRequeridos.some(doc => !this.archivosDocumentos[doc.id]);
+    if (faltanDocumentos) {
+      this.snackBar.open('⚠️ Debe subir todos los documentos requeridos.', 'Cerrar', { 
         duration: 5000,
         panelClass: ['snackbar-error']
       });
@@ -176,8 +181,6 @@ export class NuevoProtocoloPage implements OnInit {
       ...this.step1Form.value as any,
       ...this.step2Form.getRawValue() as any,
       ...this.step3Form.value as any,
-      ...this.step4Form.value as any,
-      ...this.step5Form.value as any,
       lugarEjecucion: this.step1Form.value.coberturaGeografica || 'Ecuador', 
       fechaInicioEstimada: new Date().toISOString(),
       fechaFinEstimada: new Date().toISOString(),
@@ -189,6 +192,19 @@ export class NuevoProtocoloPage implements OnInit {
     this.isLoading = true;
     const formData = new FormData();
     formData.append('data', JSON.stringify(protocolData));
+
+    // Adjuntar archivos CV
+    this.equipoInvestigador.controls.forEach((control, index) => {
+      const file = control.get('cvFile')?.value;
+      if (file) {
+        formData.append(`cv_investigador_${index}`, file);
+      }
+    });
+
+    // Adjuntar documentos del protocolo
+    Object.keys(this.archivosDocumentos).forEach(key => {
+      formData.append(key, this.archivosDocumentos[key]);
+    });
 
     this.protocoloService.crearProtocolo(formData).subscribe({
       next: () => {
@@ -211,6 +227,6 @@ export class NuevoProtocoloPage implements OnInit {
   }
 
   private isFormInvalid(): boolean {
-    return this.step1Form.invalid || this.step2Form.invalid || this.step3Form.invalid || this.step4Form.invalid || this.step5Form.invalid;
+    return this.step1Form.invalid || this.step2Form.invalid || this.step3Form.invalid;
   }
 }

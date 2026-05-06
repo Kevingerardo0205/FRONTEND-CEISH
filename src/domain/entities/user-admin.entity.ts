@@ -6,6 +6,7 @@ export interface UserAdmin {
   email: string;
   rol: 'ADMIN' | 'INVESTIGADOR' | 'EVALUADOR' | 'SECRETARIA' | 'PRESIDENTA';
   perfil: string;
+  activo: boolean;
 }
 
 export abstract class IUserAdminRepositoryPort {

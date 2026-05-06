@@ -218,16 +218,8 @@ export class LoginPage {
       this.loginUseCase.execute(this.loginForm.value).subscribe({
         next: (response) => {
           this.isLoading = false;
-          
-          // Redirección basada en roles
-          const user = response.user;
-          const userRole = user?.rol?.toUpperCase();
-
-          if (userRole === 'INVESTIGADOR') {
-            this.router.navigate(['/investigador']);
-          } else {
-            this.router.navigate(['/dashboard']);
-          }
+          // Redirección unificada al dashboard
+          this.router.navigate(['/dashboard/home']);
         },
         error: (err: any) => {
           this.isLoading = false;

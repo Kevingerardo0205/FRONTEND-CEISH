@@ -40,8 +40,8 @@ export class SidebarComponent {
     { label: 'Usuarios', icon: 'group', path: '/dashboard/admin/users', roles: ['ADMIN'] },
     
     // Investigador
-    { label: 'Mis Protocolos', icon: 'description', path: '/investigador/mis-protocolos', roles: ['INVESTIGADOR'] },
-    { label: 'Nuevo Protocolo', icon: 'add_circle', path: '/investigador/nuevo-protocolo', roles: ['INVESTIGADOR'] },
+    { label: 'Mis Protocolos', icon: 'description', path: '/dashboard/investigador/mis-protocolos', roles: ['INVESTIGADOR'] },
+    { label: 'Nuevo Protocolo', icon: 'add_circle', path: '/dashboard/investigador/nuevo-protocolo', roles: ['INVESTIGADOR'] },
     
     // Secretaría y Admin
     { label: 'Validación', icon: 'fact_check', path: '/dashboard/protocols/validation/list', roles: ['SECRETARIA', 'ADMIN'] },

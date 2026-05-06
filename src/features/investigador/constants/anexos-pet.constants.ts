@@ -44,11 +44,51 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     formatosAceptados: ['application/pdf']
   },
   {
-    id: 'protocolo_investigacion',
-    nombre: 'Protocolo de Investigación Completo',
-    anexo: 'Documento Técnico',
+    id: 'instrumentos_utilizados',
+    nombre: 'Instrumentos utilizados',
+    anexo: 'Soporte Técnico',
+    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
+    maxSizeMB: 10,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'declaratoria_confidencialidad',
+    nombre: 'Declaratoria de compromisos de confidencialidad',
+    anexo: 'Soporte Ético',
+    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
+    maxSizeMB: 5,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'declaracion_conflicto_interes',
+    nombre: 'Declaración de conflicto de interés',
+    anexo: 'Soporte Ético',
+    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
+    maxSizeMB: 5,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'anexo4_responsabilidad',
+    nombre: 'Declaración de responsabilidad del investigador principal del centro o de los centros de investigación',
+    anexo: 'Anexo 4',
     obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION, TipoEstudio.ENSAYO_CLINICO],
-    maxSizeMB: 20,
+    maxSizeMB: 5,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'carta_interes_institucional',
+    nombre: 'Carta de interés institucional',
+    anexo: 'Anexo 5',
+    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION, TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 5,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'ficha_intervencion',
+    nombre: 'Ficha que describa de forma completa la intervención',
+    anexo: 'Soporte Técnico',
+    obligatorioPara: [TipoEstudio.INTERVENCION],
+    maxSizeMB: 10,
     formatosAceptados: ['application/pdf']
   },
   {
@@ -60,28 +100,109 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     formatosAceptados: ['application/pdf']
   },
   {
-    id: 'poliza_seguro',
-    nombre: 'Póliza de Seguro de responsabilidad civil',
+    id: 'protocolo_investigacion',
+    nombre: 'Protocolo de Investigación Completo',
+    anexo: 'Documento Técnico',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 20,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'ficha_descriptiva_ensayo',
+    nombre: 'Ficha descriptiva del ensayo clínico',
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
     formatosAceptados: ['application/pdf']
   },
   {
-    id: 'aprobacion_arcsa',
-    nombre: 'Aprobación o Certificación de ARCSA',
+    id: 'manual_investigador_bpc',
+    nombre: 'Manual del investigador (Buenas Prácticas Clínicas)',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 20,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'material_reclutamiento',
+    nombre: 'Material de reclutamiento (Afiches, guiones, etc.)',
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 5,
     formatosAceptados: ['application/pdf']
   },
   {
-    id: 'cv_investigadores',
-    nombre: 'Curriculum Vitae de los investigadores (Actualizado)',
-    anexo: 'Soporte',
-    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION, TipoEstudio.ENSAYO_CLINICO],
-    aceptaMultiple: true,
+    id: 'instrumentos_recoleccion_ec',
+    nombre: 'Instrumentos de recolección de datos / cuadernos de recogida',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 10,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'poliza_seguro',
+    nombre: 'Póliza de Seguro de responsabilidad civil del ensayo',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 10,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'certificados_bioetica',
+    nombre: 'Certificados de capacitación en bioética de investigadores',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 10,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'registro_senescyt_ip',
+    nombre: 'Registro de la SENESCYT del Investigador Principal',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 5,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'seguridad_farmaco_experimental',
+    nombre: 'Información sobre seguridad del fármaco experimental',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 15,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'aprobacion_comite_extranjero',
+    nombre: 'Aprobación de comité de ética extranjero (Si aplica)',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    esCondicional: true,
+    condicion: 'Obligatorio para estudios multicéntricos internacionales',
+    maxSizeMB: 10,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'contrato_promotor_investigadores',
+    nombre: 'Contrato entre el promotor y los investigadores',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 10,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'plan_monitoreo_ensayo',
+    nombre: 'Plan de monitoreo del ensayo',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 10,
+    formatosAceptados: ['application/pdf']
+  },
+  {
+    id: 'plan_seguridad_participante',
+    nombre: 'Plan de seguridad y seguimiento del participante',
+    anexo: 'Requisito EC',
+    obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
+    maxSizeMB: 10,
     formatosAceptados: ['application/pdf']
   }
 ];

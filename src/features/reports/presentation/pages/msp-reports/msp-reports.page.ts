@@ -10,6 +10,9 @@ import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ReportsUseCase } from '@features/reports/application/use-cases/reports.use-case';
 import { MSPReportData } from '@features/reports/domain/entities/report.entity';
+
+// Dynamically import libraries to avoid build-time missing module errors if they are not installed
+// and use common patterns. 
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';

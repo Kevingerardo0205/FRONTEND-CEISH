@@ -45,6 +45,10 @@ export const DASHBOARD_ROUTES: Routes = [
         loadChildren: () => import('@features/reports/routes').then(m => m.REPORTS_ROUTES)
       },
       {
+        path: 'investigador',
+        loadChildren: () => import('@features/investigador/investigador.routes').then(m => m.INVESTIGADOR_ROUTES)
+      },
+      {
         path: 'audit',
         loadChildren: () => import('@features/audit/routes').then(m => m.AUDIT_ROUTES)
       },

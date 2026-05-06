@@ -28,44 +28,10 @@ export interface CrearProtocoloDto {
   titulo: string;
   tipoEstudio: TipoEstudio;
   coberturaGeografica: string;
-  montoTotal: number;
-  fuenteFinanciamiento: string;
   duracionMeses: number;
 
-  // 2. Datos del Patrocinador
-  nombrePatrocinador: string;
-  identificacionPatrocinador: string; // Cédula / RUC
-  correoPatrocinador: string;
-  telefonoPatrocinador?: string;
-  direccionPatrocinador?: string;
-
-  // 3. Equipo Investigador
+  // 2. Equipo Investigador
   equipoInvestigador: InvestigadorEquipo[];
-
-  // 4. Detalle de la Investigación
-  resumenEstructurado: string;
-  problemaInvestigacion: string;
-  justificacion: string;
-  marcoTeorico: string;
-  objetivoGeneral: string;
-  objetivosEspecificos: string;
-  hipotesis?: string;
-
-  // 5. Metodología
-  disenoEstudio: string;
-  descripcionPoblacion: string; // Incluye tamaño muestral y fórmula
-  criteriosInclusionExclusion: string;
-  operacionalizacionVariables: string;
-  procedimientosDetallados: string;
-  paqueteEstadistico: string;
-
-  // 6. Consideraciones Éticas
-  procesoAnonimizacion: string;
-  balanceRiesgoBeneficio: string;
-
-  // 7. Resultados y Referencias
-  resultadosEsperados: string;
-  referenciasBibliograficas: string;
 
   // Metadatos de control (heredados o necesarios)
   lugarEjecucion: string;
@@ -98,4 +64,5 @@ export interface ProtocoloDetalle extends CrearProtocoloDto {
   codigoCeish: string;
   estado: EstadoProtocolo;
   fechaCreacion: string;
+  investigadorPrincipal: string;
 }

@@ -23,109 +23,150 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatDividerModule
   ],
   template: `
-    <div class="page-container">
-      <header class="page-header">
-        <div class="title-area">
-          <h1>Generador de Resoluciones</h1>
-          <p>Emisión de dictámenes oficiales (Anexos 13, 14, 15, 16)</p>
+    <div class="dashboard-page animate-fade-in">
+      <!-- Header Seccion -->
+      <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="title-section">
+          <div class="breadcrumb-chip">CEISH / Presidenta / Resoluciones</div>
+          <h1 class="page-title">Generador de Resoluciones</h1>
+          <p class="page-subtitle">Emisión de dictámenes oficiales y anexos institucionales</p>
         </div>
-      </header>
+      </div>
 
       <div class="generator-layout">
         <!-- Form Section -->
         <main class="form-section">
-          <form [formGroup]="form" class="card">
-            <h3>Configuración del Documento</h3>
+          <form [formGroup]="form" class="content-card shadow-soft p-4">
+            <header class="section-header mb-4">
+              <mat-icon>settings_suggest</mat-icon>
+              <h3>Configuración del Documento</h3>
+            </header>
             
-            <div class="form-grid">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Protocolo a Resolver</mat-label>
-                <mat-select formControlName="protocolId">
-                  <mat-option value="2026-IO-001">2026-IO-001: Impacto COVID-19</mat-option>
-                  <mat-option value="2026-EC-002">2026-EC-002: Ensayo Clínico Vacuna X</mat-option>
-                </mat-select>
-              </mat-form-field>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="field-label">Protocolo a Resolver</label>
+                <mat-form-field appearance="outline" class="full-width custom-field">
+                  <mat-select formControlName="protocolId" placeholder="Seleccione un protocolo">
+                    <mat-option value="2026-IO-001">2026-IO-001: Impacto COVID-19</mat-option>
+                    <mat-option value="2026-EC-002">2026-EC-002: Ensayo Clínico Vacuna X</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
 
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Tipo de Resolución</mat-label>
-                <mat-select formControlName="resolutionType">
-                  <mat-option value="APPROVAL">Aprobación Definitiva (Anexos 13/14)</mat-option>
-                  <mat-option value="CONDITIONAL">Aprobación Condicionada (Anexo 15)</mat-option>
-                  <mat-option value="REJECTION">No Aprobación (Anexo 16)</mat-option>
-                  <mat-option value="EXEMPTION">Exención de Revisión (Anexo 12)</mat-option>
-                </mat-select>
-              </mat-form-field>
+              <div class="col-md-6">
+                <label class="field-label">Tipo de Resolución</label>
+                <mat-form-field appearance="outline" class="full-width custom-field">
+                  <mat-select formControlName="resolutionType" placeholder="Seleccione el tipo de anexo">
+                    <mat-option value="APPROVAL">Aprobación Definitiva (Anexos 13/14)</mat-option>
+                    <mat-option value="CONDITIONAL">Aprobación Condicionada (Anexo 15)</mat-option>
+                    <mat-option value="REJECTION">No Aprobación (Anexo 16)</mat-option>
+                    <mat-option value="EXEMPTION">Exención de Revisión (Anexo 12)</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
             </div>
 
             <mat-divider class="my-4"></mat-divider>
 
             <!-- Dynamic Fields Section -->
-            <div class="dynamic-fields" *ngIf="form.get('resolutionType')?.value">
-              <h4 class="section-title">Campos Específicos</h4>
+            <div class="dynamic-fields animate-slide-up" *ngIf="form.get('resolutionType')?.value">
+              <h4 class="section-sub-title mb-3">
+                <mat-icon>edit_note</mat-icon>
+                Campos Específicos del Dictamen
+              </h4>
               
               <!-- Conditional Fields -->
               <ng-container *ngIf="form.get('resolutionType')?.value === 'CONDITIONAL'">
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Observaciones Mayores</mat-label>
-                  <textarea matInput formControlName="majorObservations" rows="3"></textarea>
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Observaciones Menores</mat-label>
-                  <textarea matInput formControlName="minorObservations" rows="3"></textarea>
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="half-width">
-                  <mat-label>Plazo de Subsanación (Días)</mat-label>
-                  <input matInput type="number" formControlName="deadlineDays" value="30">
-                </mat-form-field>
+                <div class="field-group mb-3">
+                  <label class="field-label">Observaciones Mayores</label>
+                  <mat-form-field appearance="outline" class="full-width custom-field">
+                    <textarea matInput formControlName="majorObservations" rows="3" placeholder="Detalle las correcciones obligatorias..."></textarea>
+                  </mat-form-field>
+                </div>
+                <div class="field-group mb-3">
+                  <label class="field-label">Observaciones Menores</label>
+                  <mat-form-field appearance="outline" class="full-width custom-field">
+                    <textarea matInput formControlName="minorObservations" rows="3" placeholder="Sugerencias de mejora..."></textarea>
+                  </mat-form-field>
+                </div>
+                <div class="col-md-4">
+                  <label class="field-label">Plazo de Subsanación (Días)</label>
+                  <mat-form-field appearance="outline" class="full-width custom-field">
+                    <input matInput type="number" formControlName="deadlineDays">
+                    <span matSuffix class="pe-3">días</span>
+                  </mat-form-field>
+                </div>
               </ng-container>
 
               <!-- Rejection Fields -->
               <ng-container *ngIf="form.get('resolutionType')?.value === 'REJECTION'">
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Justificación Ética y Metodológica (Detallada)</mat-label>
-                  <textarea matInput formControlName="rejectionJustification" rows="5"></textarea>
-                </mat-form-field>
+                <div class="field-group">
+                  <label class="field-label">Justificación Ética y Metodológica</label>
+                  <mat-form-field appearance="outline" class="full-width custom-field">
+                    <textarea matInput formControlName="rejectionJustification" rows="6" placeholder="Detalle los motivos del rechazo conforme a la normativa..."></textarea>
+                  </mat-form-field>
+                </div>
               </ng-container>
 
               <!-- Approval Fields -->
               <ng-container *ngIf="form.get('resolutionType')?.value === 'APPROVAL'">
-                <div class="row">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Vigencia (Meses)</mat-label>
-                    <input matInput type="number" formControlName="validityMonths" value="12">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Periodicidad de Informes (Meses)</mat-label>
-                    <input matInput type="number" formControlName="reportPeriodicityMonths" value="6">
-                  </mat-form-field>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="field-label">Vigencia de la Aprobación</label>
+                    <mat-form-field appearance="outline" class="full-width custom-field">
+                      <input matInput type="number" formControlName="validityMonths">
+                      <span matSuffix class="pe-3">meses</span>
+                    </mat-form-field>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="field-label">Periodicidad de Informes</label>
+                    <mat-form-field appearance="outline" class="full-width custom-field">
+                      <input matInput type="number" formControlName="reportPeriodicityMonths">
+                      <span matSuffix class="pe-3">meses</span>
+                    </mat-form-field>
+                  </div>
                 </div>
               </ng-container>
             </div>
-
           </form>
         </main>
 
         <!-- Preview Section -->
         <aside class="preview-section">
-          <div class="card status-card">
-            <h4>Vista Previa y Emisión</h4>
+          <div class="content-card shadow-soft p-4 sticky-preview">
+            <h4 class="preview-title">
+              <mat-icon>visibility</mat-icon>
+              Vista Previa y Emisión
+            </h4>
+            
             <div class="document-preview-placeholder">
-              <mat-icon>picture_as_pdf</mat-icon>
-              <p *ngIf="!form.get('resolutionType')?.value">Seleccione un tipo de resolución para previsualizar</p>
-              <p *ngIf="form.get('resolutionType')?.value" class="active-preview">Generando borrador para {{ form.get('protocolId')?.value }}...</p>
+              <div class="preview-art">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <div class="pulse-ring"></div>
+              </div>
+              <p *ngIf="!form.get('resolutionType')?.value" class="text-muted">Seleccione un tipo de resolución para generar el borrador PDF</p>
+              <div *ngIf="form.get('resolutionType')?.value" class="active-preview-info">
+                <span class="doc-type">{{ getResolutionLabel(form.get('resolutionType')?.value) }}</span>
+                <span class="doc-target">Protocolo: {{ form.get('protocolId')?.value }}</span>
+              </div>
             </div>
 
-            <div class="action-buttons mt-4">
-              <button mat-stroked-button color="primary" class="full-width-btn" [disabled]="form.invalid">
-                <mat-icon>visibility</mat-icon>
-                Ver PDF
+            <div class="preview-actions d-flex flex-column gap-3 mt-4">
+              <button mat-stroked-button color="primary" class="preview-btn" [disabled]="form.invalid">
+                <mat-icon>open_in_new</mat-icon>
+                Visualizar Borrador
               </button>
-              <button mat-flat-button class="approve-btn full-width-btn mt-2" 
+              <button mat-flat-button class="emit-btn" 
                       [disabled]="form.invalid"
                       (click)="onGenerate()">
-                <mat-icon>verified</mat-icon>
+                <mat-icon>draw</mat-icon>
                 Firmar y Notificar
               </button>
+            </div>
+
+            <div class="security-note mt-3">
+              <mat-icon>security</mat-icon>
+              <span>Al emitir, se generará una firma electrónica vinculada a su perfil de Presidenta.</span>
             </div>
           </div>
         </aside>
@@ -133,36 +174,157 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     </div>
   `,
   styles: [`
-    .page-container { padding: 2rem; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.3s ease-out; }
-    .page-header { margin-bottom: 2rem; h1 { margin: 0; font-size: 1.8rem; color: #003366; } p { color: #64748b; margin-top: 0.5rem; } }
-    
-    .generator-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; align-items: start; }
-    @media (max-width: 960px) { .generator-layout { grid-template-columns: 1fr; } }
+    .dashboard-page { padding: 1rem; }
 
-    .card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; h3 { margin-top: 0; color: #003366; } }
-    
-    .form-grid { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .full-width { width: 100%; }
-    .half-width { width: 50%; }
-    .my-4 { margin: 2rem 0; }
-    .mt-4 { margin-top: 2rem; }
-    .mt-2 { margin-top: 1rem; }
-    
-    .section-title { font-weight: 700; color: #475569; margin-bottom: 1rem; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
-
-    .status-card { h4 { margin: 0 0 1.5rem; font-weight: 800; color: #003366; } }
-    .document-preview-placeholder {
-      background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 3rem 1rem; text-align: center;
-      mat-icon { font-size: 48px; width: 48px; height: 48px; color: #94a3b8; margin-bottom: 1rem; }
-      p { color: #64748b; font-size: 0.9rem; margin: 0; }
-      .active-preview { color: #003366; font-weight: 600; }
+    .breadcrumb-chip {
+      background: rgba(0, 51, 102, 0.05);
+      color: #003366;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: inline-block;
+      margin-bottom: 0.5rem;
     }
 
-    .full-width-btn { width: 100%; padding: 0.5rem; }
-    .approve-btn { background-color: #10b981; color: white; }
+    .page-title { font-size: 1.85rem; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.5px; }
+    .page-subtitle { color: #64748b; font-size: 0.95rem; }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .generator-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 24px;
+      border: 1px solid #f1f5f9;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      mat-icon { color: #003366; }
+      h3 { margin: 0; font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+    }
+
+    .section-sub-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #475569;
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+
+    .field-label { 
+      display: block; 
+      font-size: 0.8rem; 
+      font-weight: 700; 
+      color: #334155; 
+      margin-bottom: 8px; 
+    }
+
+    ::ng-deep .custom-field {
+      width: 100%;
+      .mat-mdc-text-field-wrapper {
+        background-color: #f8fafc !important;
+        border-radius: 12px !important;
+      }
+      .mdc-notched-outline__leading, .mdc-notched-outline__notch, .mdc-notched-outline__trailing {
+        border-color: transparent !important;
+      }
+    }
+
+    .sticky-preview {
+      position: sticky;
+      top: 1rem;
+    }
+
+    .preview-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 1.5rem;
+      mat-icon { color: #003366; }
+    }
+
+    .document-preview-placeholder {
+      background: #f8fafc;
+      border: 2px dashed #e2e8f0;
+      border-radius: 20px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+
+      .preview-art {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        background: white;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        mat-icon { font-size: 32px; width: 32px; height: 32px; color: #ef4444; }
+      }
+
+      .active-preview-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        .doc-type { font-weight: 800; color: #1e293b; font-size: 0.95rem; }
+        .doc-target { font-size: 0.8rem; color: #64748b; font-weight: 600; }
+      }
+    }
+
+    .preview-btn {
+      height: 48px;
+      border-radius: 12px;
+      font-weight: 700;
+      border-width: 2px;
+    }
+
+    .emit-btn {
+      height: 52px;
+      background: #10b981 !important;
+      color: white !important;
+      border-radius: 12px;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3); }
+    }
+
+    .security-note {
+      display: flex;
+      gap: 8px;
+      background: #fffbeb;
+      padding: 12px;
+      border-radius: 12px;
+      color: #92400e;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.4;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+
+    .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 1100px) {
+      .generator-layout { grid-template-columns: 1fr; }
+      .sticky-preview { position: static; }
+    }
   `]
 })
 export class ResolutionGeneratorPage implements OnInit {
@@ -184,14 +346,22 @@ export class ResolutionGeneratorPage implements OnInit {
   });
 
   ngOnInit() {
-    // Dynamic validation handling
     this.form.get('resolutionType')?.valueChanges.subscribe(type => {
       this.updateValidators(type);
     });
   }
 
+  getResolutionLabel(type: string): string {
+    const labels: any = {
+      'APPROVAL': 'Aprobación Definitiva',
+      'CONDITIONAL': 'Aprobación Condicionada',
+      'REJECTION': 'No Aprobación',
+      'EXEMPTION': 'Exención de Revisión'
+    };
+    return labels[type] || '';
+  }
+
   private updateValidators(type: string) {
-    // Reset validators
     ['majorObservations', 'rejectionJustification'].forEach(control => {
       this.form.get(control)?.clearValidators();
       this.form.get(control)?.updateValueAndValidity();
@@ -208,9 +378,8 @@ export class ResolutionGeneratorPage implements OnInit {
 
   onGenerate() {
     if (this.form.valid) {
-      this.snackBar.open('Resolución generada, firmada y notificada exitosamente.', 'Cerrar', {
-        duration: 4000,
-        panelClass: ['success-snackbar']
+      this.snackBar.open('✅ Resolución generada, firmada y notificada con éxito', 'Cerrar', {
+        duration: 5000,
       });
       this.form.reset();
     }

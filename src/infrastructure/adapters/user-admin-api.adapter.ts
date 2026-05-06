@@ -59,7 +59,7 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
       email: u.email || u.institutionalEmail || '',
       rol: u.roles && u.roles.length > 0 ? (u.roles[0].nombre || u.roles[0]) : 'INVESTIGADOR',
       perfil: u.investigatorProfile ? 'Investigador' : 'Personal Administrativo',
-      activo: u.isActive
+      activo: u.isActive ?? true
     };
   }
 }

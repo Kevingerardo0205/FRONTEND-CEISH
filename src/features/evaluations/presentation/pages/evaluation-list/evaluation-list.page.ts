@@ -4,8 +4,10 @@ import { RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
+import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
 
 @Component({
   selector: 'app-evaluation-list',
@@ -16,89 +18,353 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
     MatTableModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
     MatChipsModule,
-    ProtocolCodePipe
+    ProtocolCodePipe,
+    StatCardComponent
   ],
   template: `
-    <div class="page-container">
-      <header class="page-header">
-        <h1>Bandeja de Evaluaciones</h1>
-        <p>Protocolos asignados para su revisión técnica y ética</p>
-      </header>
+    <div class="dashboard-page animate-fade-in">
+      <!-- Header Seccion -->
+      <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="title-section">
+          <div class="breadcrumb-chip">CEISH / Evaluador / Mis Evaluaciones</div>
+          <h1 class="page-title">Bandeja de Evaluaciones</h1>
+          <p class="page-subtitle">Gestione los protocolos asignados para su revisión técnica y ética</p>
+        </div>
+        <div class="header-actions">
+           <button mat-stroked-button color="primary" class="refresh-btn shadow-sm">
+             <mat-icon>refresh</mat-icon>
+             Actualizar Bandeja
+           </button>
+        </div>
+      </div>
 
-      <div class="table-card">
-        <table mat-table [dataSource]="evaluations()">
-          
-          <ng-container matColumnDef="protocol">
-            <th mat-header-cell *matHeaderCellDef>Protocolo</th>
-            <td mat-cell *matCellDef="let ev">
-              <div class="protocol-info">
-                <span class="code">{{ ev.protocolCode | protocolCode }}</span>
-                <span class="title">{{ ev.protocolTitle }}</span>
-              </div>
-            </td>
-          </ng-container>
+      <!-- Métricas Rápidas -->
+      <div class="stats-grid mb-4">
+        <app-stat-card label="Pendientes" [value]="3" icon="rate_review" color="#2563eb"></app-stat-card>
+        <app-stat-card label="Por Vencer" [value]="2" icon="timer" color="#f59e0b"></app-stat-card>
+        <app-stat-card label="Completadas" [value]="12" icon="task_alt" color="#10b981"></app-stat-card>
+        <app-stat-card label="Puntaje Promedio" value="95" icon="verified" color="#6366f1"></app-stat-card>
+      </div>
 
-          <ng-container matColumnDef="deadline">
-            <th mat-header-cell *matHeaderCellDef>Fecha Límite</th>
-            <td mat-cell *matCellDef="let ev" [class.overdue]="isOverdue(ev.deadline)">
-              {{ ev.deadline | date:'mediumDate' }}
-            </td>
-          </ng-container>
+      <!-- Lista de Evaluaciones -->
+      <div class="content-card shadow-soft">
+        <div class="table-toolbar p-3 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-3">
+            <h2 class="section-title m-0">Protocolos por Evaluar</h2>
+            <span class="badge-count">{{ evaluations().length }}</span>
+          </div>
+          <div class="search-box">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Buscar por título, código o investigador...">
+          </div>
+        </div>
 
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let ev">
-              <mat-chip [ngClass]="ev.status.toLowerCase()">{{ ev.status }}</mat-chip>
-            </td>
-          </ng-container>
+        <div class="table-responsive">
+          <table mat-table [dataSource]="evaluations()" class="modern-table">
+            
+            <ng-container matColumnDef="protocol">
+              <th mat-header-cell *matHeaderCellDef> Información del Protocolo </th>
+              <td mat-cell *matCellDef="let ev">
+                <div class="protocol-info-cell">
+                  <div class="code-wrapper">
+                    <span class="code">{{ ev.protocolCode | protocolCode }}</span>
+                    <span class="type-tag" [ngClass]="ev.type.toLowerCase()">{{ ev.type }}</span>
+                  </div>
+                  <span class="title" [matTooltip]="ev.protocolTitle">{{ ev.protocolTitle }}</span>
+                  <div class="investigator-info">
+                    <mat-icon>person</mat-icon>
+                    <span>PI: {{ ev.investigator }}</span>
+                  </div>
+                </div>
+              </td>
+            </ng-container>
 
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let ev">
-              <button mat-flat-button color="primary" [routerLink]="['/evaluations/form', ev.id]">
-                <mat-icon>edit_note</mat-icon>
-                Evaluar
-              </button>
-            </td>
-          </ng-container>
+            <ng-container matColumnDef="deadline">
+              <th mat-header-cell *matHeaderCellDef> Tiempo Restante </th>
+              <td mat-cell *matCellDef="let ev">
+                <div class="sla-cell" [ngClass]="getSLAStatus(ev.deadline)">
+                  <div class="days-remaining">
+                    <span class="value">{{ getDaysLeft(ev.deadline) }}</span>
+                    <span class="label">días</span>
+                  </div>
+                  <div class="deadline-detail">
+                    <mat-icon>{{ getSLAIcon(ev.deadline) }}</mat-icon>
+                    <span>{{ ev.deadline | date:'dd MMM' }}</span>
+                  </div>
+                </div>
+              </td>
+            </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef> Estado </th>
+              <td mat-cell *matCellDef="let ev">
+                <div class="status-indicator" [ngClass]="ev.status.toLowerCase()">
+                  <span class="dot"></span>
+                  <span class="text">{{ ev.status === 'PENDING' ? 'Pendiente' : 'En Proceso' }}</span>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="text-end"> Acciones </th>
+              <td mat-cell *matCellDef="let ev" class="text-end">
+                <div class="actions-wrapper">
+                  <button mat-icon-button color="primary" matTooltip="Vista Previa" class="action-btn preview">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-flat-button color="primary" class="eval-btn shadow-sm" [routerLink]="['/dashboard/evaluations/form', ev.id]">
+                    <mat-icon>gavel</mat-icon>
+                    Evaluar
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+          </table>
+        </div>
       </div>
     </div>
   `,
   styles: [`
-    .page-container { padding: 2rem; }
-    .page-header { margin-bottom: 2rem; }
-    .table-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-    .protocol-info {
+    .dashboard-page { padding: 1.5rem; }
+
+    .breadcrumb-chip {
+      background: rgba(0, 51, 102, 0.05);
+      color: #003366;
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      display: inline-block;
+      margin-bottom: 0.75rem;
+    }
+
+    .page-title { font-size: 2.25rem; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: -1px; }
+    .page-subtitle { color: #64748b; font-size: 1.1rem; margin-top: 4px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 28px;
+      border: 1px solid #f1f5f9;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .table-toolbar {
+      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
+      padding: 1.5rem !important;
+
+      .section-title { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+      .badge-count {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+    }
+
+    .search-box {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 350px;
+      transition: all 0.2s ease;
+      
+      &:focus-within { border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+      mat-icon { font-size: 20px; width: 20px; height: 20px; color: #94a3b8; }
+      input { border: none; background: transparent; outline: none; font-size: 0.9rem; width: 100%; color: #1e293b; font-weight: 500; }
+    }
+
+    .modern-table {
+      width: 100%;
+      th { background: #f8fafc; color: #64748b; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 1.25rem 1.5rem; }
+      td { padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    }
+
+    .table-row {
+      transition: background 0.2s ease;
+      &:hover { background: #fcfdfe; }
+    }
+
+    .protocol-info-cell {
       display: flex;
       flex-direction: column;
-      .code { font-weight: 700; color: #003366; font-size: 0.8rem; }
-      .title { font-size: 0.9rem; color: #475569; }
+      gap: 6px;
+      max-width: 500px;
+
+      .code-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        .code { font-family: 'Fira Code', monospace; font-weight: 800; color: #003366; font-size: 0.8rem; letter-spacing: 0.5px; }
+        .type-tag {
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 2px 8px;
+          border-radius: 6px;
+          text-transform: uppercase;
+          &.ei { background: #fee2e2; color: #b91c1c; }
+          &.ec { background: #dcfce7; color: #15803d; }
+          &.io { background: #e0f2fe; color: #0369a1; }
+        }
+      }
+
+      .title { font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.4; }
+      .investigator-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #64748b;
+        font-size: 0.8rem;
+        font-weight: 500;
+        mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      }
     }
-    .overdue { color: #dc2626; font-weight: 700; }
-    table { width: 100%; }
-    th { padding: 1rem; }
-    td { padding: 1rem; }
-    
-    .pending { background: #fef9c3 !important; color: #854d0e !important; }
-    .completed { background: #dcfce7 !important; color: #166534 !important; }
+
+    .sla-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      
+      .days-remaining {
+        display: flex;
+        align-items: baseline;
+        gap: 2px;
+        .value { font-size: 1.25rem; font-weight: 800; }
+        .label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+      }
+
+      .deadline-detail {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        mat-icon { font-size: 14px; width: 14px; height: 14px; }
+      }
+
+      &.critical { color: #ef4444; .days-remaining { animation: pulse 2s infinite; } }
+      &.warning { color: #f59e0b; }
+      &.safe { color: #10b981; }
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      .dot { width: 8px; height: 8px; border-radius: 50%; }
+      &.pending { background: #eff6ff; color: #1e40af; .dot { background: #3b82f6; } }
+      &.in_progress { background: #fff7ed; color: #9a3412; .dot { background: #f59e0b; } }
+    }
+
+    .actions-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .action-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      transition: all 0.2s ease;
+      &:hover { background: #f1f5f9; transform: translateY(-2px); }
+    }
+
+    .eval-btn {
+      border-radius: 14px;
+      font-weight: 700;
+      padding: 0 20px;
+      height: 44px;
+      mat-icon { margin-right: 8px; font-size: 20px; width: 20px; height: 20px; }
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   `]
 })
 export class EvaluationListPage implements OnInit {
   displayedColumns = ['protocol', 'deadline', 'status', 'actions'];
   
   evaluations = signal<any[]>([
-    { id: 'ev1', protocolCode: '2026-IO-001', protocolTitle: 'Estudio de prevalencia de diabetes', deadline: new Date(2026, 5, 20), status: 'PENDING' },
-    { id: 'ev2', protocolCode: '2026-EC-002', protocolTitle: 'Ensayo clínico Vacuna X', deadline: new Date(2026, 4, 15), status: 'PENDING' }
+    { 
+      id: 'ev1', 
+      protocolCode: '2026-IO-001', 
+      type: 'IO',
+      protocolTitle: 'Prevalencia de trastornos de ansiedad en estudiantes de medicina durante el internado rotativo', 
+      investigator: 'Dr. Marco Vinicio',
+      deadline: new Date(2026, 4, 10), // Cerca de hoy
+      status: 'PENDING' 
+    },
+    { 
+      id: 'ev2', 
+      protocolCode: '2026-EC-002', 
+      type: 'EC',
+      protocolTitle: 'Estudio comparativo de la eficacia de dos protocolos de rehabilitación post-infarto', 
+      investigator: 'Dra. Elena Proaño',
+      deadline: new Date(2026, 4, 18), 
+      status: 'IN_PROGRESS' 
+    },
+    { 
+      id: 'ev3', 
+      protocolCode: '2026-EI-003', 
+      type: 'EI',
+      protocolTitle: 'Evaluación del impacto de la telemedicina en el control glicémico de pacientes rurales con DM2', 
+      investigator: 'Dr. Roberto Carlos',
+      deadline: new Date(2026, 3, 28), // Vencido o crítico
+      status: 'PENDING' 
+    }
   ]);
 
   ngOnInit() {}
 
-  isOverdue(deadline: Date): boolean {
-    return deadline < new Date();
+  getDaysLeft(deadline: Date): number {
+    const today = new Date();
+    const diff = deadline.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
+  getSLAStatus(deadline: Date): string {
+    const days = this.getDaysLeft(deadline);
+    if (days <= 2) return 'critical';
+    if (days <= 5) return 'warning';
+    return 'safe';
+  }
+
+  getSLAIcon(deadline: Date): string {
+    const days = this.getDaysLeft(deadline);
+    if (days <= 2) return 'priority_high';
+    if (days <= 5) return 'history';
+    return 'event_available';
   }
 }
