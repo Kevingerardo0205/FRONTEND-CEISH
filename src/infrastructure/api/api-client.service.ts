@@ -1,14 +1,16 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { TokenStoreAdapter } from '../storage/token-store.adapter';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiClientService {
   private axiosInstance: AxiosInstance;
+  private tokenStore = inject(TokenStoreAdapter);
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -21,7 +23,7 @@ export class ApiClientService {
     // Interceptor para añadir el Token JWT automáticamente
     this.axiosInstance.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('token'); // O tu servicio de almacenamiento
+        const token = this.tokenStore.getToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -32,8 +34,8 @@ export class ApiClientService {
   }
 
   // Método genérico para peticiones GET
-  get<T>(url: string, config?: AxiosRequestConfig): Observable<T> {
-    return from(this.axiosInstance.get<T>(url, config)).pipe(
+  get<T>(url: string, params?: any): Observable<T> {
+    return from(this.axiosInstance.get<T>(url, { params })).pipe(
       map((response: AxiosResponse<T>) => response.data)
     );
   }
