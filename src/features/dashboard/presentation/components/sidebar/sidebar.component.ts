@@ -44,22 +44,22 @@ export class SidebarComponent {
     { label: 'Nuevo Protocolo', icon: 'add_circle', path: '/dashboard/investigador/nuevo-protocolo', roles: ['INVESTIGADOR'] },
     
     // Secretaría y Admin
-    { label: 'Validación', icon: 'fact_check', path: '/dashboard/protocols/validation/list', roles: ['SECRETARIA', 'ADMIN'] },
-    { label: 'Asignación', icon: 'assignment_ind', path: '/dashboard/evaluations/assignment', roles: ['PRESIDENTE', 'PRESIDENTA', 'ADMIN'] },
-    { label: 'Asignación', icon: 'assignment_ind', path: '/dashboard/evaluations/confirm-assignment', roles: ['SECRETARIA'] },
+    { label: 'Validación', icon: 'fact_check', path: '/dashboard/protocols/validation/list', roles: ['SECRETARIA', 'ADMIN', 'ADMIN_TI'] },
+    { label: 'Asignación', icon: 'assignment_ind', path: '/dashboard/evaluations/assignment', roles: ['PRESIDENTE', 'PRESIDENTA', 'ADMIN', 'ADMIN_TI'] },
+    { label: 'Asignación', icon: 'assignment_ind', path: '/dashboard/evaluations/confirm-assignment', roles: ['SECRETARIA', 'ADMIN_TI'] },
     
     // Evaluador
     { label: 'Mis Evaluaciones', icon: 'gavel', path: '/dashboard/evaluations/list', roles: ['EVALUADOR', 'ADMIN'] },
     
     // Resoluciones
-    { label: 'Resoluciones', icon: 'gavel', path: '/dashboard/resolutions/generator', roles: ['SECRETARIA', 'PRESIDENTA', 'ADMIN'] },
+    { label: 'Resoluciones', icon: 'gavel', path: '/dashboard/resolutions/generator', roles: ['SECRETARIA', 'PRESIDENTA', 'ADMIN', 'ADMIN_TI'] },
     
     { label: 'Eventos Adversos', icon: 'warning', path: '/dashboard/follow-up/adverse-events' },
     { label: 'Solicitar Enmienda', icon: 'edit_document', path: '/dashboard/amendments/request' },
     { label: 'Renovaciones', icon: 'update', path: '/dashboard/renewals/request' },
     
-    { label: 'Reportes', icon: 'insights', path: '/dashboard/reports', roles: ['SECRETARIA', 'PRESIDENTA', 'ADMIN'] },
-    { label: 'Auditoría', icon: 'security', path: '/dashboard/audit', roles: ['ADMIN'] },
+    { label: 'Reportes', icon: 'insights', path: '/dashboard/reports', roles: ['SECRETARIA', 'PRESIDENTA', 'ADMIN', 'ADMIN_TI'] },
+    { label: 'Auditoría', icon: 'security', path: '/dashboard/audit', roles: ['ADMIN', 'ADMIN_TI'] },
     { label: 'Notificaciones', icon: 'notifications', path: '/dashboard/notifications' },
   ];
 

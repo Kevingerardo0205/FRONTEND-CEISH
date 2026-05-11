@@ -6,7 +6,7 @@ export abstract class IEvaluationRepositoryPort {
    * Presidenta: Obtiene el dashboard de carga de evaluadores.
    * GET /evaluations/evaluators/dashboard
    */
-  abstract getEvaluatorsDashboard(): Observable<any>;
+  abstract getEvaluatorsDashboard(profileId?: string): Observable<any>;
 
   /**
    * Presidenta: Sugiere evaluadores para un protocolo.
@@ -32,6 +32,30 @@ export abstract class IEvaluationRepositoryPort {
    * @param data FormData conteniendo 'evaluationData' (JSON con assignmentId, annex10, result) y 'report' (archivo PDF)
    */
   abstract submitEvaluation(data: FormData): Observable<void>;
+
+  /**
+   * Obtener todos los perfiles de evaluadores.
+   * GET /evaluations/profiles
+   */
+  abstract getProfiles(): Observable<any[]>;
+
+  /**
+   * Crear un nuevo perfil de evaluador.
+   * POST /evaluations/profiles
+   */
+  abstract createProfile(profile: any): Observable<any>;
+
+  /**
+   * Actualizar un perfil de evaluador.
+   * PATCH /evaluations/profiles/{id}
+   */
+  abstract updateProfile(id: number, profile: any): Observable<any>;
+
+  /**
+   * Eliminar un perfil de evaluador.
+   * DELETE /evaluations/profiles/{id}
+   */
+  abstract deleteProfile(id: number): Observable<void>;
 
   // Métodos de consulta existentes
   abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;

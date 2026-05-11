@@ -60,7 +60,7 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     return of(filtered).pipe(delay(500));
   }
 
-  getEvaluatorsDashboard(): Observable<any> {
+  getEvaluatorsDashboard(profileId?: string): Observable<any> {
     return of({
       pendingProtocols: [
         { protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba' }
@@ -89,5 +89,28 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
   submitEvaluation(data: FormData): Observable<void> {
     console.log('Mock: Enviando evaluación (FormData)');
     return of(undefined).pipe(delay(1000));
+  }
+
+  getProfiles(): Observable<any[]> {
+    return of([
+      { id: 1, name: 'SALUD' },
+      { id: 2, name: 'JURÍDICO' },
+      { id: 3, name: 'ÉTICO' }
+    ]).pipe(delay(500));
+  }
+
+  createProfile(profile: any): Observable<any> {
+    console.log('Mock: Creando perfil', profile);
+    return of({ id: Math.floor(Math.random() * 1000), ...profile }).pipe(delay(500));
+  }
+
+  updateProfile(id: number, profile: any): Observable<any> {
+    console.log('Mock: Actualizando perfil', id, profile);
+    return of({ id, ...profile }).pipe(delay(500));
+  }
+
+  deleteProfile(id: number): Observable<void> {
+    console.log('Mock: Eliminando perfil', id);
+    return of(undefined).pipe(delay(500));
   }
 }

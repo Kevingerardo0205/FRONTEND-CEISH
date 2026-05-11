@@ -12,7 +12,7 @@ export const AUDIT_ROUTES: Routes = [
     path: 'trail/:id',
     loadComponent: () => import('./presentation/pages/protocol-trail/protocol-trail.page').then(m => m.ProtocolTrailPage),
     canActivate: [RoleGuard],
-    data: { roles: ['SECRETARY', 'PRESIDENT', 'ADMIN'] }
+    data: { roles: ['SECRETARIA', 'PRESIDENTE', 'PRESIDENTA', 'ADMIN'] }
   },
   {
     path: '',

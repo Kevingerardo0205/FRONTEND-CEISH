@@ -53,11 +53,12 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
   }
 
   private mapToDomain(u: any): UserAdmin {
+    const roleName = u.roles && u.roles.length > 0 ? (u.roles[0].nombre || u.roles[0]) : 'INVESTIGADOR';
     return {
       id: u.id,
       nombre: u.fullName || u.nombre || 'Sin nombre',
       email: u.email || u.institutionalEmail || '',
-      rol: u.roles && u.roles.length > 0 ? (u.roles[0].nombre || u.roles[0]) : 'INVESTIGADOR',
+      rol: roleName.toUpperCase(),
       perfil: u.investigatorProfile ? 'Investigador' : 'Personal Administrativo',
       activo: u.isActive ?? true
     };

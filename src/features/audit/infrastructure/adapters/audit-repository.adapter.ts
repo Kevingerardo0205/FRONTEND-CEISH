@@ -33,7 +33,7 @@ export class AuditRepositoryAdapter implements IAuditRepositoryPort {
         timestamp: new Date(Date.now() - 3600000),
         userId: 'u2',
         userName: 'Secretary User',
-        userRole: 'SECRETARY',
+        userRole: 'SECRETARIA',
         action: 'VALIDATE',
         entity: 'Protocol',
         recordId: 'PRT-2024-002',

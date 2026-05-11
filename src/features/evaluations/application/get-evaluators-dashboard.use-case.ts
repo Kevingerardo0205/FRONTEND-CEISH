@@ -8,7 +8,7 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 export class GetEvaluatorsDashboardUseCase {
   private repo = inject(IEvaluationRepositoryPort);
 
-  execute(): Observable<any> {
-    return this.repo.getEvaluatorsDashboard();
+  execute(profileId?: string): Observable<any> {
+    return this.repo.getEvaluatorsDashboard(profileId);
   }
 }

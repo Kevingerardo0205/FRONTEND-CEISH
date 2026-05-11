@@ -23,6 +23,8 @@ export const ENDPOINTS = {
     CONFIRM: '/evaluations/confirm-assignment',
     MY_ASSIGNMENTS: '/evaluations/my-assignments',
     SUBMIT: '/evaluations/submit',
+    PROFILES: '/evaluations/profiles',
+    PROFILE_BY_ID: (id: number) => `/evaluations/profiles/${id}`,
   },
   HEALTH: '/'
 };

@@ -13,13 +13,13 @@ export const EVALUATION_ROUTES: Routes = [
         path: 'assignment',
         component: AssignmentPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['PRESIDENTE', 'PRESIDENTA', 'ADMIN'] }
+        data: { roles: ['PRESIDENTE', 'PRESIDENTA', 'ADMIN', 'ADMIN_TI'] }
       },
       {
         path: 'confirm-assignment',
         component: EvaluationListPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['SECRETARIA', 'ADMIN'] }
+        data: { roles: ['SECRETARIA', 'ADMIN', 'ADMIN_TI'] }
       },
       {
         path: 'list',

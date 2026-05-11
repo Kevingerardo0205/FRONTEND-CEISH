@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { IEvaluationRepositoryPort } from 'src/domain/ports/IEvaluationRepositoryPort';
 import { ApiClientService } from '../api/api-client.service';
 import { ENDPOINTS } from '../api/endpoints.constant';
@@ -14,8 +15,14 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   /**
    * Presidenta: Obtiene el dashboard de carga de evaluadores.
    */
-  getEvaluatorsDashboard(): Observable<any> {
-    return this.apiClient.get(ENDPOINTS.EVALUATIONS.DASHBOARD);
+  getEvaluatorsDashboard(profileId?: string): Observable<any> {
+    const params: any = {};
+    if (profileId) {
+      params.profileId = profileId;
+    }
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.DASHBOARD, params).pipe(
+      map(res => res.data || res)
+    );
   }
 
   /**
@@ -36,7 +43,9 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
    * Evaluador: Obtiene las tareas asignadas al evaluador actual.
    */
   getMyAssignments(): Observable<any[]> {
-    return this.apiClient.get(ENDPOINTS.EVALUATIONS.MY_ASSIGNMENTS);
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.MY_ASSIGNMENTS).pipe(
+      map(res => res.data || res)
+    );
   }
 
   /**
@@ -51,16 +60,54 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   }
 
   /**
+   * Obtener todos los perfiles de evaluadores.
+   */
+  getProfiles(): Observable<any[]> {
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PROFILES).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  /**
+   * Crear un nuevo perfil de evaluador.
+   */
+  createProfile(profile: any): Observable<any> {
+    return this.apiClient.post<any>(ENDPOINTS.EVALUATIONS.PROFILES, profile).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  /**
+   * Actualizar un perfil de evaluador.
+   */
+  updateProfile(id: number, profile: any): Observable<any> {
+    return this.apiClient.patch<any>(ENDPOINTS.EVALUATIONS.PROFILE_BY_ID(id), profile).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  /**
+   * Eliminar un perfil de evaluador.
+   */
+  deleteProfile(id: number): Observable<void> {
+    return this.apiClient.delete(ENDPOINTS.EVALUATIONS.PROFILE_BY_ID(id));
+  }
+
+  /**
    * Obtiene evaluaciones por ID de protocolo.
    */
   getByProtocolId(protocolId: string): Observable<EvaluationEntity[]> {
-    return this.apiClient.get(`${ENDPOINTS.EVALUATIONS.SUBMIT}/protocol/${protocolId}`);
+    return this.apiClient.get<any>(`${ENDPOINTS.EVALUATIONS.SUBMIT}/protocol/${protocolId}`).pipe(
+      map(res => res.data || res)
+    );
   }
 
   /**
    * Obtiene evaluaciones por ID de evaluador.
    */
   getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]> {
-    return this.apiClient.get(`${ENDPOINTS.EVALUATIONS.SUBMIT}/evaluator/${evaluatorId}`);
+    return this.apiClient.get<any>(`${ENDPOINTS.EVALUATIONS.SUBMIT}/evaluator/${evaluatorId}`).pipe(
+      map(res => res.data || res)
+    );
   }
 }
