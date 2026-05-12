@@ -20,7 +20,9 @@ import { EvaluationApiAdapter } from '@infrastructure/adapters/evaluation-api.ad
 import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
 import { EvaluatorMockAdapter } from '@infrastructure/adapters/evaluator-mock.adapter';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { ProtocolMockAdapter } from '@infrastructure/adapters/protocol-mock.adapter';
+import { ProtocolApiAdapter } from '@infrastructure/adapters/protocol-api.adapter';
+import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
+import { DocumentApiAdapter } from '@infrastructure/adapters/document-api.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -34,6 +36,7 @@ export const appConfig: ApplicationConfig = {
     { provide: IUserAdminRepositoryPort, useClass: UserAdminApiAdapter },
     { provide: IEvaluationRepositoryPort, useClass: EvaluationApiAdapter },
     { provide: IEvaluatorRepositoryPort, useClass: EvaluatorMockAdapter },
-    { provide: IProtocolRepositoryPort, useClass: ProtocolMockAdapter }
+    { provide: IProtocolRepositoryPort, useClass: ProtocolApiAdapter },
+    { provide: IDocumentRepositoryPort, useClass: DocumentApiAdapter }
   ]
 };

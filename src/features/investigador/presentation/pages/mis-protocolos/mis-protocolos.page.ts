@@ -411,6 +411,7 @@ export class MisProtocolosPage implements OnInit {
       case 'APROBADO_CONDICIONADO':
         return 'approved';
       case 'EN_REVISION_DOCUMENTAL':
+      case 'EN_REVISION_SECRETARIA':
       case 'EN_EVALUACION':
         return 'review';
       case 'REQUIERE_CORRECCION':
@@ -423,6 +424,7 @@ export class MisProtocolosPage implements OnInit {
 
   formatStatus(estado: string): string {
     if (!estado) return 'Desconocido';
+    if (estado === 'EN_REVISION_SECRETARIA') return 'En Revisión (Secretaría)';
     return estado.replace(/_/g, ' ');
   }
 

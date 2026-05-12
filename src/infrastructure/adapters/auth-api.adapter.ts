@@ -39,7 +39,8 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       nombre: data.fullName || data.nombre || data.nombres_completos || 'Usuario CEISH',
       rol: roleName.toUpperCase() as UserRole,
       activo: data.isActive !== undefined ? data.isActive : (data.activo !== undefined ? data.activo : true),
-      emailVerificado: data.isEmailVerified !== undefined ? data.isEmailVerified : (data.email_verificado || false)
+      emailVerificado: data.isEmailVerified !== undefined ? data.isEmailVerified : (data.email_verificado || false),
+      permissions: data.permissions || []
     };
   }
 
@@ -51,12 +52,13 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
 
     return this.post<any>(ENDPOINTS.AUTH.LOGIN, loginPayload).pipe(
       map(response => {
-        // El backend ahora envía { access_token, user }
+        // El backend ahora envía { access_token, user, permissions }
         const payload = response.data || response; 
         return {
           accessToken: payload.access_token || payload.accessToken || payload.token,
           refreshToken: payload.refresh_token || payload.refreshToken,
-          user: payload.user ? this.mapBackendUser(payload.user) : undefined
+          user: payload.user ? this.mapBackendUser({ ...payload.user, permissions: payload.permissions }) : undefined,
+          permissions: payload.permissions || []
         };
       }),
       switchMap(authData => {

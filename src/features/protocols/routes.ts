@@ -18,7 +18,8 @@ export const PROTOCOL_ROUTES: Routes = [
       },
       {
         path: 'create',
-        component: ProtocolCreatePage
+        component: ProtocolCreatePage,
+        data: { permissions: ['RECEPCION_SUBIR_DOCUMENTOS'] }
       },
       {
         path: 'detail/:id',
@@ -26,6 +27,7 @@ export const PROTOCOL_ROUTES: Routes = [
       },
       {
         path: 'validation',
+        data: { permissions: ['DOCUMENTOS_VALIDAR'] },
         children: [
           {
             path: 'list',

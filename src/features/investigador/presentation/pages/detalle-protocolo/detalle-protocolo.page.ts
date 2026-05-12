@@ -152,7 +152,8 @@ import { ProtocoloDetalle, EstadoProtocolo } from '../../../domain/dtos/crear-pr
             </div>
             <div class="p-3">
               <div class="d-grid gap-2">
-                <button mat-flat-button class="btn-espoch" [disabled]="protocolo.estado !== 'REQUIERE_CORRECCION'">
+                <button mat-flat-button class="btn-espoch" 
+                        [disabled]="protocolo.estado !== 'REQUIERE_CORRECCION' || protocolo.estado === 'EN_REVISION_SECRETARIA'">
                   <mat-icon class="me-2">edit_note</mat-icon> Atender Observaciones
                 </button>
                 <button mat-stroked-button color="primary" [disabled]="protocolo.estado !== 'APROBADO_DEFINITIVO'"
@@ -167,6 +168,10 @@ import { ProtocoloDetalle, EstadoProtocolo } from '../../../domain/dtos/crear-pr
                         [routerLink]="['/investigador/renovacion', protocolo.id]">
                   <mat-icon class="me-2">update</mat-icon> Renovar Aprobación
                 </button>
+              </div>
+              <div *ngIf="protocolo.estado === 'EN_REVISION_SECRETARIA'" class="alert alert-warning mt-3 mb-0 small">
+                <mat-icon style="font-size: 16px; vertical-align: middle;">lock</mat-icon>
+                La carga de archivos está bloqueada mientras Secretaría revisa su protocolo.
               </div>
             </div>
           </mat-card>
@@ -267,13 +272,16 @@ export class DetalleProtocoloPage implements OnInit {
   }
 
   formatStatus(estado: string): string {
+    if (estado === 'EN_REVISION_SECRETARIA') return 'En Revisión (Secretaría)';
     return estado.replace(/_/g, ' ');
   }
 
   getStatusClass(estado: string): string {
     switch (estado) {
       case 'APROBADO_DEFINITIVO': return 'approved';
-      case 'EN_REVISION_DOCUMENTAL': return 'review';
+      case 'EN_REVISION_DOCUMENTAL': 
+      case 'EN_REVISION_SECRETARIA':
+        return 'review';
       case 'REQUIERE_CORRECCION': return 'correction';
       default: return 'pending';
     }
@@ -282,7 +290,9 @@ export class DetalleProtocoloPage implements OnInit {
   getStatusIcon(estado: string): string {
     switch (estado) {
       case 'APROBADO_DEFINITIVO': return 'verified';
-      case 'EN_REVISION_DOCUMENTAL': return 'search';
+      case 'EN_REVISION_DOCUMENTAL':
+      case 'EN_REVISION_SECRETARIA':
+        return 'search';
       case 'REQUIERE_CORRECCION': return 'edit_note';
       default: return 'schedule';
     }

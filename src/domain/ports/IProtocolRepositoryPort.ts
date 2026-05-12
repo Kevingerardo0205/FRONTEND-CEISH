@@ -8,4 +8,5 @@ export abstract class IProtocolRepositoryPort {
   abstract getById(id: string): Observable<ProtocolEntity>;
   abstract uploadDocuments(protocolId: string, files: File[]): Observable<ProtocolEntity>;
   abstract getRequirementsByType(type: ProtocolType): Observable<string[]>;
+  abstract finalizeValidation(protocolId: string): Observable<any>;
 }

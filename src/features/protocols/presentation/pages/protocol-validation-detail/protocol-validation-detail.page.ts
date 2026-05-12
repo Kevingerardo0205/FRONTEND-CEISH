@@ -8,10 +8,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { ValidateDocumentaryUseCase } from '../../../application/use-cases/validate-documentary.use-case';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/constants/anexos-pet.constants';
 
 @Component({
@@ -27,6 +29,7 @@ import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/con
     MatInputModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    MatTooltipModule,
     FormsModule
   ],
   template: `
@@ -78,29 +81,41 @@ import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/con
               <thead>
                 <tr>
                   <th class="col-req">REQUISITOS</th>
-                  <th class="col-check">SI</th>
-                  <th class="col-check">NO</th>
-                  <th class="col-pages">NRO. PÁGS</th>
-                  <th class="col-date">FECHA ENTREGA</th>
+                  <th class="col-doc">DOCUMENTO</th>
+                  <th class="col-action">VALIDACIÓN</th>
+                  <th class="col-obs">OBSERVACIONES</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let item of checklist()">
+                <tr *ngFor="let item of checklist()" [ngClass]="{'row-validated': item.status === 1, 'row-rejected': item.status === 2}">
                   <td class="req-label">
                     <span class="req-id">{{ item.anexo }}</span>
                     {{ item.label }}
                   </td>
                   <td class="text-center">
-                    <mat-checkbox color="primary" [(ngModel)]="item.si" (change)="toggleSi(item)"></mat-checkbox>
+                    <a *ngIf="item.documentUrl" [href]="item.documentUrl" target="_blank" mat-icon-button color="primary" matTooltip="Ver documento">
+                      <mat-icon>visibility</mat-icon>
+                    </a>
+                    <span *ngIf="!item.documentUrl" class="text-muted small">No subido</span>
                   </td>
                   <td class="text-center">
-                    <mat-checkbox color="warn" [(ngModel)]="item.no" (change)="toggleNo(item)"></mat-checkbox>
+                    <div class="btn-group-validation">
+                      <button mat-icon-button [color]="item.status === 1 ? 'primary' : ''" 
+                              (click)="onValidateDocument(item, 1)" 
+                              [disabled]="!item.documentId || isProcessing"
+                              matTooltip="Aprobar">
+                        <mat-icon>{{ item.status === 1 ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
+                      </button>
+                      <button mat-icon-button [color]="item.status === 2 ? 'warn' : ''" 
+                              (click)="onValidateDocument(item, 2)" 
+                              [disabled]="isProcessing"
+                              matTooltip="Rechazar">
+                        <mat-icon>{{ item.status === 2 ? 'cancel' : 'highlight_off' }}</mat-icon>
+                      </button>
+                    </div>
                   </td>
                   <td>
-                    <input type="number" class="mini-input" [(ngModel)]="item.pages">
-                  </td>
-                  <td>
-                    <input type="date" class="mini-input date" [(ngModel)]="item.completionDate">
+                    <input type="text" class="mini-input" [(ngModel)]="item.observations" placeholder="Nota opcional...">
                   </td>
                 </tr>
               </tbody>
@@ -110,13 +125,7 @@ import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/con
 
         <!-- PANEL DE ACCIÓN Y NOTIFICACIONES -->
         <div class="action-footer mt-4">
-          <div class="observations-section">
-            <label class="section-label">OBSERVACIONES Y CAMBIOS SOLICITADOS:</label>
-            <textarea class="obs-textarea" [(ngModel)]="observations" 
-                      placeholder="Describa aquí si falta algún documento o si se requieren correcciones específicas para que el investigador las vea..."></textarea>
-          </div>
-
-          <div class="summary-panel">
+          <div class="summary-panel full-width">
             <div class="progress-container">
               <div class="progress-labels">
                 <span>Progreso de validación:</span>
@@ -126,17 +135,11 @@ import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/con
                                 [color]="progress() === 100 ? 'primary' : 'accent'"></mat-progress-bar>
             </div>
 
-            <div class="action-buttons">
-              <button mat-flat-button class="btn-validate" 
-                      [disabled]="!canApprove() || isProcessing" (click)="onApprove()">
-                <mat-icon>verified</mat-icon>
-                VALIDAR Y NOTIFICAR EVALUACIÓN
-              </button>
-              
-              <button mat-stroked-button color="warn" class="btn-observe"
-                      [disabled]="isProcessing" (click)="onObserve()">
-                <mat-icon>announcement</mat-icon>
-                NOTIFICAR CAMBIOS AL INVESTIGADOR
+            <div class="action-buttons-row">
+              <button mat-flat-button class="btn-finalize" 
+                      [disabled]="progress() < 100 || isProcessing" (click)="onFinalize()">
+                <mat-icon>send</mat-icon>
+                FINALIZAR REVISIÓN Y GENERAR CONSTANCIA
               </button>
             </div>
           </div>
@@ -178,22 +181,18 @@ import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/con
       td { border: 1px solid #000; padding: 8px; font-size: 0.85rem; vertical-align: middle; }
       .req-label { .req-id { font-weight: 900; color: #003366; margin-right: 8px; } }
       .text-center { text-align: center; }
-      .mini-input { width: 100%; border: 1px solid #d1d5db; padding: 4px; border-radius: 4px; text-align: center; &.date { font-size: 0.75rem; } }
+      .mini-input { width: 100%; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; }
+      .btn-group-validation { display: flex; justify-content: center; gap: 4px; }
+      .row-validated { background-color: #f0fdf4; }
+      .row-rejected { background-color: #fef2f2; }
     }
 
-    .action-footer {
-      display: grid; grid-template-columns: 1fr 400px; gap: 2rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 12px;
-    }
-
-    .section-label { font-weight: 800; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 10px; }
-    .obs-textarea { width: 100%; height: 120px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-family: inherit; resize: none; &:focus { outline: 2px solid #003366; } }
-
-    .summary-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+    .action-footer { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; }
+    .summary-panel { display: flex; flex-direction: column; gap: 1.5rem; &.full-width { width: 100%; } }
     .progress-labels { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
     
-    .action-buttons { display: flex; flex-direction: column; gap: 1rem;
-      button { height: 52px; font-weight: 700; border-radius: 8px; }
-      .btn-validate { background: #003366 !important; color: white !important; }
+    .action-buttons-row { display: flex; justify-content: flex-end;
+      .btn-finalize { height: 52px; font-weight: 700; border-radius: 8px; background: #003366 !important; color: white !important; min-width: 300px; }
     }
 
     .animate-fade-in { animation: fadeIn 0.4s ease-out; }
@@ -205,6 +204,7 @@ export class ProtocolValidationDetailPage implements OnInit {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private repository = inject(IProtocolRepositoryPort);
+  private docRepository = inject(IDocumentRepositoryPort);
   private validateUseCase = inject(ValidateDocumentaryUseCase);
 
   isLoading = signal(true);
@@ -221,17 +221,11 @@ export class ProtocolValidationDetailPage implements OnInit {
     }
   });
 
-  observations = '';
   progress = signal(0);
   isProcessing = false;
   generatedCode = signal<string | null>(null);
   
   checklist = signal<any[]>([]);
-
-  canApprove = computed(() => {
-    const list = this.checklist();
-    return list.length > 0 && list.every(item => item.si === true);
-  });
 
   ngOnInit() {
     this.protocolId = this.route.snapshot.params['id'];
@@ -246,81 +240,81 @@ export class ProtocolValidationDetailPage implements OnInit {
         this.protocolType.set(protocol.type);
         this.generatedCode.set(protocol.code || null);
         
-        // Cargar requisitos basados en el PET 2023 configurado en anexos-pet.constants.ts
         let tipo: TipoEstudio;
         if (protocol.type === ProtocolType.IO) tipo = TipoEstudio.OBSERVACIONAL;
         else if (protocol.type === ProtocolType.EC) tipo = TipoEstudio.ENSAYO_CLINICO;
         else tipo = TipoEstudio.INTERVENCION;
 
-        const docs = REQUISITOS_DOCUMENTOS.filter(req => req.obligatorioPara.includes(tipo));
+        const reqs = REQUISITOS_DOCUMENTOS.filter(req => req.obligatorioPara.includes(tipo));
         
-        this.checklist.set(docs.map(d => ({ 
-          label: d.nombre,
-          anexo: d.anexo,
-          type: d.id, 
-          si: false, 
-          no: false,
-          pages: 0,
-          completionDate: new Date().toISOString().split('T')[0]
-        })));
+        this.checklist.set(reqs.map(r => {
+          const doc = protocol.documents.find(d => d.type === r.id);
+          return {
+            label: r.nombre,
+            anexo: r.anexo,
+            typeId: r.id,
+            documentId: doc?.id,
+            documentUrl: doc?.url,
+            status: 0, // 0: Pending, 1: Approved, 2: Rejected
+            observations: ''
+          };
+        }));
 
+        this.updateProgress();
         this.isLoading.set(false);
       },
       error: (err) => {
         console.error('Error loading protocol:', err);
         this.protocolNotFound.set(true);
         this.isLoading.set(false);
-        this.snackBar.open('❌ No se pudo cargar el protocolo. Verifique el ID.', 'Cerrar', { duration: 5000 });
+        this.snackBar.open('❌ No se pudo cargar el protocolo.', 'Cerrar', { duration: 5000 });
       }
     });
   }
 
-  toggleSi(item: any) {
-    if (item.si) item.no = false;
-    this.updateProgress();
-  }
+  onValidateDocument(item: any, statusId: number) {
+    if (!item.documentId && statusId === 1) return;
 
-  toggleNo(item: any) {
-    if (item.no) item.si = false;
-    this.updateProgress();
+    this.isProcessing = true;
+    this.docRepository.validateDocument(item.documentId || 'none', statusId, item.observations).subscribe({
+      next: () => {
+        item.status = statusId;
+        this.updateProgress();
+        this.isProcessing = false;
+        const msg = statusId === 1 ? 'Documento aprobado' : 'Documento rechazado';
+        this.snackBar.open(`✅ ${msg}`, 'Cerrar', { duration: 2000 });
+      },
+      error: () => {
+        this.isProcessing = false;
+        this.snackBar.open('❌ Error al validar el documento', 'Cerrar', { duration: 3000 });
+      }
+    });
   }
 
   updateProgress() {
     const total = this.checklist().length;
     if (total === 0) return;
-    const answered = this.checklist().filter(c => c.si || c.no).length;
+    const answered = this.checklist().filter(c => c.status !== 0).length;
     this.progress.set(Math.round((answered / total) * 100));
   }
 
-  onApprove() {
+  onFinalize() {
     this.isProcessing = true;
-    this.validateUseCase.execute(this.protocolId, true).subscribe({
-      next: () => {
-        this.snackBar.open('✅ Protocolo validado. Se ha notificado al investigador que será evaluado por el comité.', 'Cerrar', { duration: 6000 });
-        this.router.navigate(['/dashboard/protocols/validation/list']);
+    this.validateUseCase.execute(this.protocolId).subscribe({
+      next: (res) => {
+        if (res.status === 'COMPLETE') {
+          this.snackBar.open(`✅ Revisión finalizada. Código generado: ${res.ceishCode}`, 'Cerrar', { duration: 6000 });
+          this.router.navigate(['/dashboard/protocols/validation/list']);
+        } else {
+          const missing = res.missingDocuments?.join(', ') || 'documentos obligatorios';
+          this.snackBar.open(`⚠️ Incompleto: Faltan ${missing}. Plazo hasta ${new Date(res.deadline).toLocaleDateString()}`, 'Cerrar', { duration: 10000 });
+          this.isProcessing = false;
+        }
       },
-      error: () => {
+      error: (err) => {
         this.isProcessing = false;
-        this.snackBar.open('❌ Error al procesar la validación', 'Cerrar', { duration: 3000 });
-      }
-    });
-  }
-
-  onObserve() {
-    if (!this.observations) {
-      this.snackBar.open('⚠️ Debe escribir observaciones para notificar al investigador.', 'Cerrar', { duration: 4000 });
-      return;
-    }
-
-    this.isProcessing = true;
-    this.validateUseCase.execute(this.protocolId, false, this.observations).subscribe({
-      next: () => {
-        this.snackBar.open('📨 Observaciones enviadas. El investigador ha sido notificado para realizar los cambios solicitados.', 'Cerrar', { duration: 6000 });
-        this.router.navigate(['/dashboard/protocols/validation/list']);
-      },
-      error: () => {
-        this.isProcessing = false;
-        this.snackBar.open('❌ Error al enviar la notificación', 'Cerrar', { duration: 3000 });
+        const msg = err.error?.message || 'Error al finalizar la revisión';
+        this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
       }
     });
   }

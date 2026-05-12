@@ -8,6 +8,7 @@ export interface User {
   perfil?: string;
   activo: boolean;
   emailVerificado: boolean;
+  permissions?: string[];
   fechaCreacion?: Date;
   ultimoAcceso?: Date;
 }
@@ -23,6 +24,7 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user?: User;
+  permissions?: string[];
 }
 
 export interface LoginCredentials {

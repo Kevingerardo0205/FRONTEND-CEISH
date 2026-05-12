@@ -14,7 +14,9 @@ export const DASHBOARD_ROUTES: Routes = [
       },
       {
         path: 'admin/users',
-        loadComponent: () => import('./presentation/pages/user-management.page').then(m => m.UserManagementPage)
+        loadComponent: () => import('./presentation/pages/user-management.page').then(m => m.UserManagementPage),
+        canActivate: [AuthGuard],
+        data: { permissions: ['USUARIOS_CREAR'] }
       },
       {
         path: 'protocols',
@@ -50,7 +52,9 @@ export const DASHBOARD_ROUTES: Routes = [
       },
       {
         path: 'audit',
-        loadChildren: () => import('@features/audit/routes').then(m => m.AUDIT_ROUTES)
+        loadChildren: () => import('@features/audit/routes').then(m => m.AUDIT_ROUTES),
+        canActivate: [AuthGuard],
+        data: { permissions: ['ADMIN_ALL'] }
       },
       {
         path: 'notifications',
