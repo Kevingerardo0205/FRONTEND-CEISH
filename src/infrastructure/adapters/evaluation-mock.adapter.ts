@@ -78,4 +78,14 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
   createProfile(profile: any): Observable<any> { return of({ id: 1, ...profile }); }
   updateProfile(id: number, profile: any): Observable<any> { return of({ id, ...profile }); }
   deleteProfile(id: number): Observable<void> { return of(undefined); }
+
+  consolidateEvaluation(protocolId: string): Observable<any> {
+    return of({
+      protocolId,
+      consolidatedDate: new Date(),
+      status: 'CONSOLIDATED',
+      verdict: 'APROBADO',
+      observations: 'Consolidación mock generada automáticamente.'
+    }).pipe(delay(500));
+  }
 }
