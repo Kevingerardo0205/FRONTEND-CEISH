@@ -39,7 +39,7 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   uploadDocuments(protocolId: string, files: File[]): Observable<ProtocolEntity> {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
-    return this.apiClient.post<any>(`/reception/protocol/${protocolId}/document`, formData).pipe(
+    return this.apiClient.post<any>(ENDPOINTS.PROTOCOLS.RECEPTION.BULK_UPLOAD(protocolId), formData).pipe(
       map(data => this.mapToEntity(data))
     );
   }
@@ -48,8 +48,21 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
     return this.apiClient.get<string[]>(`${ENDPOINTS.PROTOCOLS.BASE}/requirements/${type}`);
   }
 
+  getChecklist(id: string): Observable<any> {
+    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.RECEPTION.CHECKLIST(id));
+  }
+
+  finalizeReception(id: string): Observable<any> {
+    return this.apiClient.post(ENDPOINTS.PROTOCOLS.RECEPTION.FINALIZE(id), {});
+  }
+
+  getCertificate(id: string): Observable<Blob> {
+    // El backend del Sprint 1 usa POST para generar el certificado según la tabla
+    return this.apiClient.post(ENDPOINTS.PROTOCOLS.RECEPTION.CERTIFICATE(id), {}, { responseType: 'blob' });
+  }
+
   finalizeValidation(protocolId: string): Observable<any> {
-    return this.apiClient.post(`/reception/protocol/${protocolId}/finalize`);
+    return this.finalizeReception(protocolId);
   }
 
   private mapToEntity(data: any): ProtocolEntity {

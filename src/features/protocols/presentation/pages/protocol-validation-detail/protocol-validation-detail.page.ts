@@ -15,7 +15,6 @@ import { ValidateDocumentaryUseCase } from '../../../application/use-cases/valid
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
-import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/constants/anexos-pet.constants';
 import { IncompleteValidationDialog } from './incomplete-validation-dialog.component';
 
 @Component({
@@ -94,6 +93,7 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
                   <td class="req-label">
                     <span class="req-id">{{ item.anexo }}</span>
                     {{ item.label }}
+                    <span *ngIf="item.isOptional" class="badge-optional">(Opcional)</span>
                   </td>
                   <td class="text-center">
                     <a *ngIf="item.documentUrl" [href]="item.documentUrl" target="_blank" mat-icon-button color="primary" matTooltip="Ver documento">
@@ -111,7 +111,7 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
                       </button>
                       <button mat-icon-button [color]="item.status === 2 ? 'warn' : ''" 
                               (click)="onValidateDocument(item, 2)" 
-                              [disabled]="isProcessing"
+                              [disabled]="!item.documentId || isProcessing"
                               matTooltip="Rechazar">
                         <mat-icon>{{ item.status === 2 ? 'cancel' : 'highlight_off' }}</mat-icon>
                       </button>
@@ -139,10 +139,14 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
             </div>
 
             <div class="action-buttons-row">
+              <button *ngIf="generatedCode()" mat-stroked-button color="accent" (click)="onDownloadCertificate()" class="btn-cert">
+                <mat-icon>download</mat-icon> DESCARGAR ANEXO 7 (CONSTANCIA)
+              </button>
+              
               <button mat-flat-button class="btn-finalize" 
-                      [disabled]="progress() < 100 || isProcessing" (click)="onFinalize()">
+                      [disabled]="progress() < 100 || isProcessing || generatedCode()" (click)="onFinalize()">
                 <mat-icon>send</mat-icon>
-                FINALIZAR REVISIÓN Y GENERAR CONSTANCIA
+                {{ generatedCode() ? 'REVISIÓN FINALIZADA' : 'FINALIZAR REVISIÓN Y GENERAR CONSTANCIA' }}
               </button>
             </div>
           </div>
@@ -182,7 +186,10 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
       width: 100%; border-collapse: collapse; border: 1px solid #000; background: white;
       th { background: #d1d5db; color: #000; border: 1px solid #000; padding: 10px; font-size: 0.75rem; text-transform: uppercase; }
       td { border: 1px solid #000; padding: 8px; font-size: 0.85rem; vertical-align: middle; }
-      .req-label { .req-id { font-weight: 900; color: #003366; margin-right: 8px; } }
+      .req-label { 
+        .req-id { font-weight: 900; color: #003366; margin-right: 8px; } 
+        .badge-optional { font-size: 0.7rem; color: #64748b; margin-left: 4px; font-style: italic; }
+      }
       .text-center { text-align: center; }
       .mini-input { width: 100%; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; }
       .btn-group-validation { display: flex; justify-content: center; gap: 4px; }
@@ -194,7 +201,8 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
     .summary-panel { display: flex; flex-direction: column; gap: 1.5rem; &.full-width { width: 100%; } }
     .progress-labels { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
     
-    .action-buttons-row { display: flex; justify-content: flex-end;
+    .action-buttons-row { display: flex; justify-content: flex-end; gap: 1rem;
+      .btn-cert { height: 52px; font-weight: 700; border-radius: 8px; border: 2px solid #059669; color: #059669; }
       .btn-finalize { height: 52px; font-weight: 700; border-radius: 8px; background: #003366 !important; color: white !important; min-width: 300px; }
     }
 
@@ -238,40 +246,35 @@ export class ProtocolValidationDetailPage implements OnInit {
 
   loadProtocol() {
     this.isLoading.set(true);
-    this.repository.getById(this.protocolId).subscribe({
-      next: (protocol) => {
+    // 1. Obtener Checklist REAL del Backend (Sprint 1)
+    this.repository.getChecklist(this.protocolId).subscribe({
+      next: (res) => {
+        const protocol = res.protocol || res;
+        const documents = res.documents || [];
+
         this.protocolTitle.set(protocol.title);
         this.protocolType.set(protocol.type);
         this.generatedCode.set(protocol.code || null);
         
-        let tipo: TipoEstudio;
-        if (protocol.type === ProtocolType.IO) tipo = TipoEstudio.OBSERVACIONAL;
-        else if (protocol.type === ProtocolType.EC) tipo = TipoEstudio.ENSAYO_CLINICO;
-        else tipo = TipoEstudio.INTERVENCION;
-
-        const reqs = REQUISITOS_DOCUMENTOS.filter(req => req.obligatorioPara.includes(tipo));
-        
-        this.checklist.set(reqs.map(r => {
-          const doc = protocol.documents.find(d => d.type === r.id);
-          return {
-            label: r.nombre,
-            anexo: r.anexo,
-            typeId: r.id,
-            documentId: doc?.id,
-            documentUrl: doc?.url,
-            status: 0, // 0: Pending, 1: Approved, 2: Rejected
-            observations: ''
-          };
-        }));
+        this.checklist.set(documents.map((d: any) => ({
+          label: d.documentType?.name || 'Requisito',
+          anexo: d.documentType?.description || 'N/A',
+          typeId: d.documentTypeId,
+          documentId: d.id,
+          documentUrl: d.path, 
+          status: d.status === 'VALIDADO' ? 1 : (d.status === 'RECHAZADO' ? 2 : 0),
+          observations: d.observations || '',
+          isOptional: d.isOptional
+        })));
 
         this.updateProgress();
         this.isLoading.set(false);
       },
       error: (err) => {
-        console.error('Error loading protocol:', err);
+        console.error('Error loading checklist:', err);
         this.protocolNotFound.set(true);
         this.isLoading.set(false);
-        this.snackBar.open('❌ No se pudo cargar el protocolo.', 'Cerrar', { duration: 5000 });
+        this.snackBar.open('❌ No se pudo cargar el checklist de recepción.', 'Cerrar', { duration: 5000 });
       }
     });
   }
@@ -280,7 +283,7 @@ export class ProtocolValidationDetailPage implements OnInit {
     if (!item.documentId && statusId === 1) return;
 
     this.isProcessing = true;
-    this.docRepository.validateDocument(item.documentId || 'none', statusId, item.observations).subscribe({
+    this.docRepository.validateDocument(item.documentId, statusId, item.observations).subscribe({
       next: () => {
         item.status = statusId;
         this.updateProgress();
@@ -298,7 +301,7 @@ export class ProtocolValidationDetailPage implements OnInit {
   updateProgress() {
     const total = this.checklist().length;
     if (total === 0) return;
-    const answered = this.checklist().filter(c => c.status !== 0).length;
+    const answered = this.checklist().filter(c => c.status !== 0 || c.isOptional).length;
     this.progress.set(Math.round((answered / total) * 100));
   }
 
@@ -306,13 +309,17 @@ export class ProtocolValidationDetailPage implements OnInit {
     this.isProcessing = true;
     this.validateUseCase.execute(this.protocolId).subscribe({
       next: (res) => {
-        this.snackBar.open(`✅ Revisión finalizada. Código generado: ${res.ceishCode}`, 'Cerrar', { duration: 6000 });
-        this.router.navigate(['/dashboard/protocols/validation/list']);
+        this.isProcessing = false;
+        const code = res.ceishCode || res.code || 'GENERADO';
+        this.generatedCode.set(code);
+        this.snackBar.open(`✅ Recepción finalizada. Código CEISH: ${code}`, 'Cerrar', { duration: 10000 });
+        
+        // Ofrecer descarga inmediata
+        this.onDownloadCertificate();
       },
       error: (err) => {
         this.isProcessing = false;
         
-        // Manejo de Incompletos (Error 400 con data según PET)
         if (err.status === 400 && err.error?.missingDocuments) {
           this.dialog.open(IncompleteValidationDialog, {
             width: '500px',
@@ -322,9 +329,25 @@ export class ProtocolValidationDetailPage implements OnInit {
             }
           });
         } else {
-          const msg = err.error?.message || 'Error al finalizar la revisión';
+          const msg = err.error?.message || 'Error al finalizar la recepción';
           this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
         }
+      }
+    });
+  }
+
+  onDownloadCertificate() {
+    this.repository.getCertificate(this.protocolId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Anexo_7_Constancia_${this.generatedCode()}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.snackBar.open('❌ Error al descargar la constancia.', 'Cerrar');
       }
     });
   }

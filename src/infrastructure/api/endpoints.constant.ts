@@ -11,6 +11,14 @@ export const ENDPOINTS = {
   PROTOCOLS: {
     BASE: '/protocols',
     BY_ID: (id: string) => `/protocols/${id}`,
+    RECEPTION: {
+      CREATE: '/protocols',
+      BULK_UPLOAD: (id: string) => `/reception/protocol/${id}/documents/bulk`,
+      CHECKLIST: (id: string) => `/reception/protocol/${id}`,
+      FINALIZE: (id: string) => `/reception/protocol/${id}/finalize`,
+      CERTIFICATE: (id: string) => `/reception/protocol/${id}/certificate`,
+      VALIDATE_DOC: (id: string) => `/reception/document/${id}/validate`,
+    }
   },
   DOCUMENTS: {
     BASE: '/documents',

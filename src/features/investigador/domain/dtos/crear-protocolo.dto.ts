@@ -50,6 +50,7 @@ export interface CrearProtocoloDto {
   sponsorExecutingAgency: string;
   financingAmount: number;
   isAffidavitAccepted: boolean;
+  isIndigenousPopulation: boolean;
   investigators: InvestigadorEquipo[];
   institutions: InstitucionParticipante[];
   lugarEjecucion?: string;

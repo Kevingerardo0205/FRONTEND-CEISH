@@ -83,6 +83,7 @@ export class NuevoProtocoloPage implements OnInit {
     duracionMeses: [1, [Validators.required, Validators.min(1), Validators.max(120)]],
     usesBiologicalSamples: [false],
     isVulnerablePopulation: [false],
+    isIndigenousPopulation: [false],
     isMulticentric: [false],
     isExternal: [false],
     sponsorRuc: ['', [Validators.required, ecuadorianIdValidator]],
@@ -119,6 +120,7 @@ export class NuevoProtocoloPage implements OnInit {
     this.generalForm.get('tipoEstudio')?.valueChanges.subscribe(() => this.loadRequirements());
     this.generalForm.get('usesBiologicalSamples')?.valueChanges.subscribe(() => this.loadRequirements());
     this.generalForm.get('isVulnerablePopulation')?.valueChanges.subscribe(() => this.loadRequirements());
+    this.generalForm.get('isIndigenousPopulation')?.valueChanges.subscribe(() => this.loadRequirements());
   }
 
   private loadStudyTypes() {
@@ -216,6 +218,7 @@ export class NuevoProtocoloPage implements OnInit {
       studyDurationMonths: Number(formVal.duracionMeses),
       usesBiologicalSamples: !!formVal.usesBiologicalSamples,
       isVulnerablePopulation: !!formVal.isVulnerablePopulation,
+      isIndigenousPopulation: !!formVal.isIndigenousPopulation,
       isMulticentric: !!formVal.isMulticentric,
       hasExternalInstitutions: !!formVal.isExternal,
       sponsorRuc: formVal.sponsorRuc!,
@@ -255,7 +258,7 @@ export class NuevoProtocoloPage implements OnInit {
         if (id) {
           this.protocolId = id;
           this.uploadAllCVs(id);
-          // Refrescamos requisitos ahora que el protocolo existe
+          // Refrescamos requisitos ahora que el protocolo existe usando el Checklist Dinámico
           this.loadRequirements(id);
         } else {
           this.isLoading = false;
@@ -318,62 +321,55 @@ export class NuevoProtocoloPage implements OnInit {
 
   private loadRequirements(protocolId?: number) {
     const studyTypeId = this.generalForm.get('tipoEstudio')?.value;
-    if (!studyTypeId) return;
+    if (!studyTypeId && !protocolId) return;
 
-    // BUSCAR EL CÓDIGO (IO, EI, EC) basado en el ID seleccionado
-    const selectedType = this.tiposEstudio.find(t => t.id === Number(studyTypeId));
-    const codigoTipo = selectedType ? (selectedType.codigo || selectedType.code) : '';
+    let request;
 
-    if (!codigoTipo) {
-      console.warn('No se encontró el código para el tipo de estudio:', studyTypeId);
-      return;
+    if (protocolId) {
+      // Paso 3 del plan: Obtener requisitos desde el endpoint de Checklist (Sprint 1)
+      console.log('Obteniendo Checklist Dinámico para protocolo:', protocolId);
+      request = this.protocoloService.getChecklist(protocolId);
+    } else {
+      // Búsqueda preliminar basada en formulario
+      const selectedType = this.tiposEstudio.find(t => t.id === Number(studyTypeId));
+      const codigoTipo = selectedType ? (selectedType.codigo || selectedType.code) : '';
+      if (!codigoTipo) return;
+
+      const muestras = !!this.generalForm.get('usesBiologicalSamples')?.value;
+      const vulnerable = !!this.generalForm.get('isVulnerablePopulation')?.value;
+      const indigena = !!this.generalForm.get('isIndigenousPopulation')?.value;
+
+      console.log('Cargando requisitos preliminares:', { codigoTipo, muestras, vulnerable, indigena });
+      request = this.protocoloService.getRequisitos(codigoTipo, muestras, vulnerable, indigena);
     }
 
-    const muestras = !!this.generalForm.get('usesBiologicalSamples')?.value;
-    const vulnerable = !!this.generalForm.get('isVulnerablePopulation')?.value;
-
-    console.log('Cargando requisitos para:', { codigoTipo, muestras, vulnerable, protocolId });
-
-    // Si ya tenemos protocolId, intentamos traerlos del protocolo específico
-    const request = protocolId 
-      ? this.protocoloService.obtenerRequisitosDeProtocolo(protocolId)
-      : this.protocoloService.getRequisitos(codigoTipo, muestras, vulnerable);
-
     request.subscribe({
-      next: (reqs: any) => {
-        // Forzamos que se reconozca el array
-        let requirementsArray = Array.isArray(reqs) ? reqs : (reqs?.data || []);
+      next: (res: any) => {
+        // El backend del Sprint 1 devuelve un objeto con el protocolo y sus 'documents' (requisitos)
+        let requirementsArray = Array.isArray(res) ? res : (res?.documents || res?.data || []);
         
-        // Mapeo si vienen con nombres de campos de base de datos (codigo_requisito -> id)
-        if (requirementsArray.length > 0 && requirementsArray[0].codigo_requisito) {
-          requirementsArray = requirementsArray.map((r: any) => ({
-            id: r.id || r.codigo_requisito,
-            nombre: r.nombre_requisito || r.nombre,
-            anexo: r.anexo || 'Requisito',
-            formatosAceptados: ['application/pdf'],
-            maxSizeMB: 10
-          }));
-        }
+        // Mapeo uniforme para la UI
+        this.documentosRequeridos = requirementsArray.map((r: any) => ({
+          id: r.documentTypeId || r.id || r.codigo_requisito,
+          nombre: r.documentType?.name || r.nombre_requisito || r.nombre,
+          anexo: r.documentType?.description || r.anexo || 'Requisito',
+          formatosAceptados: ['application/pdf'],
+          maxSizeMB: 10,
+          esCondicional: r.isOptional || false,
+          estadoCarga: r.status || 'PENDIENTE'
+        }));
 
-        // FALLBACK LOCAL SI EL BACKEND SIGUE VACÍO
-        if (requirementsArray.length === 0) {
-          console.warn('Backend devolvió requisitos vacíos, usando fallback local.');
-          requirementsArray = getRequisitosPorTipoEstudio(codigoTipo as TipoEstudio);
-        }
+        console.log('Checklist Dinámico cargado:', this.documentosRequeridos);
 
-        this.documentosRequeridos = requirementsArray;
-        console.log('Documentos cargados:', this.documentosRequeridos);
-
-        if (this.documentosRequeridos.length > 0) {
-          this.documentosRequeridos.forEach((doc: any) => {
-            if (!this.documentUploadStatus[doc.id]) this.documentUploadStatus[doc.id] = 'pendiente';
-          });
-        }
+        // Inicializar estados de carga si están vacíos
+        this.documentosRequeridos.forEach((doc: any) => {
+          if (!this.documentUploadStatus[doc.id]) {
+            this.documentUploadStatus[doc.id] = (doc.estadoCarga === 'VALIDADO' || doc.estadoCarga === 'CARGADO') ? 'exito' : 'pendiente';
+          }
+        });
       },
       error: (err) => {
-        console.error('Error cargando requisitos:', err);
-        // Fallback local en caso de error
-        this.documentosRequeridos = getRequisitosPorTipoEstudio(codigoTipo as TipoEstudio);
+        console.error('Error cargando Checklist:', err);
       }
     });
   }
@@ -384,20 +380,16 @@ export class NuevoProtocoloPage implements OnInit {
 
     this.documentUploadStatus[docId] = 'subiendo';
     
-    // Mapeo manual de IDs locales (strings) a IDs de backend (números)
-    // Intentamos parsear a número, si no, usamos 1 como default (o mapeamos según código si supiéramos)
     const numericDocId = parseInt(docId);
     
-    // ENVIAMOS JSON EN LUGAR DE FORMDATA para que el backend lo entienda sin Multer
+    // Usamos el servicio de subida masiva si es posible, o el individual
     const payload = {
       protocolId: this.protocolId,
       fileName: file.name,
-      path: `/uploads/protocols/${this.protocolId}/${file.name}`, // Ruta simulada
+      path: `/uploads/protocols/${this.protocolId}/${file.name}`, 
       sizeBytes: file.size,
       documentTypeId: isNaN(numericDocId) ? 1 : numericDocId 
     };
-
-    console.log('Subiendo documento:', payload);
 
     this.protocoloService.subirDocumento(payload).subscribe({
       next: () => {
@@ -422,9 +414,10 @@ export class NuevoProtocoloPage implements OnInit {
 
     this.isLoading = true;
     this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.isLoading = false;
-        this.snackBar.open('✅ Solicitud enviada al CEISH. Código generado.', 'Cerrar', { duration: 5000 });
+        const codigo = res?.code || res?.data?.code || 'CEISH-GEN-001';
+        this.snackBar.open(`✅ Protocolo ${codigo} enviado exitosamente.`, 'Cerrar', { duration: 5000 });
         this.router.navigate(['/investigador/mis-protocolos']);
       },
       error: (err) => {

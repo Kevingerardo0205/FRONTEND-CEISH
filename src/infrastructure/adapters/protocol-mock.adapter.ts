@@ -62,6 +62,25 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
     return of(['Req 1', 'Req 2']);
   }
 
+  getChecklist(id: string): Observable<any> {
+    const protocol = this.protocols.find(p => p.id === id);
+    return of({
+      protocol: protocol,
+      documents: [
+        { id: 'doc-1', documentTypeId: 1, documentType: { name: 'Anexo 1', description: 'Formulario de solicitud' }, status: 'PENDIENTE', isOptional: false },
+        { id: 'doc-2', documentTypeId: 2, documentType: { name: 'CV Investigador', description: 'Hoja de vida' }, status: 'PENDIENTE', isOptional: false }
+      ]
+    });
+  }
+
+  finalizeReception(id: string): Observable<any> {
+    return of({ ceishCode: `CEISH-MOCK-${id}`, message: 'Recepción finalizada mock' });
+  }
+
+  getCertificate(id: string): Observable<Blob> {
+    return of(new Blob(['Mock Certificate Content'], { type: 'application/pdf' }));
+  }
+
   finalizeValidation(protocolId: string): Observable<any> {
     const index = this.protocols.findIndex(p => p.id === protocolId);
     if (index !== -1) {
