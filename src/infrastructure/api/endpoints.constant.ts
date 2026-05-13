@@ -26,5 +26,8 @@ export const ENDPOINTS = {
     PROFILES: '/evaluations/profiles',
     PROFILE_BY_ID: (id: number) => `/evaluations/profiles/${id}`,
   },
+  RESOLUTIONS: {
+    BASE: '/resolutions',
+  },
   HEALTH: '/'
 };

@@ -9,20 +9,31 @@
     </div>
   </div>
 
-  <div class="nav-section-title">Director del menú</div>
+  <div class="nav-section-title">MENÚ PRINCIPAL</div>
   
-  <mat-nav-list class="menu-list">
-    @for (item of filteredMenuItems(); track item.path) {
-      <a mat-list-item 
-         [routerLink]="item.path" 
-         routerLinkActive="active-link" 
-         (click)="onNavClick()"
-         class="menu-item">
-        <mat-icon matListItemIcon class="menu-icon">{{ item.icon }}</mat-icon>
-        <span matListItemTitle class="menu-label">{{ item.label }}</span>
-      </a>
+  <div class="menu-container">
+    @for (group of authFacade.menuConfig(); track group.module.code) {
+      <div class="module-group">
+        <div class="module-header">
+          <mat-icon>{{ group.module.icon }}</mat-icon>
+          <span>{{ group.module.name }}</span>
+        </div>
+
+        <mat-nav-list class="menu-list">
+          @for (sub of group.subItems; track sub.code) {
+            <a mat-list-item 
+               [routerLink]="getRoute(sub.code)" 
+               routerLinkActive="active-link" 
+               (click)="onNavClick()"
+               class="menu-item">
+              <mat-icon matListItemIcon class="menu-icon">{{ getIcon(sub.code) }}</mat-icon>
+              <span matListItemTitle class="menu-label">{{ getLabel(sub.code) }}</span>
+            </a>
+          }
+        </mat-nav-list>
+      </div>
     }
-  </mat-nav-list>
+  </div>
 
   <div class="sidebar-spacer"></div>
 

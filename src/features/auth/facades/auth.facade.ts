@@ -1,6 +1,6 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, computed } from '@angular/core';
 import { Observable, of, throwError, delay, tap, catchError } from 'rxjs';
-import { User, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
+import { User, AuthResponse, LoginCredentials, Module, Permission } from '@domain/entities/user.entity';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 
@@ -13,6 +13,27 @@ export class AuthFacade {
   
   private currentUserSignal = signal<User | null>(null);
   public currentUser = this.currentUserSignal.asReadonly();
+
+  /**
+   * Genera la configuración del menú agrupada por módulos basada en los permisos enriquecidos del usuario.
+   * Paso 3 del plan: Obtener user.fullPermissions y agrupar por module.code.
+   */
+  public menuConfig = computed(() => {
+    const user = this.currentUser();
+    if (!user || !user.fullPermissions) return [];
+
+    const modulesMap = new Map<string, { module: Module, subItems: Permission[] }>();
+
+    user.fullPermissions.forEach(p => {
+      const moduleCode = p.module.code;
+      if (!modulesMap.has(moduleCode)) {
+        modulesMap.set(moduleCode, { module: p.module, subItems: [] });
+      }
+      modulesMap.get(moduleCode)!.subItems.push(p);
+    });
+
+    return Array.from(modulesMap.values()).sort((a, b) => a.module.order - b.module.order);
+  });
 
   // Gestión de intentos de login
   private readonly MAX_ATTEMPTS = 3;

@@ -17,45 +17,18 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
       protocolType: 'IO',
       protocolTitle: 'Prevalencia de parasitosis intestinal mediante técnicas coproparasitológicas en niños...', 
       investigator: 'Dra. Ana María Lucía',
-      deadline: new Date(new Date().setDate(new Date().getDate() + 1)), // Crítico: 1 día restante
-      status: 'PENDING' 
-    },
-    { 
-      id: 'ev2', 
-      protocolId: '2',
-      evaluatorId: 'eval-123',
-      protocolCode: '2026-EC-002', 
-      protocolType: 'EC',
-      protocolTitle: 'Estudio comparativo de la eficacia de dos protocolos de rehabilitación post-infarto', 
-      investigator: 'Dr. Roberto Carlos Espinoza',
-      deadline: new Date(new Date().setDate(new Date().getDate() + 10)), 
-      status: 'IN_PROGRESS' 
+      deadline: new Date(new Date().setDate(new Date().getDate() + 1)),
+      status: 'PENDING',
+      verdict: EvaluationVerdict.APROBADO,
+      evaluationDate: new Date()
     }
   ];
 
-  submit(evaluation: Partial<EvaluationEntity>): Observable<EvaluationEntity> {
-    console.log('Mock: Guardando evaluación...', evaluation);
-    const mockResponse: EvaluationEntity = {
-      id: evaluation.id || Math.random().toString(36).substring(7),
-      protocolId: evaluation.protocolId || 'unknown',
-      evaluatorId: evaluation.evaluatorId || 'user-123',
-      technicalCriteria: evaluation.technicalCriteria || [],
-      technicalObservations: evaluation.technicalObservations || '',
-      ethicalCriteria: evaluation.ethicalCriteria || [],
-      ethicalObservations: evaluation.ethicalObservations || '',
-      verdict: evaluation.verdict || (null as any),
-      actaUrl: 'mock-url-acta.pdf',
-      evaluationDate: new Date()
-    };
-    return of(mockResponse).pipe(delay(1500));
-  }
-
   getByProtocolId(protocolId: string): Observable<EvaluationEntity[]> {
-    return of([]);
+    return of(this.mockEvaluations.filter(e => e.protocolId === protocolId)).pipe(delay(500));
   }
 
   getByEvaluatorId(evaluatorId: string): Observable<any[]> {
-    // Filtramos por evaluador
     const filtered = this.mockEvaluations.filter(e => e.evaluatorId === evaluatorId);
     return of(filtered).pipe(delay(500));
   }
@@ -66,9 +39,12 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
         { protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba' }
       ],
       evaluators: [
-        { id: 'ev-1', nombre: 'Evaluador Mock 1', perfil: 'SALUD', cargaActiva: 2 }
+        { id: 'ev-1', nombre: 'Dr. Marco Antonio', perfil: 'SALUD', cargaActiva: 2 },
+        { id: 'ev-2', nombre: 'Dra. Elena Ramos', perfil: 'JURIDICO', cargaActiva: 0 }
       ],
-      suggestedEvaluations: []
+      suggestedEvaluations: [
+        { id: 'sug-1', protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba', evaluatorId: 'ev-1', evaluatorName: 'Dr. Marco Antonio', evaluatorProfile: 'SALUD', deadline: null }
+      ]
     }).pipe(delay(500));
   }
 
@@ -87,7 +63,7 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
   }
 
   submitEvaluation(data: FormData): Observable<void> {
-    console.log('Mock: Enviando evaluación (FormData)');
+    console.log('Mock: Enviando evaluación (FormData)', data.get('evaluationData'));
     return of(undefined).pipe(delay(1000));
   }
 
@@ -99,18 +75,7 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     ]).pipe(delay(500));
   }
 
-  createProfile(profile: any): Observable<any> {
-    console.log('Mock: Creando perfil', profile);
-    return of({ id: Math.floor(Math.random() * 1000), ...profile }).pipe(delay(500));
-  }
-
-  updateProfile(id: number, profile: any): Observable<any> {
-    console.log('Mock: Actualizando perfil', id, profile);
-    return of({ id, ...profile }).pipe(delay(500));
-  }
-
-  deleteProfile(id: number): Observable<void> {
-    console.log('Mock: Eliminando perfil', id);
-    return of(undefined).pipe(delay(500));
-  }
+  createProfile(profile: any): Observable<any> { return of({ id: 1, ...profile }); }
+  updateProfile(id: number, profile: any): Observable<any> { return of({ id, ...profile }); }
+  deleteProfile(id: number): Observable<void> { return of(undefined); }
 }

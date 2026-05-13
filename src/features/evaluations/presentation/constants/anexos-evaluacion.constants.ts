@@ -9,7 +9,7 @@ export enum TipoRevision {
 export interface CampoEvaluacion {
   id: string;
   label: string;
-  tipo: 'check' | 'text' | 'section';
+  tipo: 'check' | 'text' | 'compliance'; // compliance: C, NC, NA
   obligatorio: boolean;
   seccion: 'TECNICA' | 'ETICA' | 'JURIDICA' | 'GENERAL';
   descripcion?: string;
@@ -23,47 +23,73 @@ export interface AnexoEvaluacion {
   campos: CampoEvaluacion[];
 }
 
-export const CAMPOS_COMUNES: CampoEvaluacion[] = [
-  { id: 'resumen', label: 'Resumen del proyecto y justificación', tipo: 'text', obligatorio: true, seccion: 'GENERAL' },
-  { id: 'diseno_metodologico', label: '¿El diseño metodológico es coherente con los objetivos?', tipo: 'check', obligatorio: true, seccion: 'TECNICA', descripcion: 'Evaluación de la rigurosidad científica' },
-  { id: 'procedimientos', label: '¿Los procedimientos están claramente descritos?', tipo: 'check', obligatorio: true, seccion: 'TECNICA' },
-  { id: 'riesgos', label: 'Identificación y minimización de riesgos', tipo: 'check', obligatorio: true, seccion: 'ETICA', descripcion: 'Asegurar que los riesgos son menores al beneficio' },
-  { id: 'confidencialidad', label: 'Garantía de confidencialidad de datos', tipo: 'check', obligatorio: true, seccion: 'ETICA' },
-  { id: 'consentimiento', label: 'Proceso de Consentimiento Informado', tipo: 'check', obligatorio: true, seccion: 'ETICA', descripcion: 'Verificar Anexo 3' },
-  { id: 'normativa', label: 'Cumplimiento de normativa nacional (MSP)', tipo: 'check', obligatorio: true, seccion: 'JURIDICA' },
+/**
+ * Los 7 Criterios de Ezekiel Emanuel (Núcleo de Evaluación Ética)
+ */
+export const CRITERIOS_EMANUEL: CampoEvaluacion[] = [
+  { id: 'valorSocial', label: 'Valor Social', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Genera beneficios reales para los participantes o la comunidad.' },
+  { id: 'validezCientifica', label: 'Validez Científica', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Metodología bien planteada, objetivos claros e instrumentos validados.' },
+  { id: 'seleccionEquitativa', label: 'Selección Equitativa', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Oportunidad de inclusión sin discriminación arbitraria.' },
+  { id: 'riesgoBeneficio', label: 'Riesgo-Beneficio Favorable', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Beneficios potenciales superan claramente los riesgos.' },
+  { id: 'evaluacionIndependiente', label: 'Evaluación Independiente', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'No existe conflicto de intereses.' },
+  { id: 'consentimientoInformado', label: 'Consentimiento Informado', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Correctamente aplicado, documentado y comprendido.' },
+  { id: 'proteccionVulnerables', label: 'Protección de Vulnerables', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Consideración especial a poblaciones vulnerables y confidencialidad.' }
+];
+
+/**
+ * Evaluación Metodológica Detallada (PET)
+ */
+export const METODOLOGIA_DETALLADA: CampoEvaluacion[] = [
+  { id: 'coherenciaTitulo', label: 'Coherencia Título-Objetivos', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
+  { id: 'disenoEstudio', label: 'Diseño del Estudio', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
+  { id: 'sujetosMuestra', label: 'Sujetos y Tamaño de Muestra', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
+  { id: 'definicionVariables', label: 'Definición de Variables', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
+  { id: 'manejoDatos', label: 'Manejo de Datos y Análisis', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' }
+];
+
+/**
+ * Evaluación Jurídica Detallada (PET)
+ */
+export const JURIDICA_DETALLADA: CampoEvaluacion[] = [
+  { id: 'acordeLegislacion', label: 'Acorde a Legislación Nacional', tipo: 'compliance', obligatorio: true, seccion: 'JURIDICA' },
+  { id: 'contratoInvestigadores', label: 'Contrato/Acuerdos Investigadores', tipo: 'compliance', obligatorio: true, seccion: 'JURIDICA' }
 ];
 
 export const ANEXOS_EVALUACION: AnexoEvaluacion[] = [
   {
     id: 'anexo9',
-    titulo: 'Informe de Evaluación Ética - Revisión Expedita',
+    titulo: 'Revisión Expedita (Estudios Observacionales)',
     anexo: 'Anexo 9',
     tipoRevision: TipoRevision.EXPEDITA,
     campos: [
-      ...CAMPOS_COMUNES,
-      { id: 'justificacion_expedita', label: 'Justificación para el tipo de revisión', tipo: 'text', obligatorio: true, seccion: 'GENERAL' }
+      { id: 'cumpleCriteriosExpedita', label: 'Cumple criterios para revisión expedita', tipo: 'check', obligatorio: true, seccion: 'GENERAL' },
+      { id: 'justificacion', label: 'Justificación del tipo de revisión', tipo: 'text', obligatorio: true, seccion: 'GENERAL' },
+      ...CRITERIOS_EMANUEL
     ]
   },
   {
     id: 'anexo10',
-    titulo: 'Informe de Evaluación Ética - Revisión en Pleno',
+    titulo: 'Revisión por Pleno (Intervención/Riesgo)',
     anexo: 'Anexo 10',
     tipoRevision: TipoRevision.PLENO,
     campos: [
-      ...CAMPOS_COMUNES,
-      { id: 'analisis_social', label: 'Valor social y científico de la investigación', tipo: 'text', obligatorio: true, seccion: 'GENERAL' },
-      { id: 'seleccion_equitativa', label: 'Selección equitativa de la muestra', tipo: 'check', obligatorio: true, seccion: 'ETICA' }
+      ...CRITERIOS_EMANUEL,
+      ...METODOLOGIA_DETALLADA,
+      ...JURIDICA_DETALLADA
     ]
   },
   {
     id: 'anexo11',
-    titulo: 'Informe de Evaluación Ética - Ensayos Clínicos',
+    titulo: 'Evaluación de Ensayos Clínicos',
     anexo: 'Anexo 11',
     tipoRevision: TipoRevision.ENSAYO_CLINICO,
     campos: [
-      ...CAMPOS_COMUNES,
-      { id: 'fase_ensayo', label: 'Fase del ensayo y seguridad farmacológica', tipo: 'text', obligatorio: true, seccion: 'TECNICA' },
-      { id: 'seguro', label: 'Póliza de seguro para participantes', tipo: 'check', obligatorio: true, seccion: 'JURIDICA' }
+      ...CRITERIOS_EMANUEL,
+      ...METODOLOGIA_DETALLADA,
+      ...JURIDICA_DETALLADA,
+      { id: 'aprobacionArcsaVerificada', label: 'Aprobación ARCSA Verificada', tipo: 'check', obligatorio: true, seccion: 'JURIDICA' },
+      { id: 'polizaSeguroVigente', label: 'Póliza de Seguro Vigente', tipo: 'check', obligatorio: true, seccion: 'JURIDICA' },
+      { id: 'comentariosFarmaco', label: 'Datos sobre Fármaco/Producto', tipo: 'text', obligatorio: true, seccion: 'TECNICA' }
     ]
   }
 ];

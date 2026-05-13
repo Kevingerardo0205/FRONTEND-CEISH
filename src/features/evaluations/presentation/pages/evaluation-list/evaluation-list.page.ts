@@ -147,7 +147,7 @@ export class EvaluationListPage implements OnInit {
   }
 
   onConfirm(item: any) {
-    this.confirmUC.execute(item.id, item.newDeadline).subscribe(() => {
+    this.confirmUC.execute({ evaluationId: item.id, deadline: item.newDeadline }).subscribe(() => {
       this.snackBar.open('✅ Asignación confirmada con éxito', 'Cerrar', { duration: 3000 });
       this.loadData();
     });

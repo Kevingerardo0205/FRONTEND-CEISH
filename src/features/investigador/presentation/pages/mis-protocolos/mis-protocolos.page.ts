@@ -12,6 +12,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { RouterModule } from '@angular/router';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { ProtocoloResumen } from '../../../domain/dtos/crear-protocolo.dto';
+import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 
 @Component({
   selector: 'app-mis-protocolos',
@@ -86,7 +87,7 @@ import { ProtocoloResumen } from '../../../domain/dtos/crear-protocolo.dto';
               <mat-icon>search</mat-icon>
               <input type="text" placeholder="Buscar por título o código..." (keyup)="applyFilter($event)">
             </div>
-            <button mat-icon-button matTooltip="Refrescar lista">
+            <button mat-icon-button matTooltip="Refrescar lista" (click)="loadProtocolos()">
               <mat-icon>refresh</mat-icon>
             </button>
           </div>
@@ -386,11 +387,21 @@ import { ProtocoloResumen } from '../../../domain/dtos/crear-protocolo.dto';
 })
 export class MisProtocolosPage implements OnInit {
   private protocoloService = inject(ProtocoloService);
+  private notificationBroker = inject(NotificationBrokerService);
   
   protocolos: ProtocoloResumen[] = [];
   displayedColumns: string[] = ['codigo', 'titulo', 'estado', 'acciones'];
 
   ngOnInit(): void {
+    this.loadProtocolos();
+
+    // Tarea 2: Escuchar actualizaciones para refrescar "al instante"
+    this.notificationBroker.on('PROTOCOL_STATUS_UPDATED').subscribe(() => {
+      this.loadProtocolos();
+    });
+  }
+
+  loadProtocolos() {
     this.protocoloService.misProtocolos().subscribe(data => {
       this.protocolos = data;
     });

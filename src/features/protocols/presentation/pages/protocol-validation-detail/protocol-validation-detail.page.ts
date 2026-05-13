@@ -9,12 +9,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { ValidateDocumentaryUseCase } from '../../../application/use-cases/validate-documentary.use-case';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/constants/anexos-pet.constants';
+import { IncompleteValidationDialog } from './incomplete-validation-dialog.component';
 
 @Component({
   selector: 'app-protocol-validation-detail',
@@ -30,6 +32,7 @@ import { REQUISITOS_DOCUMENTOS, TipoEstudio } from '../../../../investigador/con
     MatProgressBarModule,
     MatSnackBarModule,
     MatTooltipModule,
+    MatDialogModule,
     FormsModule
   ],
   template: `
@@ -206,6 +209,7 @@ export class ProtocolValidationDetailPage implements OnInit {
   private repository = inject(IProtocolRepositoryPort);
   private docRepository = inject(IDocumentRepositoryPort);
   private validateUseCase = inject(ValidateDocumentaryUseCase);
+  private dialog = inject(MatDialog);
 
   isLoading = signal(true);
   protocolNotFound = signal(false);
@@ -302,19 +306,25 @@ export class ProtocolValidationDetailPage implements OnInit {
     this.isProcessing = true;
     this.validateUseCase.execute(this.protocolId).subscribe({
       next: (res) => {
-        if (res.status === 'COMPLETE') {
-          this.snackBar.open(`✅ Revisión finalizada. Código generado: ${res.ceishCode}`, 'Cerrar', { duration: 6000 });
-          this.router.navigate(['/dashboard/protocols/validation/list']);
-        } else {
-          const missing = res.missingDocuments?.join(', ') || 'documentos obligatorios';
-          this.snackBar.open(`⚠️ Incompleto: Faltan ${missing}. Plazo hasta ${new Date(res.deadline).toLocaleDateString()}`, 'Cerrar', { duration: 10000 });
-          this.isProcessing = false;
-        }
+        this.snackBar.open(`✅ Revisión finalizada. Código generado: ${res.ceishCode}`, 'Cerrar', { duration: 6000 });
+        this.router.navigate(['/dashboard/protocols/validation/list']);
       },
       error: (err) => {
         this.isProcessing = false;
-        const msg = err.error?.message || 'Error al finalizar la revisión';
-        this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
+        
+        // Manejo de Incompletos (Error 400 con data según PET)
+        if (err.status === 400 && err.error?.missingDocuments) {
+          this.dialog.open(IncompleteValidationDialog, {
+            width: '500px',
+            data: {
+              missingDocuments: err.error.missingDocuments,
+              deadline: err.error.deadline
+            }
+          });
+        } else {
+          const msg = err.error?.message || 'Error al finalizar la revisión';
+          this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
+        }
       }
     });
   }

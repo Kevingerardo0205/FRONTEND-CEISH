@@ -8,6 +8,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
+import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
+import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 
 @Component({
   selector: 'app-resolution-generator',
@@ -152,15 +155,15 @@ import { MatSnackBar } from '@angular/material/snack-bar';
             </div>
 
             <div class="preview-actions d-flex flex-column gap-3 mt-4">
-              <button mat-stroked-button color="primary" class="preview-btn" [disabled]="form.invalid">
+              <button mat-stroked-button color="primary" class="preview-btn" [disabled]="form.invalid || isSubmitting()">
                 <mat-icon>open_in_new</mat-icon>
                 Visualizar Borrador
               </button>
               <button mat-flat-button class="emit-btn" 
-                      [disabled]="form.invalid"
+                      [disabled]="form.invalid || isSubmitting()"
                       (click)="onGenerate()">
                 <mat-icon>draw</mat-icon>
-                Firmar y Notificar
+                {{ isSubmitting() ? 'Procesando...' : 'Firmar y Notificar' }}
               </button>
             </div>
 
@@ -330,6 +333,10 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class ResolutionGeneratorPage implements OnInit {
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private resolutionRepo = inject(IResolutionRepositoryPort);
+  private notificationBroker = inject(NotificationBrokerService);
+
+  isSubmitting = signal(false);
 
   form: FormGroup = this.fb.group({
     protocolId: ['', Validators.required],
@@ -378,10 +385,49 @@ export class ResolutionGeneratorPage implements OnInit {
 
   onGenerate() {
     if (this.form.valid) {
-      this.snackBar.open('✅ Resolución generada, firmada y notificada con éxito', 'Cerrar', {
-        duration: 5000,
+      this.isSubmitting.set(true);
+
+      const formData = new FormData();
+      const formValue = this.form.value;
+
+      formData.append('protocolId', formValue.protocolId);
+      formData.append('resolutionType', formValue.resolutionType);
+
+      // Map resolution type to final status
+      let finalStatus = ProtocolStatus.APPROVED;
+      if (formValue.resolutionType === 'REJECTION') finalStatus = ProtocolStatus.REJECTED;
+      if (formValue.resolutionType === 'CONDITIONAL') finalStatus = ProtocolStatus.OBSERVED;
+      
+      formData.append('finalStatus', finalStatus);
+
+      // Create a mock PDF file for the resolution
+      const mockBlob = new Blob(['Contenido de la resolución para ' + formValue.protocolId], { type: 'application/pdf' });
+      formData.append('file', mockBlob, `Resolucion_` + formValue.protocolId + `.pdf`);
+
+      // Add other relevant data
+      formData.append('data', JSON.stringify(formValue));
+
+      this.resolutionRepo.submitResolution(formData).subscribe({
+        next: () => {
+          this.snackBar.open('✅ Resolución generada, firmada y notificada con éxito', 'Cerrar', {
+            duration: 5000,
+          });
+          
+          // Publish event for global state refresh
+          this.notificationBroker.publish('PROTOCOL_STATUS_UPDATED', {
+            protocolId: formValue.protocolId,
+            status: finalStatus
+          });
+
+          this.form.reset();
+          this.isSubmitting.set(false);
+        },
+        error: (err) => {
+          console.error('Error submitting resolution:', err);
+          this.snackBar.open('❌ Error al procesar la resolución', 'Cerrar', { duration: 5000 });
+          this.isSubmitting.set(false);
+        }
       });
-      this.form.reset();
     }
   }
 }

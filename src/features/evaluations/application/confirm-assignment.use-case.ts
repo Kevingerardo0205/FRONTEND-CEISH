@@ -8,7 +8,7 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 export class ConfirmAssignmentUseCase {
   private repo = inject(IEvaluationRepositoryPort);
 
-  execute(evaluationId: string, deadline: string): Observable<void> {
-    return this.repo.confirmAssignment({ evaluationId, deadline });
+  execute(payload: { evaluationId: string; deadline: string }): Observable<void> {
+    return this.repo.confirmAssignment(payload);
   }
 }

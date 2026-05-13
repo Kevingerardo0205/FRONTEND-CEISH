@@ -153,23 +153,23 @@ import { ProtocoloDetalle, EstadoProtocolo } from '../../../domain/dtos/crear-pr
             <div class="p-3">
               <div class="d-grid gap-2">
                 <button mat-flat-button class="btn-espoch" 
-                        [disabled]="protocolo.estado !== 'REQUIERE_CORRECCION' || protocolo.estado === 'EN_REVISION_SECRETARIA'">
+                        [disabled]="protocolo.estado !== EstadoProtocolo.REQUIERE_CORRECCION">
                   <mat-icon class="me-2">edit_note</mat-icon> Atender Observaciones
                 </button>
-                <button mat-stroked-button color="primary" [disabled]="protocolo.estado !== 'APROBADO_DEFINITIVO'"
+                <button mat-stroked-button color="primary" [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
                         [routerLink]="['/investigador/enmienda', protocolo.id]">
                   <mat-icon class="me-2">edit_document</mat-icon> Solicitar Enmienda
                 </button>
-                <button mat-stroked-button color="warn" [disabled]="protocolo.estado !== 'APROBADO_DEFINITIVO'"
+                <button mat-stroked-button color="warn" [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
                         [routerLink]="['/investigador/evento-adverso', protocolo.id]">
                   <mat-icon class="me-2">warning</mat-icon> Reportar Evento Grave
                 </button>
-                <button mat-stroked-button color="accent" [disabled]="protocolo.estado !== 'APROBADO_DEFINITIVO'"
+                <button mat-stroked-button color="accent" [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
                         [routerLink]="['/investigador/renovacion', protocolo.id]">
                   <mat-icon class="me-2">update</mat-icon> Renovar Aprobación
                 </button>
               </div>
-              <div *ngIf="protocolo.estado === 'EN_REVISION_SECRETARIA'" class="alert alert-warning mt-3 mb-0 small">
+              <div *ngIf="protocolo.estado === EstadoProtocolo.EN_REVISION_SECRETARIA" class="alert alert-warning mt-3 mb-0 small">
                 <mat-icon style="font-size: 16px; vertical-align: middle;">lock</mat-icon>
                 La carga de archivos está bloqueada mientras Secretaría revisa su protocolo.
               </div>
@@ -177,7 +177,7 @@ import { ProtocoloDetalle, EstadoProtocolo } from '../../../domain/dtos/crear-pr
           </mat-card>
 
           <!-- Seguimiento Automático (HU-007) -->
-          <mat-card class="border-0 shadow-soft rounded-4 p-4" *ngIf="protocolo.estado === 'APROBADO_DEFINITIVO'">
+          <mat-card class="border-0 shadow-soft rounded-4 p-4" *ngIf="protocolo.estado === EstadoProtocolo.APROBADO_DEFINITIVO">
             <h5 class="fw-bold mb-3 d-flex align-items-center">
               <mat-icon class="me-2 text-primary">notifications_active</mat-icon>
               Próximos Hitos
@@ -244,6 +244,7 @@ export class DetalleProtocoloPage implements OnInit {
   private route = inject(ActivatedRoute);
   private protocoloService = inject(ProtocoloService);
   
+  EstadoProtocolo = EstadoProtocolo;
   protocolo: ProtocoloDetalle | null = null;
   documentos: any[] = [
     { nombre: 'Anexo 1 - Solicitud.pdf', tipo: 'Anexo 1', size: '1.2 MB' },
@@ -272,28 +273,28 @@ export class DetalleProtocoloPage implements OnInit {
   }
 
   formatStatus(estado: string): string {
-    if (estado === 'EN_REVISION_SECRETARIA') return 'En Revisión (Secretaría)';
+    if (estado === EstadoProtocolo.EN_REVISION_SECRETARIA) return 'En Revisión (Secretaría)';
     return estado.replace(/_/g, ' ');
   }
 
   getStatusClass(estado: string): string {
     switch (estado) {
-      case 'APROBADO_DEFINITIVO': return 'approved';
-      case 'EN_REVISION_DOCUMENTAL': 
-      case 'EN_REVISION_SECRETARIA':
+      case EstadoProtocolo.APROBADO_DEFINITIVO: return 'approved';
+      case EstadoProtocolo.EN_REVISION_DOCUMENTAL: 
+      case EstadoProtocolo.EN_REVISION_SECRETARIA:
         return 'review';
-      case 'REQUIERE_CORRECCION': return 'correction';
+      case EstadoProtocolo.REQUIERE_CORRECCION: return 'correction';
       default: return 'pending';
     }
   }
 
   getStatusIcon(estado: string): string {
     switch (estado) {
-      case 'APROBADO_DEFINITIVO': return 'verified';
-      case 'EN_REVISION_DOCUMENTAL':
-      case 'EN_REVISION_SECRETARIA':
+      case EstadoProtocolo.APROBADO_DEFINITIVO: return 'verified';
+      case EstadoProtocolo.EN_REVISION_DOCUMENTAL:
+      case EstadoProtocolo.EN_REVISION_SECRETARIA:
         return 'search';
-      case 'REQUIERE_CORRECCION': return 'edit_note';
+      case EstadoProtocolo.REQUIERE_CORRECCION: return 'edit_note';
       default: return 'schedule';
     }
   }

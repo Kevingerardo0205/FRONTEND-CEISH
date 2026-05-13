@@ -8,6 +8,7 @@ import { Router, RouterModule } from '@angular/router';
 import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
+import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 
 @Component({
   selector: 'app-protocol-validation-list',
@@ -96,6 +97,8 @@ import { ProtocolEntity } from '@domain/entities/protocol.entity';
 })
 export class ProtocolValidationListPage implements OnInit {
   private protocolRepo = inject(IProtocolRepositoryPort);
+  private notificationBroker = inject(NotificationBrokerService);
+
   displayedColumns = ['fecha', 'titulo', 'tipo', 'acciones'];
   
   protocols = signal<ProtocolEntity[]>([]);
@@ -103,6 +106,10 @@ export class ProtocolValidationListPage implements OnInit {
 
   ngOnInit() {
     this.loadProtocols();
+
+    this.notificationBroker.on('PROTOCOL_STATUS_UPDATED').subscribe(() => {
+      this.loadProtocols();
+    });
   }
 
   loadProtocols() {

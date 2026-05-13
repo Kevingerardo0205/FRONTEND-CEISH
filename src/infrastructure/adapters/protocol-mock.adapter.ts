@@ -61,4 +61,13 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
   getRequirementsByType(type: ProtocolType): Observable<string[]> {
     return of(['Req 1', 'Req 2']);
   }
+
+  finalizeValidation(protocolId: string): Observable<any> {
+    const index = this.protocols.findIndex(p => p.id === protocolId);
+    if (index !== -1) {
+      this.protocols[index].status = ProtocolStatus.VALIDATED;
+      return of({ message: 'Validación finalizada con éxito' });
+    }
+    throw new Error('Protocolo no encontrado');
+  }
 }
