@@ -3,6 +3,7 @@ import { Observable, of, throwError, delay, tap, catchError } from 'rxjs';
 import { User, AuthResponse, LoginCredentials, Module, Permission } from '@domain/entities/user.entity';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
+import { MODULE_UI_MAP, PERMISSION_UI_MAP, toSentenceCase } from '@shared/constants/menu-ui.config';
 
 @Injectable({
   providedIn: 'root'
@@ -15,24 +16,45 @@ export class AuthFacade {
   public currentUser = this.currentUserSignal.asReadonly();
 
   /**
-   * Genera la configuración del menú agrupada por módulos basada en los permisos enriquecidos del usuario.
-   * Paso 3 del plan: Obtener user.fullPermissions y agrupar por module.code.
+   * Genera la configuración del menú enriquecida con metadata de UI.
+   * Aplica un "Mapeo Híbrido": Usa nombres amigables si existen, de lo contrario formatea el nombre del backend.
    */
   public menuConfig = computed(() => {
     const user = this.currentUser();
     if (!user || !user.fullPermissions) return [];
 
-    const modulesMap = new Map<string, { module: Module, subItems: Permission[] }>();
+    const modulesMap = new Map<string, { 
+      code: string;
+      label: string; 
+      icon: string; 
+      order: number;
+      subItems: any[] 
+    }>();
 
     user.fullPermissions.forEach(p => {
-      const moduleCode = p.module.code;
-      if (!modulesMap.has(moduleCode)) {
-        modulesMap.set(moduleCode, { module: p.module, subItems: [] });
+      const mod = p.module;
+      const modUI = MODULE_UI_MAP[mod.code];
+
+      if (!modulesMap.has(mod.code)) {
+        modulesMap.set(mod.code, {
+          code: mod.code,
+          label: modUI?.label || toSentenceCase(mod.name),
+          icon: modUI?.icon || mod.icon,
+          order: mod.order,
+          subItems: []
+        });
       }
-      modulesMap.get(moduleCode)!.subItems.push(p);
+
+      const permUI = PERMISSION_UI_MAP[p.code];
+      modulesMap.get(mod.code)!.subItems.push({
+        code: p.code,
+        label: permUI?.label || toSentenceCase(p.code),
+        icon: permUI?.icon || 'chevron_right',
+        path: permUI?.path || '/dashboard/home'
+      });
     });
 
-    return Array.from(modulesMap.values()).sort((a, b) => a.module.order - b.module.order);
+    return Array.from(modulesMap.values()).sort((a, b) => a.order - b.order);
   });
 
   // Gestión de intentos de login
