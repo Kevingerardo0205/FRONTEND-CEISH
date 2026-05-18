@@ -9,7 +9,11 @@ export abstract class IProtocolRepositoryPort {
   abstract uploadDocuments(protocolId: string, files: File[]): Observable<ProtocolEntity>;
   abstract getRequirementsByType(type: ProtocolType): Observable<string[]>;
   abstract getChecklist(id: string): Observable<any>;
+  abstract getDocumentHistory(id: string): Observable<any[]>;
+  abstract getReceptionProtocols(): Observable<ProtocolEntity[]>;
   abstract finalizeReception(id: string): Observable<any>;
   abstract getCertificate(id: string): Observable<Blob>;
   abstract finalizeValidation(protocolId: string): Observable<any>;
+  abstract updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<any>;
+  abstract verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<any>;
 }

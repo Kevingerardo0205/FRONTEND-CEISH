@@ -14,6 +14,20 @@ export enum EstadoProtocolo {
   VENCIDO = 'VENCIDO'
 }
 
+export enum RequirementStatus {
+  NO_PRESENTADO = 'NO_PRESENTADO',
+  PRESENTADO = 'PRESENTADO',
+  OBSERVADO = 'OBSERVADO'
+}
+
+export interface ChecklistRequirement {
+  id: number;
+  requirementCode: string;
+  requirementName: string;
+  status: RequirementStatus;
+  observations?: string;
+}
+
 export interface InvestigadorEquipo {
   fullName: string;
   identification: string;
@@ -32,16 +46,24 @@ export interface InstitucionParticipante {
   contactPerson: string;
 }
 
+/**
+ * DTO para la creación de protocolos siguiendo el Acuerdo Ministerial y PET 4.1.
+ * Los flags booleanos disparan el cálculo dinámico del checklist en el Backend.
+ */
 export interface CrearProtocoloDto {
   title: string;
-  principalInvestigatorId?: number; // Cambiado a number
+  principalInvestigatorId: number; 
   studyTypeId: number;
   riskLevelId: number;
   geographicCoverage: string;
   studyDurationMonths: number;
+  
+  // Interruptores Legales (Mandatorios para Sprint 3)
   usesBiologicalSamples: boolean;
   isVulnerablePopulation: boolean;
+  isIndigenousPopulation: boolean;
   isMulticentric: boolean;
+  
   hasExternalInstitutions: boolean;
   sponsorRuc: string;
   sponsorPhone: string;
@@ -50,7 +72,7 @@ export interface CrearProtocoloDto {
   sponsorExecutingAgency: string;
   financingAmount: number;
   isAffidavitAccepted: boolean;
-  isIndigenousPopulation: boolean;
+  
   investigators: InvestigadorEquipo[];
   institutions: InstitucionParticipante[];
   lugarEjecucion?: string;

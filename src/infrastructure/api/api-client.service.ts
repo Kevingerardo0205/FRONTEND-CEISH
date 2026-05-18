@@ -1,70 +1,69 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { from, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { TokenStoreAdapter } from '../storage/token-store.adapter';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiClientService {
-  private axiosInstance: AxiosInstance;
-  private tokenStore = inject(TokenStoreAdapter);
+  private http = inject(HttpClient);
+  private readonly baseUrl = environment.apiUrl;
 
-  constructor() {
-    this.axiosInstance = axios.create({
-      baseURL: environment.apiUrl,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+  constructor() {}
 
-    // Interceptor para añadir el Token JWT automáticamente
-    this.axiosInstance.interceptors.request.use(
-      (config) => {
-        const token = this.tokenStore.getToken();
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-  }
-
-  // Método genérico para peticiones GET
+  /**
+   * Método genérico para peticiones GET
+   */
   get<T>(url: string, params?: any): Observable<T> {
-    return from(this.axiosInstance.get<T>(url, { params })).pipe(
-      map((response: AxiosResponse<T>) => response.data)
-    );
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+          httpParams = httpParams.append(key, params[key]);
+        }
+      });
+    }
+    return this.http.get<T>(`${this.baseUrl}${url}`, { params: httpParams });
   }
 
-  // Método genérico para peticiones POST
-  post<T>(url: string, data?: any, config?: AxiosRequestConfig): Observable<T> {
-    return from(this.axiosInstance.post<T>(url, data, config)).pipe(
-      map((response: AxiosResponse<T>) => response.data)
-    );
+  /**
+   * Método genérico para peticiones POST
+   */
+  post<T>(url: string, data?: any, config?: any): Observable<T> {
+    if (!config || Object.keys(config).length === 0) {
+      return this.http.post<T>(`${this.baseUrl}${url}`, data);
+    }
+    return this.http.post<T>(`${this.baseUrl}${url}`, data, config) as unknown as Observable<T>;
   }
 
-  // Método genérico para peticiones PUT
-  put<T>(url: string, data?: any, config?: AxiosRequestConfig): Observable<T> {
-    return from(this.axiosInstance.put<T>(url, data, config)).pipe(
-      map((response: AxiosResponse<T>) => response.data)
-    );
+  /**
+   * Método genérico para peticiones PUT
+   */
+  put<T>(url: string, data?: any, config?: any): Observable<T> {
+    if (!config || Object.keys(config).length === 0) {
+      return this.http.put<T>(`${this.baseUrl}${url}`, data);
+    }
+    return this.http.put<T>(`${this.baseUrl}${url}`, data, config) as unknown as Observable<T>;
   }
 
-  // Método genérico para peticiones PATCH
-  patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Observable<T> {
-    return from(this.axiosInstance.patch<T>(url, data, config)).pipe(
-      map((response: AxiosResponse<T>) => response.data)
-    );
+  /**
+   * Método genérico para peticiones PATCH
+   */
+  patch<T>(url: string, data?: any, config?: any): Observable<T> {
+    if (!config || Object.keys(config).length === 0) {
+      return this.http.patch<T>(`${this.baseUrl}${url}`, data);
+    }
+    return this.http.patch<T>(`${this.baseUrl}${url}`, data, config) as unknown as Observable<T>;
   }
 
-  // Método genérico para peticiones DELETE
-  delete<T>(url: string, config?: AxiosRequestConfig): Observable<T> {
-    return from(this.axiosInstance.delete<T>(url, config)).pipe(
-      map((response: AxiosResponse<T>) => response.data)
-    );
+  /**
+   * Método genérico para peticiones DELETE
+   */
+  delete<T>(url: string, config?: any): Observable<T> {
+    if (!config || Object.keys(config).length === 0) {
+      return this.http.delete<T>(`${this.baseUrl}${url}`);
+    }
+    return this.http.delete<T>(`${this.baseUrl}${url}`, config) as unknown as Observable<T>;
   }
 }

@@ -1,4 +1,4 @@
-export type EvaluatorProfile = 'JURIDICO' | 'SALUD' | 'METODOLOGIA' | 'SOCIEDAD_CIVIL';
+export type EvaluatorProfile = 'JURIDICO' | 'SALUD' | 'METODOLOGIA' | 'BIOETICA' | 'SOCIEDAD_CIVIL';
 
 export interface EvaluatorEntity {
   id: string;

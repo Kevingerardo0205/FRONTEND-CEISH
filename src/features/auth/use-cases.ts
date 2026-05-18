@@ -5,6 +5,7 @@ import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { AuthFacade } from './facades/auth.facade';
 
 import { RegisterInvestigadorRequest } from './domain/entities/register.request';
+import { SetupAccountRequest } from './domain/entities/setup-account.request';
 
 @Injectable({ providedIn: 'root' })
 export class RegisterInvestigadorUseCase {
@@ -24,6 +25,17 @@ export class VerifyOtpUseCase {
   execute(email: string, code: string): Observable<any> {
     return this.authRepository.verifyOTP(email, code).pipe(
       tap(() => this.authRepository.logAudit('OTP_VERIFICATION', `Verificación de correo: ${email}`).subscribe())
+    );
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class SetupAccountUseCase {
+  constructor(private authRepository: IAuthRepositoryPort) {}
+
+  execute(data: SetupAccountRequest): Observable<any> {
+    return this.authRepository.setupAccount(data).pipe(
+      tap(() => this.authRepository.logAudit('SETUP_ACCOUNT', `Configuración de cuenta: ${data.email}`).subscribe())
     );
   }
 }

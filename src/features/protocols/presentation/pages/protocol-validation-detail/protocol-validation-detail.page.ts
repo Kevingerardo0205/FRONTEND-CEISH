@@ -10,12 +10,15 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of, catchError } from 'rxjs';
 import { ValidateDocumentaryUseCase } from '../../../application/use-cases/validate-documentary.use-case';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { IncompleteValidationDialog } from './incomplete-validation-dialog.component';
+import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
 @Component({
   selector: 'app-protocol-validation-detail',
@@ -32,6 +35,7 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
     MatSnackBarModule,
     MatTooltipModule,
     MatDialogModule,
+    MatDividerModule,
     FormsModule
   ],
   template: `
@@ -52,7 +56,7 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
         <!-- ENCABEZADO ESTILO OFICIAL PET 2023 -->
         <header class="official-header">
           <div class="top-row">
-            <button mat-icon-button routerLink="/dashboard/protocols/validation/list" class="back-btn">
+            <button mat-icon-button routerLink="/dashboard/protocols/validation/list" class="back-btn" matTooltip="Volver a la lista">
               <mat-icon>arrow_back</mat-icon>
             </button>
             <div class="header-text">
@@ -60,12 +64,24 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
               <h1>NOTIFICACIÓN DE RECEPCIÓN DE PROTOCOLO DE INVESTIGACIÓN ({{ protocolTypeLabel() }})</h1>
               <p class="subtitle">COMITÉ DE ÉTICA DE INVESTIGACIÓN EN SERES HUMANOS (CEISH-ESPOCH)</p>
             </div>
+            <button mat-stroked-button color="primary" [routerLink]="['/dashboard/protocols/detail', protocolId]" class="ms-auto">
+              <mat-icon>visibility</mat-icon>
+              Ver Detalle General
+            </button>
           </div>
 
           <div class="protocol-info-grid">
             <div class="info-item">
               <span class="label">CÓDIGO DE TRÁMITE:</span>
               <span class="value code">{{ generatedCode() || 'TRÁMITE EN PROCESO' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">FECHA DE ENVÍO:</span>
+              <span class="value">{{ protocolSubmissionDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="info-item full">
+              <span class="label">INVESTIGADOR PRINCIPAL:</span>
+              <span class="value">{{ protocolInvestigator() || 'No especificado' }}</span>
             </div>
             <div class="info-item full">
               <span class="label">TEMA DEL PROYECTO:</span>
@@ -89,11 +105,12 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let item of checklist()" [ngClass]="{'row-validated': item.status === 1, 'row-rejected': item.status === 2}">
+                <tr *ngFor="let item of checklist()" [ngClass]="{'row-validated': item.statusId === 1, 'row-rejected': item.statusId === 2}">
                   <td class="req-label">
                     <span class="req-id">{{ item.anexo }}</span>
                     {{ item.label }}
                     <span *ngIf="item.isOptional" class="badge-optional">(Opcional)</span>
+                    <span *ngIf="item.isOrphan" class="badge-orphan">(No tipificado)</span>
                   </td>
                   <td class="text-center">
                     <a *ngIf="item.documentUrl" [href]="item.documentUrl" target="_blank" mat-icon-button color="primary" matTooltip="Ver documento">
@@ -103,26 +120,51 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
                   </td>
                   <td class="text-center">
                     <div class="btn-group-validation">
-                      <button mat-icon-button [color]="item.status === 1 ? 'primary' : ''" 
-                              (click)="onValidateDocument(item, 1)" 
-                              [disabled]="!item.documentId || isProcessing"
+                      <button mat-icon-button [color]="item.statusId === 1 ? 'primary' : ''" 
+                              (click)="onValidateItem(item, 1)" 
+                              [disabled]="isProcessing"
                               matTooltip="Aprobar">
-                        <mat-icon>{{ item.status === 1 ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
+                        <mat-icon>{{ item.statusId === 1 ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
                       </button>
-                      <button mat-icon-button [color]="item.status === 2 ? 'warn' : ''" 
-                              (click)="onValidateDocument(item, 2)" 
-                              [disabled]="!item.documentId || isProcessing"
+                      <button mat-icon-button [color]="item.statusId === 2 ? 'warn' : ''" 
+                              (click)="onValidateItem(item, 2)" 
+                              [disabled]="isProcessing"
                               matTooltip="Rechazar">
-                        <mat-icon>{{ item.status === 2 ? 'cancel' : 'highlight_off' }}</mat-icon>
+                        <mat-icon>{{ item.statusId === 2 ? 'cancel' : 'highlight_off' }}</mat-icon>
                       </button>
                     </div>
                   </td>
                   <td>
-                    <input type="text" class="mini-input" [(ngModel)]="item.observations" placeholder="Nota opcional...">
+                    <input type="text" class="mini-input" [(ngModel)]="item.observations" 
+                           [placeholder]="item.statusId === 2 ? 'Motivo de rechazo (obligatorio)...' : 'Nota opcional...'"
+                           [required]="item.statusId === 2">
                   </td>
                 </tr>
               </tbody>
             </table>
+
+            <div *ngIf="checklist().length === 0" class="empty-docs-warning p-4 text-center">
+              <mat-icon color="warn">warning</mat-icon>
+              <p>No se encontraron requisitos ni documentos cargados para este protocolo.</p>
+              <p class="small text-muted">Es posible que el investigador aún no haya subido archivos o existan problemas de configuración en los anexos del backend.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL DE VERIFICACIÓN GLOBAL -->
+        <div class="verification-panel mt-4 p-4 shadow-soft">
+          <h3 class="section-title"><mat-icon>fact_check</mat-icon> Verificación Global de Recepción</h3>
+          <div class="d-flex align-items-center gap-4 mb-3">
+            <mat-checkbox [(ngModel)]="isGlobalComplete" color="primary">¿Recepción física/digital completa?</mat-checkbox>
+          </div>
+          <mat-form-field class="full-width" appearance="outline">
+            <mat-label>Lista de Faltantes u Observaciones Generales</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="missingItemsList" placeholder="Ej: Cédula borrosa, Falta Anexo 2..."></textarea>
+          </mat-form-field>
+          <div class="d-flex justify-content-end">
+            <button mat-stroked-button color="accent" (click)="onUpdateGlobalVerification()" [disabled]="isProcessing">
+              <mat-icon>save</mat-icon> Guardar Verificación Manual
+            </button>
           </div>
         </div>
 
@@ -131,7 +173,7 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
           <div class="summary-panel full-width">
             <div class="progress-container">
               <div class="progress-labels">
-                <span>Progreso de validación:</span>
+                <span>Progreso de validación (Ítems obligatorios): {{ validatedMandatory() }} / {{ mandatoryCount() }}</span>
                 <strong>{{ progress() }}%</strong>
               </div>
               <mat-progress-bar mode="determinate" [value]="progress()" 
@@ -148,6 +190,11 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
                 <mat-icon>send</mat-icon>
                 {{ generatedCode() ? 'REVISIÓN FINALIZADA' : 'FINALIZAR REVISIÓN Y GENERAR CONSTANCIA' }}
               </button>
+            </div>
+            
+            <div class="legal-disclaimer" *ngIf="progress() < 100">
+               <mat-icon>info</mat-icon>
+               <span>Según Acuerdo Ministerial, todos los documentos obligatorios deben estar en estado <strong>VALIDADO</strong> para cerrar la recepción.</span>
             </div>
           </div>
         </div>
@@ -174,7 +221,7 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
     .protocol-info-grid {
       display: grid; grid-template-columns: 250px 1fr; gap: 0; border: 1px solid #000;
       .info-item { padding: 0.75rem; border-right: 1px solid #000; border-bottom: 1px solid #000; display: flex; flex-direction: column;
-        &.full { grid-column: 1 / -1; border-right: none; border-bottom: none; }
+        &.full { grid-column: 1 / -1; border-right: none; }
         .label { font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 4px; }
         .value { font-weight: 700; &.code { color: #003366; font-size: 1.1rem; } &.title { font-style: italic; } }
       }
@@ -189,6 +236,7 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
       .req-label { 
         .req-id { font-weight: 900; color: #003366; margin-right: 8px; } 
         .badge-optional { font-size: 0.7rem; color: #64748b; margin-left: 4px; font-style: italic; }
+        .badge-orphan { font-size: 0.7rem; color: #ef4444; margin-left: 4px; font-weight: 700; }
       }
       .text-center { text-align: center; }
       .mini-input { width: 100%; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; }
@@ -196,6 +244,9 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
       .row-validated { background-color: #f0fdf4; }
       .row-rejected { background-color: #fef2f2; }
     }
+
+    .verification-panel { background: white; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .section-title { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; font-weight: 700; color: #003366; margin-bottom: 1rem; }
 
     .action-footer { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; }
     .summary-panel { display: flex; flex-direction: column; gap: 1.5rem; &.full-width { width: 100%; } }
@@ -206,8 +257,14 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
       .btn-finalize { height: 52px; font-weight: 700; border-radius: 8px; background: #003366 !important; color: white !important; min-width: 300px; }
     }
 
+    .legal-disclaimer { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #64748b; padding: 10px; background: #f1f5f9; border-radius: 8px; 
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+
     .animate-fade-in { animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .full-width { width: 100%; }
+    .empty-docs-warning { mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px; } }
   `]
 })
 export class ProtocolValidationDetailPage implements OnInit {
@@ -223,6 +280,8 @@ export class ProtocolValidationDetailPage implements OnInit {
   protocolNotFound = signal(false);
   protocolId = '';
   protocolTitle = signal('');
+  protocolInvestigator = signal('');
+  protocolSubmissionDate = signal<Date | null>(null);
   protocolType = signal(ProtocolType.IO);
   protocolTypeLabel = computed(() => {
     switch(this.protocolType()) {
@@ -234,10 +293,16 @@ export class ProtocolValidationDetailPage implements OnInit {
   });
 
   progress = signal(0);
+  validatedMandatory = signal(0);
+  mandatoryCount = signal(0);
   isProcessing = false;
   generatedCode = signal<string | null>(null);
   
   checklist = signal<any[]>([]);
+
+  // Verificación Global
+  isGlobalComplete = false;
+  missingItemsList = '';
 
   ngOnInit() {
     this.protocolId = this.route.snapshot.params['id'];
@@ -246,87 +311,209 @@ export class ProtocolValidationDetailPage implements OnInit {
 
   loadProtocol() {
     this.isLoading.set(true);
-    // 1. Obtener Checklist REAL del Backend (Sprint 1)
-    this.repository.getChecklist(this.protocolId).subscribe({
-      next: (res) => {
-        const protocol = res.protocol || res;
-        const documents = res.documents || [];
+    
+    // 1. Intentamos obtener datos básicos del protocolo primero (Endpoint General)
+    // 2. Intentamos obtener el checklist (puede dar 403)
+    // 3. Intentamos obtener el historial de documentos (Endpoint 5, puede dar 403)
+    
+    forkJoin({
+      protocolBasic: this.repository.getById(this.protocolId).pipe(catchError(() => of(null))),
+      checklistRes: this.repository.getChecklist(this.protocolId).pipe(
+        catchError(err => {
+          console.warn('[ProtocolValidationDetailPage] Falló checklistRes (403 o error):', err);
+          return of({ requirements: [], documents: [] });
+        })
+      ),
+      documents: this.repository.getDocumentHistory(this.protocolId).pipe(
+        catchError(err => {
+          console.warn('[ProtocolValidationDetailPage] Falló documentHistory (403 o error):', err);
+          return of([]);
+        })
+      )
+    }).subscribe({
+      next: ({ protocolBasic, checklistRes, documents }) => {
+        // Combinar datos del protocolo
+        const protocol = checklistRes.protocol || checklistRes || protocolBasic;
+        if (!protocol && !protocolBasic) {
+          this.protocolNotFound.set(true);
+          this.isLoading.set(false);
+          return;
+        }
 
-        this.protocolTitle.set(protocol.title);
-        this.protocolType.set(protocol.type);
-        this.generatedCode.set(protocol.code || null);
+        this.protocolTitle.set(protocol?.title || protocol?.titulo || 'Sin título');
+        this.protocolInvestigator.set(protocol?.investigator || protocol?.investigador || 'Investigador Principal');
+        this.protocolSubmissionDate.set(protocol?.submissionDate || protocol?.createdAt ? new Date(protocol.submissionDate || protocol.createdAt) : null);
+        this.protocolType.set(protocol?.type || ProtocolType.IO);
+        this.generatedCode.set(protocol?.code || null);
         
-        this.checklist.set(documents.map((d: any) => ({
-          label: d.documentType?.name || 'Requisito',
-          anexo: d.documentType?.description || 'N/A',
-          typeId: d.documentTypeId,
-          documentId: d.id,
-          documentUrl: d.path, 
-          status: d.status === 'VALIDADO' ? 1 : (d.status === 'RECHAZADO' ? 2 : 0),
-          observations: d.observations || '',
-          isOptional: d.isOptional
-        })));
+        this.isGlobalComplete = protocol?.status === 'COMPLETO' || protocol?.status === 'VALIDADO';
+        this.missingItemsList = protocol?.missingItemsList || '';
 
+        const requirements = checklistRes.requirements || checklistRes.documents || [];
+        const finalItems: any[] = [];
+        const linkedDocIds = new Set<string>();
+
+        // Primero: Mapear requisitos formales vinculando documentos
+        requirements.forEach((r: any) => {
+          const docForReq = documents.find((d: any) => 
+            (d.requirementId === r.id) || 
+            (d.requirement?.id === r.id) || 
+            (d.documentType?.id === r.id) ||
+            (d.name === r.name)
+          );
+
+          if (docForReq) linkedDocIds.add(docForReq.id);
+
+          const currentDoc = docForReq || r.currentDocument || r.document || (r.id && r.path ? r : null);
+          const status = r.status || currentDoc?.status;
+          
+          finalItems.push({
+            label: r.requirement?.name || r.name || r.documentType?.name || 'Requisito',
+            anexo: r.requirement?.description || r.description || r.documentType?.description || 'N/A',
+            requirementId: r.id || r.requirementId,
+            documentId: currentDoc?.id,
+            documentUrl: currentDoc?.path || currentDoc?.url, 
+            statusId: status === 'APROBADO' || status === 'VALIDADO' ? 1 : (status === 'RECHAZADO' ? 2 : (status === 'PRESENTADO' ? 0 : -1)),
+            statusLabel: status || 'PENDIENTE',
+            observations: currentDoc?.observations || r.observations || '',
+            isOptional: r.requirement?.isOptional || r.isOptional || false,
+            isOrphan: false
+          });
+        });
+
+        // Segundo: Añadir documentos "huérfanos" (subidos pero no tipificados en el checklist actual)
+        documents.forEach((d: any) => {
+          if (!linkedDocIds.has(d.id)) {
+            const status = d.status;
+            finalItems.push({
+              label: d.name || 'Archivo Adjunto',
+              anexo: d.type || 'S/N',
+              requirementId: null,
+              documentId: d.id,
+              documentUrl: d.path || d.url,
+              statusId: status === 'APROBADO' || status === 'VALIDADO' ? 1 : (status === 'RECHAZADO' ? 2 : (status === 'PRESENTADO' ? 0 : -1)),
+              statusLabel: status || 'PRESENTADO',
+              observations: d.observations || '',
+              isOptional: true,
+              isOrphan: true
+            });
+          }
+        });
+
+        this.checklist.set(finalItems);
         this.updateProgress();
         this.isLoading.set(false);
       },
       error: (err) => {
-        console.error('Error loading checklist:', err);
+        console.error('Error fatal cargando vista de validación:', err);
         this.protocolNotFound.set(true);
         this.isLoading.set(false);
-        this.snackBar.open('❌ No se pudo cargar el checklist de recepción.', 'Cerrar', { duration: 5000 });
+        this.snackBar.open('❌ Error crítico al cargar la información.', 'Cerrar', { duration: 5000 });
       }
     });
   }
 
-  onValidateDocument(item: any, statusId: number) {
-    if (!item.documentId && statusId === 1) return;
+  onValidateItem(item: any, statusId: number) {
+    if (statusId === 2 && (!item.observations || item.observations.trim().length < 5)) {
+      this.snackBar.open('⚠️ Por favor ingrese un motivo de rechazo técnico (mín. 5 carácteres).', 'Cerrar');
+      return;
+    }
 
     this.isProcessing = true;
-    this.docRepository.validateDocument(item.documentId, statusId, item.observations).subscribe({
+
+    if (item.documentId) {
+      this.docRepository.validateDocument(item.documentId, statusId, item.observations).subscribe({
+        next: () => this.handleValidationSuccess(item, statusId),
+        error: () => this.handleValidationError()
+      });
+    } else if (item.requirementId) {
+      const statusLabel = statusId === 1 ? 'APROBADO' : 'RECHAZADO';
+      this.repository.updateRequirementStatus(this.protocolId, item.requirementId, statusLabel).subscribe({
+        next: () => this.handleValidationSuccess(item, statusId),
+        error: () => this.handleValidationError()
+      });
+    } else {
+      this.isProcessing = false;
+      this.snackBar.open('⚠️ No se puede validar un ítem sin ID de documento o requisito.', 'Cerrar');
+    }
+  }
+
+  private handleValidationSuccess(item: any, statusId: number) {
+    item.statusId = statusId;
+    item.statusLabel = statusId === 1 ? 'APROBADO' : (statusId === 2 ? 'RECHAZADO' : 'OBSERVADO');
+    this.updateProgress();
+    this.isProcessing = false;
+    const msg = statusId === 1 ? 'Ítem aprobado' : 'Ítem rechazado';
+    this.snackBar.open(`✅ ${msg}`, 'Cerrar', { duration: 2000 });
+  }
+
+  private handleValidationError() {
+    this.isProcessing = false;
+    this.snackBar.open('❌ Error al procesar la validación', 'Cerrar', { duration: 3000 });
+  }
+
+  onUpdateGlobalVerification() {
+    this.isProcessing = true;
+    this.repository.verifyProtocol(this.protocolId, this.isGlobalComplete, this.missingItemsList).subscribe({
       next: () => {
-        item.status = statusId;
-        this.updateProgress();
         this.isProcessing = false;
-        const msg = statusId === 1 ? 'Documento aprobado' : 'Documento rechazado';
-        this.snackBar.open(`✅ ${msg}`, 'Cerrar', { duration: 2000 });
+        this.snackBar.open('✅ Verificación global guardada', 'Cerrar', { duration: 2000 });
       },
       error: () => {
         this.isProcessing = false;
-        this.snackBar.open('❌ Error al validar el documento', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('❌ Error al guardar la verificación global', 'Cerrar');
       }
     });
   }
 
   updateProgress() {
-    const total = this.checklist().length;
-    if (total === 0) return;
-    const answered = this.checklist().filter(c => c.status !== 0 || c.isOptional).length;
-    this.progress.set(Math.round((answered / total) * 100));
+    const mandatoryItems = this.checklist().filter(c => !c.isOptional && !c.isOrphan);
+    this.mandatoryCount.set(mandatoryItems.length);
+    
+    if (mandatoryItems.length === 0) {
+      this.progress.set(100);
+      this.validatedMandatory.set(0);
+      return;
+    }
+    
+    const validatedMandatoryCount = mandatoryItems.filter(c => c.statusId === 1).length;
+    this.validatedMandatory.set(validatedMandatoryCount);
+    this.progress.set(Math.round((validatedMandatoryCount / mandatoryItems.length) * 100));
   }
 
   onFinalize() {
+    const pendingMandatory = this.checklist().some(c => !c.isOptional && !c.isOrphan && c.statusId !== 1);
+    if (pendingMandatory) {
+      this.snackBar.open('❌ Error: Existen documentos obligatorios pendientes de validación.', 'Cerrar');
+      return;
+    }
+
     this.isProcessing = true;
     this.validateUseCase.execute(this.protocolId).subscribe({
       next: (res) => {
         this.isProcessing = false;
         const code = res.ceishCode || res.code || 'GENERADO';
         this.generatedCode.set(code);
-        this.snackBar.open(`✅ Recepción finalizada. Código CEISH: ${code}`, 'Cerrar', { duration: 10000 });
         
-        // Ofrecer descarga inmediata
-        this.onDownloadCertificate();
+        const dialogRef = this.dialog.open(ReceptionSuccessDialog, {
+          width: '500px',
+          disableClose: true,
+          data: { code: code }
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+          if (result === 'download') {
+            this.onDownloadCertificate();
+          }
+          this.router.navigate(['/dashboard/protocols/validation/list']);
+        });
       },
       error: (err) => {
         this.isProcessing = false;
-        
         if (err.status === 400 && err.error?.missingDocuments) {
           this.dialog.open(IncompleteValidationDialog, {
             width: '500px',
-            data: {
-              missingDocuments: err.error.missingDocuments,
-              deadline: err.error.deadline
-            }
+            data: { missingDocuments: err.error.missingDocuments, deadline: err.error.deadline }
           });
         } else {
           const msg = err.error?.message || 'Error al finalizar la recepción';
@@ -352,4 +539,3 @@ export class ProtocolValidationDetailPage implements OnInit {
     });
   }
 }
-

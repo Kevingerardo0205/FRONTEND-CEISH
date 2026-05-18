@@ -7,14 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { FormsModule } from '@angular/forms';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments.use-case';
-import { ConfirmAssignmentUseCase } from '../../../application/confirm-assignment.use-case';
-import { GetEvaluatorsDashboardUseCase } from '../../../application/get-evaluators-dashboard.use-case';
 
 @Component({
   selector: 'app-evaluation-list',
@@ -28,128 +23,160 @@ import { GetEvaluatorsDashboardUseCase } from '../../../application/get-evaluato
     MatTooltipModule,
     MatChipsModule,
     MatSnackBarModule,
-    MatFormFieldModule,
-    MatInputModule,
-    FormsModule,
     ProtocolCodePipe
   ],
   template: `
     <div class="page-container animate-fade-in">
       <header class="page-header mb-4">
         <div class="title-section">
-          <h1 class="page-title">{{ pageTitle() }}</h1>
-          <p class="page-subtitle">{{ pageSubtitle() }}</p>
+          <h1 class="page-title">Mis Tareas de Evaluación</h1>
+          <p class="page-subtitle">Protocolos asignados pendientes de su dictamen ético y técnico</p>
         </div>
-        <div class="role-badge" [ngClass]="userRole().toLowerCase()">
-          {{ userRole() }}
+        <div class="stats-overview">
+          <div class="stat-card">
+            <span class="label">Pendientes</span>
+            <span class="value">{{ items().length }}</span>
+          </div>
+          <div class="stat-card urgent">
+            <span class="label">Urgentes</span>
+            <span class="value">{{ urgentCount() }}</span>
+          </div>
         </div>
       </header>
 
       <div class="content-card shadow-soft">
         <div class="table-toolbar p-3">
-          <h2 class="section-title m-0">Protocolos {{ isSecretaria() ? 'Pendientes de Confirmar' : 'Asignados' }}</h2>
+          <h2 class="section-title m-0">Bandeja de Trabajo</h2>
         </div>
 
         <div class="table-responsive">
           <table mat-table [dataSource]="items()" class="modern-table">
             
             <ng-container matColumnDef="protocol">
-              <th mat-header-cell *matHeaderCellDef> Protocolo </th>
+              <th mat-header-cell *matHeaderCellDef> Protocolo / Investigador </th>
               <td mat-cell *matCellDef="let item">
                 <div class="protocol-info-cell">
                   <span class="code">{{ item.protocolCode | protocolCode }}</span>
                   <span class="title">{{ item.protocolTitle }}</span>
+                  <span class="investigator"><mat-icon>person</mat-icon> {{ item.investigator }}</span>
                 </div>
               </td>
             </ng-container>
 
             <ng-container matColumnDef="deadline">
-              <th mat-header-cell *matHeaderCellDef> Fecha Límite </th>
+              <th mat-header-cell *matHeaderCellDef> Plazo de Entrega </th>
               <td mat-cell *matCellDef="let item">
-                <div *ngIf="isEvaluador()" class="deadline-view">
-                  {{ item.deadline | date:'dd/MM/yyyy' }}
+                <div class="deadline-cell" [class.urgent]="item.isUrgent">
+                  <span class="date">{{ item.deadline | date:'dd/MM/yyyy' }}</span>
+                  <span class="remaining" *ngIf="item.daysRemaining !== undefined">
+                    <mat-icon>{{ item.isUrgent ? 'alarm_on' : 'schedule' }}</mat-icon>
+                    {{ item.daysRemaining }} días restantes
+                  </span>
                 </div>
-                <div *ngIf="isSecretaria()" class="deadline-edit">
-                  <mat-form-field appearance="outline" class="mini-field">
-                    <input matInput type="date" [(ngModel)]="item.newDeadline">
-                  </mat-form-field>
-                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="annex">
+              <th mat-header-cell *matHeaderCellDef> Instrumento </th>
+              <td mat-cell *matCellDef="let item">
+                <mat-chip-listbox>
+                  <mat-chip [class.annex-9]="item.annexToUse === 'ANEXO_9'"
+                           [class.annex-10]="item.annexToUse === 'ANEXO_10'"
+                           [class.annex-11]="item.annexToUse === 'ANEXO_11'">
+                    {{ item.annexToUse?.replace('_', ' ') || 'ANEXO' }}
+                  </mat-chip>
+                </mat-chip-listbox>
               </td>
             </ng-container>
 
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef class="text-end"> Acciones </th>
               <td mat-cell *matCellDef="let item" class="text-end">
-                <button *ngIf="isEvaluador()" mat-flat-button color="primary" [routerLink]="['/dashboard/evaluations/evaluate', item.id]">
+                <button mat-flat-button color="primary" [routerLink]="['/dashboard/evaluations/evaluate', item.id]">
                   <mat-icon>gavel</mat-icon> Evaluar
-                </button>
-                <button *ngIf="isSecretaria()" mat-flat-button color="warn" 
-                        [disabled]="!item.newDeadline"
-                        (click)="onConfirm(item)">
-                  Confirmar Asignación
                 </button>
               </td>
             </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.urgent-row]="row.isUrgent"></tr>
           </table>
+          
+          <div class="empty-state" *ngIf="items().length === 0">
+            <mat-icon>inbox</mat-icon>
+            <p>No tiene evaluaciones asignadas en este momento.</p>
+          </div>
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .page-container { padding: 2rem; }
+    .page-container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
     .page-header { display: flex; justify-content: space-between; align-items: center; }
     .page-title { font-size: 2rem; font-weight: 800; color: #1e293b; margin: 0; }
-    .page-subtitle { color: #64748b; }
-    .role-badge {
-      padding: 0.5rem 1rem; border-radius: 8px; font-weight: 800; font-size: 0.8rem;
-      &.secretaria { background: #f3e5f5; color: #7b1fa2; }
-      &.evaluador { background: #e0f2fe; color: #0369a1; }
+    .page-subtitle { color: #64748b; margin-top: 0.25rem; }
+    
+    .stats-overview { display: flex; gap: 1rem; }
+    .stat-card {
+      background: white; padding: 0.75rem 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; align-items: center; min-width: 100px;
+      .label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+      .value { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
+      &.urgent { border-color: #fecaca; background: #fff1f2; .value { color: #dc2626; } }
     }
-    .content-card { background: white; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; }
-    .modern-table { width: 100%; th { padding: 1rem; background: #f8fafc; font-weight: 700; } td { padding: 1rem; } }
-    .protocol-info-cell { display: flex; flex-direction: column; .code { font-weight: 800; color: #003366; } .title { font-size: 0.9rem; } }
-    .mini-field { width: 150px; }
+
+    .content-card { background: white; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .section-title { font-size: 1rem; color: #003366; font-weight: 800; }
+    
+    .modern-table { 
+      width: 100%; 
+      th { background: #f8fafc; color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; padding: 1rem; }
+      td { padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    }
+
+    .urgent-row { background: #fff1f2 !important; }
+
+    .protocol-info-cell {
+      display: flex; flex-direction: column; gap: 0.25rem;
+      .code { font-weight: 800; color: #003366; font-size: 0.75rem; }
+      .title { font-size: 0.9rem; font-weight: 700; color: #1e293b; line-height: 1.3; }
+      .investigator { font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 4px; mat-icon { font-size: 14px; width: 14px; height: 14px; } }
+    }
+
+    .deadline-cell {
+      display: flex; flex-direction: column; .date { font-weight: 700; color: #1e293b; }
+      .remaining { font-size: 0.7rem; font-weight: 800; color: #64748b; display: flex; align-items: center; gap: 4px; mat-icon { font-size: 14px; width: 14px; height: 14px; } }
+      &.urgent { .date, .remaining { color: #dc2626; } }
+    }
+
+    .mat-mdc-chip { font-weight: 800; font-size: 0.65rem; }
+    .annex-9 { --mdc-chip-elevated-container-color: #f1f5f9; }
+    .annex-10 { --mdc-chip-elevated-container-color: #003366; color: white; }
+    .annex-11 { --mdc-chip-elevated-container-color: #fde047; }
+
+    .empty-state {
+      padding: 5rem 3rem; display: flex; flex-direction: column; align-items: center; color: #94a3b8;
+      mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
+      p { font-weight: 600; font-size: 0.9rem; }
+    }
+
+    .text-end { text-align: right; }
+    button { font-weight: 800; border-radius: 10px; padding: 0 1.5rem; height: 44px; }
   `]
 })
 export class EvaluationListPage implements OnInit {
   private authFacade = inject(AuthFacade);
   private getMyAssignmentsUC = inject(GetMyAssignmentsUseCase);
-  private confirmUC = inject(ConfirmAssignmentUseCase);
-  private getDashboardUC = inject(GetEvaluatorsDashboardUseCase);
-  private snackBar = inject(MatSnackBar);
 
-  userRole = computed(() => this.authFacade.currentUser()?.rol?.toUpperCase() || '');
-  isSecretaria = computed(() => this.userRole() === 'SECRETARIA');
-  isEvaluador = computed(() => this.userRole() === 'EVALUADOR');
-
-  pageTitle = computed(() => this.isSecretaria() ? 'Confirmación de Asignaciones' : 'Mis Tareas de Evaluación');
-  pageSubtitle = computed(() => this.isSecretaria() ? 'Gestione y confirme las fechas límite para los evaluadores sugeridos' : 'Protocolos pendientes de su revisión ética y técnica');
-
-  displayedColumns = computed(() => ['protocol', 'deadline', 'actions']);
   items = signal<any[]>([]);
+  displayedColumns = ['protocol', 'annex', 'deadline', 'actions'];
+  urgentCount = computed(() => this.items().filter(i => i.isUrgent).length);
 
   ngOnInit() {
     this.loadData();
   }
 
   loadData() {
-    if (this.isEvaluador()) {
-      this.getMyAssignmentsUC.execute().subscribe(data => this.items.set(data));
-    } else if (this.isSecretaria()) {
-      // Para la Secretaria, cargamos el dashboard que debería contener las sugerencias
-      this.getDashboardUC.execute().subscribe(data => {
-        this.items.set(data.suggestedEvaluations.map((e: any) => ({ ...e, newDeadline: '' })));
-      });
-    }
-  }
-
-  onConfirm(item: any) {
-    this.confirmUC.execute({ evaluationId: item.id, deadline: item.newDeadline }).subscribe(() => {
-      this.snackBar.open('✅ Asignación confirmada con éxito', 'Cerrar', { duration: 3000 });
-      this.loadData();
-    });
+    this.getMyAssignmentsUC.execute().subscribe(data => this.items.set(data));
   }
 }

@@ -18,6 +18,27 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
       protocolTitle: 'Prevalencia de parasitosis intestinal mediante técnicas coproparasitológicas en niños...', 
       investigator: 'Dra. Ana María Lucía',
       deadline: new Date(new Date().setDate(new Date().getDate() + 1)),
+      daysRemaining: 1,
+      isUrgent: true,
+      annexToUse: 'ANEXO_9',
+      reviewType: 'EXPEDITA',
+      status: 'PENDING',
+      verdict: EvaluationVerdict.APROBADO,
+      evaluationDate: new Date()
+    },
+    { 
+      id: 'ev2', 
+      protocolId: '2',
+      evaluatorId: 'eval-123',
+      protocolCode: '2026-CC-005', 
+      protocolType: 'CC',
+      protocolTitle: 'Estudio clínico sobre nueva terapia de hipertensión', 
+      investigator: 'Dr. Juan Pérez',
+      deadline: new Date(new Date().setDate(new Date().getDate() + 10)),
+      daysRemaining: 10,
+      isUrgent: false,
+      annexToUse: 'ANEXO_10',
+      reviewType: 'PLENO',
       status: 'PENDING',
       verdict: EvaluationVerdict.APROBADO,
       evaluationDate: new Date()
@@ -39,8 +60,9 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
         { protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba' }
       ],
       evaluators: [
-        { id: 'ev-1', nombre: 'Dr. Marco Antonio', perfil: 'SALUD', cargaActiva: 2 },
-        { id: 'ev-2', nombre: 'Dra. Elena Ramos', perfil: 'JURIDICO', cargaActiva: 0 }
+        { id: 'ev-1', nombre: 'Dr. Marco Antonio', perfil: 'SALUD', cargaActiva: 2, terminadosMes: 5 },
+        { id: 'ev-2', nombre: 'Dra. Elena Ramos', perfil: 'JURIDICO', cargaActiva: 0, terminadosMes: 2 },
+        { id: 'ev-3', nombre: 'Dr. Luis Méndez', perfil: 'METODOLOGÍA', cargaActiva: 1, terminadosMes: 3 }
       ],
       suggestedEvaluations: [
         { id: 'sug-1', protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba', evaluatorId: 'ev-1', evaluatorName: 'Dr. Marco Antonio', evaluatorProfile: 'SALUD', deadline: null }
@@ -53,8 +75,21 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     return of(undefined).pipe(delay(500));
   }
 
+  getPendingSuggestions(): Observable<any[]> {
+    return of([
+      { id: 'sug-1', protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba', evaluatorId: 'ev-1', evaluatorName: 'Dr. Marco Antonio', reviewType: 'EXPEDITA' },
+      { id: 'sug-2', protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba', evaluatorId: 'ev-3', evaluatorName: 'Dr. Luis Méndez', reviewType: 'EXPEDITA' }
+    ]).pipe(delay(500));
+  }
+
   confirmAssignment(payload: { evaluationId: string; deadline: string }): Observable<void> {
     console.log('Mock: Confirmando asignación', payload);
+    return of(undefined).pipe(delay(500));
+  }
+
+  rejectSuggestion(id: string): Observable<void> {
+    console.log('Mock: Rechazando sugerencia', id);
+    this.mockEvaluations = this.mockEvaluations.filter(e => e.id !== id);
     return of(undefined).pipe(delay(500));
   }
 
@@ -71,7 +106,8 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     return of([
       { id: 1, name: 'SALUD' },
       { id: 2, name: 'JURÍDICO' },
-      { id: 3, name: 'ÉTICO' }
+      { id: 3, name: 'ÉTICO' },
+      { id: 4, name: 'METODOLOGÍA' }
     ]).pipe(delay(500));
   }
 

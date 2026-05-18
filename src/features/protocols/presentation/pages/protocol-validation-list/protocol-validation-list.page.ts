@@ -49,7 +49,7 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
               <th mat-header-cell *matHeaderCellDef> Información del Proyecto </th>
               <td mat-cell *matCellDef="let p"> 
                 <div class="project-cell">
-                  <span class="main-title">{{ p.title }}</span>
+                  <span class="main-title" [matTooltip]="p.title">{{ p.title }}</span>
                   <span class="investigator-info">{{ p.investigator || 'Investigador Principal' }}</span>
                 </div>
               </td>
@@ -65,10 +65,20 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef class="text-end"> Gestión </th>
               <td mat-cell *matCellDef="let p" class="text-end">
-                <button mat-flat-button color="primary" class="review-btn" [routerLink]="['/dashboard/protocols/validation/detail', p.id]">
-                  <mat-icon>verified</mat-icon>
-                  Validar
-                </button>
+                <div class="d-flex justify-content-end gap-2">
+                  <button mat-stroked-button color="primary" class="review-btn" 
+                          [routerLink]="['/dashboard/protocols/detail', p.id]"
+                          matTooltip="Ver información detallada del protocolo">
+                    <mat-icon>visibility</mat-icon>
+                    Ver
+                  </button>
+                  <button mat-flat-button color="primary" class="review-btn" 
+                          [routerLink]="['/dashboard/protocols/validation/detail', p.id]"
+                          matTooltip="Validar documentación técnica del protocolo">
+                    <mat-icon>assignment_turned_in</mat-icon>
+                    Validar Documentos
+                  </button>
+                </div>
               </td>
             </ng-container>
 
@@ -88,7 +98,21 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
     .content-card { background: white; border-radius: 24px; border: 1px solid #f1f5f9; overflow: hidden; }
     .table-toolbar { border-bottom: 1px solid #f1f5f9; }
     .modern-table { width: 100%; th { background: #f8fafc; color: #64748b; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; padding: 1.25rem 1rem; } td { padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; } }
-    .project-cell { display: flex; flex-direction: column; .main-title { font-weight: 700; color: #1e293b; font-size: 0.9rem; } .investigator-info { color: #94a3b8; font-size: 0.75rem; } }
+    .project-cell { 
+      display: flex; 
+      flex-direction: column; 
+      max-width: 450px;
+      .main-title { 
+        font-weight: 700; 
+        color: #1e293b; 
+        font-size: 0.9rem; 
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      } 
+      .investigator-info { color: #94a3b8; font-size: 0.75rem; } 
+    }
     .type-badge { padding: 4px 12px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; &.io { background: #eff6ff; color: #2563eb; } &.ec { background: #fff7ed; color: #f59e0b; } &.ei { background: #f0fdf4; color: #16a34a; } }
     .review-btn { border-radius: 10px; font-weight: 700; }
     .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -113,9 +137,18 @@ export class ProtocolValidationListPage implements OnInit {
   }
 
   loadProtocols() {
-    this.protocolRepo.getAll().subscribe(data => {
-      this.protocols.set(data);
-      this.pendingCount.set(data.length);
+    this.protocolRepo.getReceptionProtocols().subscribe({
+      next: (data) => {
+        const list = Array.isArray(data) ? data : [];
+        console.log(`[ProtocolValidationListPage] ${list.length} protocolos recibidos.`);
+        this.protocols.set(list);
+        this.pendingCount.set(list.length);
+      },
+      error: (err) => {
+        console.error('[ProtocolValidationListPage] Error cargando protocolos:', err);
+        this.protocols.set([]);
+        this.pendingCount.set(0);
+      }
     });
   }
 }

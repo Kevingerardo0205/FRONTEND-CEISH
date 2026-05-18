@@ -8,6 +8,7 @@ import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { User, UserRole, UserDTO, AuthResponse, LoginCredentials, Permission } from '@domain/entities/user.entity';
 
 import { RegisterInvestigadorRequest } from '@features/auth/domain/entities/register.request';
+import { SetupAccountRequest } from '@features/auth/domain/entities/setup-account.request';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPort {
@@ -24,6 +25,10 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
     return this.post<any>(ENDPOINTS.AUTH.VERIFY_OTP, { email, code });
   }
 
+  setupAccount(data: SetupAccountRequest): Observable<any> {
+    return this.post<any>(ENDPOINTS.AUTH.SETUP_ACCOUNT, data);
+  }
+
   private mapBackendUser(data: any): User {
     const rolesArray = data.roles || [];
     let roleCode = 'INVESTIGADOR';
@@ -33,14 +38,31 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       if (typeof firstRole === 'string') {
         roleCode = firstRole;
       } else {
-        roleCode = firstRole.code || firstRole.nombre || firstRole.name || 'INVESTIGADOR';
+        roleCode = firstRole.code || firstRole.codigo || firstRole.nombre || firstRole.name || 'INVESTIGADOR';
       }
     }
 
     const rawPermissions = data.permissions || [];
-    // Paso 2 del plan: Limpiar el objeto de permiso para extraer el string del 'code'
-    const permissionCodes = rawPermissions.map((p: any) => typeof p === 'object' ? p.code : p);
-    const fullPermissions = Array.isArray(rawPermissions) && typeof rawPermissions[0] === 'object' ? rawPermissions : [];
+    
+    // Normalizar permisos para que el resto del sistema siempre encuentre .code
+    const normalizedFullPermissions = rawPermissions.map((p: any) => {
+      if (typeof p === 'object') {
+        return {
+          ...p,
+          code: p.code || p.codigo,
+          module: p.module || p.modulo ? {
+            ...(p.module || p.modulo),
+            code: (p.module && p.module.code) || (p.modulo && p.modulo.codigo),
+            icon: (p.module && p.module.icon) || (p.modulo && p.modulo.icono),
+            name: (p.module && p.module.name) || (p.modulo && p.modulo.nombre)
+          } : undefined
+        };
+      }
+      return p;
+    });
+
+    const permissionCodes = normalizedFullPermissions.map((p: any) => typeof p === 'object' ? p.code : p);
+    const fullPermissions = Array.isArray(normalizedFullPermissions) && typeof normalizedFullPermissions[0] === 'object' ? normalizedFullPermissions : [];
 
     return {
       id: data.id || data.Usuario_id,
@@ -90,6 +112,18 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
           );
         }
         return of(authData);
+      })
+    );
+  }
+
+  refreshToken(token: string): Observable<any> {
+    return this.post<any>(ENDPOINTS.AUTH.REFRESH, { refreshToken: token }).pipe(
+      map(response => {
+        const payload = response.data || response;
+        return {
+          accessToken: payload.access_token || payload.accessToken || payload.token,
+          refreshToken: payload.refresh_token || payload.refreshToken
+        };
       })
     );
   }

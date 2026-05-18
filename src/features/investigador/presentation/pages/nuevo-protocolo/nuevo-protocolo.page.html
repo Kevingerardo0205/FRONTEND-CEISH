@@ -273,29 +273,80 @@
         <mat-step>
           <ng-template matStepLabel>Documentos</ng-template>
           <div class="step-content">
-            <h3>Carga Dinámica de Documentos</h3>
-            <p class="text-muted small">Los requisitos se han generado según su tipo de investigación y características marcadas.</p>
+            <div class="section-info mb-4">
+              <mat-icon class="section-icon">description</mat-icon>
+              <div>
+                <h3>Checklist de Documentación</h3>
+                <p class="text-muted small">Cargue los requisitos generados dinámicamente para su protocolo.</p>
+              </div>
+            </div>
 
+            <!-- Upload Normal -->
             <div class="requirements-list mt-4" *ngIf="documentosRequeridos.length > 0">
-              <div *ngFor="let doc of documentosRequeridos" class="doc-row p-3 mb-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
-                <div class="doc-info">
-                  <span class="fw-bold d-block text-dark">{{doc.nombre}}</span>
-                  <span class="small text-muted">{{doc.anexo}} • Máx {{doc.maxSizeMB}}MB</span>
-                </div>
-                <div class="doc-actions d-flex align-items-center gap-3">
-                  <input type="file" #docIn hidden (change)="onDocumentSelected($event, doc.id)" [accept]="doc.formatosAceptados?.join(',')">
-                  
-                  <!-- Indicador de Estado -->
-                  <div [ngSwitch]="documentUploadStatus[doc.id]">
-                    <button *ngSwitchCase="'pendiente'" mat-flat-button color="primary" (click)="docIn.click()"><mat-icon>upload</mat-icon> SUBIR</button>
-                    <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled><mat-progress-spinner diameter="18" mode="indeterminate" class="d-inline-block me-2"></mat-progress-spinner> CARGANDO</button>
-                    <button *ngSwitchCase="'exito'" mat-flat-button color="success" class="bg-success text-white" (click)="docIn.click()"><mat-icon>check_circle</mat-icon> LISTO</button>
-                    <button *ngSwitchCase="'error'" mat-flat-button color="warn" (click)="docIn.click()"><mat-icon>error</mat-icon> REINTENTAR</button>
+              <div *ngFor="let doc of documentosRequeridos" class="doc-card p-3 mb-3 border rounded bg-white shadow-soft animate-fade-in">
+                <div class="row align-items-center">
+                  <div class="col-auto">
+                    <div class="doc-icon-box" [ngClass]="doc.color">
+                      <mat-icon>{{doc.icon}}</mat-icon>
+                    </div>
                   </div>
-                  
-                  <span class="small text-truncate" style="max-width: 120px;" *ngIf="archivosCargados[doc.id]">{{archivosCargados[doc.id]}}</span>
+                  <div class="col">
+                    <div class="doc-main-info">
+                      <span class="fw-bold d-block text-dark">{{doc.nombre}}</span>
+                      <span class="small text-muted">{{doc.code}}</span>
+                      <div class="mt-1" *ngIf="doc.alert">
+                        <span class="badge bg-light text-primary border"><mat-icon style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;">info</mat-icon> {{doc.alert}}</span>
+                      </div>
+                      <div class="mt-2 text-danger small fw-bold" *ngIf="doc.status === 'OBSERVADO'">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle;">warning</mat-icon> OBSERVACIÓN: {{doc.observations}}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <div class="doc-actions d-flex align-items-center gap-3">
+                      <input type="file" #docIn hidden (change)="onDocumentSelected($event, doc.code)" accept="application/pdf">
+                      
+                      <!-- Indicador de Estado Dinámico -->
+                      <div [ngSwitch]="documentUploadStatus[doc.code]">
+                        <button *ngSwitchCase="'pendiente'" mat-flat-button color="primary" (click)="docIn.click()"><mat-icon>upload</mat-icon> SUBIR</button>
+                        <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled><mat-progress-spinner diameter="18" mode="indeterminate" class="d-inline-block me-2"></mat-progress-spinner> CARGANDO</button>
+                        <button *ngSwitchCase="'exito'" mat-flat-button color="success" class="bg-success text-white" (click)="docIn.click()"><mat-icon>check_circle</mat-icon> PRESENTADO</button>
+                        <button *ngSwitchCase="'error'" mat-flat-button color="warn" (click)="docIn.click()"><mat-icon>error</mat-icon> REINTENTAR</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Fallback Upload Resiliente -->
+            <div class="no-requirements p-4 border rounded bg-light mt-4 text-center animate-fade-in" *ngIf="documentosRequeridos.length === 0 && !isLoading && protocolId">
+              <mat-icon color="accent" style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px;">cloud_upload</mat-icon>
+              <h4>Carga de Documentos (Modo Contingencia)</h4>
+              <p class="text-muted small mb-4">
+                El sistema no pudo generar la lista específica de requisitos para su tipo de estudio. 
+                Sin embargo, puede cargar todos sus documentos (PDF) a continuación para que sean revisados por el CEISH.
+              </p>
+              
+              <button mat-flat-button color="primary" (click)="bulkIn.click()" [disabled]="isLoading">
+                <mat-icon>upload_file</mat-icon> SELECCIONAR ARCHIVOS (PDF)
+              </button>
+              <input type="file" #bulkIn hidden multiple (change)="onBulkUpload($event)" accept="application/pdf">
+
+              <div class="mt-4 text-start" *ngIf="archivosCargados && (archivosCargados | keyvalue).length > 0">
+                <h5 class="fw-bold">Archivos Cargados Exitosamente:</h5>
+                <ul class="list-group">
+                  <li class="list-group-item text-success" *ngFor="let file of (archivosCargados | keyvalue)">
+                    <mat-icon style="vertical-align: middle; font-size: 18px; width: 18px; height: 18px;">check_circle</mat-icon> {{ file.value }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Loader Estado Inicial -->
+            <div class="no-requirements text-center p-5" *ngIf="documentosRequeridos.length === 0 && !protocolId">
+              <mat-icon style="font-size: 48px; width: 48px; height: 48px;" class="text-muted">pending_actions</mat-icon>
+              <p class="text-muted mt-3">Complete el registro inicial para habilitar la carga de documentos.</p>
             </div>
 
             <div class="step-actions mt-5 d-flex gap-2">

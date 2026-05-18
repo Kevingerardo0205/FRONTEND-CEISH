@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -55,16 +55,33 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
       <div class="management-layout">
         <main class="table-section shadow-soft">
           <div class="section-toolbar">
-            <h2 class="section-title">Listado de Personal</h2>
+            <div class="title-group">
+              <h2 class="section-title">Listado de Personal</h2>
+              <div class="filter-pills">
+                <button 
+                  [class.active]="filterMode() === 'COMITE'" 
+                  (click)="filterMode.set('COMITE')">
+                  Miembros del Comité
+                </button>
+                <button 
+                  [class.active]="filterMode() === 'INVESTIGADOR'" 
+                  (click)="filterMode.set('INVESTIGADOR')">
+                  Investigadores
+                </button>
+              </div>
+            </div>
             <div class="spacer"></div>
             <div class="search-mini">
               <mat-icon>search</mat-icon>
-              <input type="text" placeholder="Filtrar por nombre...">
+              <input 
+                type="text" 
+                placeholder="Filtrar por nombre..." 
+                (input)="onSearch($event)">
             </div>
           </div>
           
           <app-user-table 
-            [users]="users()" 
+            [users]="filteredUsers()" 
             (edit)="onEdit($event)"
             (delete)="onDelete($event)">
           </app-user-table>
@@ -93,6 +110,33 @@ export class UserManagementPage implements OnInit {
   users = signal<UserAdmin[]>([]);
   selectedUser = signal<UserAdmin | null>(null);
   activeCount = signal<number>(0);
+  
+  // Filtering state
+  filterMode = signal<'COMITE' | 'INVESTIGADOR'>('COMITE');
+  searchQuery = signal<string>('');
+
+  filteredUsers = computed(() => {
+    const allUsers = this.users();
+    const query = this.searchQuery().toLowerCase().trim();
+    const mode = this.filterMode();
+
+    return allUsers.filter(user => {
+      // Búsqueda por nombre o email
+      const matchesSearch = 
+        user.nombre.toLowerCase().includes(query) || 
+        user.email.toLowerCase().includes(query) ||
+        (user.cedula && user.cedula.includes(query));
+      
+      const isInvestigador = user.rol === 'INVESTIGADOR';
+      
+      if (mode === 'INVESTIGADOR') {
+        return matchesSearch && isInvestigador;
+      } else {
+        // Miembros del comité: Todos los que NO son investigadores
+        return matchesSearch && !isInvestigador;
+      }
+    });
+  });
 
   ngOnInit() {
     this.loadUsers();
@@ -103,6 +147,11 @@ export class UserManagementPage implements OnInit {
       this.users.set(data);
       this.activeCount.set(data.filter(u => u.activo !== false).length);
     });
+  }
+
+  onSearch(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.searchQuery.set(input.value);
   }
 
   onSave(user: UserAdmin) {

@@ -16,7 +16,7 @@ export const DASHBOARD_ROUTES: Routes = [
         path: 'admin/users',
         loadComponent: () => import('./presentation/pages/user-management.page').then(m => m.UserManagementPage),
         canActivate: [AuthGuard],
-        data: { permissions: ['USUARIOS_CREAR'] }
+        data: { permissions: ['USUARIOS_VER'] }
       },
       {
         path: 'protocols',

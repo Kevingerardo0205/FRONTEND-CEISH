@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatChipsModule } from '@angular/material/chips';
 import { UserAdmin } from '@domain/entities/user-admin.entity';
 import { GetRolesUseCase } from '@features/dashboard/use-cases';
 
@@ -21,7 +22,8 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
     MatButtonModule, 
     MatIconModule,
     MatProgressSpinnerModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatChipsModule
   ],
   template: `
     <div class="high-end-card">
@@ -36,12 +38,31 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
       </header>
 
       <form [formGroup]="userForm" (ngSubmit)="submit()" class="animate-fade-in">
+
+        <!-- BANNER INFORMATIVO: INVITACIÓN -->
+        <div class="info-banner mb-4" *ngIf="!userToEdit()">
+          <mat-icon>mail_outline</mat-icon>
+          <div class="info-content">
+            <strong>Flujo de Invitación Activo</strong>
+            <p>Al registrar al usuario, el sistema enviará automáticamente un correo con un código de seguridad (OTP) para que configure su propia contraseña.</p>
+          </div>
+        </div>
+
+        <div class="field-container">
+          <label class="field-label">Cédula / ID Nacional</label>
+          <mat-form-field appearance="outline" class="custom-field">
+            <input matInput formControlName="cedula" placeholder="Ej: 0601234567" maxlength="10">
+            <mat-icon matSuffix class="text-muted">fingerprint</mat-icon>
+            <mat-error>Ingrese una cédula válida</mat-error>
+          </mat-form-field>
+        </div>
+
         <div class="field-container">
           <label class="field-label">Nombre Completo</label>
           <mat-form-field appearance="outline" class="custom-field">
             <input matInput formControlName="nombre" placeholder="Ej: Dra. María López">
             <mat-icon matSuffix class="text-muted">badge</mat-icon>
-            <mat-error>El nombre es obligatorio</mat-error>
+            <mat-error>El nombre es obligatorio (min 5 carácteres)</mat-error>
           </mat-form-field>
         </div>
 
@@ -55,15 +76,15 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
         </div>
 
         <div class="field-container">
-          <label class="field-label">Rol del Sistema</label>
+          <label class="field-label">Roles del Sistema</label>
           <mat-form-field appearance="outline" class="custom-field">
-            <mat-select formControlName="rol" placeholder="--- SELECCIONE ---">
-              <mat-option *ngFor="let r of roles()" [value]="r.nombre || r">
-                {{ r.nombre || r }}
+            <mat-select formControlName="roles" placeholder="--- SELECCIONE ROLES ---" multiple>
+              <mat-option *ngFor="let r of availableRoles" [value]="r.code">
+                {{ r.label }}
               </mat-option>
             </mat-select>
             <mat-icon matSuffix class="text-muted">admin_panel_settings</mat-icon>
-            <mat-error>Seleccione un rol</mat-error>
+            <mat-error>Seleccione al menos un rol</mat-error>
           </mat-form-field>
         </div>
 
@@ -116,7 +137,7 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
       align-items: center;
       gap: 1.25rem;
       margin-bottom: 2.5rem;
-      
+
       .header-icon {
         width: 48px; height: 48px;
         background: rgba(0, 51, 102, 0.05);
@@ -128,6 +149,21 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
 
       h2 { margin: 0; font-size: 1.25rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; }
       p { margin: 0; font-size: 0.8rem; color: #64748b; font-weight: 500; }
+    }
+
+    .info-banner {
+      display: flex;
+      gap: 12px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      padding: 16px;
+      border-radius: 16px;
+      color: #0369a1;
+      mat-icon { color: #0ea5e9; }
+      .info-content {
+        strong { display: block; font-size: 0.85rem; margin-bottom: 2px; }
+        p { margin: 0; font-size: 0.75rem; line-height: 1.4; color: #075985; }
+      }
     }
 
     .field-container {
@@ -187,19 +223,26 @@ import { GetRolesUseCase } from '@features/dashboard/use-cases';
 })
 export class UserRegistrationFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
-  private readonly getRolesUseCase = inject(GetRolesUseCase);
-  
+
   userToEdit = input<UserAdmin | null>(null);
   isLoading = signal<boolean>(false);
-  roles = signal<any[]>([]);
-  
+
   save = output<UserAdmin>();
   cancel = output<void>();
 
+  readonly availableRoles = [
+    { code: 'ADMIN_TI', label: 'Administrador TI' },
+    { code: 'SECRETARIA', label: 'Secretaría' },
+    { code: 'PRESIDENTE', label: 'Presidente/a' },
+    { code: 'EVALUADOR', label: 'Evaluador' },
+    { code: 'INVESTIGADOR', label: 'Investigador' }
+  ];
+
   userForm: FormGroup = this.fb.group({
+    cedula: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
     nombre: ['', [Validators.required, Validators.minLength(5)]],
     email: ['', [Validators.required, Validators.email]],
-    rol: ['', [Validators.required]],
+    roles: [[], [Validators.required, Validators.minLength(1)]],
     perfil: ['', [Validators.required]],
     activo: [true]
   });
@@ -209,25 +252,20 @@ export class UserRegistrationFormComponent implements OnInit {
       const user = this.userToEdit();
       if (user) {
         this.userForm.patchValue({
+          cedula: user.cedula || '',
           nombre: user.nombre,
           email: user.email,
-          rol: user.rol,
+          roles: user.roles || [user.rol],
           perfil: user.perfil,
           activo: user.activo !== false
         });
       } else {
-        this.userForm.reset({ rol: '', activo: true });
+        this.userForm.reset({ roles: [], activo: true });
       }
     });
   }
 
-  ngOnInit() {
-    this.loadRoles();
-  }
-
-  loadRoles() {
-    this.getRolesUseCase.execute().subscribe(r => this.roles.set(r));
-  }
+  ngOnInit() {}
 
   onCancel() {
     this.userForm.reset();
@@ -236,12 +274,17 @@ export class UserRegistrationFormComponent implements OnInit {
 
   submit() {
     if (this.userForm.valid) {
+      const formVal = this.userForm.value;
+      // El backend espera roles[], pero para compatibilidad con la interfaz UserAdmin 
+      // seteamos rol como el primero del array.
       this.save.emit({
         ...this.userToEdit(),
-        ...this.userForm.value
+        ...formVal,
+        rol: formVal.roles[0]
       });
     } else {
       this.userForm.markAllAsTouched();
     }
   }
 }
+

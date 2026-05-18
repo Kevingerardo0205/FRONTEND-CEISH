@@ -33,10 +33,26 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   }
 
   /**
+   * Secretaria: Obtiene las sugerencias de evaluadores pendientes de confirmación.
+   */
+  getPendingSuggestions(): Observable<any[]> {
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PENDING_SUGGESTIONS).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  /**
    * Secretaria: Confirma la asignación de un evaluador y fija fecha límite.
    */
   confirmAssignment(payload: { evaluationId: string; deadline: string }): Observable<void> {
     return this.apiClient.patch(ENDPOINTS.EVALUATIONS.CONFIRM, payload);
+  }
+
+  /**
+   * Secretaria: Rechaza una sugerencia previa de la presidencia.
+   */
+  rejectSuggestion(id: string): Observable<void> {
+    return this.apiClient.delete(ENDPOINTS.EVALUATIONS.REJECT_SUGGESTION(id));
   }
 
   /**
@@ -91,6 +107,15 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
    */
   deleteProfile(id: number): Observable<void> {
     return this.apiClient.delete(ENDPOINTS.EVALUATIONS.PROFILE_BY_ID(id));
+  }
+
+  /**
+   * Obtiene la consolidación de evaluaciones para un protocolo (Anexo 12).
+   */
+  consolidateEvaluation(protocolId: string): Observable<any> {
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.CONSOLIDATE(protocolId)).pipe(
+      map(res => res.data || res)
+    );
   }
 
   /**

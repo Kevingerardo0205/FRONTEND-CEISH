@@ -1,4 +1,3 @@
-import { Observable } from 'rxjs';
 import { UserRole } from './user.entity';
 
 export interface UserAdmin {
@@ -6,12 +5,8 @@ export interface UserAdmin {
   nombre: string;
   email: string;
   rol: UserRole;
+  roles?: string[]; // Soporte para múltiples roles
+  cedula?: string;
   perfil: string;
   activo: boolean;
-}
-
-export abstract class IUserAdminRepositoryPort {
-  abstract getAll(): Observable<UserAdmin[]>;
-  abstract create(user: UserAdmin): Observable<UserAdmin>;
-  abstract delete(id: string): Observable<void>;
 }

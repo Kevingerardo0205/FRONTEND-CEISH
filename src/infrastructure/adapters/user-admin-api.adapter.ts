@@ -1,18 +1,20 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { UserAdmin } from '@domain/entities/user-admin.entity';
 import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.port';
-import { environment } from 'src/environments/environment';
+import { ApiClientService } from '@infrastructure/api/api-client.service';
+import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 
 @Injectable({ providedIn: 'root' })
 export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
-  private readonly http = inject(HttpClient);
-  private readonly API = `${environment.apiUrl}/auth`;
+  private readonly apiClient = inject(ApiClientService);
 
   getAll(): Observable<UserAdmin[]> {
-    return this.http.get<any[]>(`${this.API}/users`).pipe(
-      map(users => users.map(u => this.mapToDomain(u)))
+    return this.apiClient.get<any>(ENDPOINTS.USERS.BASE).pipe(
+      map(res => {
+        const users = res.data || res;
+        return Array.isArray(users) ? users.map((u: any) => this.mapToDomain(u)) : [];
+      })
     );
   }
 
@@ -20,11 +22,11 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
     const payload = {
       fullName: user.nombre,
       email: user.email,
-      nationalId: (user as any).cedula || '',
-      roles: [user.rol]
+      nationalId: user.cedula || '',
+      roles: user.roles || [user.rol]
     };
-    return this.http.post<any>(`${this.API}/users`, payload).pipe(
-      map(u => this.mapToDomain(u))
+    return this.apiClient.post<any>(ENDPOINTS.USERS.BASE, payload).pipe(
+      map(res => this.mapToDomain(res.data || res))
     );
   }
 
@@ -32,35 +34,41 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
     const payload: any = {};
     if (user.nombre) payload.fullName = user.nombre;
     if (user.email) payload.email = user.email;
-    if ((user as any).activo !== undefined) payload.isActive = (user as any).activo;
+    if (user.activo !== undefined) payload.isActive = user.activo;
 
-    return this.http.patch<any>(`${this.API}/users/${id}`, payload).pipe(
-      map(u => this.mapToDomain(u))
+    return this.apiClient.patch<any>(ENDPOINTS.USERS.BY_ID(id), payload).pipe(
+      map(res => this.mapToDomain(res.data || res))
     );
   }
 
   delete(id: string): Observable<void> {
-    // Si el backend no tiene DELETE, usamos PATCH para desactivar
-    return this.http.patch<void>(`${this.API}/users/${id}`, { isActive: false });
+    return this.apiClient.patch<void>(ENDPOINTS.USERS.BY_ID(id), { isActive: false });
   }
 
   getRoles(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.API}/roles`);
+    return this.apiClient.get<any>(ENDPOINTS.USERS.ROLES).pipe(
+      map(res => res.data || res)
+    );
   }
 
   updateRoles(id: string, roles: string[]): Observable<void> {
-    return this.http.patch<void>(`${this.API}/users/${id}/roles`, { roles });
+    return this.apiClient.patch<void>(`${ENDPOINTS.USERS.BY_ID(id)}/roles`, { roles });
   }
 
   private mapToDomain(u: any): UserAdmin {
-    const roleName = u.roles && u.roles.length > 0 ? (u.roles[0].nombre || u.roles[0]) : 'INVESTIGADOR';
+    const roleName = u.roles && u.roles.length > 0 
+      ? (typeof u.roles[0] === 'string' ? u.roles[0] : (u.roles[0].code || u.roles[0].nombre)) 
+      : 'INVESTIGADOR';
+    
     return {
-      id: u.id,
+      id: u.id || u.Usuario_id,
       nombre: u.fullName || u.nombre || 'Sin nombre',
       email: u.email || u.institutionalEmail || '',
       rol: roleName.toUpperCase(),
+      roles: u.roles ? u.roles.map((r: any) => typeof r === 'string' ? r : r.code) : [],
       perfil: u.investigatorProfile ? 'Investigador' : 'Personal Administrativo',
-      activo: u.isActive ?? true
+      activo: u.isActive ?? u.activo ?? true,
+      cedula: u.nationalId || u.cedula
     };
   }
 }

@@ -422,7 +422,7 @@ export class DashboardHomePage {
           ],
           quickActions: [
             { label: 'Validar Documentos', icon: 'rule', link: '/dashboard/protocols/validation/list' },
-            { label: 'Confirmar Asignaciones', icon: 'people_alt', link: '/dashboard/evaluations/confirm-assignment', color: 'accent' }
+            { label: 'Oficializar Asignaciones', icon: 'people_alt', link: '/dashboard/evaluations/assignment', color: 'accent' }
           ],
           recentTitle: 'Trámites recibidos hoy',
           emptyMessage: 'No hay trámites nuevos pendientes de validación.',

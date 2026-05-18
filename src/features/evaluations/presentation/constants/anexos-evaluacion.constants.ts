@@ -6,10 +6,12 @@ export enum TipoRevision {
   ENSAYO_CLINICO = 'ENSAYO_CLINICO'
 }
 
+export type ResultadoSeccion = 'APROBADO' | 'NO_APROBADO' | 'CON_OBSERVACIONES' | 'APROBADO_CONDICIONADO';
+
 export interface CampoEvaluacion {
   id: string;
   label: string;
-  tipo: 'check' | 'text' | 'compliance'; // compliance: C, NC, NA
+  tipo: 'check' | 'text' | 'compliance' | 'result_triple'; // compliance: C, NC, NA, result_triple: Aprobado, No aprobado, Con observaciones
   obligatorio: boolean;
   seccion: 'TECNICA' | 'ETICA' | 'JURIDICA' | 'GENERAL';
   descripcion?: string;
@@ -23,73 +25,41 @@ export interface AnexoEvaluacion {
   campos: CampoEvaluacion[];
 }
 
-/**
- * Los 7 Criterios de Ezekiel Emanuel (Núcleo de Evaluación Ética)
- */
-export const CRITERIOS_EMANUEL: CampoEvaluacion[] = [
-  { id: 'valorSocial', label: 'Valor Social', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Genera beneficios reales para los participantes o la comunidad.' },
-  { id: 'validezCientifica', label: 'Validez Científica', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Metodología bien planteada, objetivos claros e instrumentos validados.' },
-  { id: 'seleccionEquitativa', label: 'Selección Equitativa', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Oportunidad de inclusión sin discriminación arbitraria.' },
-  { id: 'riesgoBeneficio', label: 'Riesgo-Beneficio Favorable', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Beneficios potenciales superan claramente los riesgos.' },
-  { id: 'evaluacionIndependiente', label: 'Evaluación Independiente', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'No existe conflicto de intereses.' },
-  { id: 'consentimientoInformado', label: 'Consentimiento Informado', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Correctamente aplicado, documentado y comprendido.' },
-  { id: 'proteccionVulnerables', label: 'Protección de Vulnerables', tipo: 'compliance', obligatorio: true, seccion: 'ETICA', descripcion: 'Consideración especial a poblaciones vulnerables y confidencialidad.' }
-];
-
-/**
- * Evaluación Metodológica Detallada (PET)
- */
-export const METODOLOGIA_DETALLADA: CampoEvaluacion[] = [
-  { id: 'coherenciaTitulo', label: 'Coherencia Título-Objetivos', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
-  { id: 'disenoEstudio', label: 'Diseño del Estudio', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
-  { id: 'sujetosMuestra', label: 'Sujetos y Tamaño de Muestra', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
-  { id: 'definicionVariables', label: 'Definición de Variables', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' },
-  { id: 'manejoDatos', label: 'Manejo de Datos y Análisis', tipo: 'compliance', obligatorio: true, seccion: 'TECNICA' }
-];
-
-/**
- * Evaluación Jurídica Detallada (PET)
- */
-export const JURIDICA_DETALLADA: CampoEvaluacion[] = [
-  { id: 'acordeLegislacion', label: 'Acorde a Legislación Nacional', tipo: 'compliance', obligatorio: true, seccion: 'JURIDICA' },
-  { id: 'contratoInvestigadores', label: 'Contrato/Acuerdos Investigadores', tipo: 'compliance', obligatorio: true, seccion: 'JURIDICA' }
-];
-
 export const ANEXOS_EVALUACION: AnexoEvaluacion[] = [
   {
     id: 'anexo9',
-    titulo: 'Revisión Expedita (Estudios Observacionales)',
+    titulo: 'Guía para evaluación expedita de estudios observacionales y de intervención',
     anexo: 'Anexo 9',
     tipoRevision: TipoRevision.EXPEDITA,
     campos: [
-      { id: 'cumpleCriteriosExpedita', label: 'Cumple criterios para revisión expedita', tipo: 'check', obligatorio: true, seccion: 'GENERAL' },
-      { id: 'justificacion', label: 'Justificación del tipo de revisión', tipo: 'text', obligatorio: true, seccion: 'GENERAL' },
-      ...CRITERIOS_EMANUEL
+      { id: 'resultadoEtica', label: 'RESULTADO DE LA EVALUACION ETICA', tipo: 'result_triple', obligatorio: true, seccion: 'ETICA' },
+      { id: 'plazoEtica', label: 'Plazo para absolver las observaciones (Ética)', tipo: 'text', obligatorio: false, seccion: 'ETICA' },
+      
+      { id: 'resultadoMetodologia', label: 'RESULTADO DE LA EVALUACION METODOLOGICA', tipo: 'result_triple', obligatorio: true, seccion: 'TECNICA' },
+      { id: 'plazoMetodologia', label: 'Plazo para absolver las observaciones (Metodología)', tipo: 'text', obligatorio: false, seccion: 'TECNICA' },
+      
+      { id: 'resultadoJuridica', label: 'RESULTADO DE LA EVALUACION JURIDICA', tipo: 'result_triple', obligatorio: true, seccion: 'JURIDICA' },
+      { id: 'plazoJuridica', label: 'Plazo para absolver las observaciones (Jurídica)', tipo: 'text', obligatorio: false, seccion: 'JURIDICA' }
     ]
   },
   {
     id: 'anexo10',
-    titulo: 'Revisión por Pleno (Intervención/Riesgo)',
+    titulo: 'Guía para evaluación en pleno de estudios observacionales y de intervención',
     anexo: 'Anexo 10',
     tipoRevision: TipoRevision.PLENO,
     campos: [
-      ...CRITERIOS_EMANUEL,
-      ...METODOLOGIA_DETALLADA,
-      ...JURIDICA_DETALLADA
+      { id: 'resultadoGlobal', label: 'Resultado de la evaluación', tipo: 'result_triple', obligatorio: true, seccion: 'GENERAL' },
+      { id: 'condiciones', label: 'Describir los requisitos/aspectos que se requiere completar para que el estudio sea aprobado', tipo: 'text', obligatorio: false, seccion: 'GENERAL' }
     ]
   },
   {
     id: 'anexo11',
-    titulo: 'Evaluación de Ensayos Clínicos',
+    titulo: 'Guía para evaluación de ensayos clínicos',
     anexo: 'Anexo 11',
     tipoRevision: TipoRevision.ENSAYO_CLINICO,
     campos: [
-      ...CRITERIOS_EMANUEL,
-      ...METODOLOGIA_DETALLADA,
-      ...JURIDICA_DETALLADA,
-      { id: 'aprobacionArcsaVerificada', label: 'Aprobación ARCSA Verificada', tipo: 'check', obligatorio: true, seccion: 'JURIDICA' },
-      { id: 'polizaSeguroVigente', label: 'Póliza de Seguro Vigente', tipo: 'check', obligatorio: true, seccion: 'JURIDICA' },
-      { id: 'comentariosFarmaco', label: 'Datos sobre Fármaco/Producto', tipo: 'text', obligatorio: true, seccion: 'TECNICA' }
+      { id: 'resultadoGlobal', label: 'Resultado de la evaluación', tipo: 'result_triple', obligatorio: true, seccion: 'GENERAL' },
+      { id: 'fechaEvaluacion', label: 'Fecha de evaluación', tipo: 'text', obligatorio: true, seccion: 'GENERAL' }
     ]
   }
 ];

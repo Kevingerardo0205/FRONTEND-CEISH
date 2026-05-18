@@ -15,10 +15,22 @@ export abstract class IEvaluationRepositoryPort {
   abstract suggestEvaluators(payload: { protocolId: string; evaluatorIds: string[] }): Observable<void>;
 
   /**
+   * Secretaria: Obtiene las sugerencias de evaluadores pendientes de confirmación.
+   * GET /evaluations/pending-suggestions
+   */
+  abstract getPendingSuggestions(): Observable<any[]>;
+
+  /**
    * Secretaria: Confirma la asignación de un evaluador y fija fecha límite.
    * PATCH /evaluations/confirm-assignment
    */
   abstract confirmAssignment(payload: { evaluationId: string; deadline: string }): Observable<void>;
+
+  /**
+   * Secretaria: Rechaza una sugerencia previa de la presidencia.
+   * DELETE /evaluations/reject-suggestion/{id}
+   */
+  abstract rejectSuggestion(id: string): Observable<void>;
 
   /**
    * Evaluador: Obtiene las tareas asignadas al evaluador actual.
@@ -56,6 +68,12 @@ export abstract class IEvaluationRepositoryPort {
    * DELETE /evaluations/profiles/{id}
    */
   abstract deleteProfile(id: number): Observable<void>;
+
+  /**
+   * Obtiene la consolidación de evaluaciones para un protocolo (Anexo 12).
+   * GET /evaluations/consolidate/{id}
+   */
+  abstract consolidateEvaluation(protocolId: string): Observable<any>;
 
   // Métodos de consulta existentes
   abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;

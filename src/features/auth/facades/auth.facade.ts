@@ -45,7 +45,7 @@ export class AuthFacade {
         });
       }
 
-      const permUI = PERMISSION_UI_MAP[p.code];
+      const permUI = PERMISSION_UI_MAP[p.code]; console.log('[AuthFacade] Mapping:', p.code, '->', permUI?.path || '/dashboard/home');
       modulesMap.get(mod.code)!.subItems.push({
         code: p.code,
         label: permUI?.label || toSentenceCase(p.code),
@@ -154,6 +154,13 @@ export class AuthFacade {
     if (!refreshToken) {
       return throwError(() => new Error('No refresh token available'));
     }
-    return of({ accessToken: 'new-mock-access-token' }).pipe(delay(500));
+    return this.authRepository.refreshToken(refreshToken).pipe(
+      tap((tokens) => {
+        this.tokenService.saveToken(tokens.accessToken);
+        if (tokens.refreshToken) {
+          this.tokenService.saveRefreshToken(tokens.refreshToken);
+        }
+      })
+    );
   }
 }

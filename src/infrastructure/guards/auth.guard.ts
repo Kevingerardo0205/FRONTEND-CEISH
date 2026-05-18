@@ -12,11 +12,13 @@ export class AuthGuard implements CanActivate {
   canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
     // 1. Verificar Autenticación
     if (!this.authFacade.isAuthenticated()) {
+      console.warn('[AuthGuard] Usuario no autenticado, redirigiendo a login');
       return this.router.createUrlTree(['/auth/login']);
     }
 
     // 2. Verificar Permisos (PBAC) si están definidos en la ruta
     const requiredPermissions = route.data['permissions'] as string | string[];
+    const strategy = route.data['permissionStrategy'] || 'any';
     
     if (!requiredPermissions) {
       return true;
@@ -25,15 +27,25 @@ export class AuthGuard implements CanActivate {
     const user = this.authFacade.currentUser();
     const userPermissions = user?.permissions || [];
     
-    const hasPermission = Array.isArray(requiredPermissions)
-      ? requiredPermissions.every(p => userPermissions.includes(p))
-      : userPermissions.includes(requiredPermissions);
+    // Si el usuario tiene permiso total de administrador, permitir acceso
+    if (userPermissions.includes('ADMIN_ALL')) {
+      return true;
+    }
+
+    let hasPermission = false;
+    if (Array.isArray(requiredPermissions)) {
+      hasPermission = strategy === 'all'
+        ? requiredPermissions.every(p => userPermissions.includes(p))
+        : requiredPermissions.some(p => userPermissions.includes(p));
+    } else {
+      hasPermission = userPermissions.includes(requiredPermissions);
+    }
 
     if (hasPermission) {
       return true;
     }
 
-    console.warn(`Acceso denegado: Usuario no cuenta con los permisos requeridos: ${requiredPermissions}`);
+    console.error(`[AuthGuard] Acceso denegado: Usuario ${user?.email} (${user?.rol}) no cuenta con los permisos requeridos: ${requiredPermissions}. Permisos actuales:`, userPermissions);
     return this.router.createUrlTree(['/dashboard']);
   }
 }

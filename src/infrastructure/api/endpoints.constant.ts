@@ -7,17 +7,23 @@ export const ENDPOINTS = {
     RESEND_OTP: '/auth/resend-confirmation',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
+    SETUP_ACCOUNT: '/auth/setup-account',
+    REFRESH: '/auth/refresh',
   },
   PROTOCOLS: {
     BASE: '/protocols',
     BY_ID: (id: string) => `/protocols/${id}`,
+    CHECKLIST: (id: string) => `/reception/protocol/${id}`,
+    REQUIREMENTS: '/protocols/requirements',
+    UPLOAD_DOCUMENT: (id: string) => `/reception/protocol/${id}/document`,
     RECEPTION: {
       CREATE: '/protocols',
+      LIST: '/reception/protocol',
       BULK_UPLOAD: (id: string) => `/reception/protocol/${id}/documents/bulk`,
-      CHECKLIST: (id: string) => `/reception/protocol/${id}`,
       FINALIZE: (id: string) => `/reception/protocol/${id}/finalize`,
       CERTIFICATE: (id: string) => `/reception/protocol/${id}/certificate`,
       VALIDATE_DOC: (id: string) => `/reception/document/${id}/validate`,
+      DOCUMENTS_HISTORY: (id: string) => `/reception/protocol/${id}/documents`,
     }
   },
   DOCUMENTS: {
@@ -28,11 +34,19 @@ export const ENDPOINTS = {
   EVALUATIONS: {
     DASHBOARD: '/evaluations/evaluators/dashboard',
     SUGGEST: '/evaluations/suggest',
+    PENDING_SUGGESTIONS: '/evaluations/pending-suggestions',
     CONFIRM: '/evaluations/confirm-assignment',
+    REJECT_SUGGESTION: (id: string) => `/evaluations/reject-suggestion/${id}`,
     MY_ASSIGNMENTS: '/evaluations/my-assignments',
     SUBMIT: '/evaluations/submit',
     PROFILES: '/evaluations/profiles',
     PROFILE_BY_ID: (id: number) => `/evaluations/profiles/${id}`,
+    CONSOLIDATE: (id: string) => `/evaluations/consolidate/${id}`,
+  },
+  USERS: {
+    BASE: '/auth/users',
+    BY_ID: (id: string) => `/auth/users/${id}`,
+    ROLES: '/auth/roles',
   },
   RESOLUTIONS: {
     BASE: '/resolutions',

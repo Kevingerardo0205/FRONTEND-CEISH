@@ -13,7 +13,10 @@ export const EVALUATION_ROUTES: Routes = [
         path: 'assignment',
         component: AssignmentPage,
         canActivate: [AuthGuard],
-        data: { permissions: ['EVALUADORES_ASIGNAR'] }
+        data: { 
+          permissions: ['EVALUATORS_ASSIGN', 'EVALUATORS_SUGGEST', 'EVALUACION_ASIGNAR'],
+          permissionStrategy: 'any'
+        }
       },
       {
         path: 'list',
@@ -41,3 +44,4 @@ export const EVALUATION_ROUTES: Routes = [
     ]
   }
 ];
+

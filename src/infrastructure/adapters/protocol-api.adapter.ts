@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
@@ -14,8 +14,30 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   private apiClient = inject(ApiClientService);
 
   getAll(): Observable<ProtocolEntity[]> {
-    return this.apiClient.get<any[]>(ENDPOINTS.PROTOCOLS.BASE).pipe(
-      map(data => data.map(item => this.mapToEntity(item)))
+    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.BASE).pipe(
+      map(res => this.extractAndMapList(res)),
+      catchError(err => {
+        console.warn('[ProtocolApiAdapter] Error en getAll:', err);
+        return of([]);
+      })
+    );
+  }
+
+  getReceptionProtocols(): Observable<ProtocolEntity[]> {
+    /**
+     * Fallback secuencial:
+     * 1. /reception/protocol (v2 singular)
+     * 2. /reception/protocols (v2 plural)
+     * 3. /protocols (v1)
+     */
+    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.RECEPTION.LIST).pipe(
+      catchError(() => this.apiClient.get<any>('/reception/protocols')),
+      catchError(() => this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.BASE)),
+      map(res => this.extractAndMapList(res)),
+      catchError(err => {
+        console.error('[ProtocolApiAdapter] Todos los fallbacks de recepción fallaron:', err);
+        return of([]);
+      })
     );
   }
 
@@ -49,7 +71,17 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   }
 
   getChecklist(id: string): Observable<any> {
-    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.RECEPTION.CHECKLIST(id));
+    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.CHECKLIST(id));
+  }
+
+  getDocumentHistory(id: string): Observable<any[]> {
+    return this.apiClient.get<any[]>(ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(id)).pipe(
+      map(res => this.extractAnyArray(res)),
+      catchError(err => {
+        console.warn('[ProtocolApiAdapter] Error en getDocumentHistory:', err);
+        return of([]);
+      })
+    );
   }
 
   finalizeReception(id: string): Observable<any> {
@@ -65,17 +97,73 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
     return this.finalizeReception(protocolId);
   }
 
+  updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<any> {
+    return this.apiClient.patch(`/reception/protocol/${protocolId}/requirement/${reqId}`, {
+      status
+    });
+  }
+
+  verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<any> {
+    return this.apiClient.patch(`/reception/protocol/${protocolId}/verify`, {
+      isComplete,
+      missingItemsList
+    });
+  }
+
+  private extractAndMapList(res: any): ProtocolEntity[] {
+    const rawList = this.extractAnyArray(res);
+    return rawList.map(item => this.mapToEntity(item));
+  }
+
+  private extractAnyArray(res: any): any[] {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+
+    // Función recursiva para encontrar el primer arreglo en un objeto
+    const findFirstArray = (obj: any, depth = 0): any[] | null => {
+      if (depth > 3 || !obj || typeof obj !== 'object') return null;
+      if (Array.isArray(obj)) return obj;
+      
+      const priorityKeys = ['protocols', 'protocolos', 'data', 'items', 'results', 'list', 'rows', 'documents', 'documentos'];
+      for (const key of priorityKeys) {
+        if (obj[key] && Array.isArray(obj[key])) return obj[key];
+      }
+
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          const result = findFirstArray(obj[key], depth + 1);
+          if (result) return result;
+        }
+      }
+      return null;
+    };
+
+    return findFirstArray(res) || [];
+  }
+
   private mapToEntity(data: any): ProtocolEntity {
+    if (!data) return {} as ProtocolEntity;
+    
+    // El status puede venir como string o como objeto { name: '...' } o { id: 1, name: '...' }
+    let statusLabel = 'DESCONOCIDO';
+    if (typeof data.status === 'string') {
+      statusLabel = data.status;
+    } else if (data.status && typeof data.status === 'object') {
+      statusLabel = data.status.name || data.status.label || data.status.descripcion || 'DESCONOCIDO';
+    } else if (data.estado) {
+      statusLabel = typeof data.estado === 'string' ? data.estado : (data.estado.name || 'DESCONOCIDO');
+    }
+
     return {
-      id: data.id,
-      title: data.title,
-      investigatorId: data.investigatorId,
-      type: data.type,
-      status: data.status?.toUpperCase(),
-      submissionDate: new Date(data.submissionDate),
-      code: data.code,
-      documents: data.documents || [],
-      version: data.version
+      id: data.id?.toString() || '',
+      title: data.title || data.titulo || 'Sin título',
+      investigatorId: data.investigatorId || data.investigadorId || '',
+      type: data.type || data.tipo || '',
+      status: statusLabel.toUpperCase() as any,
+      submissionDate: data.submissionDate || data.fechaEnvio || data.createdAt ? new Date(data.submissionDate || data.fechaEnvio || data.createdAt) : new Date(),
+      code: data.code || data.codigo || '',
+      documents: data.documents || data.documentos || [],
+      version: data.version || 1
     };
   }
 }

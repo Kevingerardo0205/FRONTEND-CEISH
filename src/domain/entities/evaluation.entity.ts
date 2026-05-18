@@ -81,12 +81,21 @@ export interface EvaluationEntity {
   id: string;
   protocolId: string;
   evaluatorId: string;
+  protocolCode?: string;
+  protocolTitle?: string;
+  protocolType?: string;
+  investigator?: string;
+  deadline?: Date;
+  daysRemaining?: number;
+  isUrgent?: boolean;
+  annexToUse?: 'ANEXO_9' | 'ANEXO_10' | 'ANEXO_11';
+  reviewType?: 'EXPEDITA' | 'PLENO';
   verdict: EvaluationVerdict;
   evaluationDate: Date;
   annex9?: Annex9;
   annex10?: Annex10;
   annex11?: Annex11;
-  status: 'PENDING' | 'COMPLETED';
+  status: 'PENDING' | 'COMPLETED' | 'CONSOLIDATED';
 }
 
 export interface SubmitEvaluationDto {

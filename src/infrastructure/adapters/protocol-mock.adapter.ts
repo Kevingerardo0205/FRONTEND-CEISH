@@ -37,6 +37,10 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
     return of(this.protocols);
   }
 
+  getReceptionProtocols(): Observable<ProtocolEntity[]> {
+    return of(this.protocols);
+  }
+
   save(protocol: Partial<ProtocolEntity>): Observable<ProtocolEntity> {
     const index = this.protocols.findIndex(p => p.id === protocol.id);
     if (index !== -1) {
@@ -73,6 +77,10 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
     });
   }
 
+  getDocumentHistory(id: string): Observable<any[]> {
+    return of([]);
+  }
+
   finalizeReception(id: string): Observable<any> {
     return of({ ceishCode: `CEISH-MOCK-${id}`, message: 'Recepción finalizada mock' });
   }
@@ -88,5 +96,15 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
       return of({ message: 'Validación finalizada con éxito' });
     }
     throw new Error('Protocolo no encontrado');
+  }
+
+  updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<any> {
+    console.log(`[ProtocolMockAdapter] Actualizando requisito ${reqId} a ${status} para protocolo ${protocolId}`);
+    return of({ message: 'Estado de requisito actualizado exitosamente (Mock)' });
+  }
+
+  verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<any> {
+    console.log(`[ProtocolMockAdapter] Verificando protocolo ${protocolId}: complete=${isComplete}, missing=${missingItemsList}`);
+    return of({ message: 'Verificación de protocolo guardada exitosamente (Mock)' });
   }
 }
