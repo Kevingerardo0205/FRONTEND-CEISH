@@ -12,11 +12,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, of, catchError } from 'rxjs';
+import { catchError, of } from 'rxjs';
 import { ValidateDocumentaryUseCase } from '../../../application/use-cases/validate-documentary.use-case';
-import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
+import { ValidationChecklistItem, ValidationHeader, ValidationGlobalStatus } from '@domain/entities/protocol.entity';
 import { IncompleteValidationDialog } from './incomplete-validation-dialog.component';
 import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
@@ -29,13 +29,13 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
     MatButtonModule, 
     MatIconModule, 
     MatCheckboxModule, 
-    MatFormFieldModule,
+    MatFormFieldModule, 
     MatInputModule,
-    MatProgressBarModule,
-    MatSnackBarModule,
+    MatProgressBarModule, 
+    MatSnackBarModule, 
     MatTooltipModule,
-    MatDialogModule,
-    MatDividerModule,
+    MatDialogModule, 
+    MatDividerModule, 
     FormsModule
   ],
   template: `
@@ -43,7 +43,7 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
       
       <div *ngIf="isLoading()" class="loading-overlay">
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        <p>Cargando información del protocolo...</p>
+        <p>Cargando información técnica del protocolo...</p>
       </div>
 
       <div *ngIf="!isLoading() && protocolNotFound()" class="error-state">
@@ -54,14 +54,14 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
       <div *ngIf="!isLoading() && !protocolNotFound()">
         <!-- ENCABEZADO ESTILO OFICIAL PET 2023 -->
-        <header class="official-header">
+        <header class="official-header shadow-sm">
           <div class="top-row">
             <button mat-icon-button routerLink="/dashboard/protocols/validation/list" class="back-btn" matTooltip="Volver a la lista">
               <mat-icon>arrow_back</mat-icon>
             </button>
             <div class="header-text">
               <span class="institution">ESCUELA SUPERIOR POLITÉCNICA DE CHIMBORAZO</span>
-              <h1>NOTIFICACIÓN DE RECEPCIÓN DE PROTOCOLO DE INVESTIGACIÓN ({{ protocolTypeLabel() }})</h1>
+              <h1>NOTIFICACIÓN DE RECEPCIÓN DE PROTOCOLO DE INVESTIGACIÓN ({{ header()?.studyType | uppercase }})</h1>
               <p class="subtitle">COMITÉ DE ÉTICA DE INVESTIGACIÓN EN SERES HUMANOS (CEISH-ESPOCH)</p>
             </div>
             <button mat-stroked-button color="primary" [routerLink]="['/dashboard/protocols/detail', protocolId]" class="ms-auto">
@@ -73,19 +73,19 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
           <div class="protocol-info-grid">
             <div class="info-item">
               <span class="label">CÓDIGO DE TRÁMITE:</span>
-              <span class="value code">{{ generatedCode() || 'TRÁMITE EN PROCESO' }}</span>
+              <span class="value code">{{ header()?.ceishCode || 'TRÁMITE EN PROCESO' }}</span>
             </div>
             <div class="info-item">
               <span class="label">FECHA DE ENVÍO:</span>
-              <span class="value">{{ protocolSubmissionDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+              <span class="value">{{ header()?.submissionDate | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
             <div class="info-item full">
               <span class="label">INVESTIGADOR PRINCIPAL:</span>
-              <span class="value">{{ protocolInvestigator() || 'No especificado' }}</span>
+              <span class="value">{{ header()?.investigator || 'No especificado' }}</span>
             </div>
             <div class="info-item full">
               <span class="label">TEMA DEL PROYECTO:</span>
-              <span class="value title">"{{ protocolTitle() }}"</span>
+              <span class="value title">"{{ header()?.title }}"</span>
             </div>
           </div>
         </header>
@@ -105,39 +105,46 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let item of checklist()" [ngClass]="{'row-validated': item.statusId === 1, 'row-rejected': item.statusId === 2}">
+                <tr *ngFor="let item of checklist()" [ngClass]="{'row-validated': item.status === 'APROBADO' || item.status === 'VALIDADO', 'row-rejected': item.status === 'RECHAZADO'}">
                   <td class="req-label">
-                    <span class="req-id">{{ item.anexo }}</span>
-                    {{ item.label }}
-                    <span *ngIf="item.isOptional" class="badge-optional">(Opcional)</span>
-                    <span *ngIf="item.isOrphan" class="badge-orphan">(No tipificado)</span>
+                    <div class="d-flex flex-column">
+                      <span class="req-id">{{ item.code }}</span>
+                      <span class="req-name">{{ item.name }}</span>
+                      <span class="item-status-tag" [ngClass]="item.status.toLowerCase()">{{ item.status }}</span>
+                    </div>
                   </td>
                   <td class="text-center">
-                    <a *ngIf="item.documentUrl" [href]="item.documentUrl" target="_blank" mat-icon-button color="primary" matTooltip="Ver documento">
-                      <mat-icon>visibility</mat-icon>
-                    </a>
-                    <span *ngIf="!item.documentUrl" class="text-muted small">No subido</span>
+                    <div *ngIf="item.attachedDocument; else noDoc">
+                      <a [href]="item.attachedDocument.path" target="_blank" mat-icon-button color="primary" matTooltip="Ver documento cargado">
+                        <mat-icon>description</mat-icon>
+                      </a>
+                      <div class="small text-muted" style="font-size: 0.65rem;">{{ item.attachedDocument.fileName | slice:0:15 }}...</div>
+                    </div>
+                    <ng-template #noDoc>
+                      <span class="text-muted small italic">Sin archivo</span>
+                    </ng-template>
                   </td>
                   <td class="text-center">
-                    <div class="btn-group-validation">
-                      <button mat-icon-button [color]="item.statusId === 1 ? 'primary' : ''" 
+                    <div class="btn-group-validation" *ngIf="item.attachedDocument">
+                      <button mat-icon-button [color]="item.status === 'APROBADO' ? 'primary' : ''" 
                               (click)="onValidateItem(item, 1)" 
                               [disabled]="isProcessing"
-                              matTooltip="Aprobar">
-                        <mat-icon>{{ item.statusId === 1 ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
+                              matTooltip="Aprobar documento">
+                        <mat-icon>{{ item.status === 'APROBADO' ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
                       </button>
-                      <button mat-icon-button [color]="item.statusId === 2 ? 'warn' : ''" 
+                      <button mat-icon-button [color]="item.status === 'RECHAZADO' ? 'warn' : ''" 
                               (click)="onValidateItem(item, 2)" 
                               [disabled]="isProcessing"
-                              matTooltip="Rechazar">
-                        <mat-icon>{{ item.statusId === 2 ? 'cancel' : 'highlight_off' }}</mat-icon>
+                              matTooltip="Rechazar documento">
+                        <mat-icon>{{ item.status === 'RECHAZADO' ? 'cancel' : 'highlight_off' }}</mat-icon>
                       </button>
                     </div>
+                    <span *ngIf="!item.attachedDocument" class="small text-muted">-</span>
                   </td>
                   <td>
                     <input type="text" class="mini-input" [(ngModel)]="item.observations" 
-                           [placeholder]="item.statusId === 2 ? 'Motivo de rechazo (obligatorio)...' : 'Nota opcional...'"
-                           [required]="item.statusId === 2">
+                           [placeholder]="item.status === 'RECHAZADO' ? 'Motivo de rechazo (obligatorio)...' : 'Nota opcional...'"
+                           [disabled]="!item.attachedDocument || isProcessing">
                   </td>
                 </tr>
               </tbody>
@@ -145,8 +152,7 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
             <div *ngIf="checklist().length === 0" class="empty-docs-warning p-4 text-center">
               <mat-icon color="warn">warning</mat-icon>
-              <p>No se encontraron requisitos ni documentos cargados para este protocolo.</p>
-              <p class="small text-muted">Es posible que el investigador aún no haya subido archivos o existan problemas de configuración en los anexos del backend.</p>
+              <p>No se encontraron requisitos para este protocolo.</p>
             </div>
           </div>
         </div>
@@ -156,14 +162,17 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
           <h3 class="section-title"><mat-icon>fact_check</mat-icon> Verificación Global de Recepción</h3>
           <div class="d-flex align-items-center gap-4 mb-3">
             <mat-checkbox [(ngModel)]="isGlobalComplete" color="primary">¿Recepción física/digital completa?</mat-checkbox>
+            <span class="badge-status" [ngClass]="globalStatus()?.status?.toLowerCase()">
+              Estado: {{ globalStatus()?.status }}
+            </span>
           </div>
           <mat-form-field class="full-width" appearance="outline">
             <mat-label>Lista de Faltantes u Observaciones Generales</mat-label>
-            <textarea matInput rows="3" [(ngModel)]="missingItemsList" placeholder="Ej: Cédula borrosa, Falta Anexo 2..."></textarea>
+            <textarea matInput rows="3" [(ngModel)]="missingItemsList" placeholder="Ej: Cédula borrosa, falta Anexo 2..."></textarea>
           </mat-form-field>
           <div class="d-flex justify-content-end">
             <button mat-stroked-button color="accent" (click)="onUpdateGlobalVerification()" [disabled]="isProcessing">
-              <mat-icon>save</mat-icon> Guardar Verificación Manual
+              <mat-icon>save</mat-icon> Guardar Estado de Verificación
             </button>
           </div>
         </div>
@@ -173,7 +182,7 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
           <div class="summary-panel full-width">
             <div class="progress-container">
               <div class="progress-labels">
-                <span>Progreso de validación (Ítems obligatorios): {{ validatedMandatory() }} / {{ mandatoryCount() }}</span>
+                <span>Progreso de validación (Ítems obligatorios): {{ validatedCount() }} / {{ mandatoryCount() }}</span>
                 <strong>{{ progress() }}%</strong>
               </div>
               <mat-progress-bar mode="determinate" [value]="progress()" 
@@ -181,14 +190,15 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
             </div>
 
             <div class="action-buttons-row">
-              <button *ngIf="generatedCode()" mat-stroked-button color="accent" (click)="onDownloadCertificate()" class="btn-cert">
+              <button *ngIf="header()?.ceishCode && header()?.ceishCode !== 'TRÁMITE EN PROCESO'" mat-stroked-button color="accent" (click)="onDownloadCertificate()" class="btn-cert">
                 <mat-icon>download</mat-icon> DESCARGAR ANEXO 7 (CONSTANCIA)
               </button>
               
               <button mat-flat-button class="btn-finalize" 
-                      [disabled]="progress() < 100 || isProcessing || generatedCode()" (click)="onFinalize()">
+                      [disabled]="progress() < 100 || isProcessing || (header()?.ceishCode && header()?.ceishCode !== 'TRÁMITE EN PROCESO')" 
+                      (click)="onFinalize()">
                 <mat-icon>send</mat-icon>
-                {{ generatedCode() ? 'REVISIÓN FINALIZADA' : 'FINALIZAR REVISIÓN Y GENERAR CONSTANCIA' }}
+                {{ (header()?.ceishCode && header()?.ceishCode !== 'TRÁMITE EN PROCESO') ? 'REVISIÓN FINALIZADA' : 'FINALIZAR REVISIÓN Y GENERAR CONSTANCIA' }}
               </button>
             </div>
             
@@ -204,17 +214,16 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
   `,
   styles: [`
     .validation-wrapper { padding: 1.5rem; max-width: 1250px; margin: 0 auto; min-height: 80vh; }
-    
     .loading-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #64748b; }
     .error-state { text-align: center; padding: 4rem; color: #64748b; mat-icon { font-size: 48px; width: 48px; height: 48px; color: #ef4444; } }
 
     .official-header {
-      background: white; border: 2px solid #000; padding: 1.5rem;
+      background: white; border: 2px solid #000; padding: 1.5rem; border-radius: 4px;
       .top-row { display: flex; align-items: flex-start; gap: 1rem; border-bottom: 1px solid #000; padding-bottom: 1rem; margin-bottom: 1rem; }
       .header-text { flex: 1; text-align: center; 
         .institution { font-weight: 800; font-size: 1.1rem; display: block; color: #000; }
-        h1 { font-size: 1.25rem; font-weight: 900; color: #003366; margin: 0.5rem 0; }
-        .subtitle { font-size: 0.9rem; font-weight: 600; color: #000; margin: 0; }
+        h1 { font-size: 1.2rem; font-weight: 900; color: #003366; margin: 0.5rem 0; }
+        .subtitle { font-size: 0.85rem; font-weight: 600; color: #000; margin: 0; }
       }
     }
 
@@ -222,8 +231,9 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
       display: grid; grid-template-columns: 250px 1fr; gap: 0; border: 1px solid #000;
       .info-item { padding: 0.75rem; border-right: 1px solid #000; border-bottom: 1px solid #000; display: flex; flex-direction: column;
         &.full { grid-column: 1 / -1; border-right: none; }
+        &:last-child { border-bottom: none; }
         .label { font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 4px; }
-        .value { font-weight: 700; &.code { color: #003366; font-size: 1.1rem; } &.title { font-style: italic; } }
+        .value { font-weight: 700; color: #1e293b; &.code { color: #003366; font-size: 1.1rem; } &.title { font-style: italic; } }
       }
     }
 
@@ -234,12 +244,18 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
       th { background: #d1d5db; color: #000; border: 1px solid #000; padding: 10px; font-size: 0.75rem; text-transform: uppercase; }
       td { border: 1px solid #000; padding: 8px; font-size: 0.85rem; vertical-align: middle; }
       .req-label { 
-        .req-id { font-weight: 900; color: #003366; margin-right: 8px; } 
-        .badge-optional { font-size: 0.7rem; color: #64748b; margin-left: 4px; font-style: italic; }
-        .badge-orphan { font-size: 0.7rem; color: #ef4444; margin-left: 4px; font-weight: 700; }
+        .req-id { font-weight: 900; color: #003366; margin-bottom: 2px; } 
+        .req-name { font-weight: 500; color: #334155; }
+        .item-status-tag { 
+          font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; width: fit-content; margin-top: 4px; text-transform: uppercase;
+          &.presentado { background: #e0f2fe; color: #0369a1; }
+          &.no_presentado { background: #f1f5f9; color: #64748b; }
+          &.aprobado, &.validado { background: #dcfce7; color: #166534; }
+          &.rechazado { background: #fee2e2; color: #991b1b; }
+        }
       }
       .text-center { text-align: center; }
-      .mini-input { width: 100%; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; }
+      .mini-input { width: 100%; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; font-size: 0.8rem; }
       .btn-group-validation { display: flex; justify-content: center; gap: 4px; }
       .row-validated { background-color: #f0fdf4; }
       .row-rejected { background-color: #fef2f2; }
@@ -247,6 +263,12 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
     .verification-panel { background: white; border-radius: 12px; border: 1px solid #e2e8f0; }
     .section-title { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; font-weight: 700; color: #003366; margin-bottom: 1rem; }
+
+    .badge-status { padding: 4px 12px; border-radius: 100px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+      &.en_revision_secretaria { background: #fef3c7; color: #92400e; }
+      &.completo { background: #dcfce7; color: #166534; }
+      &.incompleto { background: #fee2e2; color: #991b1b; }
+    }
 
     .action-footer { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; }
     .summary-panel { display: flex; flex-direction: column; gap: 1.5rem; &.full-width { width: 100%; } }
@@ -278,178 +300,77 @@ export class ProtocolValidationDetailPage implements OnInit {
 
   isLoading = signal(true);
   protocolNotFound = signal(false);
-  protocolId = '';
-  protocolTitle = signal('');
-  protocolInvestigator = signal('');
-  protocolSubmissionDate = signal<Date | null>(null);
-  protocolType = signal(ProtocolType.IO);
-  protocolTypeLabel = computed(() => {
-    switch(this.protocolType()) {
-      case ProtocolType.IO: return 'ESTUDIO OBSERVACIONAL';
-      case ProtocolType.EC: return 'ENSAYO CLÍNICO';
-      case ProtocolType.EI: return 'ESTUDIO DE INTERVENCIÓN';
-      default: return 'PROTOCOLO';
-    }
-  });
-
-  progress = signal(0);
-  validatedMandatory = signal(0);
-  mandatoryCount = signal(0);
   isProcessing = false;
-  generatedCode = signal<string | null>(null);
-  
-  checklist = signal<any[]>([]);
+  protocolId = '';
 
-  // Verificación Global
+  header = signal<ValidationHeader | null>(null);
+  checklist = signal<ValidationChecklistItem[]>([]);
+  globalStatus = signal<ValidationGlobalStatus | null>(null);
+
+  // Verificación Global local (para edición)
   isGlobalComplete = false;
   missingItemsList = '';
 
+  progress = signal(0);
+  validatedCount = signal(0);
+  mandatoryCount = signal(0);
+
   ngOnInit() {
     this.protocolId = this.route.snapshot.params['id'];
-    this.loadProtocol();
+    this.loadValidationData();
   }
 
-  loadProtocol() {
+  loadValidationData() {
     this.isLoading.set(true);
-    
-    // 1. Intentamos obtener datos básicos del protocolo primero (Endpoint General)
-    // 2. Intentamos obtener el checklist (puede dar 403)
-    // 3. Intentamos obtener el historial de documentos (Endpoint 5, puede dar 403)
-    
-    forkJoin({
-      protocolBasic: this.repository.getById(this.protocolId).pipe(catchError(() => of(null))),
-      checklistRes: this.repository.getChecklist(this.protocolId).pipe(
-        catchError(err => {
-          console.warn('[ProtocolValidationDetailPage] Falló checklistRes (403 o error):', err);
-          return of({ requirements: [], documents: [] });
-        })
-      ),
-      documents: this.repository.getDocumentHistory(this.protocolId).pipe(
-        catchError(err => {
-          console.warn('[ProtocolValidationDetailPage] Falló documentHistory (403 o error):', err);
-          return of([]);
-        })
-      )
-    }).subscribe({
-      next: ({ protocolBasic, checklistRes, documents }) => {
-        // Combinar datos del protocolo
-        const protocol = checklistRes.protocol || checklistRes || protocolBasic;
-        if (!protocol && !protocolBasic) {
-          this.protocolNotFound.set(true);
-          this.isLoading.set(false);
-          return;
-        }
-
-        this.protocolTitle.set(protocol?.title || protocol?.titulo || 'Sin título');
-        this.protocolInvestigator.set(protocol?.investigator || protocol?.investigador || 'Investigador Principal');
-        this.protocolSubmissionDate.set(protocol?.submissionDate || protocol?.createdAt ? new Date(protocol.submissionDate || protocol.createdAt) : null);
-        this.protocolType.set(protocol?.type || ProtocolType.IO);
-        this.generatedCode.set(protocol?.code || null);
-        
-        this.isGlobalComplete = protocol?.status === 'COMPLETO' || protocol?.status === 'VALIDADO';
-        this.missingItemsList = protocol?.missingItemsList || '';
-
-        const requirements = checklistRes.requirements || checklistRes.documents || [];
-        const finalItems: any[] = [];
-        const linkedDocIds = new Set<string>();
-
-        // Primero: Mapear requisitos formales vinculando documentos
-        requirements.forEach((r: any) => {
-          const docForReq = documents.find((d: any) => 
-            (d.requirementId === r.id) || 
-            (d.requirement?.id === r.id) || 
-            (d.documentType?.id === r.id) ||
-            (d.name === r.name)
-          );
-
-          if (docForReq) linkedDocIds.add(docForReq.id);
-
-          const currentDoc = docForReq || r.currentDocument || r.document || (r.id && r.path ? r : null);
-          const status = r.status || currentDoc?.status;
-          
-          finalItems.push({
-            label: r.requirement?.name || r.name || r.documentType?.name || 'Requisito',
-            anexo: r.requirement?.description || r.description || r.documentType?.description || 'N/A',
-            requirementId: r.id || r.requirementId,
-            documentId: currentDoc?.id,
-            documentUrl: currentDoc?.path || currentDoc?.url, 
-            statusId: status === 'APROBADO' || status === 'VALIDADO' ? 1 : (status === 'RECHAZADO' ? 2 : (status === 'PRESENTADO' ? 0 : -1)),
-            statusLabel: status || 'PENDIENTE',
-            observations: currentDoc?.observations || r.observations || '',
-            isOptional: r.requirement?.isOptional || r.isOptional || false,
-            isOrphan: false
-          });
-        });
-
-        // Segundo: Añadir documentos "huérfanos" (subidos pero no tipificados en el checklist actual)
-        documents.forEach((d: any) => {
-          if (!linkedDocIds.has(d.id)) {
-            const status = d.status;
-            finalItems.push({
-              label: d.name || 'Archivo Adjunto',
-              anexo: d.type || 'S/N',
-              requirementId: null,
-              documentId: d.id,
-              documentUrl: d.path || d.url,
-              statusId: status === 'APROBADO' || status === 'VALIDADO' ? 1 : (status === 'RECHAZADO' ? 2 : (status === 'PRESENTADO' ? 0 : -1)),
-              statusLabel: status || 'PRESENTADO',
-              observations: d.observations || '',
-              isOptional: true,
-              isOrphan: true
-            });
-          }
-        });
-
-        this.checklist.set(finalItems);
-        this.updateProgress();
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error fatal cargando vista de validación:', err);
+    this.repository.getValidationDetail(this.protocolId).pipe(
+      catchError(err => {
+        console.error('[ProtocolValidationDetailPage] Error al cargar detalle:', err);
         this.protocolNotFound.set(true);
-        this.isLoading.set(false);
-        this.snackBar.open('❌ Error crítico al cargar la información.', 'Cerrar', { duration: 5000 });
+        return of(null);
+      })
+    ).subscribe(data => {
+      if (data) {
+        console.log('[ProtocolValidationDetailPage] Detalle cargado:', data);
+        
+        this.header.set(data.header);
+        this.checklist.set(data.checklist || []);
+        this.globalStatus.set(data.globalStatus);
+        
+        if (data.globalStatus) {
+          this.isGlobalComplete = data.globalStatus.isComplete;
+          this.missingItemsList = data.globalStatus.missingItemsList || '';
+        }
+        
+        this.updateProgress();
+      } else {
+        this.protocolNotFound.set(true);
       }
+      this.isLoading.set(false);
     });
   }
 
-  onValidateItem(item: any, statusId: number) {
-    if (statusId === 2 && (!item.observations || item.observations.trim().length < 5)) {
+  onValidateItem(item: ValidationChecklistItem, actionType: number) {
+    if (!item.attachedDocument) return;
+
+    if (actionType === 2 && (!item.observations || item.observations.trim().length < 5)) {
       this.snackBar.open('⚠️ Por favor ingrese un motivo de rechazo técnico (mín. 5 carácteres).', 'Cerrar');
       return;
     }
 
     this.isProcessing = true;
-
-    if (item.documentId) {
-      this.docRepository.validateDocument(item.documentId, statusId, item.observations).subscribe({
-        next: () => this.handleValidationSuccess(item, statusId),
-        error: () => this.handleValidationError()
-      });
-    } else if (item.requirementId) {
-      const statusLabel = statusId === 1 ? 'APROBADO' : 'RECHAZADO';
-      this.repository.updateRequirementStatus(this.protocolId, item.requirementId, statusLabel).subscribe({
-        next: () => this.handleValidationSuccess(item, statusId),
-        error: () => this.handleValidationError()
-      });
-    } else {
-      this.isProcessing = false;
-      this.snackBar.open('⚠️ No se puede validar un ítem sin ID de documento o requisito.', 'Cerrar');
-    }
-  }
-
-  private handleValidationSuccess(item: any, statusId: number) {
-    item.statusId = statusId;
-    item.statusLabel = statusId === 1 ? 'APROBADO' : (statusId === 2 ? 'RECHAZADO' : 'OBSERVADO');
-    this.updateProgress();
-    this.isProcessing = false;
-    const msg = statusId === 1 ? 'Ítem aprobado' : 'Ítem rechazado';
-    this.snackBar.open(`✅ ${msg}`, 'Cerrar', { duration: 2000 });
-  }
-
-  private handleValidationError() {
-    this.isProcessing = false;
-    this.snackBar.open('❌ Error al procesar la validación', 'Cerrar', { duration: 3000 });
+    this.docRepository.validateDocument(item.attachedDocument.id.toString(), actionType, item.observations || '').subscribe({
+      next: () => {
+        item.status = actionType === 1 ? 'APROBADO' : 'RECHAZADO';
+        this.updateProgress();
+        this.isProcessing = false;
+        const msg = actionType === 1 ? 'Ítem aprobado' : 'Ítem rechazado';
+        this.snackBar.open(`✅ ${msg}`, 'Cerrar', { duration: 2000 });
+      },
+      error: () => {
+        this.isProcessing = false;
+        this.snackBar.open('❌ Error al procesar la validación', 'Cerrar', { duration: 3000 });
+      }
+    });
   }
 
   onUpdateGlobalVerification() {
@@ -458,6 +379,7 @@ export class ProtocolValidationDetailPage implements OnInit {
       next: () => {
         this.isProcessing = false;
         this.snackBar.open('✅ Verificación global guardada', 'Cerrar', { duration: 2000 });
+        this.loadValidationData(); // Recargar para actualizar badge de estado global
       },
       error: () => {
         this.isProcessing = false;
@@ -467,24 +389,26 @@ export class ProtocolValidationDetailPage implements OnInit {
   }
 
   updateProgress() {
-    const mandatoryItems = this.checklist().filter(c => !c.isOptional && !c.isOrphan);
-    this.mandatoryCount.set(mandatoryItems.length);
-    
-    if (mandatoryItems.length === 0) {
+    const items = this.checklist();
+    if (items.length === 0) {
       this.progress.set(100);
-      this.validatedMandatory.set(0);
       return;
     }
+
+    const totalItems = items.length;
+    const validatedItems = items.filter(i => i.status === 'APROBADO' || i.status === 'VALIDADO').length;
     
-    const validatedMandatoryCount = mandatoryItems.filter(c => c.statusId === 1).length;
-    this.validatedMandatory.set(validatedMandatoryCount);
-    this.progress.set(Math.round((validatedMandatoryCount / mandatoryItems.length) * 100));
+    this.mandatoryCount.set(totalItems);
+    this.validatedCount.set(validatedItems);
+    this.progress.set(Math.round((validatedItems / totalItems) * 100));
   }
 
   onFinalize() {
-    const pendingMandatory = this.checklist().some(c => !c.isOptional && !c.isOrphan && c.statusId !== 1);
-    if (pendingMandatory) {
-      this.snackBar.open('❌ Error: Existen documentos obligatorios pendientes de validación.', 'Cerrar');
+    const items = this.checklist();
+    const pending = items.some(i => i.status !== 'APROBADO' && i.status !== 'VALIDADO');
+    
+    if (pending) {
+      this.snackBar.open('❌ Error: Existen documentos pendientes de validación o rechazados.', 'Cerrar');
       return;
     }
 
@@ -493,7 +417,6 @@ export class ProtocolValidationDetailPage implements OnInit {
       next: (res) => {
         this.isProcessing = false;
         const code = res.ceishCode || res.code || 'GENERADO';
-        this.generatedCode.set(code);
         
         const dialogRef = this.dialog.open(ReceptionSuccessDialog, {
           width: '500px',
@@ -524,12 +447,13 @@ export class ProtocolValidationDetailPage implements OnInit {
   }
 
   onDownloadCertificate() {
+    const code = this.header()?.ceishCode || 'CONSTANCIA';
     this.repository.getCertificate(this.protocolId).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `Anexo_7_Constancia_${this.generatedCode()}.pdf`;
+        link.download = `Anexo_7_Constancia_${code}.pdf`;
         link.click();
         window.URL.revokeObjectURL(url);
       },

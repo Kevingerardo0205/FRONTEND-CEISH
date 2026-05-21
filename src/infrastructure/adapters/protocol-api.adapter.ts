@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { ProtocolEntity } from '@domain/entities/protocol.entity';
+import { ProtocolEntity, ValidationDetailResponse } from '@domain/entities/protocol.entity';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
@@ -24,20 +24,19 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   }
 
   getReceptionProtocols(): Observable<ProtocolEntity[]> {
-    /**
-     * Fallback secuencial:
-     * 1. /reception/protocol (v2 singular)
-     * 2. /reception/protocols (v2 plural)
-     * 3. /protocols (v1)
-     */
+    // El backend ahora devuelve un array directo con todos los protocolos de recepción
     return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.RECEPTION.LIST).pipe(
-      catchError(() => this.apiClient.get<any>('/reception/protocols')),
-      catchError(() => this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.BASE)),
       map(res => this.extractAndMapList(res)),
       catchError(err => {
-        console.error('[ProtocolApiAdapter] Todos los fallbacks de recepción fallaron:', err);
+        console.error('[ProtocolApiAdapter] Error cargando lista de recepción:', err);
         return of([]);
       })
+    );
+  }
+
+  getProtocolsByStatus(status: string): Observable<ProtocolEntity[]> {
+    return this.getReceptionProtocols().pipe(
+      map(list => list.filter(p => p.status === status))
     );
   }
 
@@ -89,7 +88,6 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   }
 
   getCertificate(id: string): Observable<Blob> {
-    // El backend del Sprint 1 usa POST para generar el certificado según la tabla
     return this.apiClient.post(ENDPOINTS.PROTOCOLS.RECEPTION.CERTIFICATE(id), {}, { responseType: 'blob' });
   }
 
@@ -98,16 +96,22 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   }
 
   updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<any> {
-    return this.apiClient.patch(`/reception/protocol/${protocolId}/requirement/${reqId}`, {
+    return this.apiClient.patch(ENDPOINTS.PROTOCOLS.RECEPTION.REQUIREMENT_STATUS(protocolId, reqId), {
       status
     });
   }
 
   verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<any> {
-    return this.apiClient.patch(`/reception/protocol/${protocolId}/verify`, {
+    return this.apiClient.patch(ENDPOINTS.PROTOCOLS.RECEPTION.VERIFY(protocolId), {
       isComplete,
       missingItemsList
     });
+  }
+
+  getValidationDetail(id: string): Observable<ValidationDetailResponse> {
+    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.RECEPTION.VALIDATION_DETAIL(id)).pipe(
+      map(res => res.data || res)
+    );
   }
 
   private extractAndMapList(res: any): ProtocolEntity[] {
@@ -118,52 +122,39 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   private extractAnyArray(res: any): any[] {
     if (!res) return [];
     if (Array.isArray(res)) return res;
-
-    // Función recursiva para encontrar el primer arreglo en un objeto
-    const findFirstArray = (obj: any, depth = 0): any[] | null => {
-      if (depth > 3 || !obj || typeof obj !== 'object') return null;
-      if (Array.isArray(obj)) return obj;
-      
-      const priorityKeys = ['protocols', 'protocolos', 'data', 'items', 'results', 'list', 'rows', 'documents', 'documentos'];
-      for (const key of priorityKeys) {
-        if (obj[key] && Array.isArray(obj[key])) return obj[key];
-      }
-
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          const result = findFirstArray(obj[key], depth + 1);
-          if (result) return result;
-        }
-      }
-      return null;
-    };
-
-    return findFirstArray(res) || [];
+    if (res.data && Array.isArray(res.data)) return res.data;
+    return [];
   }
 
   private mapToEntity(data: any): ProtocolEntity {
     if (!data) return {} as ProtocolEntity;
+    const raw = data.data || data;
     
-    // El status puede venir como string o como objeto { name: '...' } o { id: 1, name: '...' }
-    let statusLabel = 'DESCONOCIDO';
-    if (typeof data.status === 'string') {
-      statusLabel = data.status;
-    } else if (data.status && typeof data.status === 'object') {
-      statusLabel = data.status.name || data.status.label || data.status.descripcion || 'DESCONOCIDO';
-    } else if (data.estado) {
-      statusLabel = typeof data.estado === 'string' ? data.estado : (data.estado.name || 'DESCONOCIDO');
+    // Mapeo de estado según el nuevo campo receptionStatus
+    let statusLabel = raw.receptionStatus || raw.status || raw.estado || 'DESCONOCIDO';
+    if (typeof statusLabel === 'object') {
+      statusLabel = statusLabel.name || statusLabel.label || 'DESCONOCIDO';
+    }
+
+    // Mapeo de Investigador Principal
+    let pi = raw.principalInvestigator || '';
+    if (!pi && raw.investigators && Array.isArray(raw.investigators)) {
+      const principal = raw.investigators.find((i: any) => i.role === 'PRINCIPAL');
+      if (principal) pi = principal.fullName || principal.nombre || '';
     }
 
     return {
-      id: data.id?.toString() || '',
-      title: data.title || data.titulo || 'Sin título',
-      investigatorId: data.investigatorId || data.investigadorId || '',
-      type: data.type || data.tipo || '',
+      id: raw.id?.toString() || '',
+      title: raw.title || raw.titulo || 'Sin título',
+      investigatorId: raw.investigatorId || '',
+      principalInvestigator: pi,
+      type: (raw.studyType || raw.type || '') as ProtocolType,
+      studyTypeCode: raw.studyType || raw.studyTypeCode || '',
       status: statusLabel.toUpperCase() as any,
-      submissionDate: data.submissionDate || data.fechaEnvio || data.createdAt ? new Date(data.submissionDate || data.fechaEnvio || data.createdAt) : new Date(),
-      code: data.code || data.codigo || '',
-      documents: data.documents || data.documentos || [],
-      version: data.version || 1
+      submissionDate: raw.receptionDate ? new Date(raw.receptionDate) : (raw.submissionDate ? new Date(raw.submissionDate) : new Date()),
+      code: raw.ceishCode || raw.code || '',
+      documents: raw.documents || [],
+      version: raw.version || 1
     };
   }
 }

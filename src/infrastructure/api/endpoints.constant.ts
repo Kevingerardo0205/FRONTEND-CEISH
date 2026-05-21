@@ -18,12 +18,15 @@ export const ENDPOINTS = {
     UPLOAD_DOCUMENT: (id: string) => `/reception/protocol/${id}/document`,
     RECEPTION: {
       CREATE: '/protocols',
-      LIST: '/reception/protocol',
+      LIST: '/reception/protocols',
       BULK_UPLOAD: (id: string) => `/reception/protocol/${id}/documents/bulk`,
       FINALIZE: (id: string) => `/reception/protocol/${id}/finalize`,
       CERTIFICATE: (id: string) => `/reception/protocol/${id}/certificate`,
       VALIDATE_DOC: (id: string) => `/reception/document/${id}/validate`,
       DOCUMENTS_HISTORY: (id: string) => `/reception/protocol/${id}/documents`,
+      REQUIREMENT_STATUS: (protocolId: string, reqId: string) => `/reception/protocol/${protocolId}/requirement/${reqId}`,
+      VERIFY: (protocolId: string) => `/reception/protocol/${protocolId}/verify`,
+      VALIDATION_DETAIL: (id: string) => `/reception/protocol/${id}/validation-detail`,
     }
   },
   DOCUMENTS: {

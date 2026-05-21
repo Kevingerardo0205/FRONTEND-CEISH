@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { A11yModule } from '@angular/cdk/a11y';
 import { VerifyOtpUseCase } from '../../../use-cases';
 
 interface DialogData {
@@ -16,6 +17,7 @@ interface DialogData {
 @Component({
   selector: 'app-otp-verification-dialog',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -24,10 +26,11 @@ interface DialogData {
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    A11yModule
   ],
   template: `
-    <div class="otp-premium-wrapper">
+    <div class="otp-premium-wrapper" cdkTrapFocus cdkTrapFocusAutoCapture>
       <div class="glass-header">
         <div class="icon-circle">
           <mat-icon>shield_lock</mat-icon>
@@ -50,25 +53,31 @@ interface DialogData {
               <mat-label>Código de 6 dígitos</mat-label>
               <input matInput formControlName="code" placeholder="· · · · · ·" 
                      maxlength="6" class="otp-main-input" 
+                     cdkFocusInitial
                      (keypress)="onKeyPressNumber($event)">
               <mat-icon matSuffix color="primary">key</mat-icon>
               <mat-hint>Ingrese el código recibido en su bandeja</mat-hint>
             </mat-form-field>
           </div>
 
-          <div *ngIf="errorMessage" class="error-glass animate-shake">
-            <mat-icon>warning</mat-icon>
-            <span>{{ errorMessage }}</span>
-          </div>
+          @if (errorMessage()) {
+            <div class="error-glass animate-shake">
+              <mat-icon>warning</mat-icon>
+              <span>{{ errorMessage() }}</span>
+            </div>
+          }
 
           <div class="actions-group mt-5">
             <button mat-flat-button class="premium-verify-btn" 
-                    [disabled]="otpForm.invalid || isLoading">
-              <div class="btn-content" *ngIf="!isLoading">
-                <span>VERIFICAR AHORA</span>
-                <mat-icon>verified</mat-icon>
+                    [disabled]="otpForm.invalid || isLoading()">
+              <div class="btn-content">
+                @if (isLoading()) {
+                  <mat-progress-spinner diameter="24" mode="indeterminate" class="white-spinner"></mat-progress-spinner>
+                } @else {
+                  <span>VERIFICAR AHORA</span>
+                  <mat-icon>verified</mat-icon>
+                }
               </div>
-              <mat-progress-spinner *ngIf="isLoading" diameter="24" mode="indeterminate" class="white-spinner"></mat-progress-spinner>
             </button>
             
             <button mat-button type="button" class="cancel-link" (click)="onClose()">
@@ -80,17 +89,15 @@ interface DialogData {
         <div class="resend-footer mt-4">
           <div class="divider"></div>
           <p class="small text-muted mb-2">¿No recibiste nada?</p>
-          <button mat-stroked-button class="resend-btn" [disabled]="resendDisabled" (click)="onResend()">
+          <button mat-stroked-button class="resend-btn" [disabled]="resendDisabled()" (click)="onResend()">
             <mat-icon>refresh</mat-icon>
-            {{ resendDisabled ? 'Reintentar en ' + timer + 's' : 'Reenviar Código' }}
+            {{ resendDisabled() ? 'Reintentar en ' + timer() + 's' : 'Reenviar Código' }}
           </button>
         </div>
       </mat-dialog-content>
     </div>
   `,
   styles: [`
-    @use 'variables' as vars;
-
     .otp-premium-wrapper {
       background: white;
       border-radius: 24px;
@@ -188,24 +195,31 @@ interface DialogData {
       30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
       40%, 60% { transform: translate3d(4px, 0, 0); }
     }
-  `]
+  `],
 })
-export class OtpVerificationDialogComponent {
+export class OtpVerificationDialogComponent implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly verifyOtpUseCase = inject(VerifyOtpUseCase);
   private readonly dialogRef = inject(MatDialogRef<OtpVerificationDialogComponent>);
   public readonly data: DialogData = inject(MAT_DIALOG_DATA);
 
   otpForm: FormGroup;
-  isLoading = false;
-  errorMessage = '';
-  resendDisabled = false;
-  timer = 60;
+  isLoading = signal(false);
+  errorMessage = signal('');
+  resendDisabled = signal(false);
+  timer = signal(60);
+  private intervalId: any;
 
   constructor() {
     this.otpForm = this.fb.group({
       code: ['', [Validators.required, Validators.pattern('^[0-9]{6}$')]]
     });
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
   }
 
   onKeyPressNumber(event: KeyboardEvent) {
@@ -218,17 +232,17 @@ export class OtpVerificationDialogComponent {
 
   onVerify() {
     if (this.otpForm.valid) {
-      this.isLoading = true;
-      this.errorMessage = '';
+      this.isLoading.set(true);
+      this.errorMessage.set('');
 
       this.verifyOtpUseCase.execute(this.data.email, this.otpForm.value.code).subscribe({
-        next: (res: any) => {
-          this.isLoading = false;
-          this.dialogRef.close(true); // Éxito
+        next: () => {
+          this.isLoading.set(false);
+          this.dialogRef.close(true);
         },
         error: (err: any) => {
-          this.isLoading = false;
-          this.errorMessage = err.message || 'Código incorrecto';
+          this.isLoading.set(false);
+          this.errorMessage.set(err.message || 'Código incorrecto');
         }
       });
     }
@@ -239,18 +253,18 @@ export class OtpVerificationDialogComponent {
   }
 
   onResend() {
-    this.resendDisabled = true;
+    this.resendDisabled.set(true);
     this.startTimer();
     console.log('Reenviando código a:', this.data.email);
   }
 
   private startTimer() {
-    this.timer = 60;
-    const interval = setInterval(() => {
-      this.timer--;
-      if (this.timer <= 0) {
-        this.resendDisabled = false;
-        clearInterval(interval);
+    this.timer.set(60);
+    this.intervalId = setInterval(() => {
+      this.timer.update(t => t - 1);
+      if (this.timer() <= 0) {
+        this.resendDisabled.set(false);
+        clearInterval(this.intervalId);
       }
     }, 1000);
   }

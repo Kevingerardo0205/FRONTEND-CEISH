@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { ProtocolEntity } from '@domain/entities/protocol.entity';
+import { ProtocolEntity, ValidationDetailResponse } from '@domain/entities/protocol.entity';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 
@@ -14,7 +14,9 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
       id: '1',
       title: 'Prevalencia de parasitosis intestinal mediante técnicas coproparasitológicas en niños y adolescentes de 5 a 18 años de la parroquia Punín, provincia de Chimborazo',
       investigatorId: 'inv-123',
+      principalInvestigator: 'Juan Pérez',
       type: ProtocolType.IO,
+      studyTypeCode: 'IO',
       status: ProtocolStatus.SUBMITTED,
       submissionDate: new Date(),
       code: 'IO-01-CEISH-ESPOCH-2026',
@@ -25,7 +27,9 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
       id: '2',
       title: 'Estudio comparativo de la eficacia de dos protocolos de rehabilitación post-infarto',
       investigatorId: 'inv-456',
+      principalInvestigator: 'María López',
       type: ProtocolType.EC,
+      studyTypeCode: 'EC',
       status: ProtocolStatus.SUBMITTED,
       submissionDate: new Date(),
       documents: [],
@@ -39,6 +43,22 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
 
   getReceptionProtocols(): Observable<ProtocolEntity[]> {
     return of(this.protocols);
+  }
+
+  getProtocolsByStatus(status: string, params?: { page?: number, limit?: number }): Observable<any> {
+    const filtered = this.protocols.filter(p => p.status === status || (status === 'EN_REVISION_SECRETARIA' && p.status === ProtocolStatus.SUBMITTED));
+    const page = params?.page || 1;
+    const limit = params?.limit || 20;
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    
+    return of({
+      data: filtered.slice(start, end),
+      total: filtered.length,
+      page,
+      limit,
+      totalPages: Math.ceil(filtered.length / limit)
+    });
   }
 
   save(protocol: Partial<ProtocolEntity>): Observable<ProtocolEntity> {
@@ -106,5 +126,42 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
   verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<any> {
     console.log(`[ProtocolMockAdapter] Verificando protocolo ${protocolId}: complete=${isComplete}, missing=${missingItemsList}`);
     return of({ message: 'Verificación de protocolo guardada exitosamente (Mock)' });
+  }
+
+  getValidationDetail(id: string): Observable<ValidationDetailResponse> {
+    const protocol = this.protocols.find(p => p.id === id);
+    return of({
+      header: {
+        id: Number(id),
+        ceishCode: protocol?.code || 'TRÁMITE EN PROCESO',
+        title: protocol?.title || 'Sin título',
+        submissionDate: new Date().toISOString(),
+        investigator: protocol?.principalInvestigator || 'Investigador Mock',
+        studyType: 'Estudio Observacional'
+      },
+      checklist: [
+        {
+          id: 1,
+          code: 'ANX-1',
+          name: 'Carta de Cita Archivo Adjunto',
+          status: 'PRESENTADO',
+          observations: 'Nota mock',
+          attachedDocument: {
+            id: 101,
+            fileName: 'mock_file.pdf',
+            path: 'mock/path',
+            isValidated: false,
+            uploadedAt: new Date().toISOString()
+          }
+        }
+      ],
+      globalStatus: {
+        isComplete: false,
+        status: 'EN_REVISION_SECRETARIA',
+        hasMissingItems: false,
+        missingItemsList: null,
+        submissionDeadline: null
+      }
+    });
   }
 }

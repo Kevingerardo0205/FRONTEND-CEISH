@@ -91,3 +91,14 @@ body {
   .mat-mdc-button { color: white !important; }
 }
 
+// Material Dialog Personalizado
+.modern-dialog-container {
+  .mat-mdc-dialog-container {
+    padding: 0 !important;
+    .mdc-dialog__surface {
+      border-radius: 24px !important;
+      overflow: hidden !important;
+    }
+  }
+}
+
