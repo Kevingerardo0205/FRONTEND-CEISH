@@ -80,13 +80,15 @@ export class ProtocoloService extends BaseApiService {
    */
   subirDocumento(file: File, protocolId: number, requirementId: number): Observable<any> {
     const formData = new FormData();
-    formData.append('files', file); // El backend espera 'files' (plural) según la estructura NestJS
+    // El backend espera 'file' (singular)
+    formData.append('file', file); 
+    formData.append('protocolId', protocolId.toString()); // ID faltante detectado en logs del backend
     formData.append('requirementId', requirementId.toString());
     formData.append('fileName', file.name);
     formData.append('sizeBytes', file.size.toString());
-    
-    const url = this.isInvestigador 
-      ? `/protocols/${protocolId}/upload-document` 
+
+    const url = this.isInvestigador
+      ? `/protocols/${protocolId}/upload-document`
       : ENDPOINTS.PROTOCOLS.UPLOAD_DOCUMENT(protocolId.toString());
 
     console.log(`[ProtocoloService] Subiendo documento a: ${url} (ReqID: ${requirementId})`);
@@ -102,22 +104,24 @@ export class ProtocoloService extends BaseApiService {
 
   subirDocumentosBulk(protocolId: number, files: File[]): Observable<any> {
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    
+    // El backend espera 'file' (singular)
+    files.forEach(file => formData.append('file', file));
+
     const url = this.isInvestigador
       ? `/protocols/${protocolId}/documents/bulk`
       : ENDPOINTS.PROTOCOLS.RECEPTION.BULK_UPLOAD(protocolId.toString());
 
     return this.post<any>(url, formData);
   }
-
   /**
-   * 4. Cierre y Generación de Código CEISH
+   * 4. Cierre y Envío para Revisión Técnica
    */
   finalizarProtocolo(protocolId: number): Observable<any> {
     const url = this.isInvestigador
-      ? `/protocols/${protocolId}/finalize`
-      : ENDPOINTS.PROTOCOLS.RECEPTION.FINALIZE(protocolId.toString());
+      ? `/protocols/${protocolId}/submit` // El backend espera 'submit' para el Investigador
+      : ENDPOINTS.PROTOCOLS.RECEPTION.FINALIZE(protocolId.toString()); // 'finalize' para Secretaría
+
+    console.log(`[ProtocoloService] Enviando/Finalizando protocolo: ${url}`);
     return this.post<any>(url, {});
   }
 

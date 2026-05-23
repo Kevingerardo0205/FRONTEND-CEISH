@@ -25,6 +25,8 @@ import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { DocumentApiAdapter } from '@infrastructure/adapters/document-api.adapter';
 import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
 import { ResolutionApiAdapter } from '@infrastructure/adapters/resolution-api.adapter';
+import { ISecurityRepositoryPort } from '@domain/ports/ISecurityRepositoryPort';
+import { SecurityApiAdapter } from '@infrastructure/adapters/security-api.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -40,6 +42,7 @@ export const appConfig: ApplicationConfig = {
     { provide: IEvaluatorRepositoryPort, useClass: EvaluatorMockAdapter },
     { provide: IProtocolRepositoryPort, useClass: ProtocolApiAdapter },
     { provide: IDocumentRepositoryPort, useClass: DocumentApiAdapter },
-    { provide: IResolutionRepositoryPort, useClass: ResolutionApiAdapter }
+    { provide: IResolutionRepositoryPort, useClass: ResolutionApiAdapter },
+    { provide: ISecurityRepositoryPort, useClass: SecurityApiAdapter }
   ]
 };

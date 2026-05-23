@@ -20,6 +20,7 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
   'DASHBOARD_RESUMEN': { label: 'Resumen', icon: 'analytics', path: '/dashboard/home' },
   'USUARIOS_VER': { label: 'Gestión de Usuarios', icon: 'people', path: '/dashboard/admin/users' },
   'USUARIOS_CREAR': { label: 'Nuevo Profesional', icon: 'person_add', path: '/dashboard/admin/users' },
+  'PERMISOS_GESTIONAR': { label: 'Roles y Permisos', icon: 'admin_panel_settings', path: '/dashboard/admin/security' },
   
   // Recepción de Protocolos (Secretaría / Admin)
   'RECEPCION_NUEVO': { label: 'Recepción Nueva', path: '/dashboard/protocols/reception/new', icon: 'add_task' },

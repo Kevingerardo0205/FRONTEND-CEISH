@@ -19,6 +19,12 @@ export const DASHBOARD_ROUTES: Routes = [
         data: { permissions: ['USUARIOS_VER'] }
       },
       {
+        path: 'admin/security',
+        loadChildren: () => import('@features/security/routes').then(m => m.SECURITY_ROUTES),
+        canActivate: [AuthGuard],
+        data: { permissions: ['PERMISOS_GESTIONAR'] }
+      },
+      {
         path: 'protocols',
         loadChildren: () => import('@features/protocols/routes').then(m => m.PROTOCOL_ROUTES)
       },

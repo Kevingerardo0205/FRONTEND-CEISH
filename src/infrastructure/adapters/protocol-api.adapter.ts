@@ -59,7 +59,8 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
 
   uploadDocuments(protocolId: string, files: File[]): Observable<ProtocolEntity> {
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    // El backend (Multer) espera el campo 'file' en singular
+    files.forEach(file => formData.append('file', file));
     return this.apiClient.post<any>(ENDPOINTS.PROTOCOLS.RECEPTION.BULK_UPLOAD(protocolId), formData).pipe(
       map(data => this.mapToEntity(data))
     );

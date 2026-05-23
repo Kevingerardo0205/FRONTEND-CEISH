@@ -28,6 +28,12 @@ export abstract class BaseApiService {
     );
   }
 
+  protected patch<T>(endpoint: string, body: any): Observable<T> {
+    return this.apiClient.patch<T>(endpoint, body).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   protected delete<T>(endpoint: string): Observable<T> {
     return this.apiClient.delete<T>(endpoint).pipe(
       catchError(this.handleError)
