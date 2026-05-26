@@ -153,7 +153,13 @@ import { ProtocoloDetalle, EstadoProtocolo } from '../../../domain/dtos/crear-pr
             <div class="p-3">
               <div class="d-grid gap-2">
                 <button mat-flat-button class="btn-espoch" 
-                        [disabled]="protocolo.estado !== EstadoProtocolo.REQUIERE_CORRECCION">
+                        *ngIf="protocolo.estado === EstadoProtocolo.REQUIERE_CORRECCION || protocolo.estado === EstadoProtocolo.BORRADOR"
+                        [routerLink]="['/investigador/protocolo', protocolo.id, 'editar']">
+                  <mat-icon class="me-2">edit_note</mat-icon> Completar / Editar Datos
+                </button>
+                <button mat-flat-button class="btn-espoch" 
+                        *ngIf="protocolo.estado !== EstadoProtocolo.REQUIERE_CORRECCION && protocolo.estado !== EstadoProtocolo.BORRADOR"
+                        [disabled]="true">
                   <mat-icon class="me-2">edit_note</mat-icon> Atender Observaciones
                 </button>
                 <button mat-stroked-button color="primary" [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"

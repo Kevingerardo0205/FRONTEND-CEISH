@@ -149,13 +149,27 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       title: raw.title || raw.titulo || 'Sin título',
       investigatorId: raw.investigatorId || '',
       principalInvestigator: pi,
-      type: (raw.studyType || raw.type || '') as ProtocolType,
-      studyTypeCode: raw.studyType || raw.studyTypeCode || '',
+      type: (raw.studyType?.code || raw.type || '') as ProtocolType,
+      studyTypeCode: raw.studyType?.code || raw.studyTypeCode || '',
+      studyType: raw.studyType || null,
       status: statusLabel.toUpperCase() as any,
       submissionDate: raw.receptionDate ? new Date(raw.receptionDate) : (raw.submissionDate ? new Date(raw.submissionDate) : new Date()),
       code: raw.ceishCode || raw.code || '',
       documents: raw.documents || [],
-      version: raw.version || 1
+      version: raw.version || 1,
+      riskLevel: raw.riskLevel || null,
+      riskLevelId: raw.riskLevelId || null,
+      geographicCoverage: raw.geographicCoverage || null,
+      studyDurationMonths: raw.studyDurationMonths || null,
+      lugarEjecucion: raw.lugarEjecucion || null,
+      fechaInicioEstimada: raw.fechaInicioEstimada || null,
+      fechaFinEstimada: raw.fechaFinEstimada || null,
+      sponsorRuc: raw.sponsorRuc || null,
+      sponsorPhone: raw.sponsorPhone || null,
+      sponsorAddress: raw.sponsorAddress || null,
+      sponsorWeb: raw.sponsorWeb || null,
+      sponsorExecutingAgency: raw.sponsorExecutingAgency || raw.sponsorExecutingOrgan || raw.executingOrgan || null,
+      financingAmount: raw.financingAmount || raw.amount || null
     };
   }
 }

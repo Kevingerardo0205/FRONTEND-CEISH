@@ -18,266 +18,97 @@
 
   <main class="register-main-content">
     <div class="content-header animate-fade-in">
-      <h1 class="page-title">Nuevo Protocolo - Wizard V2</h1>
-      <p class="page-subtitle">Siga los pasos técnicos integrados con el backend NestJS.</p>
+      <h1 class="page-title">Nuevo Protocolo</h1>
+      <p class="page-subtitle">Complete la información básica y cargue la documentación requerida por el CEISH.</p>
     </div>
 
     <mat-card class="register-stepper-card shadow-soft animate-fade-in">
       <mat-stepper [linear]="true" #stepper class="custom-stepper">
         
-        <!-- PASO 1: GENERAL -->
+        <!-- PASO 1: INFORMACIÓN GENERAL -->
         <mat-step [stepControl]="generalForm">
-          <ng-template matStepLabel>General</ng-template>
+          <ng-template matStepLabel>Información General</ng-template>
           <div class="step-content">
             <form [formGroup]="generalForm" class="row g-4">
-              <!-- Información del Estudio -->
+              <!-- Título -->
               <div class="col-12">
-                <label class="field-label">Título de la investigación (Población, Lugar y Período)</label>
+                <label class="field-label">Título de la investigación (Población, Lugar y Período) *</label>
                 <mat-form-field appearance="outline">
-                  <textarea matInput formControlName="titulo" rows="3" placeholder="Ej: Frecuencia de anemia..."></textarea>
+                  <textarea matInput formControlName="titulo" rows="3" placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."></textarea>
                   <mat-hint align="end">{{generalForm.get('titulo')?.value?.length || 0}}/200</mat-hint>
+                  <mat-error *ngIf="generalForm.get('titulo')?.hasError('required')">El título es requerido</mat-error>
+                  <mat-error *ngIf="generalForm.get('titulo')?.hasError('minlength')">El título debe tener al menos 20 caracteres</mat-error>
                 </mat-form-field>
               </div>
 
-              <div class="col-md-6">
-                <label class="field-label">Tipo de investigación</label>
+              <!-- Tipo de Estudio -->
+              <div class="col-md-12">
+                <label class="field-label">Tipo de investigación *</label>
                 <mat-form-field appearance="outline" class="w-100">
                   <mat-select formControlName="tipoEstudio" placeholder="--- SELECCIONE ---">
                     <mat-option *ngFor="let t of tiposEstudio" [value]="t.id || t.code || t">
                       {{ t.nombre || t.name || t.description || t }}
                     </mat-option>
                   </mat-select>
+                  <mat-error *ngIf="generalForm.get('tipoEstudio')?.hasError('required')">El tipo de estudio es obligatorio</mat-error>
                 </mat-form-field>
               </div>
 
-              <div class="col-md-6">
-                <label class="field-label">Nivel de Riesgo</label>
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-select formControlName="riskLevelId" placeholder="--- SELECCIONE ---">
-                    <mat-option *ngFor="let r of nivelesRiesgo" [value]="r.id">
-                      {{ r.name }} - {{ r.description }}
-                    </mat-option>
-                  </mat-select>
-                  <mat-error>El nivel de riesgo es obligatorio</mat-error>
-                </mat-form-field>
-              </div>
-
-              <div class="col-md-6">
-                <label class="field-label">Cobertura geográfica</label>
-                <mat-form-field appearance="outline" class="w-100">
-                  <mat-select formControlName="coberturaGeografica" placeholder="--- SELECCIONE ---">
-                    <mat-option *ngFor="let c of coberturas" [value]="c">{{c}}</mat-option>
-                  </mat-select>
-                </mat-form-field>
-              </div>
-
-              <div class="col-md-6">
-                <label class="field-label">Duración estimada (meses)</label>
-                <mat-form-field appearance="outline">
-                  <input matInput type="number" formControlName="duracionMeses" (keypress)="onKeyPressNumber($event)">
-                </mat-form-field>
-              </div>
-
-              <!-- Flags de Características -->
+              <!-- Flags de Características del Estudio -->
               <div class="col-12 mt-3">
-                <div class="flags-box p-3 border rounded-3 bg-light">
-                  <h4 class="fw-bold small text-uppercase mb-3">Características del Estudio</h4>
+                <div class="flags-box p-4 border rounded-3 bg-light">
+                  <h4 class="fw-bold small text-uppercase mb-3 text-primary">Características del Estudio</h4>
                   <div class="row g-3">
-                    <div class="col-md-3"><mat-checkbox formControlName="usesBiologicalSamples" color="primary">¿Usa muestras biológicas?</mat-checkbox></div>
-                    <div class="col-md-3"><mat-checkbox formControlName="isVulnerablePopulation" color="primary">¿Población vulnerable?</mat-checkbox></div>
-                    <div class="col-md-3"><mat-checkbox formControlName="isIndigenousPopulation" color="primary">¿Población indígena?</mat-checkbox></div>
-                    <div class="col-md-3"><mat-checkbox formControlName="isMulticentric" color="primary">¿Multicéntrico?</mat-checkbox></div>
-                    <div class="col-md-3"><mat-checkbox formControlName="isExternal" color="primary">¿Es externo (No ESPOCH)?</mat-checkbox></div>
+                    <div class="col-12 col-md-6">
+                      <mat-checkbox formControlName="isIndigenousPopulation" color="primary">¿Involucra pueblos o nacionalidades indígenas?</mat-checkbox>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <mat-checkbox formControlName="usesBiologicalSamples" color="primary">¿Utiliza muestras biológicas humanas?</mat-checkbox>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <mat-checkbox formControlName="isVulnerablePopulation" color="primary">¿Involucra población vulnerable?</mat-checkbox>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <mat-checkbox formControlName="isMulticentric" color="primary">¿Es un estudio multicéntrico?</mat-checkbox>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <mat-checkbox formControlName="isExternal" color="primary">¿Participan instituciones externas?</mat-checkbox>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Datos del Patrocinador -->
+              <!-- Declaración Jurada -->
               <div class="col-12 mt-4">
-                <h4 class="fw-bold mb-3 small text-uppercase text-primary d-flex align-items-center">
-                  <mat-icon class="me-2">business</mat-icon> Datos del Patrocinador (Sponsor)
-                </h4>
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <label class="field-label">RUC / Identificación</label>
-                    <mat-form-field appearance="outline"><input matInput formControlName="sponsorRuc" maxlength="13" (keypress)="onKeyPressNumber($event)"></mat-form-field>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="field-label">Teléfono de contacto</label>
-                    <mat-form-field appearance="outline"><input matInput formControlName="sponsorPhone" maxlength="10" (keypress)="onKeyPressNumber($event)"></mat-form-field>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="field-label">Sitio Web (Opcional)</label>
-                    <mat-form-field appearance="outline"><input matInput formControlName="sponsorWeb" placeholder="https://..."></mat-form-field>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="field-label">Dirección Fiscal</label>
-                    <mat-form-field appearance="outline"><input matInput formControlName="sponsorAddress"></mat-form-field>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="field-label">Órgano Ejecutor</label>
-                    <mat-form-field appearance="outline"><input matInput formControlName="executingOrgan" placeholder="Departamento / Facultad / Área"></mat-form-field>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="field-label">Monto total financiado (USD)</label>
-                    <mat-form-field appearance="outline"><span matPrefix>$&nbsp;</span><input matInput type="number" formControlName="amount"></mat-form-field>
-                  </div>
+                <div class="legal-box p-4 rounded bg-white border shadow-sm text-start">
+                  <mat-checkbox formControlName="isAffidavitAccepted" color="primary">
+                    <span class="small fw-bold text-uppercase text-amber">DECLARO BAJO JURAMENTO QUE LA INVESTIGACIÓN NO HA INICIADO SU FASE DE CAMPO Y LA INFORMACIÓN ES VERAZ. *</span>
+                  </mat-checkbox>
+                  <mat-error *ngIf="generalForm.get('isAffidavitAccepted')?.touched && generalForm.get('isAffidavitAccepted')?.hasError('required')">
+                    Debe aceptar la declaración jurada para continuar.
+                  </mat-error>
                 </div>
               </div>
             </form>
 
             <div class="step-actions mt-5 d-flex justify-content-end">
-              <button mat-flat-button color="primary" matStepperNext class="next-btn">
-                SIGUIENTE <mat-icon>arrow_forward</mat-icon>
-              </button>
-            </div>
-          </div>
-        </mat-step>
-
-        <!-- PASO 2: EQUIPO -->
-        <mat-step [stepControl]="teamForm">
-          <ng-template matStepLabel>Equipo</ng-template>
-          <div class="step-content">
-            <div class="section-header-inline mb-4 d-flex justify-content-between align-items-center">
-              <h3>Equipo de Investigación</h3>
-              <button type="button" mat-stroked-button color="primary" (click)="addMiembro()"><mat-icon>add</mat-icon> AÑADIR MIEMBRO</button>
-            </div>
-
-            <form [formGroup]="teamForm">
-              <div formArrayName="equipoInvestigador">
-                <div *ngFor="let item of equipoInvestigador.controls; let i=index" [formGroupName]="i" 
-                     class="team-member-card p-4 mb-4 border rounded shadow-sm bg-white animate-fade-in">
-                  <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="badge bg-secondary px-3 py-2">{{item.get('funcion')?.value}}</span>
-                    <button type="button" mat-icon-button color="warn" (click)="removeMiembro(i)" *ngIf="i > 0"><mat-icon>delete</mat-icon></button>
-                  </div>
-                  <div class="row g-3">
-                    <div class="col-md-4" *ngIf="i > 0">
-                      <label class="field-label">Función</label>
-                      <mat-form-field appearance="outline" class="w-100"><mat-select formControlName="funcion">
-                        <mat-option *ngFor="let f of funcionesEquipo" [value]="f" [disabled]="f === 'Investigador Principal'">{{f}}</mat-option>
-                      </mat-select></mat-form-field>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="field-label">Nombre Completo</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="nombreCompleto"></mat-form-field>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="field-label">Cédula</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="cedula" maxlength="10" (keypress)="onKeyPressNumber($event)"></mat-form-field>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="field-label">Formación Académica</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="formacion" placeholder="Ej: Médico, Máster..."></mat-form-field>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="field-label">Entidad / Institución</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="entidad"></mat-form-field>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="field-label">Correo Electrónico</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="correo" type="email"></mat-form-field>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="field-label">Celular</label>
-                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="celular" maxlength="10" (keypress)="onKeyPressNumber($event)"></mat-form-field>
-                    </div>
-                    <div class="col-md-8">
-                      <label class="field-label">Hoja de Vida (PDF)</label>
-                      <div class="d-flex align-items-center gap-3 p-2 border rounded bg-light">
-                        <button type="button" mat-flat-button color="accent" (click)="cvIn.click()"><mat-icon>upload</mat-icon> SELECCIONAR CV</button>
-                        <input type="file" #cvIn hidden (change)="onFileSelected($event, i)" accept=".pdf">
-                        <span class="small text-muted text-truncate" style="max-width: 250px;" *ngIf="item.get('cvFile')?.value">
-                          {{ item.get('cvFile')?.value.name }}
-                        </span>
-                        <span class="small text-danger fw-bold" *ngIf="!item.get('cvFile')?.value">Requerido *</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </form>
-
-            <div class="step-actions mt-5 d-flex gap-2">
-              <button mat-stroked-button matStepperPrevious class="next-btn">ATRÁS</button>
-              <button mat-flat-button color="primary" matStepperNext class="next-btn">SIGUIENTE</button>
-            </div>
-          </div>
-        </mat-step>
-
-        <!-- PASO 3: INSTITUCIONES -->
-        <mat-step [stepControl]="institutionsForm">
-          <ng-template matStepLabel>Instituciones</ng-template>
-          <div class="step-content">
-            <div class="section-info mb-4">
-              <mat-icon class="section-icon">location_city</mat-icon>
-              <div>
-                <h3>Instituciones Participantes</h3>
-                <p class="text-muted small">Agregue las instituciones donde se llevará a cabo la investigación.</p>
-              </div>
-            </div>
-
-            <form [formGroup]="institutionsForm">
-              <div formArrayName="instituciones">
-                <div *ngFor="let inst of instituciones.controls; let i=index" [formGroupName]="i" 
-                     class="institution-card p-3 mb-3 border rounded bg-light shadow-sm animate-fade-in">
-                  <div class="d-flex justify-content-between mb-3">
-                    <span class="badge bg-primary">Sede #{{i + 1}}</span>
-                    <button type="button" mat-icon-button color="warn" (click)="removeInstitucion(i)" *ngIf="instituciones.length > 1"><mat-icon>delete</mat-icon></button>
-                  </div>
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <label class="field-label">Nombre de la Institución</label>
-                      <mat-form-field appearance="outline" class="w-100">
-                        <input matInput formControlName="nombre">
-                      </mat-form-field>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="field-label">Tipo</label>
-                      <mat-form-field appearance="outline" class="w-100">
-                        <mat-select formControlName="tipo">
-                          <mat-option value="PUBLICA">Pública</mat-option>
-                          <mat-option value="PRIVADA">Privada</mat-option>
-                        </mat-select>
-                      </mat-form-field>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="field-label">Dirección</label>
-                      <mat-form-field appearance="outline" class="w-100">
-                        <input matInput formControlName="direccion">
-                      </mat-form-field>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="field-label">Persona de Contacto</label>
-                      <mat-form-field appearance="outline" class="w-100">
-                        <input matInput formControlName="contacto" placeholder="Nombre y Cargo">
-                      </mat-form-field>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </form>
-
-            <div class="step-actions mt-5 d-flex gap-2">
-              <button mat-stroked-button matStepperPrevious class="next-btn">ATRÁS</button>
-              <button mat-flat-button color="accent" (click)="guardarInicial()" class="next-btn" [disabled]="isLoading">
-                <span *ngIf="!isLoading">REGISTRAR Y CONTINUAR</span>
+              <button mat-flat-button color="accent" (click)="guardarInicial()" class="next-btn px-4" [disabled]="isLoading || generalForm.invalid" style="height: 54px; font-weight: 700;">
+                <span *ngIf="!isLoading">REGISTRAR Y CONTINUAR <mat-icon>arrow_forward</mat-icon></span>
                 <mat-progress-spinner *ngIf="isLoading" diameter="24" mode="indeterminate"></mat-progress-spinner>
               </button>
             </div>
           </div>
         </mat-step>
 
-        <!-- PASO 4: DOCUMENTOS -->
+        <!-- PASO 2: CARGA DE DOCUMENTOS -->
         <mat-step>
-          <ng-template matStepLabel>Documentos</ng-template>
+          <ng-template matStepLabel>Subir Documentos</ng-template>
           <div class="step-content">
-            <div class="section-info mb-4">
-              <mat-icon class="section-icon">description</mat-icon>
+            <div class="section-info mb-4 d-flex align-items-center gap-3">
+              <mat-icon class="section-icon text-primary" style="font-size: 36px; width: 36px; height: 36px;">cloud_upload</mat-icon>
               <div>
-                <h3>Checklist de Documentación</h3>
-                <p class="text-muted small">Cargue los requisitos generados dinámicamente para su protocolo.</p>
+                <h3 class="fw-bold mb-0">Carga de Documentos Técnicos</h3>
+                <p class="text-muted small mb-0">Por favor suba los archivos PDF correspondientes a cada requisito generado por el CEISH.</p>
               </div>
             </div>
 
@@ -310,7 +141,7 @@
                       <div [ngSwitch]="documentUploadStatus[doc.code]">
                         <button *ngSwitchCase="'pendiente'" mat-flat-button color="primary" (click)="docIn.click()"><mat-icon>upload</mat-icon> SUBIR</button>
                         <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled><mat-progress-spinner diameter="18" mode="indeterminate" class="d-inline-block me-2"></mat-progress-spinner> CARGANDO</button>
-                        <button *ngSwitchCase="'exito'" mat-flat-button color="success" class="bg-success text-white" (click)="docIn.click()"><mat-icon>check_circle</mat-icon> PRESENTADO</button>
+                        <button *ngSwitchCase="'exito'" mat-flat-button class="bg-success text-white" (click)="docIn.click()"><mat-icon>check_circle</mat-icon> PRESENTADO</button>
                         <button *ngSwitchCase="'error'" mat-flat-button color="warn" (click)="docIn.click()"><mat-icon>error</mat-icon> REINTENTAR</button>
                       </div>
                     </div>
@@ -319,7 +150,7 @@
               </div>
             </div>
 
-            <!-- Fallback Upload Resiliente -->
+            <!-- Fallback Upload Resiliente (Bulk) -->
             <div class="no-requirements p-4 border rounded bg-light mt-4 text-center animate-fade-in" *ngIf="documentosRequeridos.length === 0 && !isLoading && protocolId">
               <mat-icon color="accent" style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px;">cloud_upload</mat-icon>
               <h4>Carga de Documentos (Modo Contingencia)</h4>
@@ -343,59 +174,10 @@
               </div>
             </div>
 
-            <!-- Loader Estado Inicial -->
-            <div class="no-requirements text-center p-5" *ngIf="documentosRequeridos.length === 0 && !protocolId">
-              <mat-icon style="font-size: 48px; width: 48px; height: 48px;" class="text-muted">pending_actions</mat-icon>
-              <p class="text-muted mt-3">Complete el registro inicial para habilitar la carga de documentos.</p>
-            </div>
-
-            <div class="step-actions mt-5 d-flex gap-2">
-              <button mat-stroked-button matStepperPrevious class="next-btn">ATRÁS</button>
-              <button mat-flat-button color="primary" matStepperNext class="next-btn" [disabled]="!protocolId">SIGUIENTE</button>
-            </div>
-          </div>
-        </mat-step>
-
-        <!-- PASO 5: FINALIZAR -->
-        <mat-step [stepControl]="finishForm">
-          <ng-template matStepLabel>Finalizar</ng-template>
-          <div class="step-content p-5 text-center">
-            <div class="mb-4"><mat-icon color="primary" style="font-size: 80px; width: 80px; height: 80px;">verified_user</mat-icon></div>
-            <h2 class="fw-bold">Formalizar Solicitud</h2>
-            <p class="text-muted mx-auto mb-5" style="max-width: 550px;">
-              Usted está por enviar su protocolo para revisión del CEISH. 
-              Se generará un código oficial y se notificará al equipo investigador.
-            </p>
-
-            <!-- Resumen de Validación -->
-            <div class="summary-box p-4 mb-5 border rounded bg-light text-start">
-              <h4 class="fw-bold small text-uppercase mb-3">Checklist de Integridad</h4>
-              <ul class="list-unstyled mb-0">
-                <li class="d-flex align-items-center mb-2">
-                  <mat-icon class="me-2 text-success" style="font-size: 20px;">check_circle</mat-icon> Información general y patrocinio
-                </li>
-                <li class="d-flex align-items-center mb-2">
-                  <mat-icon class="me-2 text-success" style="font-size: 20px;">check_circle</mat-icon> Equipo de investigación y CVs
-                </li>
-                <li class="d-flex align-items-center">
-                  <mat-icon class="me-2 text-success" style="font-size: 20px;">check_circle</mat-icon> Documentación técnica cargada
-                </li>
-              </ul>
-            </div>
-
-            <div class="legal-box p-4 rounded bg-white border shadow-sm mb-5 text-start">
-              <form [formGroup]="finishForm">
-                <mat-checkbox formControlName="isAffidavitAccepted" color="primary">
-                  <span class="small fw-bold text-uppercase">DECLARO BAJO JURAMENTO QUE LA INVESTIGACIÓN NO HA INICIADO SU FASE DE CAMPO Y LA INFORMACIÓN ES VERAZ.</span>
-                </mat-checkbox>
-              </form>
-            </div>
-
-            <div class="step-actions d-flex gap-3 justify-content-center">
-              <button mat-stroked-button matStepperPrevious style="height: 54px; padding: 0 2rem; font-weight: 700;">REVISAR DATOS</button>
+            <div class="step-actions mt-5 d-flex gap-3 justify-content-end">
               <button mat-flat-button color="primary" class="submit-btn flex-grow-1" 
-                      [disabled]="finishForm.invalid || isLoading" (click)="onEnviarFinal()">
-                <span *ngIf="!isLoading">FIRMAR Y ENVIAR AL CEISH</span>
+                      [disabled]="isLoading || !protocolId" (click)="onEnviarFinal()">
+                <span *ngIf="!isLoading">FIRMAR Y ENVIAR AL CEISH <mat-icon>send</mat-icon></span>
                 <mat-progress-spinner *ngIf="isLoading" diameter="24" mode="indeterminate" class="mx-auto"></mat-progress-spinner>
               </button>
             </div>

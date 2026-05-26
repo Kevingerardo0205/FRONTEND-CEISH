@@ -157,4 +157,8 @@ export class ProtocoloService extends BaseApiService {
   obtenerRequisitosDeProtocolo(protocolId: number): Observable<ChecklistRequirement[]> {
     return this.getChecklist(protocolId);
   }
+
+  actualizarProtocolo(id: number, data: Partial<CrearProtocoloDto>): Observable<any> {
+    return this.put<any>(`${ENDPOINTS.PROTOCOLS.BASE}/${id}`, data);
+  }
 }

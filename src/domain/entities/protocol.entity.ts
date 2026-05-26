@@ -10,12 +10,28 @@ export interface ProtocolEntity {
   principalInvestigator?: string;
   type: ProtocolType;
   studyTypeCode?: string;
+  studyType?: any;
   status: ProtocolStatus;
   submissionDate?: Date;
   validationDate?: Date;
   documents: DocumentEntity[];
   version: number | string;
   deadline?: string | Date;
+
+  // Campos Diferidos Adicionales
+  riskLevel?: any;
+  riskLevelId?: number;
+  geographicCoverage?: string;
+  studyDurationMonths?: number;
+  lugarEjecucion?: string;
+  fechaInicioEstimada?: string;
+  fechaFinEstimada?: string;
+  sponsorRuc?: string;
+  sponsorPhone?: string;
+  sponsorAddress?: string;
+  sponsorWeb?: string;
+  sponsorExecutingAgency?: string;
+  financingAmount?: number;
 }
 
 export interface ValidationHeader {

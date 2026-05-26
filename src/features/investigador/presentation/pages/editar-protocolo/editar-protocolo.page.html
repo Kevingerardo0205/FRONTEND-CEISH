@@ -1,0 +1,289 @@
+<div class="dashboard-edit-layout" *ngIf="protocoloOriginal; else loading">
+  <!-- HEADER TOOLBAR -->
+  <mat-toolbar class="edit-toolbar shadow-sm">
+    <div class="toolbar-content">
+      <div class="brand-section">
+        <div class="logo-box"><mat-icon>edit_note</mat-icon></div>
+        <div class="brand-text">
+          <span class="main-title">CEISH - ESPOCH</span>
+          <span class="sub-title">Completar Datos del Protocolo</span>
+        </div>
+      </div>
+      <span class="spacer"></span>
+      <button mat-button color="primary" [routerLink]="['/dashboard/protocols/workspace', protocolId, 'info']" class="back-btn">
+        <mat-icon>arrow_back</mat-icon> VOLVER AL WORKSPACE
+      </button>
+    </div>
+  </mat-toolbar>
+
+  <main class="edit-main-content">
+    <div class="content-header">
+      <h1 class="page-title">Completar Registro de Protocolo</h1>
+      <p class="page-subtitle text-muted">Complete la información del patrocinador, presupuesto, equipo e instituciones participantes.</p>
+      <div class="protocol-quick-summary mt-2 p-3 bg-white border rounded-3">
+        <span class="fw-bold text-dark d-block mb-1">{{ protocoloOriginal.title }}</span>
+        <span class="badge bg-primary-subtle text-primary">{{ protocoloOriginal.studyType?.name || protocoloOriginal.studyType }}</span>
+      </div>
+    </div>
+
+    <form [formGroup]="editForm" (ngSubmit)="onSave()" class="row g-4 mt-2">
+      <!-- COLUMNA IZQUIERDA: DATOS GENERALES Y PATROCINADOR -->
+      <div class="col-lg-6">
+        <div class="row g-4">
+          <!-- CARD 1: Detalles Técnicos Diferidos -->
+          <div class="col-12">
+            <mat-card class="edit-card shadow-soft p-4">
+              <h3 class="card-section-title"><mat-icon>analytics</mat-icon> Datos Generales del Estudio</h3>
+              <mat-divider class="mb-4"></mat-divider>
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="field-label">Nivel de Riesgo</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-select formControlName="riskLevelId" placeholder="--- SELECCIONE ---">
+                      <mat-option *ngFor="let r of nivelesRiesgo" [value]="r.id">
+                        {{ r.name }} - {{ r.description }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Cobertura Geográfica</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-select formControlName="geographicCoverage" placeholder="--- SELECCIONE ---">
+                      <mat-option *ngFor="let c of coberturas" [value]="c.value">{{ c.label }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Duración Estimada (Meses)</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput type="number" formControlName="studyDurationMonths" (keypress)="onKeyPressNumber($event)">
+                    <mat-error *ngIf="editForm.get('studyDurationMonths')?.hasError('min')">Debe ser al menos 1 mes</mat-error>
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Lugar de Ejecución</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput formControlName="lugarEjecucion" placeholder="Ej: Hospital General, Chimborazo...">
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Fecha Inicio Estimada</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput type="date" formControlName="fechaInicioEstimada">
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Fecha Fin Estimada</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput type="date" formControlName="fechaFinEstimada">
+                  </mat-form-field>
+                </div>
+              </div>
+            </mat-card>
+          </div>
+
+          <!-- CARD 2: Datos del Patrocinador -->
+          <div class="col-12">
+            <mat-card class="edit-card shadow-soft p-4">
+              <h3 class="card-section-title"><mat-icon>business</mat-icon> Datos del Patrocinador (Sponsor)</h3>
+              <mat-divider class="mb-4"></mat-divider>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="field-label">RUC / Identificación</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput formControlName="sponsorRuc" maxlength="13" (keypress)="onKeyPressNumber($event)">
+                    <mat-error *ngIf="editForm.get('sponsorRuc')?.hasError('invalidIdLength')">RUC no válido (debe tener 13 dígitos)</mat-error>
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Teléfono del Patrocinador</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput formControlName="sponsorPhone" maxlength="10" (keypress)="onKeyPressNumber($event)">
+                    <mat-error *ngIf="editForm.get('sponsorPhone')?.hasError('invalidPhone')">Número ecuatoriano no válido</mat-error>
+                  </mat-form-field>
+                </div>
+
+                <div class="col-12">
+                  <label class="field-label">Dirección Fiscal del Patrocinador</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput formControlName="sponsorAddress">
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Sitio Web del Patrocinador</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput formControlName="sponsorWeb" placeholder="https://...">
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Monto Financiado (USD)</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <span matPrefix>$&nbsp;</span>
+                    <input matInput type="number" formControlName="financingAmount">
+                    <mat-error *ngIf="editForm.get('financingAmount')?.hasError('min')">Monto debe ser mayor o igual a 0</mat-error>
+                  </mat-form-field>
+                </div>
+
+                <div class="col-12">
+                  <label class="field-label">Órgano Ejecutor</label>
+                  <mat-form-field appearance="outline" class="w-100">
+                    <input matInput formControlName="sponsorExecutingAgency" placeholder="Departamento, Facultad o Área que ejecuta el proyecto">
+                  </mat-form-field>
+                </div>
+              </div>
+            </mat-card>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMNA DERECHA: EQUIPO E INSTITUCIONES -->
+      <div class="col-lg-6">
+        <div class="row g-4">
+          <!-- CARD 3: Equipo Investigador -->
+          <div class="col-12">
+            <mat-card class="edit-card shadow-soft p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="card-section-title mb-0"><mat-icon>people</mat-icon> Coinvestigadores / Equipo</h3>
+                <button type="button" mat-stroked-button color="primary" (click)="addMiembro()"><mat-icon>add</mat-icon> AÑADIR MIEMBRO</button>
+              </div>
+              <mat-divider class="mb-4"></mat-divider>
+
+              <div formArrayName="investigators" *ngIf="investigators.length > 0; else noTeam">
+                <div *ngFor="let item of investigators.controls; let i=index" [formGroupName]="i" 
+                     class="team-member-card p-3 mb-3 border rounded bg-light position-relative animate-fade-in">
+                  <button type="button" mat-icon-button color="warn" class="position-absolute top-0 end-0 m-2" (click)="removeMiembro(i)"><mat-icon>delete</mat-icon></button>
+                  
+                  <span class="badge bg-secondary mb-3">{{ item.get('funcion')?.value || 'Miembro #' + (i + 1) }}</span>
+
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="field-label">Función *</label>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <mat-select formControlName="funcion">
+                          <mat-option *ngFor="let f of funcionesEquipo" [value]="f" [disabled]="f === 'Investigador Principal'">{{f}}</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Nombre Completo *</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="nombreCompleto"></mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Cédula *</label>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <input matInput formControlName="cedula" maxlength="10" (keypress)="onKeyPressNumber($event)">
+                        <mat-error *ngIf="item.get('cedula')?.hasError('invalidIdLength')">Cédula debe tener 10 dígitos</mat-error>
+                      </mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Formación Académica *</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="formacion" placeholder="Ej: Ph.D, Mg. Sc., Médico..."></mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Entidad / Institución *</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="entidad"></mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Correo *</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="correo" type="email"></mat-form-field>
+                    </div>
+                    <div class="col-md-12">
+                      <label class="field-label">Celular *</label>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <input matInput formControlName="celular" maxlength="10" (keypress)="onKeyPressNumber($event)">
+                        <mat-error *ngIf="item.get('celular')?.hasError('invalidPhone')">Celular ecuatoriano no válido</mat-error>
+                      </mat-form-field>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noTeam>
+                <div class="text-center py-4 bg-light rounded bg-opacity-50">
+                  <p class="text-muted small mb-0">No se han registrado coinvestigadores en el equipo.</p>
+                </div>
+              </ng-template>
+            </mat-card>
+          </div>
+
+          <!-- CARD 4: Instituciones Participantes -->
+          <div class="col-12">
+            <mat-card class="edit-card shadow-soft p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="card-section-title mb-0"><mat-icon>location_city</mat-icon> Instituciones Participantes</h3>
+                <button type="button" mat-stroked-button color="primary" (click)="addInstitucion()"><mat-icon>add</mat-icon> AÑADIR SEDE</button>
+              </div>
+              <mat-divider class="mb-4"></mat-divider>
+
+              <div formArrayName="institutions" *ngIf="institutions.length > 0; else noInstitutions">
+                <div *ngFor="let inst of institutions.controls; let i=index" [formGroupName]="i" 
+                     class="institution-card p-3 mb-3 border rounded bg-light position-relative animate-fade-in">
+                  <button type="button" mat-icon-button color="warn" class="position-absolute top-0 end-0 m-2" (click)="removeInstitucion(i)"><mat-icon>delete</mat-icon></button>
+
+                  <span class="badge bg-primary mb-3">Sede #{{i + 1}}</span>
+
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="field-label">Nombre de la Institución *</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="nombre"></mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Tipo *</label>
+                      <mat-form-field appearance="outline" class="w-100">
+                        <mat-select formControlName="tipo">
+                          <mat-option value="PUBLICA">Pública</mat-option>
+                          <mat-option value="PRIVADA">Privada</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Dirección *</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="direccion"></mat-form-field>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="field-label">Persona de Contacto *</label>
+                      <mat-form-field appearance="outline" class="w-100"><input matInput formControlName="contacto" placeholder="Nombre y Cargo"></mat-form-field>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noInstitutions>
+                <div class="text-center py-4 bg-light rounded bg-opacity-50">
+                  <p class="text-muted small mb-0">No se han registrado instituciones participantes.</p>
+                </div>
+              </ng-template>
+            </mat-card>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTONES DE ACCIÓN ACCION -->
+      <div class="col-12 mt-5 mb-5 d-flex gap-3 justify-content-end">
+        <button type="button" mat-stroked-button [routerLink]="['/dashboard/protocols/workspace', protocolId, 'info']" style="height: 54px; padding: 0 2rem; font-weight: 700;">CANCELAR</button>
+        <button type="submit" mat-flat-button color="primary" class="save-btn px-5" [disabled]="isSaving || editForm.invalid" style="height: 54px; font-weight: 700;">
+          <span *ngIf="!isSaving">GUARDAR CAMBIOS <mat-icon>save</mat-icon></span>
+          <mat-progress-spinner *ngIf="isSaving" diameter="24" mode="indeterminate"></mat-progress-spinner>
+        </button>
+      </div>
+    </form>
+  </main>
+</div>
+
+<ng-template #loading>
+  <div class="loading-viewport">
+    <div class="loader-card">
+      <mat-spinner diameter="40" color="primary" class="mx-auto mb-3"></mat-spinner>
+      <p>Cargando información del protocolo...</p>
+    </div>
+  </div>
+</ng-template>

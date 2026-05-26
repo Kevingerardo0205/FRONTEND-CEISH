@@ -1,6 +1,6 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -236,6 +236,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
 })
 export class ProtocolWorkspaceComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private workspaceService = inject(ProtocolWorkspaceService);
   private authFacade = inject(AuthFacade);
 
@@ -246,6 +247,12 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (!p) return [];
 
     const actions = [];
+    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
+    const status = p.status as string;
+    if (role === 'INVESTIGADOR' && (status === 'DRAFT' || status === 'BORRADOR' || status === 'REQUIERE_CORRECCION' || status === 'OBSERVED' || status === 'PENDIENTE_SUBSANACION')) {
+      actions.push({ id: 'EDIT_PROTOCOL', label: 'Completar / Editar', icon: 'edit' });
+    }
+
     if (p.status === ProtocolStatus.SUBMITTED || p.status === ProtocolStatus.PENDIENTE) {
       actions.push({ id: 'VALIDATE_ALL', label: 'Aprobar Todo', icon: 'done_all' });
     }
@@ -295,7 +302,11 @@ export class ProtocolWorkspaceComponent implements OnInit {
   }
 
   onExecuteAction(actionId: string) {
-    console.log('[ProtocolWorkspace] Executing premium action:', actionId);
+    if (actionId === 'EDIT_PROTOCOL') {
+      this.router.navigate(['/investigador/protocolo', this.protocol()?.id, 'editar']);
+    } else {
+      console.log('[ProtocolWorkspace] Executing action:', actionId);
+    }
   }
 
   isStepActive(step: string): boolean {
