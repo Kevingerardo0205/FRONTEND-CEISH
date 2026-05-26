@@ -8,6 +8,8 @@ import { ProtocolReceptionNewPage } from './presentation/pages/protocol-receptio
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { VerificadoGuard } from '@infrastructure/guards/verificado.guard';
 
+import { ProtocolWorkspaceComponent } from './presentation/pages/protocol-workspace/protocol-workspace.component';
+
 export const PROTOCOL_ROUTES: Routes = [
   {
     path: '',
@@ -18,27 +20,44 @@ export const PROTOCOL_ROUTES: Routes = [
         component: ProtocolListPage
       },
       {
-        path: 'create',
-        component: ProtocolCreatePage,
-        canActivate: [AuthGuard, VerificadoGuard],
-        data: { permissions: ['RECEPCION_SUBIR_DOCUMENTOS'] }
+        path: 'workspace/:id',
+        component: ProtocolWorkspaceComponent,
+        children: [
+          {
+            path: 'info',
+            loadComponent: () => import('./presentation/pages/protocol-workspace/tabs/protocol-detail-tab.component').then(m => m.ProtocolDetailTabPage)
+          },
+          {
+            path: 'validation',
+            component: ProtocolValidationDetailPage
+          },
+          {
+            path: 'evaluation',
+            loadComponent: () => import('../evaluations/presentation/pages/evaluation-form/evaluation-form.page').then(m => m.EvaluationFormPage)
+          },
+          {
+            path: 'follow-up',
+            loadComponent: () => import('../follow-up/presentation/pages/adverse-events/adverse-events-list.page').then(m => m.AdverseEventsListPage)
+          },
+          {
+            path: '',
+            redirectTo: 'info',
+            pathMatch: 'full'
+          }
+        ]
       },
+      // Redirecciones Legacy para compatibilidad
       {
         path: 'detail/:id',
-        component: ProtocolDetailPage
+        redirectTo: 'workspace/:id/info'
+      },
+      {
+        path: 'validation/detail/:id',
+        redirectTo: 'workspace/:id/validation'
       },
       {
         path: 'validation/list',
         component: ProtocolValidationListPage,
-        canActivate: [AuthGuard],
-        data: { 
-          permissions: ['RECEPCION_VALIDAR', 'DOCUMENTOS_VALIDAR', 'RECEPCION_VER'],
-          permissionStrategy: 'any'
-        }
-      },
-      {
-        path: 'validation/detail/:id',
-        component: ProtocolValidationDetailPage,
         canActivate: [AuthGuard],
         data: { 
           permissions: ['RECEPCION_VALIDAR', 'DOCUMENTOS_VALIDAR', 'RECEPCION_VER'],

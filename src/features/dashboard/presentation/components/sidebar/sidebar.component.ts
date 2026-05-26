@@ -33,15 +33,22 @@ export class SidebarComponent {
    * Determina qué módulo debe estar expandido basándose en la ruta activa.
    */
   public activeModule = computed(() => {
-    const currentUrl = this.router.url;
-    const menu = this.authFacade.menuConfig();
-    
-    for (const group of menu) {
-      if (group.subItems.some(item => currentUrl.includes(item.path))) {
-        return group.code;
+    try {
+      const currentUrl = this.router.url;
+      const menu = this.authFacade.menuConfig();
+      
+      for (const group of menu) {
+        // Resiliencia: Verificar que subItems exista y sea un array
+        const subItems = group.subItems || [];
+        if (subItems.some((item: any) => item.path && currentUrl.includes(item.path))) {
+          return group.code;
+        }
       }
+      return null;
+    } catch (err) {
+      console.error('[SidebarComponent] Error en activeModule:', err);
+      return null;
     }
-    return null;
   });
 
   onNavClick() {

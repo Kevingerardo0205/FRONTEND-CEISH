@@ -20,6 +20,8 @@ import { ValidationChecklistItem, ValidationHeader, ValidationGlobalStatus } fro
 import { IncompleteValidationDialog } from './incomplete-validation-dialog.component';
 import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
+import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
+
 @Component({
   selector: 'app-protocol-validation-detail',
   standalone: true,
@@ -39,22 +41,25 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
     FormsModule
   ],
   template: `
-    <div class="validation-wrapper animate-fade-in">
+    <div class="validation-wrapper animate-fade-in" [class.in-workspace]="isInsideWorkspace()">
       
-      <div *ngIf="isLoading()" class="loading-overlay">
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        <p>Cargando información técnica del protocolo...</p>
+      <!-- Ocultar si estamos en el Workspace para evitar duplicidad -->
+      <div *ngIf="!isInsideWorkspace()">
+        <div *ngIf="isLoading()" class="loading-overlay">
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          <p>Cargando información técnica del protocolo...</p>
+        </div>
+
+        <div *ngIf="!isLoading() && protocolNotFound()" class="error-state">
+          <mat-icon>error</mat-icon>
+          <h2>Protocolo no encontrado</h2>
+          <button mat-flat-button color="primary" routerLink="/dashboard/protocols/validation/list">Volver a la lista</button>
+        </div>
       </div>
 
-      <div *ngIf="!isLoading() && protocolNotFound()" class="error-state">
-        <mat-icon>error</mat-icon>
-        <h2>Protocolo no encontrado</h2>
-        <button mat-flat-button color="primary" routerLink="/dashboard/protocols/validation/list">Volver a la lista</button>
-      </div>
-
-      <div *ngIf="!isLoading() && !protocolNotFound()">
-        <!-- ENCABEZADO ESTILO OFICIAL PET 2023 -->
-        <header class="official-header shadow-sm">
+      <div *ngIf="(!isLoading() && !protocolNotFound()) || isInsideWorkspace()">
+        <!-- ENCABEZADO ESTILO OFICIAL PET 2023 - Solo si no es Workspace -->
+        <header class="official-header shadow-sm" *ngIf="!isInsideWorkspace()">
           <div class="top-row">
             <button mat-icon-button routerLink="/dashboard/protocols/validation/list" class="back-btn" matTooltip="Volver a la lista">
               <mat-icon>arrow_back</mat-icon>
@@ -64,7 +69,7 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
               <h1>NOTIFICACIÓN DE RECEPCIÓN DE PROTOCOLO DE INVESTIGACIÓN ({{ header()?.studyType | uppercase }})</h1>
               <p class="subtitle">COMITÉ DE ÉTICA DE INVESTIGACIÓN EN SERES HUMANOS (CEISH-ESPOCH)</p>
             </div>
-            <button mat-stroked-button color="primary" [routerLink]="['/dashboard/protocols/detail', protocolId]" class="ms-auto">
+            <button mat-stroked-button color="primary" [routerLink]="['/dashboard/protocols/workspace', protocolId, 'info']" class="ms-auto">
               <mat-icon>visibility</mat-icon>
               Ver Detalle General
             </button>
@@ -73,7 +78,12 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
           <div class="protocol-info-grid">
             <div class="info-item">
               <span class="label">CÓDIGO DE TRÁMITE:</span>
-              <span class="value code">{{ header()?.ceishCode || 'TRÁMITE EN PROCESO' }}</span>
+              <div class="d-flex align-items-center justify-content-between gap-2">
+                <span class="value code">{{ header()?.ceishCode || 'TRÁMITE EN PROCESO' }}</span>
+                <span class="badge-status" [ngClass]="globalStatus()?.status?.toLowerCase() || ''">
+                  {{ globalStatus()?.status || 'PENDIENTE' }}
+                </span>
+              </div>
             </div>
             <div class="info-item">
               <span class="label">FECHA DE ENVÍO:</span>
@@ -91,7 +101,7 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
         </header>
 
         <!-- CHECKLIST DE REQUISITOS (ESTILO EXCEL) -->
-        <div class="checklist-container mt-4">
+        <div class="checklist-container" [class.mt-4]="!isInsideWorkspace()">
           <h2 class="checklist-title">LISTA DE VERIFICACIÓN DE REQUISITOS DOCUMENTALES (PET 2023)</h2>
           
           <div class="table-scroll">
@@ -157,24 +167,13 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
           </div>
         </div>
 
-        <!-- PANEL DE VERIFICACIÓN GLOBAL -->
+        <!-- PANEL DE OBSERVACIONES GENERALES -->
         <div class="verification-panel mt-4 p-4 shadow-soft">
-          <h3 class="section-title"><mat-icon>fact_check</mat-icon> Verificación Global de Recepción</h3>
-          <div class="d-flex align-items-center gap-4 mb-3">
-            <mat-checkbox [(ngModel)]="isGlobalComplete" color="primary">¿Recepción física/digital completa?</mat-checkbox>
-            <span class="badge-status" [ngClass]="globalStatus()?.status?.toLowerCase()">
-              Estado: {{ globalStatus()?.status }}
-            </span>
-          </div>
+          <h3 class="section-title"><mat-icon>chat_bubble_outline</mat-icon> Observaciones Generales (Para correo al investigador)</h3>
           <mat-form-field class="full-width" appearance="outline">
-            <mat-label>Lista de Faltantes u Observaciones Generales</mat-label>
-            <textarea matInput rows="3" [(ngModel)]="missingItemsList" placeholder="Ej: Cédula borrosa, falta Anexo 2..."></textarea>
+            <mat-label>Observaciones Generales / Lista de Faltantes</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="missingItemsList" placeholder="Ej: Se solicita revisar el formato del Anexo 2 que se encuentra ilegible..."></textarea>
           </mat-form-field>
-          <div class="d-flex justify-content-end">
-            <button mat-stroked-button color="accent" (click)="onUpdateGlobalVerification()" [disabled]="isProcessing">
-              <mat-icon>save</mat-icon> Guardar Estado de Verificación
-            </button>
-          </div>
         </div>
 
         <!-- PANEL DE ACCIÓN Y NOTIFICACIONES -->
@@ -195,16 +194,19 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
               </button>
               
               <button mat-flat-button class="btn-finalize" 
-                      [disabled]="progress() < 100 || isProcessing || (header()?.ceishCode && header()?.ceishCode !== 'TRÁMITE EN PROCESO')" 
+                      [disabled]="!allReviewed() || isProcessing || isFinalized()" 
                       (click)="onFinalize()">
-                <mat-icon>send</mat-icon>
-                {{ (header()?.ceishCode && header()?.ceishCode !== 'TRÁMITE EN PROCESO') ? 'REVISIÓN FINALIZADA' : 'FINALIZAR REVISIÓN Y GENERAR CONSTANCIA' }}
+                <mat-icon>{{ progress() === 100 ? 'send' : 'notifications_active' }}</mat-icon>
+                {{ isFinalized() 
+                    ? 'REVISIÓN FINALIZADA' 
+                    : (progress() === 100 ? 'FINALIZAR REVISIÓN Y GENERAR CONSTANCIA' : 'NOTIFICAR OBSERVACIONES AL INVESTIGADOR') }}
               </button>
             </div>
             
-            <div class="legal-disclaimer" *ngIf="progress() < 100">
-               <mat-icon>info</mat-icon>
-               <span>Según Acuerdo Ministerial, todos los documentos obligatorios deben estar en estado <strong>VALIDADO</strong> para cerrar la recepción.</span>
+            <div class="legal-disclaimer" *ngIf="allReviewed() && !isFinalized()">
+               <mat-icon [color]="progress() === 100 ? 'primary' : 'warn'">info</mat-icon>
+               <span *ngIf="progress() === 100">Todo correcto. Se generará el Anexo 7 y se notificará al investigador.</span>
+               <span *ngIf="progress() < 100">Existen rechazos. Se enviará una notificación de subsanación con las observaciones ingresadas.</span>
             </div>
           </div>
         </div>
@@ -214,6 +216,7 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
   `,
   styles: [`
     .validation-wrapper { padding: 1.5rem; max-width: 1250px; margin: 0 auto; min-height: 80vh; }
+    .validation-wrapper.in-workspace { padding: 0; max-width: 100%; min-height: auto; }
     .loading-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #64748b; }
     .error-state { text-align: center; padding: 4rem; color: #64748b; mat-icon { font-size: 48px; width: 48px; height: 48px; color: #ef4444; } }
 
@@ -297,6 +300,10 @@ export class ProtocolValidationDetailPage implements OnInit {
   private docRepository = inject(IDocumentRepositoryPort);
   private validateUseCase = inject(ValidateDocumentaryUseCase);
   private dialog = inject(MatDialog);
+  
+  // Workspace integration
+  private workspaceService = inject(ProtocolWorkspaceService, { optional: true });
+  isInsideWorkspace = signal(!!this.workspaceService);
 
   isLoading = signal(true);
   protocolNotFound = signal(false);
@@ -307,16 +314,38 @@ export class ProtocolValidationDetailPage implements OnInit {
   checklist = signal<ValidationChecklistItem[]>([]);
   globalStatus = signal<ValidationGlobalStatus | null>(null);
 
-  // Verificación Global local (para edición)
-  isGlobalComplete = false;
+  // Verificación Global local (para observaciones)
   missingItemsList = '';
 
-  progress = signal(0);
-  validatedCount = signal(0);
-  mandatoryCount = signal(0);
+  checklistLength = computed(() => this.checklist().length);
+
+  mandatoryCount = computed(() => this.checklist().length);
+
+  validatedCount = computed(() => {
+    return this.checklist().filter(i => i.status === 'APROBADO' || i.status === 'VALIDADO').length;
+  });
+
+  progress = computed(() => {
+    const total = this.mandatoryCount();
+    if (total === 0) return 100;
+    return Math.round((this.validatedCount() / total) * 100);
+  });
+
+  allReviewed = computed(() => {
+    const items = this.checklist();
+    if (items.length === 0) return false;
+    // Un ítem está revisado si no tiene documento adjunto (no requiere validación),
+    // o si teniéndolo ya ha sido APROBADO, VALIDADO o RECHAZADO
+    return items.every(i => !i.attachedDocument || i.status === 'APROBADO' || i.status === 'VALIDADO' || i.status === 'RECHAZADO');
+  });
+
+  isFinalized = computed(() => {
+    // Está finalizado solo si el progreso es 100% (todo aprobado) Y además ya existe un código generado
+    return this.progress() === 100 && !!this.header()?.ceishCode && this.header()?.ceishCode !== 'TRÁMITE EN PROCESO';
+  });
 
   ngOnInit() {
-    this.protocolId = this.route.snapshot.params['id'];
+    this.protocolId = this.route.snapshot.params['id'] || this.route.parent?.snapshot.params['id'];
     this.loadValidationData();
   }
 
@@ -337,11 +366,8 @@ export class ProtocolValidationDetailPage implements OnInit {
         this.globalStatus.set(data.globalStatus);
         
         if (data.globalStatus) {
-          this.isGlobalComplete = data.globalStatus.isComplete;
           this.missingItemsList = data.globalStatus.missingItemsList || '';
         }
-        
-        this.updateProgress();
       } else {
         this.protocolNotFound.set(true);
       }
@@ -360,8 +386,14 @@ export class ProtocolValidationDetailPage implements OnInit {
     this.isProcessing = true;
     this.docRepository.validateDocument(item.attachedDocument.id.toString(), actionType, item.observations || '').subscribe({
       next: () => {
-        item.status = actionType === 1 ? 'APROBADO' : 'RECHAZADO';
-        this.updateProgress();
+        // Actualizar la señal checklist con una nueva referencia para activar la reactividad de Angular
+        this.checklist.update(list => list.map(i => {
+          if (i.id === item.id) {
+            return { ...i, status: actionType === 1 ? 'APROBADO' : 'RECHAZADO' };
+          }
+          return i;
+        }));
+        
         this.isProcessing = false;
         const msg = actionType === 1 ? 'Ítem aprobado' : 'Ítem rechazado';
         this.snackBar.open(`✅ ${msg}`, 'Cerrar', { duration: 2000 });
@@ -373,75 +405,54 @@ export class ProtocolValidationDetailPage implements OnInit {
     });
   }
 
-  onUpdateGlobalVerification() {
+  onFinalize() {
+    if (!this.allReviewed()) {
+      this.snackBar.open('❌ Error: Existen documentos pendientes de revisión.', 'Cerrar');
+      return;
+    }
+
     this.isProcessing = true;
-    this.repository.verifyProtocol(this.protocolId, this.isGlobalComplete, this.missingItemsList).subscribe({
+    const isComplete = this.progress() === 100;
+
+    // Guardar automáticamente observaciones en la base de datos antes de finalizar
+    this.repository.verifyProtocol(this.protocolId, isComplete, this.missingItemsList).subscribe({
       next: () => {
-        this.isProcessing = false;
-        this.snackBar.open('✅ Verificación global guardada', 'Cerrar', { duration: 2000 });
-        this.loadValidationData(); // Recargar para actualizar badge de estado global
+        // Continuar con la finalización del trámite
+        this.validateUseCase.execute(this.protocolId).subscribe({
+          next: (res) => {
+            this.isProcessing = false;
+            const code = res.ceishCode || res.code || 'GENERADO';
+            
+            const dialogRef = this.dialog.open(ReceptionSuccessDialog, {
+              width: '500px',
+              disableClose: true,
+              data: { code: code }
+            });
+
+            dialogRef.afterClosed().subscribe(result => {
+              if (result === 'download') {
+                this.onDownloadCertificate();
+              }
+              this.router.navigate(['/dashboard/protocols/validation/list']);
+            });
+          },
+          error: (err) => {
+            this.isProcessing = false;
+            if (err.status === 400 && err.error?.missingDocuments) {
+              this.dialog.open(IncompleteValidationDialog, {
+                width: '500px',
+                data: { missingDocuments: err.error.missingDocuments, deadline: err.error.deadline }
+              });
+            } else {
+              const msg = err.error?.message || 'Error al finalizar la recepción';
+              this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
+            }
+          }
+        });
       },
       error: () => {
         this.isProcessing = false;
-        this.snackBar.open('❌ Error al guardar la verificación global', 'Cerrar');
-      }
-    });
-  }
-
-  updateProgress() {
-    const items = this.checklist();
-    if (items.length === 0) {
-      this.progress.set(100);
-      return;
-    }
-
-    const totalItems = items.length;
-    const validatedItems = items.filter(i => i.status === 'APROBADO' || i.status === 'VALIDADO').length;
-    
-    this.mandatoryCount.set(totalItems);
-    this.validatedCount.set(validatedItems);
-    this.progress.set(Math.round((validatedItems / totalItems) * 100));
-  }
-
-  onFinalize() {
-    const items = this.checklist();
-    const pending = items.some(i => i.status !== 'APROBADO' && i.status !== 'VALIDADO');
-    
-    if (pending) {
-      this.snackBar.open('❌ Error: Existen documentos pendientes de validación o rechazados.', 'Cerrar');
-      return;
-    }
-
-    this.isProcessing = true;
-    this.validateUseCase.execute(this.protocolId).subscribe({
-      next: (res) => {
-        this.isProcessing = false;
-        const code = res.ceishCode || res.code || 'GENERADO';
-        
-        const dialogRef = this.dialog.open(ReceptionSuccessDialog, {
-          width: '500px',
-          disableClose: true,
-          data: { code: code }
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-          if (result === 'download') {
-            this.onDownloadCertificate();
-          }
-          this.router.navigate(['/dashboard/protocols/validation/list']);
-        });
-      },
-      error: (err) => {
-        this.isProcessing = false;
-        if (err.status === 400 && err.error?.missingDocuments) {
-          this.dialog.open(IncompleteValidationDialog, {
-            width: '500px',
-            data: { missingDocuments: err.error.missingDocuments, deadline: err.error.deadline }
-          });
-        } else {
-          const msg = err.error?.message || 'Error al finalizar la recepción';
-          this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
-        }
+        this.snackBar.open('❌ Error al guardar las observaciones generales.', 'Cerrar');
       }
     });
   }

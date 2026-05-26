@@ -45,8 +45,8 @@ import { EvaluatorEntity, EvaluatorProfile } from '@domain/entities/evaluator.en
           <th mat-header-cell *matHeaderCellDef>Perfil</th>
           <td mat-cell *matCellDef="let ev">
             <mat-chip-set>
-              <mat-chip [ngClass]="ev.perfil.toLowerCase()">
-                {{ ev.perfil | titlecase }}
+              <mat-chip [ngClass]="ev.perfil?.toLowerCase() || ''">
+                {{ ev.perfil ? (ev.perfil | titlecase) : 'Sin Perfil' }}
               </mat-chip>
             </mat-chip-set>
           </td>
@@ -56,10 +56,10 @@ import { EvaluatorEntity, EvaluatorProfile } from '@domain/entities/evaluator.en
           <th mat-header-cell *matHeaderCellDef>Protocolos Activos</th>
           <td mat-cell *matCellDef="let ev">
             <div class="load-indicator">
-              <span class="count">{{ ev.cargaActiva }}</span>
+              <span class="count">{{ ev.cargaActiva || 0 }}</span>
               <div class="progress-bar">
-                <div class="fill" [style.width.%]="ev.cargaActiva * 20" 
-                     [ngClass]="{'high': ev.cargaActiva >= 5, 'medium': ev.cargaActiva >= 3}"></div>
+                <div class="fill" [style.width.%]="(ev.cargaActiva || 0) * 20" 
+                     [ngClass]="{'high': (ev.cargaActiva || 0) >= 5, 'medium': (ev.cargaActiva || 0) >= 3}"></div>
               </div>
             </div>
           </td>

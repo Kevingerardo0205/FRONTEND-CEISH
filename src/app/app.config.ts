@@ -18,7 +18,7 @@ import { UserAdminApiAdapter } from '@infrastructure/adapters/user-admin-api.ada
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { EvaluationApiAdapter } from '@infrastructure/adapters/evaluation-api.adapter';
 import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
-import { EvaluatorMockAdapter } from '@infrastructure/adapters/evaluator-mock.adapter';
+import { EvaluatorApiAdapter } from '@infrastructure/adapters/evaluator-api.adapter';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolApiAdapter } from '@infrastructure/adapters/protocol-api.adapter';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
@@ -39,7 +39,7 @@ export const appConfig: ApplicationConfig = {
     { provide: IAuthRepositoryPort, useClass: AuthApiAdapter },
     { provide: IUserAdminRepositoryPort, useClass: UserAdminApiAdapter },
     { provide: IEvaluationRepositoryPort, useClass: EvaluationApiAdapter },
-    { provide: IEvaluatorRepositoryPort, useClass: EvaluatorMockAdapter },
+    { provide: IEvaluatorRepositoryPort, useClass: EvaluatorApiAdapter },
     { provide: IProtocolRepositoryPort, useClass: ProtocolApiAdapter },
     { provide: IDocumentRepositoryPort, useClass: DocumentApiAdapter },
     { provide: IResolutionRepositoryPort, useClass: ResolutionApiAdapter },

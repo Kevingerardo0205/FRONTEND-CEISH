@@ -25,9 +25,9 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
   // Recepción de Protocolos (Secretaría / Admin)
   'RECEPCION_NUEVO': { label: 'Recepción Nueva', path: '/dashboard/protocols/reception/new', icon: 'add_task' },
   'RECEPCION_VER': { label: 'Recepción Nueva', path: '/dashboard/protocols/reception/new', icon: 'add_task' },
-  'RECEPCION_LISTA': { label: 'Listado General', path: '/dashboard/protocols/list', icon: 'list_alt' },
-  'RECEPCION_VALIDAR': { label: 'Validación Técnica', path: '/dashboard/protocols/validation/list', icon: 'fact_check' },
-  'RECEPCION_BUSCAR': { label: 'Búsqueda Avanzada', path: '/dashboard/protocols/list', icon: 'search' },
+  'RECEPCION_LISTA': { label: 'Bandeja de Protocolos', path: '/dashboard/protocols/list', icon: 'list_alt' },
+  'RECEPCION_VALIDAR': { label: 'Bandeja de Protocolos', path: '/dashboard/protocols/list', icon: 'list_alt' },
+  'RECEPCION_BUSCAR': { label: 'Bandeja de Protocolos', path: '/dashboard/protocols/list', icon: 'list_alt' },
   'RECEPCION_CONSTANCIAS': { label: 'Archivo de Constancias', path: '/dashboard/home', icon: 'folder_zip' },
   
   // Investigador
@@ -37,11 +37,11 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
   'PROTOCOLOS_CREAR': { label: 'Nuevo Protocolo', path: '/dashboard/investigador/nuevo-protocolo', icon: 'add_circle' },
   
   // Evaluaciones
-  'DOCUMENTOS_VALIDAR': { label: 'Validación Técnica', path: '/dashboard/protocols/validation/list', icon: 'fact_check' },
+  'DOCUMENTOS_VALIDAR': { label: 'Bandeja de Protocolos', path: '/dashboard/protocols/list', icon: 'list_alt' },
   'EVALUACION_RIESGO': { label: 'Clasificación de Riesgo', path: '/dashboard/home', icon: 'warning' },
-  'EVALUACION_ASIGNAR': { label: 'Asignar Evaluadores', path: '/dashboard/evaluations/assignment', icon: 'assignment_ind' },
-  'EVALUATORS_ASSIGN': { label: 'Oficializar Asignaciones', path: '/dashboard/evaluations/assignment', icon: 'assignment_ind' },
-  'EVALUATORS_SUGGEST': { label: 'Sugerir Evaluadores', path: '/dashboard/evaluations/assignment', icon: 'how_to_reg' },
+  'EVALUACION_ASIGNAR': { label: 'Asignación de Evaluadores', path: '/dashboard/evaluations/assignment', icon: 'assignment_ind' },
+  'EVALUATORS_ASSIGN': { label: 'Asignación de Evaluadores', path: '/dashboard/evaluations/assignment', icon: 'assignment_ind' },
+  'EVALUATORS_SUGGEST': { label: 'Asignación de Evaluadores', path: '/dashboard/evaluations/assignment', icon: 'how_to_reg' },
   'EVALUACION_EXPEDITA': { label: 'Revisión Expedita', path: '/dashboard/home', icon: 'bolt' },
   'EVALUACION_PLENO': { label: 'Sesión de Pleno', path: '/dashboard/home', icon: 'groups' },
   'EVALUACION_SUBSANACIONES': { label: 'Control de Enmiendas', path: '/dashboard/home', icon: 'edit_calendar' },

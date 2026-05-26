@@ -19,6 +19,18 @@
       "skillPath": "skills/angular-security/SKILL.md",
       "computedHash": "1e9298458e6aa965ed912419d0a7b72554303a2b1cf1c92310ab60f401ec7c7f"
     },
+    "design-taste-frontend": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "7af2802be2a40e5530e16ea3d19cfef88845f31a168a35167b3e8f0dc80fd0c8"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": "skill/SKILL.md",
+      "computedHash": "e08cc9be673b6b5e66eb55cf77eb50a940fc603245b2f75d8370a2043aa926aa"
+    },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",

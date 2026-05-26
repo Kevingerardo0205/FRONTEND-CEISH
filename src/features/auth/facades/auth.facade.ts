@@ -20,41 +20,67 @@ export class AuthFacade {
    * Aplica un "Mapeo Híbrido": Usa nombres amigables si existen, de lo contrario formatea el nombre del backend.
    */
   public menuConfig = computed(() => {
-    const user = this.currentUser();
-    if (!user || !user.fullPermissions) return [];
+    try {
+      const user = this.currentUser();
+      if (!user) return [];
 
-    const modulesMap = new Map<string, { 
-      code: string;
-      label: string; 
-      icon: string; 
-      order: number;
-      subItems: any[] 
-    }>();
-
-    user.fullPermissions.forEach(p => {
-      const mod = p.module;
-      const modUI = MODULE_UI_MAP[mod.code];
-
-      if (!modulesMap.has(mod.code)) {
-        modulesMap.set(mod.code, {
-          code: mod.code,
-          label: modUI?.label || toSentenceCase(mod.name),
-          icon: modUI?.icon || mod.icon,
-          order: mod.order,
-          subItems: []
-        });
+      const perms = user.fullPermissions || [];
+      if (perms.length === 0) {
+        console.warn('[AuthFacade] El usuario no tiene permisos detallados (fullPermissions vacíos).');
+        return [];
       }
 
-      const permUI = PERMISSION_UI_MAP[p.code]; console.log('[AuthFacade] Mapping:', p.code, '->', permUI?.path || '/dashboard/home');
-      modulesMap.get(mod.code)!.subItems.push({
-        code: p.code,
-        label: permUI?.label || toSentenceCase(p.code),
-        icon: permUI?.icon || 'chevron_right',
-        path: permUI?.path || '/dashboard/home'
-      });
-    });
+      const modulesMap = new Map<string, { 
+        code: string;
+        label: string; 
+        icon: string; 
+        order: number;
+        subItems: any[] 
+      }>();
 
-    return Array.from(modulesMap.values()).sort((a, b) => a.order - b.order);
+      perms.forEach(p => {
+        const mod = p.module;
+        const permUI = PERMISSION_UI_MAP[p.code];
+        
+        // Si no hay configuración de UI para este permiso, y no tiene módulo, lo ignoramos para el menú
+        if (!permUI && !mod) return;
+
+        // Si el permiso tiene UI pero no tiene módulo (ej. vino como string), lo asignamos al Dashboard por defecto
+        const modCode = mod?.code || 'MOD_DASHBOARD';
+        const modUI = MODULE_UI_MAP[modCode];
+
+        if (!modulesMap.has(modCode)) {
+          modulesMap.set(modCode, {
+            code: modCode,
+            label: modUI?.label || toSentenceCase(mod?.name || modCode),
+            icon: modUI?.icon || mod?.icon || 'folder',
+            order: mod?.order || 1,
+            subItems: []
+          });
+        }
+
+        const path = permUI?.path || '/dashboard/home';
+        const subItems = modulesMap.get(modCode)!.subItems;
+
+        // De-duplicación por path único
+        if (!subItems.some(item => item.path === path)) {
+          subItems.push({
+            code: p.code,
+            label: permUI?.label || toSentenceCase(p.code),
+            icon: permUI?.icon || 'chevron_right',
+            path: path
+          });
+        }
+      });
+
+      const finalMenu = Array.from(modulesMap.values()).sort((a, b) => a.order - b.order);
+      console.log('[AuthFacade] Menú generado:', finalMenu.length, 'módulos.');
+      return finalMenu;
+      
+    } catch (err) {
+      console.error('[AuthFacade] Error crítico al generar configuración del menú:', err);
+      return [];
+    }
   });
 
   // Gestión de intentos de login

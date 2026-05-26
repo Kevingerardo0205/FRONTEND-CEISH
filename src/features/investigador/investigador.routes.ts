@@ -21,6 +21,10 @@ export const INVESTIGADOR_ROUTES: Routes = [
       },
       {
         path: 'protocolo/:id',
+        redirectTo: '/dashboard/protocols/workspace/:id/info'
+      },
+      {
+        path: 'protocolo-legacy/:id',
         loadComponent: () => import('./presentation/pages/detalle-protocolo/detalle-protocolo.page').then(m => m.DetalleProtocoloPage),
         canActivate: [RoleGuard],
         data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }

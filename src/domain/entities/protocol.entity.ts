@@ -15,6 +15,7 @@ export interface ProtocolEntity {
   validationDate?: Date;
   documents: DocumentEntity[];
   version: number | string;
+  deadline?: string | Date;
 }
 
 export interface ValidationHeader {

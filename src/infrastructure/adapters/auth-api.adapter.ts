@@ -58,11 +58,12 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
           } : undefined
         };
       }
-      return p;
+      // Si es un string, creamos un objeto mínimo
+      return { code: p, module: undefined };
     });
 
-    const permissionCodes = normalizedFullPermissions.map((p: any) => typeof p === 'object' ? p.code : p);
-    const fullPermissions = Array.isArray(normalizedFullPermissions) && typeof normalizedFullPermissions[0] === 'object' ? normalizedFullPermissions : [];
+    const permissionCodes = normalizedFullPermissions.map((p: any) => p.code);
+    const fullPermissions = normalizedFullPermissions;
 
     return {
       id: data.id || data.Usuario_id,
