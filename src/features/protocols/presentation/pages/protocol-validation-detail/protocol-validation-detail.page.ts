@@ -110,6 +110,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                 <tr>
                   <th class="col-req">REQUISITOS</th>
                   <th class="col-doc">DOCUMENTO</th>
+                  <th class="col-pages">NRO. PÁGINAS</th>
                   <th class="col-action">VALIDACIÓN</th>
                   <th class="col-obs">OBSERVACIONES</th>
                 </tr>
@@ -134,17 +135,35 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                       <span class="text-muted small italic">Sin archivo</span>
                     </ng-template>
                   </td>
+                   <td class="text-center">
+                    <div *ngIf="item.attachedDocument" class="d-flex flex-column align-items-center gap-1">
+                      <span class="small text-muted text-nowrap" style="font-size: 0.7rem; font-weight: 600;" 
+                            matTooltip="Hojas declaradas originalmente por el investigador">
+                        Decl: {{ item.attachedDocument.originalPageCount || '-' }}
+                      </span>
+                      <input type="number" 
+                             class="mini-input text-center pages-input" 
+                             [(ngModel)]="item.attachedDocument.pageCount" 
+                             [disabled]="isProcessing || isFinalized()"
+                             (change)="onChangePageCount(item)"
+                             (keypress)="onKeyPressPages($event)"
+                             min="1"
+                             placeholder="Validadas"
+                             matTooltip="Hojas físicas reales validadas por secretaría">
+                    </div>
+                    <span *ngIf="!item.attachedDocument" class="text-muted">-</span>
+                  </td>
                   <td class="text-center">
                     <div class="btn-group-validation" *ngIf="item.attachedDocument">
                       <button mat-icon-button [color]="item.status === 'APROBADO' ? 'primary' : ''" 
                               (click)="onValidateItem(item, 1)" 
-                              [disabled]="isProcessing"
+                              [disabled]="isProcessing || isFinalized()"
                               matTooltip="Aprobar documento">
                         <mat-icon>{{ item.status === 'APROBADO' ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
                       </button>
                       <button mat-icon-button [color]="item.status === 'RECHAZADO' ? 'warn' : ''" 
                               (click)="onValidateItem(item, 2)" 
-                              [disabled]="isProcessing"
+                              [disabled]="isProcessing || isFinalized()"
                               matTooltip="Rechazar documento">
                         <mat-icon>{{ item.status === 'RECHAZADO' ? 'cancel' : 'highlight_off' }}</mat-icon>
                       </button>
@@ -154,7 +173,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                   <td>
                     <input type="text" class="mini-input" [(ngModel)]="item.observations" 
                            [placeholder]="item.status === 'RECHAZADO' ? 'Motivo de rechazo (obligatorio)...' : 'Nota opcional...'"
-                           [disabled]="!item.attachedDocument || isProcessing">
+                           [disabled]="!item.attachedDocument || isProcessing || isFinalized()">
                   </td>
                 </tr>
               </tbody>
@@ -246,6 +265,17 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
       width: 100%; border-collapse: collapse; border: 1px solid #000; background: white;
       th { background: #d1d5db; color: #000; border: 1px solid #000; padding: 10px; font-size: 0.75rem; text-transform: uppercase; }
       td { border: 1px solid #000; padding: 8px; font-size: 0.85rem; vertical-align: middle; }
+      .col-pages { width: 12%; text-align: center; }
+      .pages-input {
+        width: 70px;
+        text-align: center;
+        display: inline-block;
+        padding: 6px;
+        font-weight: 600;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font-size: 0.8rem;
+      }
       .req-label { 
         .req-id { font-weight: 900; color: #003366; margin-bottom: 2px; } 
         .req-name { font-weight: 500; color: #334155; }
@@ -362,7 +392,18 @@ export class ProtocolValidationDetailPage implements OnInit {
         console.log('[ProtocolValidationDetailPage] Detalle cargado:', data);
         
         this.header.set(data.header);
-        this.checklist.set(data.checklist || []);
+        
+        // Autocompletar conteo sugerido si viene nulo
+        const processedChecklist = (data.checklist || []).map(item => {
+          if (item.attachedDocument) {
+            if (item.attachedDocument.pageCount === null || item.attachedDocument.pageCount === undefined) {
+              item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || null;
+            }
+          }
+          return item;
+        });
+        
+        this.checklist.set(processedChecklist);
         this.globalStatus.set(data.globalStatus);
         
         if (data.globalStatus) {
@@ -378,18 +419,28 @@ export class ProtocolValidationDetailPage implements OnInit {
   onValidateItem(item: ValidationChecklistItem, actionType: number) {
     if (!item.attachedDocument) return;
 
+    const pages = item.attachedDocument.pageCount;
+    if (pages !== null && pages !== undefined && (pages <= 0 || !Number.isInteger(pages))) {
+      this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
+      return;
+    }
+
     if (actionType === 2 && (!item.observations || item.observations.trim().length < 5)) {
       this.snackBar.open('⚠️ Por favor ingrese un motivo de rechazo técnico (mín. 5 carácteres).', 'Cerrar');
       return;
     }
 
     this.isProcessing = true;
-    this.docRepository.validateDocument(item.attachedDocument.id.toString(), actionType, item.observations || '').subscribe({
+    this.docRepository.validateDocument(item.attachedDocument.id.toString(), actionType, item.observations || '', pages).subscribe({
       next: () => {
         // Actualizar la señal checklist con una nueva referencia para activar la reactividad de Angular
         this.checklist.update(list => list.map(i => {
           if (i.id === item.id) {
-            return { ...i, status: actionType === 1 ? 'APROBADO' : 'RECHAZADO' };
+            return { 
+              ...i, 
+              status: actionType === 1 ? 'APROBADO' : 'RECHAZADO',
+              attachedDocument: i.attachedDocument ? { ...i.attachedDocument, pageCount: pages } : null
+            };
           }
           return i;
         }));
@@ -403,6 +454,46 @@ export class ProtocolValidationDetailPage implements OnInit {
         this.snackBar.open('❌ Error al procesar la validación', 'Cerrar', { duration: 3000 });
       }
     });
+  }
+
+  onChangePageCount(item: ValidationChecklistItem) {
+    if (!item.attachedDocument) return;
+
+    const pageCount = item.attachedDocument.pageCount;
+    if (pageCount !== null && pageCount !== undefined && (pageCount <= 0 || !Number.isInteger(pageCount))) {
+      this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
+      // Restaurar el valor original
+      item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
+      return;
+    }
+
+    // Si ya está aprobado o rechazado, guardamos inmediatamente el cambio en la base de datos
+    if (item.status === 'APROBADO' || item.status === 'VALIDADO' || item.status === 'RECHAZADO') {
+      const actionType = (item.status === 'APROBADO' || item.status === 'VALIDADO') ? 1 : 2;
+      this.isProcessing = true;
+      this.docRepository.validateDocument(
+        item.attachedDocument.id.toString(), 
+        actionType, 
+        item.observations || '', 
+        item.attachedDocument.pageCount
+      ).subscribe({
+        next: () => {
+          this.isProcessing = false;
+          this.snackBar.open('✅ Conteo de páginas actualizado.', 'Cerrar', { duration: 1500 });
+        },
+        error: () => {
+          this.isProcessing = false;
+          this.snackBar.open('❌ Error al actualizar páginas en el servidor.', 'Cerrar', { duration: 3000 });
+        }
+      });
+    }
+  }
+
+  onKeyPressPages(event: KeyboardEvent) {
+    // Evitar caracteres de signo negativo '-', signo positivo '+', exponente 'e', decimales '.' y ','
+    if (event.key === '-' || event.key === '+' || event.key === 'e' || event.key === 'E' || event.key === '.' || event.key === ',') {
+      event.preventDefault();
+    }
   }
 
   onFinalize() {

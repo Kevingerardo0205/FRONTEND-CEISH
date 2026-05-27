@@ -242,3 +242,13 @@ td {
   50% { transform: scale(1.15); opacity: 0.8; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+.premium-paginator {
+  margin-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  background: transparent;
+  color: #64748b;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+}

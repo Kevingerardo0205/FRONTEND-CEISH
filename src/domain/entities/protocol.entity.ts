@@ -55,6 +55,8 @@ export interface ValidationChecklistItem {
     path: string;
     isValidated: boolean;
     uploadedAt: string;
+    originalPageCount?: number;
+    pageCount?: number | null;
   } | null;
 }
 

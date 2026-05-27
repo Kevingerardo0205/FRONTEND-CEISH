@@ -1,10 +1,11 @@
-import { Component, input, output, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy, signal, computed, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 
@@ -16,6 +17,7 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
     CommonModule,
     RouterModule,
     MatTableModule,
+    MatPaginatorModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
@@ -40,7 +42,7 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
       </div>
 
       <div class="table-responsive">
-        <table mat-table [dataSource]="protocols()" class="ops-table">
+        <table mat-table [dataSource]="paginatedProtocols()" class="ops-table">
           
           <ng-container matColumnDef="code">
             <th mat-header-cell *matHeaderCellDef>CÓDIGO CEISH</th>
@@ -104,6 +106,16 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
           <p>¡Gran trabajo! No tienes trámites pendientes en este filtro.</p>
         </div>
       </div>
+
+      <mat-paginator 
+        *ngIf="protocols().length > 0"
+        [length]="protocols().length" 
+        [pageSize]="pageSize()" 
+        [pageIndex]="currentPageIndex()"
+        [pageSizeOptions]="[10, 25, 50]" 
+        (page)="onPageChange($event)" 
+        class="premium-paginator">
+      </mat-paginator>
     </div>
   `,
   styleUrls: ['./workflow-table.component.scss']
@@ -117,14 +129,39 @@ export class WorkflowTableComponent {
 
   filterOptions = [
     { id: 'ALL', label: 'Todos' },
-    { id: 'SUBMITTED', label: 'Por Recibir' },
-    { id: 'EN_REVISION_DOCUMENTAL', label: 'Observados' },
-    { id: 'VALIDATED', label: 'Listos Evaluación' }
+    { id: 'SUBMITTED', label: 'Pendientes' },
+    { id: 'EN_REVISION_DOCUMENTAL', label: 'Incompletos' },
+    { id: 'VALIDATED', label: 'Validados' }
   ];
+
+  currentPageIndex = signal<number>(0);
+  pageSize = signal<number>(10);
+
+  paginatedProtocols = computed(() => {
+    const list = this.protocols();
+    const index = this.currentPageIndex();
+    const size = this.pageSize();
+    return list.slice(index * size, (index + 1) * size);
+  });
+
+  constructor() {
+    effect(() => {
+      // Reiniciar índice de página a 0 cuando cambien los protocolos (filtro/búsqueda)
+      this.protocols();
+      untracked(() => {
+        this.currentPageIndex.set(0);
+      });
+    });
+  }
 
   onFilterClick(id: string) {
     this.selectedFilter.set(id);
     this.filterChanged.emit(id);
+  }
+
+  onPageChange(event: PageEvent) {
+    this.currentPageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
   }
 
   isOverdue(protocol: ProtocolEntity): boolean {
@@ -147,9 +184,9 @@ export class WorkflowTableComponent {
   getFriendlyStatus(status: string): string {
     if (!status) return 'DESCONOCIDO';
     const s = status.toUpperCase();
-    if (s === 'SUBMITTED' || s === 'PRESENTADO') return 'POR RECIBIR';
+    if (s === 'SUBMITTED' || s === 'PRESENTADO') return 'PENDIENTE';
     if (s === 'DRAFT' || s === 'BORRADOR') return 'BORRADOR';
-    if (s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA') return 'OBSERVADO';
+    if (s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA') return 'INCOMPLETO';
     if (s === 'VALIDATED' || s === 'VALIDADO') return 'VALIDADO';
     if (s === 'EN_EVALUACION') return 'EN EVALUACIÓN';
     if (s === 'APPROVED' || s === 'APROBADO') return 'APROBADO';

@@ -9,10 +9,11 @@ import { ApiClientService } from '@infrastructure/api/api-client.service';
 export class DocumentApiAdapter extends IDocumentRepositoryPort {
   private apiClient = inject(ApiClientService);
 
-  validateDocument(documentId: string, statusId: number, observations: string): Observable<any> {
+  validateDocument(documentId: string, statusId: number, observations: string, pageCount?: number | null): Observable<any> {
     return this.apiClient.post(`/reception/document/${documentId}/validate`, {
       statusId,
-      observations
+      observations,
+      pageCount
     });
   }
 }

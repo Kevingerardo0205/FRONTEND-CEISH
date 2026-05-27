@@ -10,25 +10,25 @@ import { SecretariatMetrics } from '../../application/services/secretariat-dashb
   imports: [CommonModule, MatIconModule],
   template: `
     <div class="kpi-grid">
-      <!-- 1. Por Recibir -->
+      <!-- 1. Pendientes -->
       <div class="kpi-card">
         <div class="kpi-icon-wrapper blue">
           <mat-icon>inbox</mat-icon>
         </div>
         <div class="kpi-info">
           <span class="value">{{ metrics().pendingReception }}</span>
-          <span class="label">Nuevos por recibir</span>
+          <span class="label">Pendientes</span>
         </div>
       </div>
 
-      <!-- 2. Observados -->
+      <!-- 2. Incompletos -->
       <div class="kpi-card">
         <div class="kpi-icon-wrapper orange">
           <mat-icon>feedback</mat-icon>
         </div>
         <div class="kpi-info">
           <span class="value">{{ metrics().observed }}</span>
-          <span class="label">Observados activos</span>
+          <span class="label">Incompletos</span>
         </div>
       </div>
 

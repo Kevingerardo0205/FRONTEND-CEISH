@@ -9,4 +9,6 @@ export interface DocumentEntity {
   status?: string;
   observations?: string;
   version?: number;
+  originalPageCount?: number;
+  pageCount?: number;
 }

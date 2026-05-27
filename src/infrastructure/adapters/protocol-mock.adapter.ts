@@ -143,15 +143,81 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
         {
           id: 1,
           code: 'ANX-1',
-          name: 'Carta de Cita Archivo Adjunto',
+          name: 'Solicitud de evaluación del protocolo (Anexo 1)',
           status: 'PRESENTADO',
-          observations: 'Nota mock',
+          observations: null,
           attachedDocument: {
             id: 101,
-            fileName: 'mock_file.pdf',
-            path: 'mock/path',
+            fileName: 'solicitud_anexo_1.pdf',
+            path: 'mock/path/anexo1.pdf',
             isValidated: false,
-            uploadedAt: new Date().toISOString()
+            uploadedAt: new Date().toISOString(),
+            originalPageCount: 3,
+            pageCount: null
+          }
+        },
+        {
+          id: 2,
+          code: 'ANX-2',
+          name: 'Formulario para la presentación de protocolos (Anexo 2)',
+          status: 'PRESENTADO',
+          observations: null,
+          attachedDocument: {
+            id: 102,
+            fileName: 'formulario_anexo_2.pdf',
+            path: 'mock/path/anexo2.pdf',
+            isValidated: false,
+            uploadedAt: new Date().toISOString(),
+            originalPageCount: 15,
+            pageCount: null
+          }
+        },
+        {
+          id: 3,
+          code: 'CI-03',
+          name: 'Documento de Consentimiento Informado',
+          status: 'APROBADO',
+          observations: 'Cumple con el formato estándar',
+          attachedDocument: {
+            id: 103,
+            fileName: 'consentimiento_informado.pdf',
+            path: 'mock/path/consentimiento.pdf',
+            isValidated: true,
+            uploadedAt: new Date().toISOString(),
+            originalPageCount: 6,
+            pageCount: 6
+          }
+        },
+        {
+          id: 4,
+          code: 'CV-08',
+          name: 'Hoja de Vida de los Investigadores',
+          status: 'PRESENTADO',
+          observations: null,
+          attachedDocument: {
+            id: 104,
+            fileName: 'hoja_de_vida_principal.pdf',
+            path: 'mock/path/cv.pdf',
+            isValidated: false,
+            uploadedAt: new Date().toISOString(),
+            originalPageCount: 8,
+            pageCount: null
+          }
+        },
+        {
+          id: 5,
+          code: 'ANX-4',
+          name: 'Declaración de Responsabilidad (Anexo 4)',
+          status: 'RECHAZADO',
+          observations: 'Falta firma del investigador principal',
+          attachedDocument: {
+            id: 105,
+            fileName: 'declaracion_anexo_4.pdf',
+            path: 'mock/path/anexo4.pdf',
+            isValidated: false,
+            uploadedAt: new Date().toISOString(),
+            originalPageCount: 2,
+            pageCount: 2
           }
         }
       ],
