@@ -290,7 +290,7 @@ export class DashboardHomePage implements OnInit {
         return {
           greeting: 'Sigue el estado de tus investigaciones',
           stats: [
-            { title: 'Mis Protocolos', value: this.dashboardFacade.myProtocols().length, icon: 'folder_open', color: '#2563eb' },
+            { title: 'Mis Protocolos', value: Array.isArray(this.dashboardFacade.myProtocols()) ? this.dashboardFacade.myProtocols().length : 0, icon: 'folder_open', color: '#2563eb' },
             { title: 'Observados', value: this.dashboardFacade.myObservedCount(), icon: 'feedback', color: '#f59e0b' },
             { title: 'Aprobados', value: this.dashboardFacade.myApprovedCount(), icon: 'verified', color: '#10b981' },
           ],

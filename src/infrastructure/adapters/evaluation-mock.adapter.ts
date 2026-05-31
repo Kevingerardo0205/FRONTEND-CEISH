@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, delay } from 'rxjs';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { EvaluationEntity, EvaluationVerdict } from '@domain/entities/evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity } from '@domain/entities/peer-evaluation.entity';
 
 @Injectable({
   providedIn: 'root'
@@ -123,5 +124,73 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
       verdict: 'APROBADO',
       observations: 'Consolidación mock generada automáticamente.'
     }).pipe(delay(500));
+  }
+
+  // --- MOCKS PARA ESTRATIFICACIÓN DE RIESGO POR PARES (PET 4.2.1) ---
+
+  getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]> {
+    return of([
+      {
+        id: 12,
+        ceishCode: "CEISH-ESPOCH-EI-012-2026",
+        title: "Evaluación del balance nutricional en escolares de Chimborazo",
+        receptionStatus: "COMPLETO",
+        isRiskLevelDesignated: false,
+        createdAt: new Date().toISOString(),
+        studyType: {
+          id: 2,
+          codigo: "IO",
+          nombre: "Investigación Observacional"
+        },
+        principalInvestigatorRecord: {
+          id: 45,
+          fullName: "Dra. María Carmen Ortega",
+          email: "maria.ortega@espoch.edu.ec"
+        }
+      }
+    ]).pipe(delay(500));
+  }
+
+  assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<void> {
+    console.log('Mock: Asignando pares evaluadores', protocolId, evaluatorIds);
+    return of(undefined).pipe(delay(500));
+  }
+
+  getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]> {
+    return of([
+      {
+        id: 8,
+        protocolId: 12,
+        evaluatorId: 3,
+        proposedRiskLevelId: null,
+        observations: null,
+        assignedAt: new Date().toISOString(),
+        submittedAt: null,
+        protocol: {
+          id: 12,
+          ceishCode: "CEISH-ESPOCH-EI-012-2026",
+          title: "Evaluación del balance nutricional en escolares de Chimborazo",
+          studyType: {
+            nombre: "Investigación Observacional"
+          },
+          principalInvestigatorRecord: {
+            fullName: "Dra. María Carmen Ortega"
+          }
+        }
+      }
+    ]).pipe(delay(500));
+  }
+
+  submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string }): Observable<void> {
+    console.log('Mock: Enviando propuesta de riesgo', assignmentId, payload);
+    return of(undefined).pipe(delay(500));
+  }
+
+  getActiveEvaluators(): Observable<any[]> {
+    return of([
+      { id: 32, fullName: 'Test Evaluador', email: 'evaluador@test.com' },
+      { id: 3, fullName: 'Dr. Marco Antonio', email: 'marco.antonio@espoch.edu.ec' },
+      { id: 14, fullName: 'Dra. Elena Ramos', email: 'elena.ramos@espoch.edu.ec' }
+    ]).pipe(delay(500));
   }
 }

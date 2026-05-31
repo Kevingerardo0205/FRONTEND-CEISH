@@ -184,10 +184,12 @@ export class WorkflowTableComponent {
   getFriendlyStatus(status: string): string {
     if (!status) return 'DESCONOCIDO';
     const s = status.toUpperCase();
-    if (s === 'SUBMITTED' || s === 'PRESENTADO') return 'PENDIENTE';
+    if (s === 'SUBMITTED' || s === 'PRESENTADO') return 'INCOMPLETO';
     if (s === 'DRAFT' || s === 'BORRADOR') return 'BORRADOR';
-    if (s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA') return 'INCOMPLETO';
-    if (s === 'VALIDATED' || s === 'VALIDADO') return 'VALIDADO';
+    if (s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED') return 'PENDIENTE';
+    if (s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE') return 'PENDIENTE';
+    if (s === 'VALIDATED' || s === 'VALIDADO' || s === 'COMPLETO') return 'VALIDADO';
+    if (s === 'INCOMPLETO') return 'INCOMPLETO';
     if (s === 'EN_EVALUACION') return 'EN EVALUACIÓN';
     if (s === 'APPROVED' || s === 'APROBADO') return 'APROBADO';
     return status;

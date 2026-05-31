@@ -48,6 +48,12 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
             </div>
           </div>
 
+          <!-- BADGE LLAMATIVO DE ACEPTACIÓN DE TIEMPOS -->
+          <div class="timeline-warning-badge animate-pulse-amber" *ngIf="p.estado === 'COMPLETO' && !p.isTimelineTermsAccepted">
+            <mat-icon>warning</mat-icon>
+            <span>Pendiente Aceptación de Tiempos</span>
+          </div>
+
           <div class="card-body">
             <h3 class="protocol-title" [matTooltip]="p.titulo">{{ p.titulo }}</h3>
             <div class="meta-info">
@@ -151,6 +157,26 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
       }
     }
 
+    .timeline-warning-badge {
+      display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      border: 1.5px solid #f59e0b; border-radius: 12px;
+      color: #b45309; font-size: 0.75rem; font-weight: 700;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.05);
+      
+      mat-icon { font-size: 16px; width: 16px; height: 16px; color: #d97706; }
+    }
+
+    .animate-pulse-amber {
+      animation: pulseAmber 2.5s infinite;
+    }
+
+    @keyframes pulseAmber {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3); }
+      70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
     .protocol-title { 
       margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; line-height: 1.4;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 3.1rem;
@@ -215,6 +241,7 @@ export class MisProtocolosPage implements OnInit {
       case 'APROBADO_DEFINITIVO': case 'APROBADO_CONDICIONADO': return 'approved';
       case 'EN_REVISION_DOCUMENTAL': case 'EN_REVISION_SECRETARIA': case 'EN_EVALUACION': return 'review';
       case 'REQUIERE_CORRECCION': case 'NO_APROBADO': return 'correction';
+      case 'COMPLETO': return 'pending';
       default: return 'pending';
     }
   }
@@ -222,6 +249,7 @@ export class MisProtocolosPage implements OnInit {
   formatStatus(estado: string): string {
     if (!estado) return 'Desconocido';
     if (estado === 'EN_REVISION_SECRETARIA') return 'Revisión Secretaría';
+    if (estado === 'COMPLETO') return 'Validado / Pendiente Firma';
     return estado.replace(/_/g, ' ');
   }
 }

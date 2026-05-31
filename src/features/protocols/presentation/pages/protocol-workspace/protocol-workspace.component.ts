@@ -10,6 +10,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
 
@@ -27,10 +29,20 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
     MatChipsModule,
     MatProgressBarModule,
     MatTooltipModule,
-    ProtocolCodePipe
+    ProtocolCodePipe,
+    MatSnackBarModule,
+    TimelineAcceptanceModalComponent
   ],
   template: `
     <div class="workspace-shell" *ngIf="protocol(); else loading">
+      <!-- MODAL DE ACEPTACIÓN OBLIGATORIO DE TIEMPOS -->
+      <app-timeline-acceptance-modal
+        *ngIf="showAcceptanceModal()"
+        [protocolId]="protocolIdNumber()"
+        [ceishCode]="protocol()?.code || ''"
+        (accepted)="onTimelineAccepted()">
+      </app-timeline-acceptance-modal>
+
       <!-- 1. Header Premium: Identidad y Acciones Rápidas -->
       <header class="premium-header">
         <div class="header-main">
@@ -239,8 +251,34 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private router = inject(Router);
   private workspaceService = inject(ProtocolWorkspaceService);
   private authFacade = inject(AuthFacade);
+  private snackBar = inject(MatSnackBar);
 
   protocol = this.workspaceService.protocol;
+
+  protocolIdNumber = computed(() => Number(this.protocol()?.id || 0));
+
+  showAcceptanceModal = computed(() => {
+    const p = this.protocol();
+    const user = this.authFacade.currentUser();
+    if (!p || !user) return false;
+    
+    const isIp = user.rol?.toUpperCase() === 'INVESTIGADOR';
+    const isComplete = p.status?.toUpperCase() === 'COMPLETO';
+    const isNotSigned = !p.isTimelineTermsAccepted;
+    
+    return isIp && isComplete && isNotSigned;
+  });
+
+  onTimelineAccepted() {
+    this.workspaceService.updateProtocol({
+      isTimelineTermsAccepted: true
+    });
+    this.snackBar.open('📋 Conformidad firmada con éxito. Su protocolo ha sido sometido formalmente a evaluación.', 'Entendido', {
+      duration: 5000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top'
+    });
+  }
 
   contextualActions = computed(() => {
     const p = this.protocol();

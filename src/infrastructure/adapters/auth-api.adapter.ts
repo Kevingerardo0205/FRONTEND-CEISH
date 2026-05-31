@@ -140,9 +140,26 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
     return this.get<any>(ENDPOINTS.AUTH.PROFILE).pipe(map(res => this.mapBackendUser(res.data || res))); 
   }
   
+  forgotPassword(email: string): Observable<any> {
+    return this.post<any>(ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
+  }
+
+  resetPassword(email: string, code: string, password: string): Observable<any> {
+    return this.post<any>(ENDPOINTS.AUTH.RESET_PASSWORD, { email, code, password });
+  }
+
   checkEmailExists(email: string): Observable<boolean> { return of(false); }
   createUser(userDto: any): Observable<User> { return this.post<any>(ENDPOINTS.AUTH.REGISTER, userDto); }
-  updateUser(id: string, userDto: any): Observable<User> { return of(userDto); }
+  updateUser(id: string, userDto: any): Observable<User> {
+    const payload: any = {};
+    if (userDto.nombre) payload.fullName = userDto.nombre;
+    if (userDto.perfil) payload.perfil = userDto.perfil;
+    if (userDto.email) payload.email = userDto.email;
+
+    return this.patch<any>(ENDPOINTS.USERS.BY_ID(id), payload).pipe(
+      map(res => this.mapBackendUser(res.data || res))
+    );
+  }
   deleteUser(id: string): Observable<void> { return of(undefined); }
   logAudit(action: string, detail: string): Observable<void> { return of(undefined); }
 }

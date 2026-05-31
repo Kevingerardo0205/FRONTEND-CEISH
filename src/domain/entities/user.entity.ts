@@ -9,7 +9,7 @@ export interface Module {
 
 export interface Permission {
   code: string;
-  module: Module;
+  module?: Module;
 }
 
 export interface User {

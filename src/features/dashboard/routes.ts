@@ -13,6 +13,10 @@ export const DASHBOARD_ROUTES: Routes = [
         loadComponent: () => import('./presentation/pages/dashboard-home.page').then(m => m.DashboardHomePage)
       },
       {
+        path: 'profile',
+        loadComponent: () => import('./presentation/pages/profile/profile.page').then(m => m.ProfilePage)
+      },
+      {
         path: 'admin/users',
         loadComponent: () => import('./presentation/pages/user-management.page').then(m => m.UserManagementPage),
         canActivate: [AuthGuard],

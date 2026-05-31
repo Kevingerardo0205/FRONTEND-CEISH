@@ -39,10 +39,13 @@ export class SecretariatDashboardService {
       list = list.filter(p => {
         const s = p.status?.toUpperCase();
         if (statusFilter === 'SUBMITTED') {
-          return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR';
+          return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INCOMPLETO';
         }
         if (statusFilter === 'EN_REVISION_DOCUMENTAL') {
-          return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA';
+          return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
+        }
+        if (statusFilter === 'VALIDATED') {
+          return (s === 'COMPLETO' || s === 'VALIDATED' || s === 'VALIDADO') && (!!p.code && p.code !== 'S/C' && p.code !== 'Sin Código');
         }
         return s === statusFilter;
       });
@@ -67,11 +70,11 @@ export class SecretariatDashboardService {
     return {
       pendingReception: all.filter(p => {
         const s = p.status?.toUpperCase();
-        return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR';
+        return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INCOMPLETO';
       }).length,
       observed: all.filter(p => {
         const s = p.status?.toUpperCase();
-        return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA';
+        return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
       }).length,
       overdue: all.filter(p => p.deadline && new Date(p.deadline) < now).length,
       slaRisk: all.filter(p => {

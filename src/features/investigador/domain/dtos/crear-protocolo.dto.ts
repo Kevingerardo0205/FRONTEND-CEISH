@@ -11,7 +11,8 @@ export enum EstadoProtocolo {
   APROBADO_CONDICIONADO = 'APROBADO_CONDICIONADO',
   NO_APROBADO = 'NO_APROBADO',
   ARCHIVADO = 'ARCHIVADO',
-  VENCIDO = 'VENCIDO'
+  VENCIDO = 'VENCIDO',
+  COMPLETO = 'COMPLETO'
 }
 
 export enum RequirementStatus {
@@ -95,6 +96,9 @@ export interface ProtocoloResumen {
   estado: EstadoProtocolo;
   fechaCreacion: string;
   tipoEstudio?: string;
+  isTimelineTermsAccepted?: boolean;
+  timelineTermsAcceptedAt?: string | null;
+  timelineTermsAcceptedIp?: string | null;
 }
 
 export interface ProtocoloDetalle extends CrearProtocoloDto {
@@ -108,4 +112,7 @@ export interface ProtocoloDetalle extends CrearProtocoloDto {
   institucionPatrocinadora?: string;
   titulo: string;
   tipoEstudio?: string;
+  isTimelineTermsAccepted?: boolean;
+  timelineTermsAcceptedAt?: string | null;
+  timelineTermsAcceptedIp?: string | null;
 }

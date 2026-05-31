@@ -1,4 +1,4 @@
-import { Injectable } from "@angular/core";
+锘縤mport { Injectable } from "@angular/core";
 import { Observable, of, throwError, delay } from "rxjs";
 import { IAuthRepositoryPort } from "@domain/ports/IAuthRepositoryPort";
 import { User, UserRole, UserDTO, AuthResponse, LoginCredentials, Permission } from "@domain/entities/user.entity";
@@ -25,7 +25,7 @@ export class AuthMockRepository implements IAuthRepositoryPort {
       permissions: ["ADMIN_ALL", "USUARIOS_VER", "USUARIOS_CREAR"],
       fullPermissions: [
         this.createPermission("DASHBOARD_VER_PRINCIPAL", "MOD_DASHBOARD", "Panel Principal"),
-        this.createPermission("USUARIOS_VER", "MOD_USUARIOS", "Gesti髇 de Usuarios"),
+        this.createPermission("USUARIOS_VER", "MOD_USUARIOS", "Gesti贸n de Usuarios"),
         this.createPermission("ADMIN_ALL", "MOD_AUDIT", "Seguridad")
       ]
     },
@@ -40,8 +40,8 @@ export class AuthMockRepository implements IAuthRepositoryPort {
       permissions: ["RECEPCION_SUBIR_DOCUMENTOS", "RECEPCION_CREAR", "RECEPCION_INICIAR"],
       fullPermissions: [
         this.createPermission("DASHBOARD_VER_PRINCIPAL", "MOD_DASHBOARD", "Panel Principal"),
-        this.createPermission("RECEPCION_INICIAR", "MOD_RECEPCION", "Recepci髇"),
-        this.createPermission("RECEPCION_SUBIR_DOCUMENTOS", "MOD_RECEPCION", "Recepci髇")
+        this.createPermission("RECEPCION_INICIAR", "MOD_RECEPCION", "Recepci贸n"),
+        this.createPermission("RECEPCION_SUBIR_DOCUMENTOS", "MOD_RECEPCION", "Recepci贸n")
       ]
     },
     {
@@ -49,14 +49,14 @@ export class AuthMockRepository implements IAuthRepositoryPort {
       email: "secretaria@espoch.edu.ec",
       nombre: "Secretaria CEISH",
       rol: "SECRETARIA",
-      perfil: "Secretaria T閏nica",
+      perfil: "Secretaria T茅cnica",
       activo: true,
       emailVerificado: true,
       permissions: ["RECEPCION_VER", "DOCUMENTOS_VALIDAR"],
       fullPermissions: [
         this.createPermission("DASHBOARD_VER_PRINCIPAL", "MOD_DASHBOARD", "Panel Principal"),
-        this.createPermission("RECEPCION_VER", "MOD_RECEPCION", "Recepci髇"),
-        this.createPermission("DOCUMENTOS_VALIDAR", "MOD_RECEPCION", "Recepci髇")
+        this.createPermission("RECEPCION_VER", "MOD_RECEPCION", "Recepci贸n"),
+        this.createPermission("DOCUMENTOS_VALIDAR", "MOD_RECEPCION", "Recepci贸n")
       ]
     }
   ];
@@ -71,8 +71,8 @@ export class AuthMockRepository implements IAuthRepositoryPort {
       emailVerificado: false,
       permissions: ["RECEPCION_SUBIR_DOCUMENTOS", "RECEPCION_INICIAR"],
       fullPermissions: [
-        this.createPermission("RECEPCION_INICIAR", "MOD_RECEPCION", "Recepci髇"),
-        this.createPermission("RECEPCION_SUBIR_DOCUMENTOS", "MOD_RECEPCION", "Recepci髇")
+        this.createPermission("RECEPCION_INICIAR", "MOD_RECEPCION", "Recepci贸n"),
+        this.createPermission("RECEPCION_SUBIR_DOCUMENTOS", "MOD_RECEPCION", "Recepci贸n")
       ]
     };
     this.mockUsers.push(newUser);
@@ -99,6 +99,8 @@ export class AuthMockRepository implements IAuthRepositoryPort {
     const user = this.mockUsers.find(u => u.id === id);
     return user ? of(user) : throwError(() => new Error("Not found"));
   }
+  forgotPassword(email: string): Observable<any> { return of({ success: true }).pipe(delay(800)); }
+  resetPassword(email: string, code: string, password: string): Observable<any> { return of({ success: true }).pipe(delay(1000)); }
   checkEmailExists(email: string): Observable<boolean> { return of(false); }
   createUser(user: any): Observable<User> { return of(user); }
   updateUser(id: string, user: any): Observable<User> { return of(user); }

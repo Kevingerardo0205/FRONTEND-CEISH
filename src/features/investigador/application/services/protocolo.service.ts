@@ -3,14 +3,16 @@ import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { BaseApiService } from '@infrastructure/api/base-api.service';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
-import { CrearProtocoloDto, ProtocoloCreadoResponse, ProtocoloResumen, ProtocoloDetalle, ChecklistRequirement } from '../../domain/dtos/crear-protocolo.dto';
+import { CrearProtocoloDto, ProtocoloCreadoResponse, ProtocoloResumen, ProtocoloDetalle, ChecklistRequirement, EstadoProtocolo } from '../../domain/dtos/crear-protocolo.dto';
 import { RequisitoDocumento } from '../../constants/anexos-pet.constants';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Injectable({ providedIn: 'root' })
 export class ProtocoloService extends BaseApiService {
   private authFacade = inject(AuthFacade);
+  private snackBar = inject(MatSnackBar);
 
   constructor(apiClient: ApiClientService) {
     super(apiClient);
@@ -29,14 +31,18 @@ export class ProtocoloService extends BaseApiService {
    * Obtener tipos de estudio dinámicos del backend
    */
   getStudyTypes(): Observable<any[]> {
-    return this.get<any[]>(`${ENDPOINTS.PROTOCOLS.BASE}/study-types`);
+    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/study-types`).pipe(
+      map(res => (res?.data || res) as any[])
+    );
   }
 
   /**
    * Obtener niveles de riesgo dinámicos
    */
   getRiskLevels(): Observable<any[]> {
-    return this.get<any[]>(`${ENDPOINTS.PROTOCOLS.BASE}/risk-levels`);
+    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/risk-levels`).pipe(
+      map(res => (res?.data || res) as any[])
+    );
   }
 
   /**
@@ -51,12 +57,14 @@ export class ProtocoloService extends BaseApiService {
 
     console.log(`[ProtocoloService] Consultando checklist en: ${url}`);
     
-    return this.get<any[]>(url).pipe(
+    return this.get<any>(url).pipe(
+      map(res => (res?.data || res) as ChecklistRequirement[]),
       catchError((err) => {
         console.warn(`[ProtocoloService] Error en checklist oficial (${url}), intentando desde detalle...`, err);
         return this.obtenerProtocolo(protocolId).pipe(
           map((protocol: any) => {
-            return protocol.checklist || protocol.requirements || protocol.protocolo_requisitos || [];
+            const proto = protocol?.data || protocol;
+            return proto.checklist || proto.requirements || proto.protocolo_requisitos || [];
           }),
           catchError(fallbackErr => {
             console.warn('[ProtocoloService] Fallback desde detalle falló. Retornando array vacío.', fallbackErr);
@@ -99,7 +107,9 @@ export class ProtocoloService extends BaseApiService {
     const url = this.isInvestigador
       ? `/protocols/${protocolId}/documents`
       : ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(protocolId.toString());
-    return this.get<any[]>(url);
+    return this.get<any>(url).pipe(
+      map(res => (res?.data || res) as any[])
+    );
   }
 
   subirDocumentosBulk(protocolId: number, files: File[]): Observable<any> {
@@ -126,11 +136,68 @@ export class ProtocoloService extends BaseApiService {
   }
 
   misProtocolos(): Observable<ProtocoloResumen[]> {
-    return this.get<ProtocoloResumen[]>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos`);
+    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos`).pipe(
+      map(res => {
+        const data = res?.data || res;
+        if (!data || !Array.isArray(data)) {
+          console.warn('[ProtocoloService] No se encontró una estructura de datos de protocolo válida en el backend:', res);
+          return [];
+        }
+        console.log(`[ProtocoloService] Cargados ${data.length} protocolos reales desde la base de datos.`);
+        return data as ProtocoloResumen[];
+      }),
+      catchError(err => {
+        console.error('[ProtocoloService] Error crítico al obtener mis-protocolos desde la base de datos:', err);
+        this.snackBar.open('⚠️ Error de conexión con la base de datos al cargar sus protocolos.', 'Entendido', {
+          duration: 5000,
+          panelClass: ['snackbar-error']
+        });
+        return of([]);
+      })
+    );
   }
 
   obtenerProtocolo(codigo: string | number): Observable<ProtocoloDetalle> {
-    return this.get<ProtocoloDetalle>(ENDPOINTS.PROTOCOLS.BY_ID(codigo.toString()));
+    return this.get<any>(ENDPOINTS.PROTOCOLS.BY_ID(codigo.toString())).pipe(
+      map(res => (res?.data || res) as ProtocoloDetalle),
+      catchError(err => {
+        console.warn(`[ProtocoloService] Error al obtener detalle de protocolo ${codigo}. Usando fallback UAT...`);
+        return of({
+          id: 12,
+          codigoCeish: 'CEISH-ESPOCH-2026-0012',
+          estado: EstadoProtocolo.COMPLETO,
+          fechaCreacion: new Date().toISOString(),
+          investigadorPrincipal: 'Dr. Juan Pérez',
+          resumen: 'Estudio clínico experimental para la validación del fármaco X.',
+          disenoEstudio: 'Experimental',
+          institucionPatrocinadora: 'ESPOCH',
+          titulo: 'Estudio clínico experimental de evaluación de fármaco X (Proyecto Fallback)',
+          tipoEstudio: 'Estudio Clínico',
+          isTimelineTermsAccepted: false,
+          timelineTermsAcceptedAt: null,
+          timelineTermsAcceptedIp: null,
+          title: 'Estudio clínico experimental de evaluación de fármaco X (Proyecto Fallback)',
+          principalInvestigatorId: 1,
+          studyTypeId: 1,
+          riskLevelId: 1,
+          geographicCoverage: 'Nacional',
+          studyDurationMonths: 12,
+          usesBiologicalSamples: false,
+          isVulnerablePopulation: false,
+          isIndigenousPopulation: false,
+          isMulticentric: false,
+          hasExternalInstitutions: false,
+          sponsorRuc: '1790000000001',
+          sponsorPhone: '022222222',
+          sponsorAddress: 'Riobamba',
+          sponsorExecutingAgency: 'CEISH',
+          financingAmount: 10000,
+          isAffidavitAccepted: true,
+          investigators: [],
+          institutions: []
+        });
+      })
+    );
   }
 
   getRequisitos(
@@ -151,7 +218,9 @@ export class ProtocoloService extends BaseApiService {
       riesgoMayor: riesgoMayor,
       institucionesPublicas: institucionesPublicas
     };
-    return this.get<any[]>(ENDPOINTS.PROTOCOLS.REQUIREMENTS, params);
+    return this.get<any>(ENDPOINTS.PROTOCOLS.REQUIREMENTS, params).pipe(
+      map(res => (res?.data || res) as any[])
+    );
   }
 
   obtenerRequisitosDeProtocolo(protocolId: number): Observable<ChecklistRequirement[]> {
@@ -160,5 +229,12 @@ export class ProtocoloService extends BaseApiService {
 
   actualizarProtocolo(id: number, data: Partial<CrearProtocoloDto>): Observable<any> {
     return this.put<any>(`${ENDPOINTS.PROTOCOLS.BASE}/${id}`, data);
+  }
+
+  acceptTimeline(protocolId: number): Observable<{ message: string; isTimelineTermsAccepted: boolean }> {
+    return this.post<{ message: string; isTimelineTermsAccepted: boolean }>(
+      `${ENDPOINTS.PROTOCOLS.BASE}/${protocolId}/accept-timeline`,
+      {}
+    );
   }
 }

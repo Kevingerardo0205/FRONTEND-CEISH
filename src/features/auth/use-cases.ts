@@ -100,3 +100,25 @@ export class UpdateUserUseCase {
     );
   }
 }
+
+@Injectable({ providedIn: 'root' })
+export class ForgotPasswordUseCase {
+  constructor(private authRepository: IAuthRepositoryPort) {}
+
+  execute(email: string): Observable<any> {
+    return this.authRepository.forgotPassword(email).pipe(
+      tap(() => this.authRepository.logAudit('PASSWORD_RECOVERY_REQUEST', `Solicitud de recuperación de contraseña: ${email}`).subscribe())
+    );
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class ResetPasswordUseCase {
+  constructor(private authRepository: IAuthRepositoryPort) {}
+
+  execute(email: string, code: string, password: string): Observable<any> {
+    return this.authRepository.resetPassword(email, code, password).pipe(
+      tap(() => this.authRepository.logAudit('PASSWORD_RECOVERY_SUCCESS', `Restablecimiento de contraseña exitoso: ${email}`).subscribe())
+    );
+  }
+}

@@ -13,6 +13,7 @@ export const ENDPOINTS = {
   PROTOCOLS: {
     BASE: '/protocols',
     BY_ID: (id: string) => `/protocols/${id}`,
+    ACCEPT_TIMELINE: (id: string) => `/protocols/${id}/accept-timeline`,
     CHECKLIST: (id: string) => `/reception/protocol/${id}`,
     REQUIREMENTS: '/protocols/requirements',
     UPLOAD_DOCUMENT: (id: string) => `/reception/protocol/${id}/document`,
@@ -45,6 +46,13 @@ export const ENDPOINTS = {
     PROFILES: '/evaluations/profiles',
     PROFILE_BY_ID: (id: number) => `/evaluations/profiles/${id}`,
     CONSOLIDATE: (id: string) => `/evaluations/consolidate/${id}`,
+    PEER_ASSIGNMENTS: {
+      PENDING_ASSIGNMENT: '/evaluations/protocols/pending-peer-assignment',
+      ASSIGN_PEERS: (id: string) => `/evaluations/protocols/${id}/assign-peer-evaluators`,
+      MY_PENDING: '/evaluations/peer-assignments/my-pending',
+      SUBMIT_RISK: (id: string) => `/evaluations/peer-assignments/${id}/submit-risk`,
+      ACTIVE_EVALUATORS: '/evaluations/evaluators/active'
+    }
   },
   USERS: {
     BASE: '/auth/users',

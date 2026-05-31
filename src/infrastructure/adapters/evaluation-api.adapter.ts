@@ -5,6 +5,7 @@ import { IEvaluationRepositoryPort } from 'src/domain/ports/IEvaluationRepositor
 import { ApiClientService } from '../api/api-client.service';
 import { ENDPOINTS } from '../api/endpoints.constant';
 import { EvaluationEntity } from 'src/domain/entities/evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity } from 'src/domain/entities/peer-evaluation.entity';
 
 @Injectable({
   providedIn: 'root'
@@ -133,6 +134,43 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]> {
     return this.apiClient.get<any>(`${ENDPOINTS.EVALUATIONS.SUBMIT}/evaluator/${evaluatorId}`).pipe(
       map(res => res.data || res)
+    );
+  }
+
+  // --- IMPLEMENTACIÓN DE ESTRATIFICACIÓN DE RIESGO POR PARES (PET 4.2.1) ---
+
+  getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]> {
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.PENDING_ASSIGNMENT).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<void> {
+    return this.apiClient.post<void>(
+      ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ASSIGN_PEERS(protocolId),
+      { evaluatorIds }
+    );
+  }
+
+  getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]> {
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.MY_PENDING).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string }): Observable<void> {
+    return this.apiClient.post<void>(
+      ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.SUBMIT_RISK(assignmentId),
+      payload
+    );
+  }
+
+  getActiveEvaluators(): Observable<any[]> {
+    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ACTIVE_EVALUATORS).pipe(
+      map(res => {
+        const raw = res?.data || res;
+        return Array.isArray(raw) ? raw : [];
+      })
     );
   }
 }

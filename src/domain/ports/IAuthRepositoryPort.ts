@@ -9,6 +9,8 @@ export abstract class IAuthRepositoryPort {
   abstract registerInvestigador(data: RegisterInvestigadorRequest): Observable<any>;
   abstract verifyOTP(email: string, code: string): Observable<any>;
   abstract setupAccount(data: SetupAccountRequest): Observable<any>;
+  abstract forgotPassword(email: string): Observable<any>;
+  abstract resetPassword(email: string, code: string, password: string): Observable<any>;
   abstract getUsers(): Observable<User[]>;
   abstract getUserById(id: string): Observable<User>;
   abstract checkEmailExists(email: string): Observable<boolean>;

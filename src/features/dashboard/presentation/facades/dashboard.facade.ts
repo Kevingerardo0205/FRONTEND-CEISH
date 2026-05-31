@@ -25,13 +25,19 @@ export class DashboardFacade {
   public pendingValidationCount = this.pendingValidationCountSignal.asReadonly();
   public myProtocols = this.myProtocolsSignal.asReadonly();
 
-  // Estadísticas calculadas para Investigador
-  public myObservedCount = computed(() => 
-    this.myProtocols().filter(p => p.estado === 'REQUIERE_CORRECCION').length
-  );
-  public myApprovedCount = computed(() => 
-    this.myProtocols().filter(p => ['APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO'].includes(p.estado)).length
-  );
+  // Estadísticas calculadas para Investigador de forma resiliente
+  public myObservedCount = computed(() => {
+    const protocols = this.myProtocols();
+    return Array.isArray(protocols) 
+      ? protocols.filter(p => p.estado === 'REQUIERE_CORRECCION').length 
+      : 0;
+  });
+  public myApprovedCount = computed(() => {
+    const protocols = this.myProtocols();
+    return Array.isArray(protocols) 
+      ? protocols.filter(p => ['APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO'].includes(p.estado)).length 
+      : 0;
+  });
 
   public loadStats() {
     const role = this.authFacade.currentUser()?.rol?.toUpperCase();

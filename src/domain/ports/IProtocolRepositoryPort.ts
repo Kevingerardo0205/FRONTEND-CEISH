@@ -18,4 +18,5 @@ export abstract class IProtocolRepositoryPort {
   abstract updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<any>;
   abstract verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<any>;
   abstract getValidationDetail(id: string): Observable<ValidationDetailResponse>;
+  abstract acceptTimeline(id: string): Observable<any>;
 }

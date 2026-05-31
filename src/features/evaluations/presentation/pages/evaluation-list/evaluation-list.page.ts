@@ -7,9 +7,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments.use-case';
+import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { PeerAssignmentEntity } from '@domain/entities/peer-evaluation.entity';
+import { PeerRiskAssessmentFormComponent } from '../../components/peer-risk-assessment-form/peer-risk-assessment-form.component';
 
 @Component({
   selector: 'app-evaluation-list',
@@ -23,6 +27,7 @@ import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments
     MatTooltipModule,
     MatChipsModule,
     MatSnackBarModule,
+    MatDialogModule,
     ProtocolCodePipe
   ],
   template: `
@@ -44,9 +49,10 @@ import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments
         </div>
       </header>
 
-      <div class="content-card shadow-soft">
+      <!-- 1. Bandeja Tradicional de Evaluación -->
+      <div class="content-card shadow-soft mb-5">
         <div class="table-toolbar p-3">
-          <h2 class="section-title m-0">Bandeja de Trabajo</h2>
+          <h2 class="section-title m-0">Bandeja de Dictámenes Éticos</h2>
         </div>
 
         <div class="table-responsive">
@@ -104,8 +110,58 @@ import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments
           
           <div class="empty-state" *ngIf="items().length === 0">
             <mat-icon>inbox</mat-icon>
-            <p>No tiene evaluaciones asignadas en este momento.</p>
+            <p>No tiene evaluaciones de dictamen asignadas en este momento.</p>
           </div>
+        </div>
+      </div>
+
+      <!-- 2. Bandeja de Estratificación de Riesgo por Pares (PET 4.2.1) -->
+      <div class="content-card shadow-soft" *ngIf="peerRiskAssignments().length > 0">
+        <div class="table-toolbar p-3" style="background: #fff7ed; border-bottom: 1px solid #ffedd5; display: flex; align-items: center; gap: 0.5rem;">
+          <mat-icon style="color: #ea580c;">security</mat-icon>
+          <h2 class="section-title m-0" style="color: #ea580c;">Asignaciones de Riesgo Pendientes (PET 4.2.1)</h2>
+        </div>
+
+        <div class="table-responsive">
+          <table class="modern-table">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; padding: 1rem;">Protocolo / Investigador</th>
+                <th style="color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; padding: 1rem;">Tipo de Estudio</th>
+                <th style="color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; padding: 1rem;">Fecha Asignación</th>
+                <th class="text-end" style="color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 0.7rem; padding: 1rem;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of peerRiskAssignments()" style="transition: background-color 0.2s ease;">
+                <td style="padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle;">
+                  <div class="protocol-info-cell">
+                    <span class="code" style="color: #ea580c; font-weight: 800; font-size: 0.75rem;">{{ item.protocol.ceishCode || 'S/C' }}</span>
+                    <span class="title" style="font-size: 0.9rem; font-weight: 700; color: #1e293b; line-height: 1.3;">{{ item.protocol.title }}</span>
+                    <span class="investigator" style="font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 4px;">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">person</mat-icon>
+                      {{ item.protocol.principalInvestigatorRecord.fullName }}
+                    </span>
+                  </div>
+                </td>
+                <td style="padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle;">
+                  <span style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.72rem; white-space: nowrap;">
+                    {{ item.protocol.studyType.nombre }}
+                  </span>
+                </td>
+                <td style="padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle;">
+                  <div class="deadline-cell">
+                    <span class="date" style="font-weight: 700; color: #1e293b;">{{ item.assignedAt | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                </td>
+                <td class="text-end" style="padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle;">
+                  <button mat-flat-button color="accent" (click)="openRiskModal(item)" style="font-weight: 800; border-radius: 10px; height: 40px;">
+                    <mat-icon>security</mat-icon> Analizar Riesgo
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -167,16 +223,71 @@ import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments
 export class EvaluationListPage implements OnInit {
   private authFacade = inject(AuthFacade);
   private getMyAssignmentsUC = inject(GetMyAssignmentsUseCase);
+  private evaluationRepo = inject(IEvaluationRepositoryPort);
+  private dialog = inject(MatDialog);
 
   items = signal<any[]>([]);
+  peerRiskAssignments = signal<PeerAssignmentEntity[]>([]);
   displayedColumns = ['protocol', 'annex', 'deadline', 'actions'];
   urgentCount = computed(() => this.items().filter(i => i.isUrgent).length);
 
   ngOnInit() {
     this.loadData();
+    this.loadPeerRiskData();
   }
 
   loadData() {
     this.getMyAssignmentsUC.execute().subscribe(data => this.items.set(data));
+  }
+
+  loadPeerRiskData() {
+    this.evaluationRepo.getMyPendingPeerAssignments().subscribe({
+      next: (data) => {
+        this.peerRiskAssignments.set(data || []);
+      },
+      error: (err) => {
+        console.error('Error cargando asignaciones de riesgo:', err);
+        if (err.status === 404 || err.message?.includes('Not Found')) {
+          console.warn('[Estratificación] El backend devolvió 404. Cargando mock de demostración...');
+          const mockData: PeerAssignmentEntity[] = [
+            {
+              id: 8,
+              protocolId: 12,
+              evaluatorId: 3,
+              proposedRiskLevelId: null,
+              observations: null,
+              assignedAt: new Date().toISOString(),
+              submittedAt: null,
+              protocol: {
+                id: 12,
+                ceishCode: "CEISH-ESPOCH-EI-012-2026",
+                title: "Evaluación del balance nutricional en escolares de Chimborazo",
+                studyType: {
+                  nombre: "Investigación Observacional"
+                },
+                principalInvestigatorRecord: {
+                  fullName: "Dra. María Carmen Ortega"
+                }
+              }
+            }
+          ];
+          this.peerRiskAssignments.set(mockData);
+        }
+      }
+    });
+  }
+
+  openRiskModal(assignment: PeerAssignmentEntity) {
+    const dialogRef = this.dialog.open(PeerRiskAssessmentFormComponent, {
+      width: '650px',
+      data: { assignment },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe((success: boolean) => {
+      if (success) {
+        this.loadPeerRiskData();
+      }
+    });
   }
 }

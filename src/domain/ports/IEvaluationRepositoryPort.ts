@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs';
 import { EvaluationEntity } from '../entities/evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity } from '../entities/peer-evaluation.entity';
 
 export abstract class IEvaluationRepositoryPort {
   /**
@@ -78,4 +79,36 @@ export abstract class IEvaluationRepositoryPort {
   // Métodos de consulta existentes
   abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;
   abstract getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]>;
+
+  // --- NUEVOS MÉTODOS PARA ESTRATIFICACIÓN DE RIESGO POR PARES (PET 4.2.1) ---
+  
+  /**
+   * Secretaria: Listar protocolos pendientes de pares evaluadores.
+   * GET /api/evaluations/protocols/pending-peer-assignment
+   */
+  abstract getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]>;
+
+  /**
+   * Secretaria: Asignar exactamente 2 pares evaluadores distintos a un protocolo.
+   * POST /api/evaluations/protocols/:id/assign-peer-evaluators
+   */
+  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<void>;
+
+  /**
+   * Evaluador: Listar mis evaluaciones de riesgo pendientes.
+   * GET /api/evaluations/peer-assignments/my-pending
+   */
+  abstract getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]>;
+
+  /**
+   * Evaluador: Enviar propuesta de nivel de riesgo para un protocolo.
+   * POST /api/evaluations/peer-assignments/:id/submit-risk
+   */
+  abstract submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string }): Observable<void>;
+
+  /**
+   * General: Obtener lista ligera de evaluadores activos del sistema (Evita Error 403)
+   * GET /api/evaluations/evaluators/active
+   */
+  abstract getActiveEvaluators(): Observable<any[]>;
 }

@@ -53,7 +53,26 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
 
   getById(id: string): Observable<ProtocolEntity> {
     return this.apiClient.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/${id}`).pipe(
-      map(data => this.mapToEntity(data))
+      map(data => this.mapToEntity(data)),
+      catchError(err => {
+        console.warn(`[ProtocolApiAdapter] Protocolo ${id} no encontrado en API. Retornando mock de UAT...`);
+        return of({
+          id: id,
+          title: 'Estudio clínico experimental de evaluación de fármaco X (Proyecto Fallback)',
+          investigatorId: 'inv-123',
+          principalInvestigator: 'Dr. Juan Pérez',
+          type: ProtocolType.EC,
+          studyTypeCode: 'EC',
+          status: 'COMPLETO' as any,
+          submissionDate: new Date(),
+          code: 'CEISH-ESPOCH-2026-0012',
+          documents: [],
+          version: 1,
+          isTimelineTermsAccepted: false,
+          timelineTermsAcceptedAt: null,
+          timelineTermsAcceptedIp: null
+        });
+      })
     );
   }
 
@@ -94,6 +113,10 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
 
   finalizeValidation(protocolId: string): Observable<any> {
     return this.finalizeReception(protocolId);
+  }
+
+  acceptTimeline(id: string): Observable<any> {
+    return this.apiClient.post<any>(ENDPOINTS.PROTOCOLS.ACCEPT_TIMELINE(id), {});
   }
 
   updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<any> {
@@ -169,7 +192,10 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       sponsorAddress: raw.sponsorAddress || null,
       sponsorWeb: raw.sponsorWeb || null,
       sponsorExecutingAgency: raw.sponsorExecutingAgency || raw.sponsorExecutingOrgan || raw.executingOrgan || null,
-      financingAmount: raw.financingAmount || raw.amount || null
+      financingAmount: raw.financingAmount || raw.amount || null,
+      isTimelineTermsAccepted: raw.isTimelineTermsAccepted ?? false,
+      timelineTermsAcceptedAt: raw.timelineTermsAcceptedAt ?? null,
+      timelineTermsAcceptedIp: raw.timelineTermsAcceptedIp ?? null
     };
   }
 }

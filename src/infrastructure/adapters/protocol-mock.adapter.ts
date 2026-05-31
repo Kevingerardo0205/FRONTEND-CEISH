@@ -230,4 +230,19 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
       }
     });
   }
+
+  acceptTimeline(id: string): Observable<any> {
+    const index = this.protocols.findIndex(p => p.id === id);
+    if (index !== -1) {
+      this.protocols[index].isTimelineTermsAccepted = true;
+      this.protocols[index].timelineTermsAcceptedAt = new Date().toISOString();
+      this.protocols[index].timelineTermsAcceptedIp = '127.0.0.1';
+      return of({
+        message: 'Sometimiento a tiempos y reglamentos del comité aceptado con éxito (Mock).',
+        isTimelineTermsAccepted: true,
+        timelineTermsAcceptedAt: this.protocols[index].timelineTermsAcceptedAt
+      });
+    }
+    throw new Error('Protocolo no encontrado');
+  }
 }
