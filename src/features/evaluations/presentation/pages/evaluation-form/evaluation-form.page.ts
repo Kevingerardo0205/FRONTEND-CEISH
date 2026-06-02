@@ -133,6 +133,16 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
               <ng-template matStepLabel>Firma y Envío</ng-template>
               <div class="step-card glass-card">
                 
+                <!-- Caja de Observaciones/Sustento Técnico -->
+                <div class="observations-section mb-4">
+                  <h3 class="field-title" style="font-size: 0.90rem; font-weight: 800; color: #1e293b;">Sustento Técnico / Observaciones Generales</h3>
+                  <mat-form-field appearance="outline" class="w-100 mt-2">
+                    <mat-label>Observaciones Generales</mat-label>
+                    <textarea matInput rows="4" [formControl]="observationsControl" placeholder="Describa de forma resumida el sustento técnico y consideraciones de su dictamen..."></textarea>
+                    <mat-hint>Obligatorio para justificar observaciones o rechazo.</mat-hint>
+                  </mat-form-field>
+                </div>
+
                 <!-- Regla Crítica: Sustento Técnico Obligatorio -->
                 <div class="alert-box mb-4" *ngIf="isReportRequired()">
                   <mat-icon color="warn">warning</mat-icon>
@@ -254,6 +264,7 @@ export class EvaluationFormPage implements OnInit {
   
   evaluationForm: FormGroup = this.fb.group({});
   selectedFile: File | null = null;
+  observationsControl = new FormControl('');
 
   sections: string[] = [];
 
@@ -347,7 +358,10 @@ export class EvaluationFormPage implements OnInit {
 
   canSubmit(): boolean {
     if (this.evaluationForm.invalid) return false;
-    if (this.isReportRequired() && !this.selectedFile) return false;
+    if (this.isReportRequired()) {
+      if (!this.selectedFile) return false;
+      if (!this.observationsControl.value?.trim()) return false;
+    }
     return true;
   }
 
@@ -362,14 +376,50 @@ export class EvaluationFormPage implements OnInit {
     if (!this.canSubmit()) return;
     this.isSubmitting.set(true);
 
-    const formData = new FormData();
-    const payload = {
-      assignmentId: this.evaluationId,
-      anexoId: this.currentAnexo()?.id,
-      data: this.evaluationForm.value,
-      result: this.getGlobalResult()
+    const formVal = this.evaluationForm.value;
+    const isAnexo9 = this.currentAnexo()?.id === 'anexo9';
+    const isAnexo10 = this.currentAnexo()?.id === 'anexo10';
+    const isAnexo11 = this.currentAnexo()?.id === 'anexo11';
+
+    const globalResult = this.getGlobalResult();
+    const observations = this.observationsControl.value?.trim() || (globalResult === 'APROBADO' ? 'Aprobado sin observaciones' : 'Evaluación con observaciones/condicionada');
+
+    let payload: any = {
+      assignmentId: Number(this.evaluationId),
+      result: globalResult
     };
 
+    if (isAnexo9) {
+      const mapSectionResult = (val: string) => {
+        if (val === 'APROBADO') return 'FAVORABLE';
+        if (val === 'CON_OBSERVACIONES') return 'FAVORABLE';
+        if (val === 'NO_APROBADO') return 'NO_FAVORABLE';
+        return 'FAVORABLE';
+      };
+
+      payload.annex9 = {
+        eticaResult: mapSectionResult(formVal.resultadoEtica),
+        eticaPlazo: formVal.plazoEtica || '',
+        metodologiaResult: mapSectionResult(formVal.resultadoMetodologia),
+        metodologiaPlazo: formVal.plazoMetodologia || '',
+        juridicaResult: mapSectionResult(formVal.resultadoJuridica),
+        juridicaPlazo: formVal.plazoJuridica || ''
+      };
+      payload.observations = observations;
+    } else if (isAnexo10) {
+      payload.annex10 = {
+        resultado: globalResult,
+        condicionesDescripcion: formVal.condiciones || 'Sin condiciones'
+      };
+      payload.observations = observations;
+    } else if (isAnexo11) {
+      payload.annex11 = {
+        resultado: globalResult,
+        fechaEvaluacion: formVal.fechaEvaluacion || new Date().toISOString().split('T')[0]
+      };
+    }
+
+    const formData = new FormData();
     formData.append('evaluationData', JSON.stringify(payload));
     if (this.selectedFile) formData.append('report', this.selectedFile);
 
@@ -387,13 +437,19 @@ export class EvaluationFormPage implements OnInit {
 
   private getGlobalResult(): string {
     const values = this.evaluationForm.getRawValue();
-    if (values.resultadoGlobal) return values.resultadoGlobal;
-    
-    // Para Anexo 9, si alguna sección no es APROBADO, el global es CON_OBSERVACIONES o NO_APROBADO
-    if (values.resultadoEtica === 'NO_APROBADO' || values.resultadoMetodologia === 'NO_APROBADO' || values.resultadoJuridica === 'NO_APROBADO') {
-      return 'NO_APROBADO';
+    let rawResult = 'APROBADO';
+    if (values.resultadoGlobal) {
+      rawResult = values.resultadoGlobal;
+    } else if (values.resultadoEtica === 'NO_APROBADO' || values.resultadoMetodologia === 'NO_APROBADO' || values.resultadoJuridica === 'NO_APROBADO') {
+      rawResult = 'NO_APROBADO';
+    } else if (this.isReportRequired()) {
+      rawResult = 'CON_OBSERVACIONES';
     }
-    if (this.isReportRequired()) return 'CON_OBSERVACIONES';
+    
+    // Map to backend expected values
+    if (rawResult === 'APROBADO') return 'APROBADO';
+    if (rawResult === 'CON_OBSERVACIONES' || rawResult === 'APROBADO_CONDICIONADO') return 'APROBADO_CON_OBSERVACIONES';
+    if (rawResult === 'NO_APROBADO') return 'RECHAZADO';
     return 'APROBADO';
   }
 

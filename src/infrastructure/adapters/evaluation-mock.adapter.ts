@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, delay } from 'rxjs';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { EvaluationEntity, EvaluationVerdict } from '@domain/entities/evaluation.entity';
-import { PendingPeerAssignmentProtocol, PeerAssignmentEntity } from '@domain/entities/peer-evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse } from '@domain/entities/peer-evaluation.entity';
 
 @Injectable({
   providedIn: 'root'
@@ -151,9 +151,18 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     ]).pipe(delay(500));
   }
 
-  assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<void> {
+  assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse> {
     console.log('Mock: Asignando pares evaluadores', protocolId, evaluatorIds);
-    return of(undefined).pipe(delay(500));
+    const mockRes: AssignEvaluatorsResponse = {
+      message: `${evaluatorIds.length} evaluadores asignados exitosamente al protocolo.`,
+      totalEvaluators: evaluatorIds.length,
+      riskEvaluators: evaluatorIds.slice(0, 2),
+      allEvaluators: evaluatorIds,
+      versionId: 1,
+      evaluationAssignmentIds: evaluatorIds.map((id, index) => 101 + index),
+      deadline: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString()
+    };
+    return of(mockRes).pipe(delay(500));
   }
 
   getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]> {

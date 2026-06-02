@@ -109,34 +109,51 @@ export class DashboardSecretariaPage implements OnInit {
 
   activeTab = signal<'WORKFLOW' | 'PEERS'>('WORKFLOW');
 
-  // Reactivo: Filtra y mapea dinámicamente los protocolos reales cargados del backend
+  // Signal para almacenar la respuesta real de la bandeja de asignación del backend
+  peerPendingProtocolsSignal = signal<any[]>([]);
+
+  // Mapeador reactivo resiliente que soporta formatos anidados o planos devueltos por el endpoint /pending-peer-assignment
   peerPendingProtocols = computed<PendingPeerAssignmentProtocol[]>(() => {
-    const list = this.protocols();
-    return list
-      .filter(p => {
-        const s = p.status?.toUpperCase();
-        // Cargar protocolos con recepción completa (COMPLETO o VALIDADO)
-        return (s === 'COMPLETO' || s === 'VALIDATED' || s === 'VALIDADO') && 
-               (!!p.code && p.code !== 'S/C' && p.code.trim() !== '');
-      })
-      .map(p => ({
-        id: Number(p.id) || 0,
-        ceishCode: p.code || '',
-        title: p.title || 'Sin título',
-        receptionStatus: p.status || '',
-        isRiskLevelDesignated: false,
-        createdAt: p.submissionDate ? new Date(p.submissionDate).toISOString() : new Date().toISOString(),
-        studyType: {
-          id: 0,
-          codigo: p.studyTypeCode || '',
-          nombre: p.type || 'General'
-        },
-        principalInvestigatorRecord: {
-          id: 0,
-          fullName: p.principalInvestigator || 'Investigador Principal',
-          email: ''
-        }
-      }));
+    const list = this.peerPendingProtocolsSignal();
+    return list.map(p => {
+      const id = Number(p.id) || 0;
+      const ceishCode = p.ceishCode || p.code || '';
+      const title = p.title || p.titulo || 'Sin título';
+      const receptionStatus = p.receptionStatus || p.status || p.estado || '';
+      const isRiskLevelDesignated = p.isRiskLevelDesignated ?? false;
+      const createdAt = p.createdAt || p.submissionDate || p.receptionDate || new Date().toISOString();
+      
+      const studyType = p.studyType ? {
+        id: Number(p.studyType.id) || 0,
+        codigo: p.studyType.codigo || p.studyType.code || '',
+        nombre: p.studyType.nombre || p.studyType.name || 'General'
+      } : {
+        id: 0,
+        codigo: p.studyTypeCode || '',
+        nombre: p.type || 'General'
+      };
+
+      const principalInvestigatorRecord = p.principalInvestigatorRecord ? {
+        id: Number(p.principalInvestigatorRecord.id) || 0,
+        fullName: p.principalInvestigatorRecord.fullName || p.principalInvestigatorRecord.nombre || 'Investigador Principal',
+        email: p.principalInvestigatorRecord.email || ''
+      } : {
+        id: 0,
+        fullName: p.principalInvestigator || 'Investigador Principal',
+        email: ''
+      };
+
+      return {
+        id,
+        ceishCode,
+        title,
+        receptionStatus,
+        isRiskLevelDesignated,
+        createdAt,
+        studyType,
+        principalInvestigatorRecord
+      };
+    });
   });
 
   ngOnInit() {
@@ -145,6 +162,15 @@ export class DashboardSecretariaPage implements OnInit {
 
   refreshData() {
     this.stateService.loadDashboardData().subscribe();
+    this.evaluationRepo.getPendingPeerAssignmentProtocols().subscribe({
+      next: (list) => {
+        this.peerPendingProtocolsSignal.set(Array.isArray(list) ? list : []);
+        console.log(`[Secretaría] Cargados ${this.peerPendingProtocols().length} protocolos pendientes de asignación de pares desde el endpoint de evaluación.`);
+      },
+      error: (err) => {
+        console.error('[Secretaría] Error al obtener protocolos listos para evaluadores desde el endpoint del backend:', err);
+      }
+    });
   }
 
   onSearchInput(event: Event) {

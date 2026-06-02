@@ -273,7 +273,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     this.workspaceService.updateProtocol({
       isTimelineTermsAccepted: true
     });
-    this.snackBar.open('📋 Conformidad firmada con éxito. Su protocolo ha sido sometido formalmente a evaluación.', 'Entendido', {
+    this.snackBar.open('📋 Conformidad aceptada con éxito. Su protocolo ha sido sometido formalmente a evaluación.', 'Entendido', {
       duration: 5000,
       horizontalPosition: 'end',
       verticalPosition: 'top'

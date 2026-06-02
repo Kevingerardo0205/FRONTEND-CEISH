@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { EvaluationEntity } from '../entities/evaluation.entity';
-import { PendingPeerAssignmentProtocol, PeerAssignmentEntity } from '../entities/peer-evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse } from '../entities/peer-evaluation.entity';
 
 export abstract class IEvaluationRepositoryPort {
   /**
@@ -92,7 +92,7 @@ export abstract class IEvaluationRepositoryPort {
    * Secretaria: Asignar exactamente 2 pares evaluadores distintos a un protocolo.
    * POST /api/evaluations/protocols/:id/assign-peer-evaluators
    */
-  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<void>;
+  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse>;
 
   /**
    * Evaluador: Listar mis evaluaciones de riesgo pendientes.

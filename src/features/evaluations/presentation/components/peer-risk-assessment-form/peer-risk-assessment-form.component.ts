@@ -243,17 +243,12 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
         this.dialogRef.close(true);
       },
       error: (err) => {
-        console.error('Error enviando riesgo:', err);
-        if (err.status === 404 || err.message?.includes('Not Found')) {
-          console.warn('[Estratificación] El backend devolvió 404. Simulando éxito para demostración...');
-          this.snack.open('Propuesta de nivel de riesgo enviada exitosamente (Demostración Front-End).', 'Éxito', { duration: 3000 });
-          this.isSubmitting.set(false);
-          this.dialogRef.close(true);
-        } else {
-          this.snack.open(err.error?.message || 'Error al enviar la propuesta de riesgo.', 'Cerrar', { duration: 4000 });
-          this.isSubmitting.set(false);
-        }
+        console.error('Error enviando riesgo:', err);       
+        const msg = err.error?.message || 'Error al enviar la propuesta de riesgo.';
+        this.snack.open(Array.isArray(msg) ? msg[0] : msg, 'Cerrar', { duration: 5000 });
+        this.isSubmitting.set(false);
       }
     });
-  }
-}
+    }
+    }
+

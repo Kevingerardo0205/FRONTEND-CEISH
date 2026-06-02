@@ -22,19 +22,41 @@ export const EVALUATION_ROUTES: Routes = [
         path: 'list',
         component: EvaluationListPage,
         canActivate: [AuthGuard],
-        data: { permissions: ['EVALUACION_VER_PROPIAS', 'EVALUACION_COMPLETAR_FORMULARIO'] }
+        data: { 
+          permissions: [
+            'EVALUACION_VER_PROPIAS', 
+            'EVALUACION_COMPLETAR_FORMULARIO', 
+            'EVALUATION_VIEW_MINE', 
+            'EVALUATION_FILL',
+            'EVALUACION_EXPEDITA',
+            'EVALUACION_PLENO',
+            'EVALUACION_RIESGO'
+          ],
+          permissionStrategy: 'any'
+        }
       },
       {
         path: 'evaluate/:id',
         component: EvaluationFormPage,
         canActivate: [AuthGuard],
-        data: { permissions: ['EVALUACION_COMPLETAR_FORMULARIO'] }
+        data: { 
+          permissions: [
+            'EVALUACION_COMPLETAR_FORMULARIO', 
+            'EVALUATION_FILL',
+            'EVALUACION_EXPEDITA',
+            'EVALUACION_PLENO'
+          ],
+          permissionStrategy: 'any'
+        }
       },
       {
         path: 'consolidation/:id',
         component: EvaluationConsolidationPage,
         canActivate: [AuthGuard],
-        data: { permissions: ['RESOLUCION_CREAR'] }
+        data: { 
+          permissions: ['RESOLUCION_CREAR', 'EVALUACION_INFORMES', 'EVALUATION_REPORTS'],
+          permissionStrategy: 'any'
+        }
       },
       {
         path: '',

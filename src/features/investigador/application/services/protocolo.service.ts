@@ -138,13 +138,30 @@ export class ProtocoloService extends BaseApiService {
   misProtocolos(): Observable<ProtocoloResumen[]> {
     return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos`).pipe(
       map(res => {
-        const data = res?.data || res;
+        let data = res?.data || res;
+        // Soporte para respuestas paginadas del helper paginate: { data: [...], total: X }
+        if (data && !Array.isArray(data) && Array.isArray(data.data)) {
+          data = data.data;
+        }
+
         if (!data || !Array.isArray(data)) {
           console.warn('[ProtocoloService] No se encontró una estructura de datos de protocolo válida en el backend:', res);
           return [];
         }
         console.log(`[ProtocoloService] Cargados ${data.length} protocolos reales desde la base de datos.`);
-        return data as ProtocoloResumen[];
+        
+        // Mapeo explícito para solucionar discrepancia de nombres de propiedades del backend
+        return data.map((p: any) => ({
+          id: p.id,
+          codigoCeish: p.ceishCode || p.codigoCeish || '',
+          titulo: p.title || p.titulo || 'Sin Título',
+          estado: p.receptionStatus || p.estado || 'BORRADOR',
+          fechaCreacion: p.createdAt || p.fechaCreacion || p.receptionDate || '',
+          tipoEstudio: p.studyType || p.tipoEstudio || '',
+          isTimelineTermsAccepted: p.isTimelineTermsAccepted ?? false,
+          timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
+          timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null
+        })) as ProtocoloResumen[];
       }),
       catchError(err => {
         console.error('[ProtocoloService] Error crítico al obtener mis-protocolos desde la base de datos:', err);
@@ -159,7 +176,24 @@ export class ProtocoloService extends BaseApiService {
 
   obtenerProtocolo(codigo: string | number): Observable<ProtocoloDetalle> {
     return this.get<any>(ENDPOINTS.PROTOCOLS.BY_ID(codigo.toString())).pipe(
-      map(res => (res?.data || res) as ProtocoloDetalle),
+      map(res => {
+        const p = res?.data || res;
+        if (!p) throw new Error('No se encontró detalle de protocolo');
+        return {
+          ...p,
+          id: p.id,
+          codigoCeish: p.ceishCode || p.codigoCeish || '',
+          titulo: p.title || p.titulo || 'Sin Título',
+          estado: p.receptionStatus || p.estado || 'BORRADOR',
+          fechaCreacion: p.createdAt || p.fechaCreacion || p.receptionDate || '',
+          tipoEstudio: p.studyType || p.tipoEstudio || '',
+          isTimelineTermsAccepted: p.isTimelineTermsAccepted ?? false,
+          timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
+          timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
+          title: p.title || p.titulo || '',
+          ceishCode: p.ceishCode || p.codigoCeish || ''
+        } as ProtocoloDetalle;
+      }),
       catchError(err => {
         console.warn(`[ProtocoloService] Error al obtener detalle de protocolo ${codigo}. Usando fallback UAT...`);
         return of({

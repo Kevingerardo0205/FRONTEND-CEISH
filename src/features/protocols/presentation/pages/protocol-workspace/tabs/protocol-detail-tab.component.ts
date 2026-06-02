@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { ProtocolWorkspaceService } from '../../../../application/services/protocol-workspace.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
@@ -16,6 +17,7 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
     MatIconModule,
     MatTabsModule,
     MatDividerModule,
+    MatTooltipModule,
     RouterModule
   ],
   template: `
@@ -61,30 +63,43 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
             <label>Duración Estimada</label>
             <p>{{ protocol()?.studyDurationMonths }} meses</p>
           </div>
-          <div class="info-item" *ngIf="protocol()?.lugarEjecucion">
-            <label>Lugar de Ejecución</label>
-            <p>{{ protocol()?.lugarEjecucion }}</p>
+        </div>
+      </div>
+
+      <!-- SECCIÓN: CUERPO EVALUADOR (PET 2026) -->
+      <div class="evaluators-section mt-4" *ngIf="showEvaluators()">
+        <div class="header-row d-flex justify-content-between align-items-center mb-3">
+          <h3 class="section-title mb-0">Cuerpo Evaluador Asignado</h3>
+          <span class="badge-count">{{ evaluations().length }} Miembros</span>
+        </div>
+        
+        <div class="eval-list">
+          <div class="eval-card" *ngFor="let ev of evaluations()">
+            <div class="eval-identity">
+              <div class="avatar">{{ ev.investigator ? ev.investigator[0] : 'E' }}</div>
+              <div class="info">
+                <span class="name">{{ ev.investigator || 'Evaluador Asignado' }}</span>
+                <span class="role-tag">Evaluador Ético</span>
+              </div>
+            </div>
+            
+            <div class="eval-status-pills">
+              <!-- Badge de Riesgo Aleatorio -->
+              <span class="risk-badge" *ngIf="ev.reviewType === 'EXPEDITA' || isRiskPair(ev)" 
+                    matTooltip="Seleccionado aleatoriamente para estratificación de riesgo">
+                🎲 Par de Riesgo
+              </span>
+              
+              <span class="status-pill" [ngClass]="ev.status.toLowerCase()">
+                {{ ev.status === 'COMPLETED' ? 'Dictamen Enviado' : 'Pendiente' }}
+              </span>
+            </div>
           </div>
-          <div class="info-item" *ngIf="protocol()?.fechaInicioEstimada">
-            <label>Fecha Inicio Estimada</label>
-            <p>{{ protocol()?.fechaInicioEstimada | date:'longDate' }}</p>
-          </div>
-          <div class="info-item" *ngIf="protocol()?.fechaFinEstimada">
-            <label>Fecha Fin Estimada</label>
-            <p>{{ protocol()?.fechaFinEstimada | date:'longDate' }}</p>
-          </div>
-          <div class="info-item" *ngIf="protocol()?.sponsorRuc">
-            <label>RUC del Patrocinador</label>
-            <p>{{ protocol()?.sponsorRuc }}</p>
-          </div>
-          <div class="info-item" *ngIf="protocol()?.sponsorExecutingAgency">
-            <label>Órgano Ejecutor</label>
-            <p>{{ protocol()?.sponsorExecutingAgency }}</p>
-          </div>
-          <div class="info-item" *ngIf="protocol()?.financingAmount">
-            <label>Presupuesto Financiado</label>
-            <p>$ {{ protocol()?.financingAmount | number }} USD</p>
-          </div>
+        </div>
+        
+        <div class="empty-evals" *ngIf="evaluations().length === 0">
+          <mat-icon>group_off</mat-icon>
+          <p>No se han asignado evaluadores a este protocolo aún.</p>
         </div>
       </div>
 
@@ -118,13 +133,27 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
     }
     .full-width { grid-column: span 2; }
     .header-row { display: flex; justify-content: space-between; align-items: center; }
-    .edit-btn-inline {
-      display: flex; align-items: center; gap: 6px; background: #f1f5f9; border: 1px solid #e2e8f0;
-      color: #0f172a; font-weight: 700; font-size: 0.8rem; padding: 8px 16px; border-radius: 8px; cursor: pointer;
-      transition: all 0.2s;
-      mat-icon { font-size: 16px; width: 16px; height: 16px; }
-      &:hover { background: #e2e8f0; }
+    .badge-count { background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+
+    /* Evaluators Styling */
+    .eval-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .eval-card {
+      background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem;
+      display: flex; justify-content: space-between; align-items: center;
+      transition: border-color 0.2s; &:hover { border-color: #cbd5e1; }
     }
+    .eval-identity { display: flex; align-items: center; gap: 1rem;
+      .avatar { width: 36px; height: 36px; background: #e2e8f0; color: #64748b; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; }
+      .info { display: flex; flex-direction: column; .name { font-weight: 700; color: #1e293b; font-size: 0.9rem; } .role-tag { font-size: 0.7rem; color: #94a3b8; font-weight: 600; } }
+    }
+    .eval-status-pills { display: flex; align-items: center; gap: 8px; }
+    .risk-badge { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+    .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+      &.pending { background: #f8fafc; color: #64748b; }
+      &.completed { background: #f0fdf4; color: #166534; }
+    }
+    .empty-evals { padding: 3rem; text-align: center; color: #94a3b8; background: #f8fafc; border-radius: 16px; border: 1px dashed #e2e8f0; mat-icon { font-size: 32px; width: 32px; height: 32px; margin-bottom: 0.5rem; } p { margin: 0; font-size: 0.85rem; font-weight: 600; } }
+
     .doc-list { display: flex; flex-direction: column; gap: 0.75rem; }
     .doc-item {
       display: flex; align-items: center; gap: 1rem; padding: 1rem; background: white; border-radius: 12px; border: 1px solid #e2e8f0;
@@ -146,6 +175,19 @@ export class ProtocolDetailTabPage {
   private authFacade = inject(AuthFacade);
 
   protocol = this.workspaceService.protocol;
+  evaluations = this.workspaceService.evaluations;
+
+  showEvaluators(): boolean {
+    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
+    return ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE'].includes(role || '');
+  }
+
+  isRiskPair(ev: any): boolean {
+    // Si el backend no envía un flag explícito, podemos inferirlo 
+    // de la estructura de la respuesta o simplemente confiar en el reviewType si coincide.
+    // Según el reporte, se eligen 2 aleatoriamente.
+    return ev.isRiskEvaluator === true; 
+  }
 
   isEditable(): boolean {
     const p = this.protocol();

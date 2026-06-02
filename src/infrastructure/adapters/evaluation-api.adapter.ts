@@ -5,7 +5,7 @@ import { IEvaluationRepositoryPort } from 'src/domain/ports/IEvaluationRepositor
 import { ApiClientService } from '../api/api-client.service';
 import { ENDPOINTS } from '../api/endpoints.constant';
 import { EvaluationEntity } from 'src/domain/entities/evaluation.entity';
-import { PendingPeerAssignmentProtocol, PeerAssignmentEntity } from 'src/domain/entities/peer-evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse } from 'src/domain/entities/peer-evaluation.entity';
 
 @Injectable({
   providedIn: 'root'
@@ -56,12 +56,59 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     return this.apiClient.delete(ENDPOINTS.EVALUATIONS.REJECT_SUGGESTION(id));
   }
 
+  private normalizeAssignment(a: any): any {
+    if (!a) return a;
+    const version = a.version || {};
+    const protocol = version.protocol || a.protocol || {};
+    const protocolId = version.protocolId || protocol.id || a.protocolId;
+    const protocolCode = protocol.ceishCode || a.protocolCode || '';
+    const protocolTitle = protocol.title || a.protocolTitle || '';
+    
+    const investigatorRecord = protocol.principalInvestigatorRecord || a.principalInvestigatorRecord || {};
+    const investigatorName = investigatorRecord.fullName || a.investigator || 'Investigador Principal';
+
+    const reviewType = protocol.reviewType || a.reviewType || '';
+    let annexToUse = a.annexToUse;
+    if (!annexToUse) {
+      if (reviewType === 'PLENO') annexToUse = 'ANEXO_10';
+      else if (reviewType === 'EXPEDITA') annexToUse = 'ANEXO_9';
+      else if (reviewType === 'ENSAYO_CLINICO') annexToUse = 'ANEXO_11';
+      else annexToUse = 'ANEXO_10';
+    }
+
+    const deadlineDate = a.deadline ? new Date(a.deadline) : null;
+    let daysRemaining = a.daysRemaining;
+    let isUrgent = a.isUrgent;
+    
+    if (deadlineDate && daysRemaining === undefined) {
+      const diffTime = deadlineDate.getTime() - new Date().getTime();
+      daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      isUrgent = daysRemaining <= 2;
+    }
+
+    return {
+      ...a,
+      id: a.id?.toString(),
+      protocolId: protocolId?.toString(),
+      protocolCode,
+      protocolTitle,
+      investigator: investigatorName,
+      annexToUse,
+      reviewType,
+      daysRemaining,
+      isUrgent
+    };
+  }
+
   /**
    * Evaluador: Obtiene las tareas asignadas al evaluador actual.
    */
   getMyAssignments(): Observable<any[]> {
     return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.MY_ASSIGNMENTS).pipe(
-      map(res => res.data || res)
+      map(res => {
+        const raw = res.data || res;
+        return Array.isArray(raw) ? raw.map(a => this.normalizeAssignment(a)) : [];
+      })
     );
   }
 
@@ -145,10 +192,12 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     );
   }
 
-  assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<void> {
-    return this.apiClient.post<void>(
+  assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse> {
+    return this.apiClient.post<any>(
       ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ASSIGN_PEERS(protocolId),
       { evaluatorIds }
+    ).pipe(
+      map(res => res.data || res)
     );
   }
 

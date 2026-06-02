@@ -225,6 +225,7 @@ export class EvaluationListPage implements OnInit {
   private getMyAssignmentsUC = inject(GetMyAssignmentsUseCase);
   private evaluationRepo = inject(IEvaluationRepositoryPort);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   items = signal<any[]>([]);
   peerRiskAssignments = signal<PeerAssignmentEntity[]>([]);
@@ -247,32 +248,8 @@ export class EvaluationListPage implements OnInit {
       },
       error: (err) => {
         console.error('Error cargando asignaciones de riesgo:', err);
-        if (err.status === 404 || err.message?.includes('Not Found')) {
-          console.warn('[Estratificación] El backend devolvió 404. Cargando mock de demostración...');
-          const mockData: PeerAssignmentEntity[] = [
-            {
-              id: 8,
-              protocolId: 12,
-              evaluatorId: 3,
-              proposedRiskLevelId: null,
-              observations: null,
-              assignedAt: new Date().toISOString(),
-              submittedAt: null,
-              protocol: {
-                id: 12,
-                ceishCode: "CEISH-ESPOCH-EI-012-2026",
-                title: "Evaluación del balance nutricional en escolares de Chimborazo",
-                studyType: {
-                  nombre: "Investigación Observacional"
-                },
-                principalInvestigatorRecord: {
-                  fullName: "Dra. María Carmen Ortega"
-                }
-              }
-            }
-          ];
-          this.peerRiskAssignments.set(mockData);
-        }
+        this.peerRiskAssignments.set([]);
+        this.snackBar.open('No se pudieron cargar las tareas de riesgo.', 'Cerrar', { duration: 4000 });
       }
     });
   }
