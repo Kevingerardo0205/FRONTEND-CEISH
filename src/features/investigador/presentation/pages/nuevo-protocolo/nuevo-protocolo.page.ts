@@ -319,7 +319,8 @@ export class NuevoProtocoloPage implements OnInit {
         this.archivosCargados[requirementCode] = file.name;
         this.loadRequirements(); 
       },
-      error: () => {
+      error: (err) => {
+        console.error('[NuevoProtocoloPage] Error en subirDocumento:', err);
         this.documentUploadStatus[requirementCode] = 'error';
         this.snackBar.open('Error al subir documento técnico.', 'Cerrar');
       }

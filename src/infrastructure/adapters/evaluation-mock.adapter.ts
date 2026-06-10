@@ -43,6 +43,25 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
       status: 'PENDING',
       verdict: EvaluationVerdict.APROBADO,
       evaluationDate: new Date()
+    },
+    {
+      id: 'ev3',
+      protocolId: '12',
+      evaluatorId: 'eval-123',
+      protocolCode: 'CEISH-ESPOCH-EI-012-2026',
+      protocolType: 'IO',
+      protocolTitle: 'Evaluación del balance nutricional en escolares de Chimborazo',
+      investigator: 'Dra. María Carmen Ortega',
+      deadline: null,
+      daysRemaining: null,
+      isUrgent: false,
+      annexToUse: null,
+      rawAnnexToUse: null,
+      isSuspended: true,
+      reviewType: 'EXPEDITA',
+      status: 'PENDING',
+      isRiskLevelDesignated: false,
+      evaluationDate: new Date()
     }
   ];
 
@@ -71,35 +90,14 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     }).pipe(delay(500));
   }
 
-  suggestEvaluators(payload: { protocolId: string; evaluatorIds: string[] }): Observable<void> {
-    console.log('Mock: Sugiriendo evaluadores', payload);
-    return of(undefined).pipe(delay(500));
-  }
 
-  getPendingSuggestions(): Observable<any[]> {
-    return of([
-      { id: 'sug-1', protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba', evaluatorId: 'ev-1', evaluatorName: 'Dr. Marco Antonio', reviewType: 'EXPEDITA' },
-      { id: 'sug-2', protocolId: '1', protocolCode: '2026-IO-001', protocolTitle: 'Protocolo de Prueba', evaluatorId: 'ev-3', evaluatorName: 'Dr. Luis Méndez', reviewType: 'EXPEDITA' }
-    ]).pipe(delay(500));
-  }
-
-  confirmAssignment(payload: { evaluationId: string; deadline: string }): Observable<void> {
-    console.log('Mock: Confirmando asignación', payload);
-    return of(undefined).pipe(delay(500));
-  }
-
-  rejectSuggestion(id: string): Observable<void> {
-    console.log('Mock: Rechazando sugerencia', id);
-    this.mockEvaluations = this.mockEvaluations.filter(e => e.id !== id);
-    return of(undefined).pipe(delay(500));
-  }
 
   getMyAssignments(): Observable<any[]> {
     return of(this.mockEvaluations).pipe(delay(500));
   }
 
-  submitEvaluation(data: FormData): Observable<void> {
-    console.log('Mock: Enviando evaluación (FormData)', data.get('evaluationData'));
+  submitEvaluation(payload: any): Observable<void> {
+    console.log('Mock: Enviando evaluación (JSON)', payload);
     return of(undefined).pipe(delay(1000));
   }
 
@@ -190,7 +188,7 @@ export class EvaluationMockAdapter extends IEvaluationRepositoryPort {
     ]).pipe(delay(500));
   }
 
-  submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string }): Observable<void> {
+  submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string; reportPath: string }): Observable<void> {
     console.log('Mock: Enviando propuesta de riesgo', assignmentId, payload);
     return of(undefined).pipe(delay(500));
   }

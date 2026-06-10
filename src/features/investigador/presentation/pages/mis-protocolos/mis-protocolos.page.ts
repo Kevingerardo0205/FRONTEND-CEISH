@@ -78,7 +78,8 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
             </button>
             
             <mat-menu #menu="matMenu" class="premium-menu">
-              <button mat-menu-item *ngIf="p.estado === 'REQUIERE_CORRECCION'">
+              <button mat-menu-item *ngIf="['REQUIERE_CORRECCION', 'INCOMPLETO', 'PENDIENTE_SUBSANACION', 'OBSERVADO'].includes(p.estado)"
+                      [routerLink]="['/dashboard/protocols/workspace', p.id, 'validation']">
                 <mat-icon>edit_note</mat-icon>
                 <span>Subir Correcciones</span>
               </button>
@@ -237,19 +238,37 @@ export class MisProtocolosPage implements OnInit {
   }
 
   getStatusClass(estado: string): string {
-    switch (estado) {
-      case 'APROBADO_DEFINITIVO': case 'APROBADO_CONDICIONADO': return 'approved';
-      case 'EN_REVISION_DOCUMENTAL': case 'EN_REVISION_SECRETARIA': case 'EN_EVALUACION': return 'review';
-      case 'REQUIERE_CORRECCION': case 'NO_APROBADO': return 'correction';
-      case 'COMPLETO': return 'pending';
-      default: return 'pending';
+    if (!estado) return 'pending';
+    const s = estado.toUpperCase();
+    switch (s) {
+      case 'APROBADO_DEFINITIVO': 
+      case 'APROBADO_CONDICIONADO': 
+        return 'approved';
+      case 'EN_REVISION_DOCUMENTAL': 
+      case 'EN_REVISION_SECRETARIA': 
+      case 'EN_EVALUACION': 
+        return 'review';
+      case 'REQUIERE_CORRECCION': 
+      case 'NO_APROBADO': 
+      case 'INCOMPLETO': 
+      case 'OBSERVADO':
+        return 'correction';
+      case 'COMPLETO': 
+      case 'INICIADO':
+        return 'pending';
+      default: 
+        return 'pending';
     }
   }
 
   formatStatus(estado: string): string {
     if (!estado) return 'Desconocido';
-    if (estado === 'EN_REVISION_SECRETARIA') return 'Revisión Secretaría';
-    if (estado === 'COMPLETO') return 'Validado / Pendiente Firma';
+    const s = estado.toUpperCase();
+    if (s === 'EN_REVISION_SECRETARIA') return 'Revisión Secretaría';
+    if (s === 'COMPLETO') return 'Validado / Pendiente Firma';
+    if (s === 'INCOMPLETO') return 'Incompleto (Requiere Subsanación)';
+    if (s === 'INICIADO') return 'Iniciado';
+    if (s === 'ARCHIVADO_VENCIMIENTO' || s === 'ARCHIVADO') return 'Archivado por Vencimiento';
     return estado.replace(/_/g, ' ');
   }
 }

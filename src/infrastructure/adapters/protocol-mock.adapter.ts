@@ -41,8 +41,27 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
     return of(this.protocols);
   }
 
-  getReceptionProtocols(): Observable<ProtocolEntity[]> {
-    return of(this.protocols);
+  getReceptionProtocols(status?: string): Observable<ProtocolEntity[]> {
+    if (!status) {
+      return of(this.protocols);
+    }
+    const filtered = this.protocols.filter(p => {
+      const s = p.status?.toUpperCase();
+      if (status === 'pendientes') {
+        return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'EN_REVISION_SECRETARIA';
+      }
+      if (status === 'incompletos') {
+        return s === 'INCOMPLETO' || s === 'PENDIENTE_SUBSANACION' || s === 'OBSERVADO' || s === 'OBSERVED';
+      }
+      if (status === 'validados') {
+        return s === 'COMPLETO' || s === 'VALIDATED' || s === 'VALIDADO';
+      }
+      if (status === 'archivados') {
+        return s === 'ARCHIVADO';
+      }
+      return true;
+    });
+    return of(filtered);
   }
 
   getProtocolsByStatus(status: string, params?: { page?: number, limit?: number }): Observable<any> {
@@ -244,5 +263,15 @@ export class ProtocolMockAdapter extends IProtocolRepositoryPort {
       });
     }
     throw new Error('Protocolo no encontrado');
+  }
+
+  getRiskLevels(): Observable<any[]> {
+    return of([
+      { id: 4, code: 'SIN_RIESGO', name: 'Sin Riesgo / Riesgo No Significativo', reviewType: 'EXPEDITA', isActive: true },
+      { id: 5, code: 'RIESGO_MINIMO', name: 'Riesgo Mínimo', reviewType: 'EXPEDITA', isActive: true },
+      { id: 6, code: 'RIESGO_MODERADO', name: 'Riesgo Moderado', reviewType: 'PLENO', isActive: true },
+      { id: 7, code: 'RIESGO_MAYOR', name: 'Riesgo Mayor al Mínimo', reviewType: 'PLENO', isActive: true },
+      { id: 8, code: 'ENSAYO_CLINICO', name: 'Ensayo Clínico / Alta Complejidad', reviewType: 'ENSAYO_CLINICO', isActive: true }
+    ]);
   }
 }

@@ -10,6 +10,7 @@ import { DeadlinesRadarComponent } from './components/deadlines-radar/deadlines-
 import { AuditFeedComponent } from './components/audit-feed/audit-feed.component';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { PendingPeerAssignmentProtocol } from '@domain/entities/peer-evaluation.entity';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard-secretaria',
@@ -100,6 +101,7 @@ import { PendingPeerAssignmentProtocol } from '@domain/entities/peer-evaluation.
 export class DashboardSecretariaPage implements OnInit {
   private stateService = inject(SecretariatDashboardService);
   private evaluationRepo = inject(IEvaluationRepositoryPort);
+  private route = inject(ActivatedRoute);
 
   isLoading = this.stateService.isLoading;
   searchQuery = this.stateService.searchQuery;
@@ -157,6 +159,11 @@ export class DashboardSecretariaPage implements OnInit {
   });
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab'] === 'peers') {
+        this.activeTab.set('PEERS');
+      }
+    });
     this.refreshData();
   }
 

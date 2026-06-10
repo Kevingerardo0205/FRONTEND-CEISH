@@ -1,4 +1,5 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, OnInit, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -15,6 +16,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 @Component({
   selector: 'app-evaluation-consolidation',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     RouterModule,
@@ -31,7 +33,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
     <div class="consolidation-container animate-fade-in">
       <header class="page-header mb-4">
         <div class="d-flex align-items-center gap-3">
-          <button mat-icon-button routerLink="/dashboard/evaluations/assignment" class="back-btn">
+          <button mat-icon-button routerLink="/dashboard/evaluations/assignment" class="back-btn" aria-label="Volver a la bandeja de asignación">
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div class="title-section">
@@ -85,7 +87,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 
             <div class="action-box mt-5 pt-4 border-top">
               <h4 class="small fw-bold text-muted text-uppercase mb-3">Acción Sugerida</h4>
-              <button mat-flat-button class="btn-finalize w-100" (click)="onProceedToResolution()">
+              <button mat-flat-button class="btn-finalize w-100" (click)="onProceedToResolution()" aria-label="Generar Acta Resolutiva final para el protocolo">
                 <mat-icon>description</mat-icon> GENERAR ACTA RESOLUTIVA
               </button>
             </div>
@@ -208,12 +210,41 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
     .status-err { color: #ef4444; }
 
     .obs-timeline { display: flex; flex-direction: column; gap: 1rem; }
-    .obs-item { background: #f8fafc; padding: 1rem; border-radius: 12px; border-left: 4px solid #003366;
+    .obs-item { 
+      background: #f8fafc; 
+      padding: 1.25rem; 
+      border-radius: 12px; 
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      
       .obs-author { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
       .obs-text { font-size: 0.9rem; color: #1e293b; line-height: 1.4; }
     }
-
-    .btn-finalize { background: #003366 !important; color: white !important; height: 54px; border-radius: 12px; font-weight: 800; }
+    
+    .obs-item:hover {
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+      border-color: #cbd5e1;
+    }
+ 
+    .btn-finalize { 
+      background: #003366 !important; 
+      color: white !important; 
+      height: 54px; 
+      border-radius: 12px; 
+      font-weight: 800;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .btn-finalize:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);
+    }
+    
+    .btn-finalize:focus-visible {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+    }
     
     .animate-fade-in { animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -225,6 +256,7 @@ export class EvaluationConsolidationPage implements OnInit {
   private snackBar = inject(MatSnackBar);
   private evalRepo = inject(IEvaluationRepositoryPort);
   private protocolRepo = inject(IProtocolRepositoryPort);
+  private destroyRef = inject(DestroyRef);
 
   protocolId = '';
   protocol = signal<any>(null);
@@ -238,19 +270,33 @@ export class EvaluationConsolidationPage implements OnInit {
 
   loadConsolidation() {
     // 1. Obtener datos del protocolo para el encabezado
-    this.protocolRepo.getById(this.protocolId).subscribe(p => this.protocol.set(p));
-
+    this.protocolRepo.getById(this.protocolId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(p => this.protocol.set(p));
+ 
     // 2. Consumir el nuevo endpoint de Consolidación (Anexo 12)
-    this.evalRepo.consolidateEvaluation(this.protocolId).subscribe({
-      next: (res) => {
-        const data = res.data || res;
-        this.evaluations.set(data.evaluations || []);
-        this.isUnanimous.set(data.isUnanimous ?? true);
-      },
-      error: (err) => {
-        this.snackBar.open('❌ Error al cargar la consolidación', 'Cerrar');
-      }
-    });
+    this.evalRepo.consolidateEvaluation(this.protocolId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          const data = res.data || res;
+          const rawList = Array.isArray(data.evaluations) ? data.evaluations : [];
+          const normalized = rawList.map((ev: any) => ({
+            ...ev,
+            verdict: ev.verdict || ev.result || 'APROBADO',
+            ethicsResult: ev.ethicsResult || ev.ethicalAspects || ev.result || 'APROBADO',
+            methodologyResult: ev.methodologyResult || ev.methodologicalAspects || ev.result || 'APROBADO',
+            legalResult: ev.legalResult || ev.legalAspects || ev.result || 'APROBADO',
+            evaluatorProfile: ev.evaluatorProfile || 'Evaluador',
+            evaluatorName: ev.evaluatorName || ('Evaluador #' + (ev.evaluatorId || ev.id || ''))
+          }));
+          this.evaluations.set(normalized);
+          this.isUnanimous.set(data.isUnanimous ?? true);
+        },
+        error: (err) => {
+          this.snackBar.open('❌ Error al cargar la consolidación', 'Cerrar');
+        }
+      });
   }
 
   countVerdict(verdict: string): number {

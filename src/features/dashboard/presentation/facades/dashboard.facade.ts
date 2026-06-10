@@ -29,13 +29,19 @@ export class DashboardFacade {
   public myObservedCount = computed(() => {
     const protocols = this.myProtocols();
     return Array.isArray(protocols) 
-      ? protocols.filter(p => p.estado === 'REQUIERE_CORRECCION').length 
+      ? protocols.filter(p => {
+          const s = p.estado?.toUpperCase() || '';
+          return ['REQUIERE_CORRECCION', 'INCOMPLETO', 'OBSERVADO', 'OBSERVED', 'PENDIENTE_SUBSANACION'].includes(s);
+        }).length 
       : 0;
   });
   public myApprovedCount = computed(() => {
     const protocols = this.myProtocols();
     return Array.isArray(protocols) 
-      ? protocols.filter(p => ['APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO'].includes(p.estado)).length 
+      ? protocols.filter(p => {
+          const s = p.estado?.toUpperCase() || '';
+          return ['APROBADO', 'APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO', 'COMPLETO', 'VALIDADO'].includes(s);
+        }).length 
       : 0;
   });
 

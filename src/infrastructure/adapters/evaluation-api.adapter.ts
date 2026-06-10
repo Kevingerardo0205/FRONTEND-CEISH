@@ -26,35 +26,7 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     );
   }
 
-  /**
-   * Presidenta: Sugiere evaluadores para un protocolo.
-   */
-  suggestEvaluators(payload: { protocolId: string; evaluatorIds: string[] }): Observable<void> {
-    return this.apiClient.post(ENDPOINTS.EVALUATIONS.SUGGEST, payload);
-  }
 
-  /**
-   * Secretaria: Obtiene las sugerencias de evaluadores pendientes de confirmación.
-   */
-  getPendingSuggestions(): Observable<any[]> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PENDING_SUGGESTIONS).pipe(
-      map(res => res.data || res)
-    );
-  }
-
-  /**
-   * Secretaria: Confirma la asignación de un evaluador y fija fecha límite.
-   */
-  confirmAssignment(payload: { evaluationId: string; deadline: string }): Observable<void> {
-    return this.apiClient.patch(ENDPOINTS.EVALUATIONS.CONFIRM, payload);
-  }
-
-  /**
-   * Secretaria: Rechaza una sugerencia previa de la presidencia.
-   */
-  rejectSuggestion(id: string): Observable<void> {
-    return this.apiClient.delete(ENDPOINTS.EVALUATIONS.REJECT_SUGGESTION(id));
-  }
 
   private normalizeAssignment(a: any): any {
     if (!a) return a;
@@ -68,7 +40,13 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     const investigatorName = investigatorRecord.fullName || a.investigator || 'Investigador Principal';
 
     const reviewType = protocol.reviewType || a.reviewType || '';
-    let annexToUse = a.annexToUse;
+    
+    // Si annexToUse original es nulo o el riesgo no está designado, está suspendida
+    const rawAnnexToUse = a.annexToUse;
+    const isRiskLevelDesignated = protocol.isRiskLevelDesignated ?? a.isRiskLevelDesignated ?? true;
+    const isSuspended = !rawAnnexToUse || isRiskLevelDesignated === false;
+
+    let annexToUse = rawAnnexToUse;
     if (!annexToUse) {
       if (reviewType === 'PLENO') annexToUse = 'ANEXO_10';
       else if (reviewType === 'EXPEDITA') annexToUse = 'ANEXO_9';
@@ -80,7 +58,10 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     let daysRemaining = a.daysRemaining;
     let isUrgent = a.isUrgent;
     
-    if (deadlineDate && daysRemaining === undefined) {
+    if (!deadlineDate) {
+      daysRemaining = null;
+      isUrgent = false;
+    } else if (daysRemaining === undefined || daysRemaining === null) {
       const diffTime = deadlineDate.getTime() - new Date().getTime();
       daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
       isUrgent = daysRemaining <= 2;
@@ -94,6 +75,8 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
       protocolTitle,
       investigator: investigatorName,
       annexToUse,
+      rawAnnexToUse,
+      isSuspended,
       reviewType,
       daysRemaining,
       isUrgent
@@ -113,14 +96,10 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   }
 
   /**
-   * Evaluador: Envía el resultado de la evaluación (JSON + PDF).
+   * Evaluador: Envía el resultado de la evaluación.
    */
-  submitEvaluation(data: FormData): Observable<void> {
-    return this.apiClient.post(ENDPOINTS.EVALUATIONS.SUBMIT, data, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+  submitEvaluation(payload: any): Observable<void> {
+    return this.apiClient.post(ENDPOINTS.EVALUATIONS.SUBMIT, payload);
   }
 
   /**
@@ -207,7 +186,7 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     );
   }
 
-  submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string }): Observable<void> {
+  submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string; reportPath: string }): Observable<void> {
     return this.apiClient.post<void>(
       ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.SUBMIT_RISK(assignmentId),
       payload
@@ -223,3 +202,5 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     );
   }
 }
+
+

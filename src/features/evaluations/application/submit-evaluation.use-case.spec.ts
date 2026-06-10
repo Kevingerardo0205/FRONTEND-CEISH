@@ -26,16 +26,26 @@ describe('SubmitEvaluationUseCase', () => {
     notificationSpy = TestBed.inject(NotificationBrokerService) as jasmine.SpyObj<NotificationBrokerService>;
   });
 
-  it('debe permitir el envío sin PDF si el resultado es APROBADO', (done) => {
-    const formData = new FormData();
-    const evaluationData = { result: 'APROBADO', assignmentId: '123' };
-    formData.append('evaluationData', JSON.stringify(evaluationData));
+  it('debe fallar el envío sin PDF si el resultado es APROBADO', (done) => {
+    const payload = { result: 'APROBADO', assignmentId: '123' };
+
+    useCase.execute(payload).subscribe({
+      next: () => fail('Debería haber fallado por falta de PDF'),
+      error: (error) => {
+        expect(error.message).toContain('PDF firmado es obligatorio');
+        done();
+      }
+    });
+  });
+
+  it('debe permitir el envío con PDF si el resultado es APROBADO', (done) => {
+    const payload = { result: 'APROBADO', assignmentId: '123', reportPath: '/uploads/report123.pdf' };
     
     repoSpy.submitEvaluation.and.returnValue(of(undefined));
 
-    useCase.execute(formData).subscribe({
+    useCase.execute(payload).subscribe({
       next: () => {
-        expect(repoSpy.submitEvaluation).toHaveBeenCalled();
+        expect(repoSpy.submitEvaluation).toHaveBeenCalledWith(payload);
         expect(notificationSpy.publish).toHaveBeenCalledWith('EVALUATION_SUBMITTED', jasmine.any(Object));
         done();
       },
@@ -43,50 +53,29 @@ describe('SubmitEvaluationUseCase', () => {
     });
   });
 
-  it('debe fallar el envío si el resultado es NO_APROBADO y no hay PDF de sustento', (done) => {
-    const formData = new FormData();
-    const evaluationData = { result: 'NO_APROBADO', assignmentId: '123' };
-    formData.append('evaluationData', JSON.stringify(evaluationData));
+  it('debe fallar el envío si el resultado es NO_APROBADO y no hay PDF', (done) => {
+    const payload = { result: 'NO_APROBADO', assignmentId: '123' };
 
-    useCase.execute(formData).subscribe({
+    useCase.execute(payload).subscribe({
       next: () => fail('Debería haber fallado por falta de PDF'),
       error: (error) => {
-        expect(error.message).toContain('sustento en PDF es obligatorio');
+        expect(error.message).toContain('PDF firmado es obligatorio');
         done();
       }
     });
   });
 
   it('debe permitir el envío si el resultado es CON_OBSERVACIONES y se adjunta un PDF', (done) => {
-    const formData = new FormData();
-    const evaluationData = { result: 'CON_OBSERVACIONES', assignmentId: '123' };
-    formData.append('evaluationData', JSON.stringify(evaluationData));
-    
-    // Simular un archivo PDF
-    const blob = new Blob(['dummy content'], { type: 'application/pdf' });
-    formData.append('report', blob, 'informe.pdf');
+    const payload = { result: 'CON_OBSERVACIONES', assignmentId: '123', reportPath: '/uploads/report123.pdf' };
 
     repoSpy.submitEvaluation.and.returnValue(of(undefined));
 
-    useCase.execute(formData).subscribe({
+    useCase.execute(payload).subscribe({
       next: () => {
-        expect(repoSpy.submitEvaluation).toHaveBeenCalled();
+        expect(repoSpy.submitEvaluation).toHaveBeenCalledWith(payload);
         done();
       },
       error: fail
-    });
-  });
-
-  it('debe fallar si los datos de evaluación no son válidos (JSON corrupto)', (done) => {
-    const formData = new FormData();
-    formData.append('evaluationData', '{ invalid json }');
-
-    useCase.execute(formData).subscribe({
-      next: () => fail('Debería haber fallado por JSON inválido'),
-      error: (error) => {
-        expect(error.message).toContain('Error al procesar los datos');
-        done();
-      }
     });
   });
 });

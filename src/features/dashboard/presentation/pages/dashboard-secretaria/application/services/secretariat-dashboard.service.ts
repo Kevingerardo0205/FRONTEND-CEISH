@@ -16,15 +16,15 @@ export interface SecretariatMetrics {
 @Injectable()
 export class SecretariatDashboardService {
   private protocolRepo = inject(IProtocolRepositoryPort);
-
   // 1. Master Signals
+  private allProtocolsSignal = signal<ProtocolEntity[]>([]);
   private protocolsSignal = signal<ProtocolEntity[]>([]);
   private loadingSignal = signal<boolean>(false);
   private searchQuerySignal = signal<string>('');
   private filterStatusSignal = signal<string>('ALL');
 
   // 2. Read-Only Signals
-  public protocols = this.protocolsSignal.asReadonly();
+  public protocols = this.allProtocolsSignal.asReadonly();
   public isLoading = this.loadingSignal.asReadonly();
   public searchQuery = this.searchQuerySignal.asReadonly();
   public filterStatus = this.filterStatusSignal.asReadonly();
@@ -32,24 +32,7 @@ export class SecretariatDashboardService {
   // 3. Computed: Filtros dinámicos reactivos
   public filteredProtocols = computed(() => {
     const query = this.searchQuerySignal().toLowerCase().trim();
-    const statusFilter = this.filterStatusSignal();
     let list = this.protocolsSignal();
-
-    if (statusFilter !== 'ALL') {
-      list = list.filter(p => {
-        const s = p.status?.toUpperCase();
-        if (statusFilter === 'SUBMITTED') {
-          return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INCOMPLETO';
-        }
-        if (statusFilter === 'EN_REVISION_DOCUMENTAL') {
-          return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
-        }
-        if (statusFilter === 'VALIDATED') {
-          return (s === 'COMPLETO' || s === 'VALIDATED' || s === 'VALIDADO') && (!!p.code && p.code !== 'S/C' && p.code !== 'Sin Código');
-        }
-        return s === statusFilter;
-      });
-    }
 
     if (query) {
       list = list.filter(p => 
@@ -64,17 +47,17 @@ export class SecretariatDashboardService {
 
   // 4. Computed: KPIs del Dashboard en tiempo real
   public metrics = computed((): SecretariatMetrics => {
-    const all = this.protocolsSignal();
+    const all = this.allProtocolsSignal();
     const now = new Date();
 
     return {
       pendingReception: all.filter(p => {
         const s = p.status?.toUpperCase();
-        return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INCOMPLETO';
+        return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INICIADO' || s === 'EN_REVISION_SECRETARIA';
       }).length,
       observed: all.filter(p => {
         const s = p.status?.toUpperCase();
-        return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
+        return s === 'INCOMPLETO' || s === 'EN_REVISION_DOCUMENTAL' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
       }).length,
       overdue: all.filter(p => p.deadline && new Date(p.deadline) < now).length,
       slaRisk: all.filter(p => {
@@ -86,15 +69,41 @@ export class SecretariatDashboardService {
     };
   });
 
+  private loadFilteredData() {
+    this.loadingSignal.set(true);
+    const filter = this.filterStatusSignal();
+    let apiStatus: string | undefined = undefined;
+    if (filter === 'SUBMITTED') {
+      apiStatus = 'pendientes';
+    } else if (filter === 'EN_REVISION_DOCUMENTAL') {
+      apiStatus = 'incompletos';
+    } else if (filter === 'VALIDATED') {
+      apiStatus = 'validados';
+    }
+
+    this.protocolRepo.getReceptionProtocols(apiStatus).subscribe({
+      next: (data) => {
+        const list = Array.isArray(data) ? data : [];
+        this.protocolsSignal.set(list);
+        this.loadingSignal.set(false);
+      },
+      error: (err) => {
+        console.error('[SecretariatDashboardService] Error cargando protocolos filtrados:', err);
+        this.loadingSignal.set(false);
+      }
+    });
+  }
+
   public loadDashboardData() {
     this.loadingSignal.set(true);
     return this.protocolRepo.getReceptionProtocols().pipe(
       tap(data => {
         const list = Array.isArray(data) ? data : [];
-        this.protocolsSignal.set(list);
+        this.allProtocolsSignal.set(list);
+        this.loadFilteredData();
       }),
       catchError(err => {
-        console.error('[SecretariatDashboardService] Error cargando protocolos:', err);
+        console.error('[SecretariatDashboardService] Error cargando todos los protocolos:', err);
         return of([]);
       }),
       finalize(() => this.loadingSignal.set(false))
@@ -107,5 +116,6 @@ export class SecretariatDashboardService {
 
   public updateFilter(status: string) {
     this.filterStatusSignal.set(status);
+    this.loadFilteredData();
   }
 }

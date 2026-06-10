@@ -23,9 +23,9 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
     );
   }
 
-  getReceptionProtocols(): Observable<ProtocolEntity[]> {
-    // El backend ahora devuelve un array directo con todos los protocolos de recepción
-    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.RECEPTION.LIST).pipe(
+  getReceptionProtocols(status?: string): Observable<ProtocolEntity[]> {
+    const url = status ? `${ENDPOINTS.PROTOCOLS.RECEPTION.LIST}?status=${status}` : ENDPOINTS.PROTOCOLS.RECEPTION.LIST;
+    return this.apiClient.get<any>(url).pipe(
       map(res => this.extractAndMapList(res)),
       catchError(err => {
         console.error('[ProtocolApiAdapter] Error cargando lista de recepción:', err);
@@ -94,11 +94,41 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   }
 
   getDocumentHistory(id: string): Observable<any[]> {
-    return this.apiClient.get<any[]>(ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(id)).pipe(
-      map(res => this.extractAnyArray(res)),
+    const mapDocs = (arr: any[]) => {
+      return arr.map(doc => {
+        const viewUrl = doc.path && doc.path.startsWith('http')
+          ? doc.path
+          : `/api/reception/document/${doc.id}/view`;
+        const reqName = doc.requirement?.requirementName 
+          || doc.requirementName 
+          || doc.tipoDocumento?.nombre 
+          || doc.typeName 
+          || doc.type 
+          || 'Documento de recepción';
+        return {
+          id: doc.id,
+          name: doc.fileName || doc.name || 'Documento sin nombre',
+          title: doc.fileName || doc.title || 'Documento sin nombre',
+          type: reqName,
+          url: doc.url || viewUrl,
+          sizeBytes: doc.sizeBytes,
+          path: doc.path,
+          version: doc.versionNumber || doc.version || doc.reception?.version?.versionNumber || 1
+        };
+      });
+    };
+
+    return this.apiClient.get<any[]>(`/documents/protocol/${id}`).pipe(
+      map(res => mapDocs(this.extractAnyArray(res))),
       catchError(err => {
-        console.warn('[ProtocolApiAdapter] Error en getDocumentHistory:', err);
-        return of([]);
+        console.warn('[ProtocolApiAdapter] Error en getDocumentHistory (endpoint general). Intentando endpoint de recepción...', err);
+        return this.apiClient.get<any[]>(ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(id)).pipe(
+          map(res => mapDocs(this.extractAnyArray(res))),
+          catchError(err2 => {
+            console.warn('[ProtocolApiAdapter] Error en getDocumentHistory (ambos endpoints):', err2);
+            return of([]);
+          })
+        );
       })
     );
   }
@@ -154,48 +184,76 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
     if (!data) return {} as ProtocolEntity;
     const raw = data.data || data;
     
-    // Mapeo de estado según el nuevo campo receptionStatus
-    let statusLabel = raw.receptionStatus || raw.status || raw.estado || 'DESCONOCIDO';
+    // Si la respuesta es de recepción y viene con el protocolo anidado o la versión anidada
+    const nestedProtocol = raw.protocol || raw.version?.protocol || null;
+
+    // Resolver ID de Protocolo real (priorizando protocolId o la estructura anidada)
+    const protocolId = raw.protocolId || nestedProtocol?.id || raw.id;
+
+    // Mapeo de estado según el nuevo campo receptionStatus o status
+    let statusLabel = raw.receptionStatus || raw.status || raw.estado || nestedProtocol?.status || 'DESCONOCIDO';
     if (typeof statusLabel === 'object') {
       statusLabel = statusLabel.name || statusLabel.label || 'DESCONOCIDO';
     }
 
     // Mapeo de Investigador Principal
-    let pi = raw.principalInvestigator || '';
-    if (!pi && raw.investigators && Array.isArray(raw.investigators)) {
-      const principal = raw.investigators.find((i: any) => i.role === 'PRINCIPAL');
+    let pi = raw.principalInvestigator || nestedProtocol?.principalInvestigator || '';
+    const investigatorsList = raw.investigators || nestedProtocol?.investigators || null;
+    if (!pi && investigatorsList && Array.isArray(investigatorsList)) {
+      const principal = investigatorsList.find((i: any) => i.role === 'PRINCIPAL');
       if (principal) pi = principal.fullName || principal.nombre || '';
     }
 
     return {
-      id: raw.id?.toString() || '',
-      title: raw.title || raw.titulo || 'Sin título',
-      investigatorId: raw.investigatorId || '',
+      id: protocolId?.toString() || '',
+      title: raw.title || raw.titulo || nestedProtocol?.title || nestedProtocol?.titulo || 'Sin título',
+      investigatorId: raw.investigatorId || nestedProtocol?.investigatorId || '',
       principalInvestigator: pi,
-      type: (raw.studyType?.code || raw.type || '') as ProtocolType,
-      studyTypeCode: raw.studyType?.code || raw.studyTypeCode || '',
-      studyType: raw.studyType || null,
+      type: (raw.studyType?.code || raw.type || nestedProtocol?.studyType?.code || nestedProtocol?.type || '') as ProtocolType,
+      studyTypeCode: raw.studyType?.code || raw.studyTypeCode || nestedProtocol?.studyType?.code || nestedProtocol?.studyTypeCode || '',
+      studyType: raw.studyType || nestedProtocol?.studyType || null,
       status: statusLabel.toUpperCase() as any,
-      submissionDate: raw.receptionDate ? new Date(raw.receptionDate) : (raw.submissionDate ? new Date(raw.submissionDate) : new Date()),
-      code: raw.ceishCode || raw.code || '',
-      documents: raw.documents || [],
-      version: raw.version || 1,
-      riskLevel: raw.riskLevel || null,
-      riskLevelId: raw.riskLevelId || null,
-      geographicCoverage: raw.geographicCoverage || null,
-      studyDurationMonths: raw.studyDurationMonths || null,
-      lugarEjecucion: raw.lugarEjecucion || null,
-      fechaInicioEstimada: raw.fechaInicioEstimada || null,
-      fechaFinEstimada: raw.fechaFinEstimada || null,
-      sponsorRuc: raw.sponsorRuc || null,
-      sponsorPhone: raw.sponsorPhone || null,
-      sponsorAddress: raw.sponsorAddress || null,
-      sponsorWeb: raw.sponsorWeb || null,
-      sponsorExecutingAgency: raw.sponsorExecutingAgency || raw.sponsorExecutingOrgan || raw.executingOrgan || null,
-      financingAmount: raw.financingAmount || raw.amount || null,
-      isTimelineTermsAccepted: raw.isTimelineTermsAccepted ?? false,
-      timelineTermsAcceptedAt: raw.timelineTermsAcceptedAt ?? null,
-      timelineTermsAcceptedIp: raw.timelineTermsAcceptedIp ?? null
+      submissionDate: raw.receptionDate 
+        ? new Date(raw.receptionDate) 
+        : (raw.submissionDate 
+          ? new Date(raw.submissionDate) 
+          : (nestedProtocol?.receptionDate 
+            ? new Date(nestedProtocol.receptionDate) 
+            : (nestedProtocol?.submissionDate 
+              ? new Date(nestedProtocol.submissionDate) 
+              : new Date()))),
+      code: raw.ceishCode || raw.code || nestedProtocol?.ceishCode || nestedProtocol?.code || '',
+      documents: raw.documents || nestedProtocol?.documents || [],
+      version: raw.version || nestedProtocol?.version || 1,
+      riskLevel: raw.riskLevel || nestedProtocol?.riskLevel || null,
+      riskLevelId: raw.riskLevelId || nestedProtocol?.riskLevelId || null,
+      geographicCoverage: raw.geographicCoverage || nestedProtocol?.geographicCoverage || null,
+      studyDurationMonths: raw.studyDurationMonths || nestedProtocol?.studyDurationMonths || null,
+      lugarEjecucion: raw.lugarEjecucion || nestedProtocol?.lugarEjecucion || null,
+      fechaInicioEstimada: raw.fechaInicioEstimada || nestedProtocol?.fechaInicioEstimada || null,
+      fechaFinEstimada: raw.fechaFinEstimada || nestedProtocol?.fechaFinEstimada || null,
+      sponsorRuc: raw.sponsorRuc || nestedProtocol?.sponsorRuc || null,
+      sponsorPhone: raw.sponsorPhone || nestedProtocol?.sponsorPhone || null,
+      sponsorAddress: raw.sponsorAddress || nestedProtocol?.sponsorAddress || null,
+      sponsorWeb: raw.sponsorWeb || nestedProtocol?.sponsorWeb || null,
+      sponsorExecutingAgency: raw.sponsorExecutingAgency || raw.sponsorExecutingOrgan || raw.executingOrgan || nestedProtocol?.sponsorExecutingAgency || null,
+      financingAmount: raw.financingAmount || raw.amount || nestedProtocol?.financingAmount || null,
+      isTimelineTermsAccepted: raw.isTimelineTermsAccepted ?? nestedProtocol?.isTimelineTermsAccepted ?? false,
+      timelineTermsAcceptedAt: raw.timelineTermsAcceptedAt ?? nestedProtocol?.timelineTermsAcceptedAt ?? null,
+      timelineTermsAcceptedIp: raw.timelineTermsAcceptedIp ?? nestedProtocol?.timelineTermsAcceptedIp ?? null
     };
+  }
+
+  getRiskLevels(): Observable<any[]> {
+    return this.apiClient.get<any>(ENDPOINTS.PROTOCOLS.RISK_LEVELS).pipe(
+      map(res => {
+        const raw = res.data || res;
+        return Array.isArray(raw) ? raw : [];
+      }),
+      catchError(err => {
+        console.error('[ProtocolApiAdapter] Error cargando catálogo de riesgos:', err);
+        return of([]);
+      })
+    );
   }
 }

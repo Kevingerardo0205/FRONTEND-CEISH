@@ -10,23 +10,13 @@ export class SubmitEvaluationUseCase {
   private repo = inject(IEvaluationRepositoryPort);
   private notificationBroker = inject(NotificationBrokerService);
 
-  execute(formData: FormData): Observable<void> {
-    // Validar sustento en PDF (ReportPath)
-    try {
-      const evaluationDataRaw = formData.get('evaluationData') as string;
-      const evaluationData = JSON.parse(evaluationDataRaw);
-      const result = evaluationData.result;
-      const reportFile = formData.get('report');
-
-      // Regla: Bloqueo de Envío si no es APROBADO y no hay PDF
-      if (result !== 'APROBADO' && !reportFile) {
-        return throwError(() => new Error('El sustento en PDF es obligatorio si el resultado no es APROBADO.'));
-      }
-    } catch (e) {
-      return throwError(() => new Error('Error al procesar los datos de evaluación.'));
+  execute(payload: any): Observable<void> {
+    // Regla: El informe PDF firmado es obligatorio en todos los casos para completar la evaluación
+    if (!payload.reportPath || typeof payload.reportPath !== 'string' || payload.reportPath.trim() === '') {
+      return throwError(() => new Error('El informe PDF firmado es obligatorio para completar la evaluación.'));
     }
 
-    return this.repo.submitEvaluation(formData).pipe(
+    return this.repo.submitEvaluation(payload).pipe(
       tap(() => {
         // Disparar notificación automática a Secretaría
         this.notificationBroker.publish('EVALUATION_SUBMITTED', {

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { Observable, of, throwError, forkJoin } from 'rxjs';
+import { catchError, map, switchMap, filter } from 'rxjs/operators';
 import { BaseApiService } from '@infrastructure/api/base-api.service';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
 import { CrearProtocoloDto, ProtocoloCreadoResponse, ProtocoloResumen, ProtocoloDetalle, ChecklistRequirement, EstadoProtocolo } from '../../domain/dtos/crear-protocolo.dto';
@@ -8,11 +8,14 @@ import { RequisitoDocumento } from '../../constants/anexos-pet.constants';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { S3StorageService } from '@infrastructure/services/s3-storage.service';
+import { sanitizeFilename } from '@domain/entities/storage.interface';
 
 @Injectable({ providedIn: 'root' })
 export class ProtocoloService extends BaseApiService {
   private authFacade = inject(AuthFacade);
   private snackBar = inject(MatSnackBar);
+  private s3StorageService = inject(S3StorageService);
 
   constructor(apiClient: ApiClientService) {
     super(apiClient);
@@ -87,20 +90,47 @@ export class ProtocoloService extends BaseApiService {
    * Endpoint Investigador: POST /protocols/:id/upload-document
    */
   subirDocumento(file: File, protocolId: number, requirementId: number): Observable<any> {
-    const formData = new FormData();
-    // El backend espera 'file' (singular)
-    formData.append('file', file); 
-    formData.append('protocolId', protocolId.toString()); // ID faltante detectado en logs del backend
-    formData.append('requirementId', requirementId.toString());
-    formData.append('fileName', file.name);
-    formData.append('sizeBytes', file.size.toString());
+    const sanitizedName = sanitizeFilename(file.name);
+    const s3Key = `protocols/${protocolId}/requirements/${requirementId}/${sanitizedName}`;
 
-    const url = this.isInvestigador
-      ? `/protocols/${protocolId}/upload-document`
-      : ENDPOINTS.PROTOCOLS.UPLOAD_DOCUMENT(protocolId.toString());
+    console.log(`[ProtocoloService] Iniciando subida de documento para req ${requirementId}. S3 Key: ${s3Key}`);
 
-    console.log(`[ProtocoloService] Subiendo documento a: ${url} (ReqID: ${requirementId})`);
-    return this.post<any>(url, formData);
+    return this.s3StorageService.getUploadUrl(s3Key, file.type || 'application/pdf').pipe(
+      catchError(err => {
+        console.error('[ProtocoloService] Error al obtener URL firmada de S3:', err);
+        return throwError(() => err);
+      }),
+      switchMap(urlRes => {
+        console.log('[ProtocoloService] URL firmada obtenida con éxito. URL:', urlRes.uploadUrl);
+        return this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, file).pipe(
+          catchError(err => {
+            console.error('[ProtocoloService] Error al realizar la subida PUT a S3/R2:', err);
+            return throwError(() => err);
+          }),
+          filter(uploadRes => uploadRes.success),
+          switchMap(() => {
+            const url = this.isInvestigador
+              ? `/protocols/${protocolId}/upload-document`
+              : ENDPOINTS.PROTOCOLS.UPLOAD_DOCUMENT(protocolId.toString());
+
+            const payload = {
+              requirementId: requirementId,
+              fileName: sanitizedName,
+              path: urlRes.key,
+              sizeBytes: file.size
+            };
+
+            console.log(`[ProtocoloService] Registrando documento S3 en BD: ${url}`, payload);
+            return this.post<any>(url, payload).pipe(
+              catchError(err => {
+                console.error('[ProtocoloService] Error en el registro del documento en la BD:', err);
+                return throwError(() => err);
+              })
+            );
+          })
+        );
+      })
+    );
   }
 
   getDocumentHistory(protocolId: number): Observable<any[]> {
@@ -113,15 +143,8 @@ export class ProtocoloService extends BaseApiService {
   }
 
   subirDocumentosBulk(protocolId: number, files: File[]): Observable<any> {
-    const formData = new FormData();
-    // El backend espera 'file' (singular)
-    files.forEach(file => formData.append('file', file));
-
-    const url = this.isInvestigador
-      ? `/protocols/${protocolId}/documents/bulk`
-      : ENDPOINTS.PROTOCOLS.RECEPTION.BULK_UPLOAD(protocolId.toString());
-
-    return this.post<any>(url, formData);
+    const uploads = files.map(file => this.subirDocumento(file, protocolId, 0));
+    return forkJoin(uploads);
   }
   /**
    * 4. Cierre y Envío para Revisión Técnica
@@ -136,7 +159,7 @@ export class ProtocoloService extends BaseApiService {
   }
 
   misProtocolos(): Observable<ProtocoloResumen[]> {
-    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos`).pipe(
+    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?limit=100`).pipe(
       map(res => {
         let data = res?.data || res;
         // Soporte para respuestas paginadas del helper paginate: { data: [...], total: X }

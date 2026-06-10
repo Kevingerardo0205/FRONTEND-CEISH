@@ -3,6 +3,7 @@ import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { AssignmentPage } from './presentation/pages/assignment/assignment.page';
 import { EvaluationListPage } from './presentation/pages/evaluation-list/evaluation-list.page';
 import { EvaluationFormPage } from './presentation/pages/evaluation-form/evaluation-form.page';
+import { PeerRiskAssessmentPage } from './presentation/pages/peer-risk-assessment/peer-risk-assessment.page';
 import { EvaluationConsolidationPage } from './presentation/pages/evaluation-consolidation/evaluation-consolidation.page';
 
 export const EVALUATION_ROUTES: Routes = [
@@ -45,6 +46,20 @@ export const EVALUATION_ROUTES: Routes = [
             'EVALUATION_FILL',
             'EVALUACION_EXPEDITA',
             'EVALUACION_PLENO'
+          ],
+          permissionStrategy: 'any'
+        }
+      },
+      {
+        path: 'evaluate-risk/:id',
+        component: PeerRiskAssessmentPage,
+        canActivate: [AuthGuard],
+        data: { 
+          permissions: [
+            'EVALUACION_RIESGO',
+            'EVALUACION_COMPLETAR_FORMULARIO', 
+            'EVALUATION_FILL',
+            'EVALUATION_VIEW_MINE'
           ],
           permissionStrategy: 'any'
         }

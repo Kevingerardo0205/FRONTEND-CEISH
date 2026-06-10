@@ -10,7 +10,7 @@ export abstract class IProtocolRepositoryPort {
   abstract getRequirementsByType(type: ProtocolType): Observable<string[]>;
   abstract getChecklist(id: string): Observable<any>;
   abstract getDocumentHistory(id: string): Observable<any[]>;
-  abstract getReceptionProtocols(): Observable<ProtocolEntity[]>;
+  abstract getReceptionProtocols(status?: string): Observable<ProtocolEntity[]>;
   abstract getProtocolsByStatus(status: string): Observable<ProtocolEntity[]>;
   abstract finalizeReception(id: string): Observable<any>;
   abstract getCertificate(id: string): Observable<Blob>;
@@ -19,4 +19,5 @@ export abstract class IProtocolRepositoryPort {
   abstract verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<any>;
   abstract getValidationDetail(id: string): Observable<ValidationDetailResponse>;
   abstract acceptTimeline(id: string): Observable<any>;
+  abstract getRiskLevels(): Observable<any[]>;
 }

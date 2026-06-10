@@ -16,6 +16,7 @@ export const ENDPOINTS = {
     ACCEPT_TIMELINE: (id: string) => `/protocols/${id}/accept-timeline`,
     CHECKLIST: (id: string) => `/reception/protocol/${id}`,
     REQUIREMENTS: '/protocols/requirements',
+    RISK_LEVELS: '/protocols/risk-levels',
     UPLOAD_DOCUMENT: (id: string) => `/reception/protocol/${id}/document`,
     RECEPTION: {
       CREATE: '/protocols',
@@ -37,10 +38,7 @@ export const ENDPOINTS = {
   },
   EVALUATIONS: {
     DASHBOARD: '/evaluations/evaluators/dashboard',
-    SUGGEST: '/evaluations/suggest',
-    PENDING_SUGGESTIONS: '/evaluations/pending-suggestions',
-    CONFIRM: '/evaluations/confirm-assignment',
-    REJECT_SUGGESTION: (id: string) => `/evaluations/reject-suggestion/${id}`,
+    UPLOAD: '/evaluations/upload',
     MY_ASSIGNMENTS: '/evaluations/my-assignments',
     SUBMIT: '/evaluations/submit',
     PROFILES: '/evaluations/profiles',

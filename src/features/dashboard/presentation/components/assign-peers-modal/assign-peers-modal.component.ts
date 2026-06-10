@@ -67,8 +67,13 @@ import { UserRole } from '@domain/entities/user.entity';
               </mat-select-trigger>
               <mat-option *ngFor="let ev of evaluators()" [value]="ev.id">
                 <div class="eval-option">
-                  <span class="name">{{ ev.nombre }}</span>
-                  <span class="email">{{ ev.email }}</span>
+                  <div class="eval-main">
+                    <span class="name">{{ ev.nombre }}</span>
+                    <span class="badge-perfil">{{ ev.perfil }}</span>
+                  </div>
+                  <span class="workload" [ngClass]="getWorkloadClass(ev.cargaActiva)">
+                    Carga: {{ ev.cargaActiva }} (Mes: {{ ev.completadasMes }})
+                  </span>
                 </div>
               </mat-option>
             </mat-select>
@@ -159,7 +164,15 @@ import { UserRole } from '@domain/entities/user.entity';
       .text { p { margin: 0 0 0.5rem; font-size: 0.85rem; color: #92400e; } ul { margin: 0; padding-left: 1.2rem; font-size: 0.8rem; color: #b45309; } }
     }
     .full-width { width: 100%; }
-    .eval-option { display: flex; flex-direction: column; .name { font-weight: 600; font-size: 0.9rem; } .email { font-size: 0.75rem; color: #64748b; } }
+    .eval-option {
+      display: flex; justify-content: space-between; align-items: center; width: 100%;
+      .eval-main { display: flex; flex-direction: column; }
+      .name { font-weight: 600; font-size: 0.9rem; }
+      .badge-perfil { font-size: 0.65rem; background: #e0f2fe; color: #075985; padding: 2px 6px; border-radius: 4px; width: fit-content; margin-top: 2px; }
+      .workload { font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+        &.low { background: #f0fdf4; color: #16a34a; } &.med { background: #fffbeb; color: #d97706; } &.high { background: #fef2f2; color: #dc2626; }
+      }
+    }
     .selection-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1rem; margin-bottom: 1rem;
       .summary-chip { background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid #e2e8f0;
         mat-icon { font-size: 16px; width: 16px; height: 16px; cursor: pointer; &:hover { color: #ef4444; } }
@@ -199,7 +212,7 @@ export class AssignPeersModalComponent implements OnInit {
   private snack = inject(MatSnackBar);
 
   evaluatorsControl = new FormControl<string[]>([], { nonNullable: true });
-  evaluators = signal<UserAdmin[]>([]);
+  evaluators = signal<any[]>([]);
   isSubmitting = signal<boolean>(false);
   successData = signal<AssignEvaluatorsResponse | null>(null);
 
@@ -228,20 +241,24 @@ export class AssignPeersModalComponent implements OnInit {
     this.evaluatorsControl.setValue(currentValues.filter(val => val !== id.toString()));
   }
 
+  getWorkloadClass(carga: number): string {
+    if (carga <= 2) return 'low';
+    if (carga <= 4) return 'med';
+    return 'high';
+  }
+
   private loadEvaluators() {
-    this.evaluationRepo.getActiveEvaluators().subscribe({
-      next: (users) => {
-        const rawList = Array.isArray(users) ? users : [];
-        const mapped: UserAdmin[] = rawList.map(u => ({
+    this.evaluationRepo.getEvaluatorsDashboard().subscribe({
+      next: (data) => {
+        const rawList = Array.isArray(data.evaluators) ? data.evaluators : [];
+        const mapped = rawList.map((u: any) => ({
           id: u.id.toString(),
           nombre: u.fullName || u.nombre || 'Evaluador',
-          email: u.email || u.institutionalEmail || '',
-          rol: 'EVALUADOR' as UserRole,
-          roles: ['EVALUADOR'],
-          perfil: 'Investigador',
-          activo: true,
-          cedula: ''
-        }));
+          email: u.email || '',
+          perfil: Array.isArray(u.profiles) ? u.profiles.map((p: any) => p.name).join(', ') : (u.perfil || 'Investigador'),
+          cargaActiva: u.currentLoad ?? u.cargaActiva ?? 0,
+          completadasMes: u.completedThisMonth ?? u.terminadosMes ?? 0
+        })).sort((a: any, b: any) => a.cargaActiva - b.cargaActiva);
         this.evaluators.set(mapped);
       },
       error: () => {
