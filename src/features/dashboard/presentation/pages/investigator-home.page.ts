@@ -281,6 +281,8 @@ export class InvestigatorHomePage implements OnInit {
       'APROBADO_DEFINITIVO': 'Aprobado Definitivo',
       'APROBADO_CONDICIONADO': 'Aprobado Condicionado',
       'EN_EVALUACION': 'En Evaluación',
+      'DISCREPANCIA_RIESGO': 'Discrepancia de Riesgo',
+      'DISCREPANCIA_DE_RIESGO': 'Discrepancia de Riesgo',
       'EN_REVISION_SECRETARIA': 'Revisión Técnica',
       'SUBMITTED': 'Sometido'
     };

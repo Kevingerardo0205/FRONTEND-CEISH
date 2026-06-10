@@ -164,6 +164,9 @@ td {
   &[data-status="EN_EVALUACION"] {
     background: #fdf2f8; color: #9d174d;
   }
+  &[data-status="DISCREPANCIA_RIESGO"], &[data-status="DISCREPANCIA_DE_RIESGO"], &[data-status="DISCREPANCIA DE RIESGO"] {
+    background: #fff7ed; color: #c2410c;
+  }
   &[data-status="APPROVED"], &[data-status="APROBADO"] {
     background: #ecfdf5; color: #065f46;
   }

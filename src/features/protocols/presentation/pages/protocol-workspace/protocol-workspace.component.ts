@@ -50,7 +50,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
             <div class="meta-row">
               <span class="protocol-id">{{ protocol()?.code | protocolCode }}</span>
               <span class="status-indicator" [attr.data-status]="protocol()!.status">
-                {{ protocol()!.status }}
+                {{ getFriendlyStatusLabel(protocol()!.status) }}
               </span>
             </div>
             <h1 class="protocol-title" [matTooltip]="protocol()?.title">
@@ -166,6 +166,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         &[data-status="DRAFT"] { background: #f1f5f9; color: #475569; }
         &[data-status="SUBMITTED"] { background: #ecfdf5; color: #065f46; }
         &[data-status="EN_EVALUACION"] { background: #eff6ff; color: #1e40af; }
+        &[data-status="DISCREPANCIA_RIESGO"], &[data-status="DISCREPANCIA_DE_RIESGO"] { background: #fff7ed; color: #c2410c; }
       }
       .protocol-title { 
         margin: 0 0 0.75rem; font-size: 1.5rem; color: var(--primary); font-weight: 700; 
@@ -316,7 +317,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     }
 
     // Pestaña de Evaluación Ética: Para admins, secretaría, presidencia y evaluadores asignados
-    if ([ProtocolStatus.EN_EVALUACION, ProtocolStatus.APPROVED].includes(p.status)) {
+    if ([ProtocolStatus.EN_EVALUACION, ProtocolStatus.APPROVED, ProtocolStatus.DISCREPANCIA_RIESGO, ProtocolStatus.DISCREPANCIA_DE_RIESGO].includes(p.status)) {
       const canEvaluate = ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'EVALUADOR'].includes(role || '');
       if (canEvaluate) {
         tabs.push({ label: 'Evaluación Ética', icon: 'gavel', path: 'evaluation' });
@@ -353,7 +354,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     switch (step) {
       case 'RECEPCION': return p.status === ProtocolStatus.SUBMITTED;
       case 'VALIDACION': return p.status === ProtocolStatus.VALIDATED;
-      case 'EVALUACION': return p.status === ProtocolStatus.EN_EVALUACION;
+      case 'EVALUACION': return p.status === ProtocolStatus.EN_EVALUACION || p.status === ProtocolStatus.DISCREPANCIA_RIESGO || p.status === ProtocolStatus.DISCREPANCIA_DE_RIESGO;
       case 'RESOLUCION': return p.status === ProtocolStatus.APPROVED;
       default: return false;
     }
@@ -363,7 +364,10 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const p = this.protocol();
     if (!p) return false;
     const statusOrder = [ProtocolStatus.DRAFT, ProtocolStatus.SUBMITTED, ProtocolStatus.VALIDATED, ProtocolStatus.EN_EVALUACION, ProtocolStatus.APPROVED];
-    const currentIdx = statusOrder.indexOf(p.status);
+    let currentIdx = statusOrder.indexOf(p.status);
+    if (p.status === ProtocolStatus.DISCREPANCIA_RIESGO || p.status === ProtocolStatus.DISCREPANCIA_DE_RIESGO) {
+      currentIdx = statusOrder.indexOf(ProtocolStatus.EN_EVALUACION);
+    }
     
     switch (step) {
       case 'RECEPCION': return currentIdx > 1;
@@ -372,5 +376,29 @@ export class ProtocolWorkspaceComponent implements OnInit {
       case 'RESOLUCION': return currentIdx >= 4;
       default: return false;
     }
+  }
+
+  getFriendlyStatusLabel(status: string): string {
+    if (!status) return '';
+    const labels: { [key: string]: string } = {
+      'DRAFT': 'Borrador',
+      'BORRADOR': 'Borrador',
+      'SUBMITTED': 'Recibido',
+      'PRESENTADO': 'Recibido',
+      'EN_REVISION_SECRETARIA': 'Revisión Técnica',
+      'EN_REVISION_DOCUMENTAL': 'Revisión Técnica',
+      'VALIDATED': 'Validado',
+      'VALIDADO': 'Validado',
+      'COMPLETO': 'Validado',
+      'EN_EVALUACION': 'En Evaluación',
+      'DISCREPANCIA_RIESGO': 'Discrepancia de Riesgo',
+      'DISCREPANCIA_DE_RIESGO': 'Discrepancia de Riesgo',
+      'APPROVED': 'Aprobado',
+      'APROBADO': 'Aprobado',
+      'REJECTED': 'Rechazado',
+      'OBSERVED': 'Observado',
+      'OBSERVADO': 'Observado',
+    };
+    return labels[status.toUpperCase()] || status.replace(/_/g, ' ');
   }
 }

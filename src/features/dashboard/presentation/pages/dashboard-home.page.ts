@@ -111,7 +111,7 @@ interface DashboardConfig {
                     <span class="compact-meta">{{ p.codigoCeish || 'TRÁMITE EN PROCESO' }} • {{ p.fechaCreacion | date:'dd/MM/yyyy' }}</span>
                   </div>
                   <div class="status-chip-compact" [ngClass]="p.estado?.toLowerCase()">
-                    {{ p.estado }}
+                    {{ getFriendlyStatusLabel(p.estado) }}
                   </div>
                 </div>
               </div>
@@ -319,6 +319,10 @@ interface DashboardConfig {
         background: #fee2e2;
         color: #991b1b;
       }
+      &.discrepancia_riesgo, &.discrepancia_de_riesgo {
+        background: #fff7ed;
+        color: #c2410c;
+      }
       &.aprobado_definitivo, &.aprobado_condicionado {
         background: #dcfce7;
         color: #166534;
@@ -343,6 +347,25 @@ export class DashboardHomePage implements OnInit {
   isMobile = window.innerWidth < 768;
 
   currentHour = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+  getFriendlyStatusLabel(status: string): string {
+    if (!status) return 'Borrador';
+    const labels: { [key: string]: string } = {
+      'CREADO': 'Borrador',
+      'BORRADOR': 'Borrador',
+      'PENDIENTE': 'Pendiente',
+      'REQUIERE_CORRECCION': 'Observado',
+      'INCOMPLETO': 'Incompleto',
+      'APROBADO_DEFINITIVO': 'Aprobado Definitivo',
+      'APROBADO_CONDICIONADO': 'Aprobado Condicionado',
+      'EN_EVALUACION': 'En Evaluación',
+      'EN_REVISION_SECRETARIA': 'Revisión Técnica',
+      'SUBMITTED': 'Sometido',
+      'DISCREPANCIA_RIESGO': 'Discrepancia de Riesgo',
+      'DISCREPANCIA_DE_RIESGO': 'Discrepancia de Riesgo',
+    };
+    return labels[status.toUpperCase()] || status.replace(/_/g, ' ');
+  }
 
   ngOnInit() {
     this.dashboardFacade.loadStats();

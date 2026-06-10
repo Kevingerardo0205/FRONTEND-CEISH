@@ -191,6 +191,7 @@ export class WorkflowTableComponent {
     if (s === 'VALIDATED' || s === 'VALIDADO' || s === 'COMPLETO') return 'VALIDADO';
     if (s === 'INCOMPLETO') return 'INCOMPLETO';
     if (s === 'EN_EVALUACION') return 'EN EVALUACIÓN';
+    if (s === 'DISCREPANCIA_RIESGO' || s === 'DISCREPANCIA_DE_RIESGO' || s === 'DISCREPANCIA DE RIESGO') return 'DISCREPANCIA DE RIESGO';
     if (s === 'APPROVED' || s === 'APROBADO') return 'APROBADO';
     if (s === 'ARCHIVADO' || s === 'ARCHIVADO_VENCIMIENTO') return 'ARCHIVADO';
     return status;

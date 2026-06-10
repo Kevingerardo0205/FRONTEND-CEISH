@@ -252,6 +252,8 @@ export class MisProtocolosPage implements OnInit {
       case 'NO_APROBADO': 
       case 'INCOMPLETO': 
       case 'OBSERVADO':
+      case 'DISCREPANCIA_RIESGO':
+      case 'DISCREPANCIA_DE_RIESGO':
         return 'correction';
       case 'COMPLETO': 
       case 'INICIADO':
@@ -268,6 +270,7 @@ export class MisProtocolosPage implements OnInit {
     if (s === 'COMPLETO') return 'Validado / Pendiente Firma';
     if (s === 'INCOMPLETO') return 'Incompleto (Requiere Subsanación)';
     if (s === 'INICIADO') return 'Iniciado';
+    if (s === 'DISCREPANCIA_RIESGO' || s === 'DISCREPANCIA_DE_RIESGO') return 'Discrepancia de Riesgo';
     if (s === 'ARCHIVADO_VENCIMIENTO' || s === 'ARCHIVADO') return 'Archivado por Vencimiento';
     return estado.replace(/_/g, ' ');
   }
