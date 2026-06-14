@@ -53,26 +53,7 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
 
   getById(id: string): Observable<ProtocolEntity> {
     return this.apiClient.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/${id}`).pipe(
-      map(data => this.mapToEntity(data)),
-      catchError(err => {
-        console.warn(`[ProtocolApiAdapter] Protocolo ${id} no encontrado en API. Retornando mock de UAT...`);
-        return of({
-          id: id,
-          title: 'Estudio clínico experimental de evaluación de fármaco X (Proyecto Fallback)',
-          investigatorId: 'inv-123',
-          principalInvestigator: 'Dr. Juan Pérez',
-          type: ProtocolType.EC,
-          studyTypeCode: 'EC',
-          status: 'COMPLETO' as any,
-          submissionDate: new Date(),
-          code: 'CEISH-ESPOCH-2026-0012',
-          documents: [],
-          version: 1,
-          isTimelineTermsAccepted: false,
-          timelineTermsAcceptedAt: null,
-          timelineTermsAcceptedIp: null
-        });
-      })
+      map(data => this.mapToEntity(data))
     );
   }
 

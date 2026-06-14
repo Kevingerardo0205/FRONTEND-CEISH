@@ -8,9 +8,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router } from '@angular/router';
+import { switchMap, filter, map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+
 import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
 import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 
 @Component({
   selector: 'app-resolution-generator',
@@ -154,12 +159,23 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
               </div>
             </div>
 
+            <!-- Carga de Acta Firmada Real -->
+            <div class="file-upload-zone mt-3 p-3 border rounded text-center" style="border-style: dashed !important; background: #fafafa; border-radius: 12px; border-color: #cbd5e1;">
+              <mat-icon style="font-size: 28px; width: 28px; height: 28px; color: #94a3b8;">upload_file</mat-icon>
+              <p class="small text-muted mb-2" *ngIf="!selectedFile()" style="font-size: 0.75rem;">Cargue el Acta PDF Firmada (Anexo 12/Anexo 15)</p>
+              <p class="small text-success fw-bold mb-2" *ngIf="selectedFile()" style="font-size: 0.75rem;">📄 {{ selectedFile()?.name }}</p>
+              <button type="button" mat-stroked-button color="primary" class="btn-sm" style="line-height: 28px; height: 28px; font-size: 0.7rem; font-weight: 700;" (click)="fileInput.click()">
+                Seleccionar PDF
+              </button>
+              <input #fileInput type="file" (change)="onFileSelected($event)" accept="application/pdf" style="display: none;" />
+            </div>
+
             <div class="preview-actions d-flex flex-column gap-3 mt-4">
-              <button mat-stroked-button color="primary" class="preview-btn" [disabled]="form.invalid || isSubmitting()">
+              <button type="button" mat-stroked-button color="primary" class="preview-btn" [disabled]="form.invalid || isSubmitting()">
                 <mat-icon>open_in_new</mat-icon>
                 Visualizar Borrador
               </button>
-              <button mat-flat-button class="emit-btn" 
+              <button type="button" mat-flat-button class="emit-btn" 
                       [disabled]="form.invalid || isSubmitting()"
                       (click)="onGenerate()">
                 <mat-icon>draw</mat-icon>
@@ -335,8 +351,12 @@ export class ResolutionGeneratorPage implements OnInit {
   private snackBar = inject(MatSnackBar);
   private resolutionRepo = inject(IResolutionRepositoryPort);
   private notificationBroker = inject(NotificationBrokerService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private s3StorageService = inject(S3StorageService);
 
   isSubmitting = signal(false);
+  selectedFile = signal<File | null>(null);
 
   form: FormGroup = this.fb.group({
     protocolId: ['', Validators.required],
@@ -353,9 +373,26 @@ export class ResolutionGeneratorPage implements OnInit {
   });
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['protocolId']) {
+        this.form.get('protocolId')?.setValue(params['protocolId']);
+      }
+    });
+
     this.form.get('resolutionType')?.valueChanges.subscribe(type => {
       this.updateValidators(type);
     });
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target?.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        this.snackBar.open('⚠️ Solo se permiten archivos PDF.', 'Cerrar', { duration: 3000 });
+        return;
+      }
+      this.selectedFile.set(file);
+    }
   }
 
   getResolutionLabel(type: string): string {
@@ -386,41 +423,60 @@ export class ResolutionGeneratorPage implements OnInit {
   onGenerate() {
     if (this.form.valid) {
       this.isSubmitting.set(true);
-
-      const formData = new FormData();
       const formValue = this.form.value;
 
-      formData.append('protocolId', formValue.protocolId);
-      formData.append('resolutionType', formValue.resolutionType);
-
-      // Map resolution type to final status
-      let finalStatus = ProtocolStatus.APPROVED;
-      if (formValue.resolutionType === 'REJECTION') finalStatus = ProtocolStatus.REJECTED;
-      if (formValue.resolutionType === 'CONDITIONAL') finalStatus = ProtocolStatus.OBSERVED;
+      // 1. Generar la ruta/key para el Acta Consolidada
+      const protocolIdNum = Number(formValue.protocolId);
+      const s3Key = `protocols/${protocolIdNum}/resolutions/Carta_Resolucion_Consolidada.pdf`;
       
-      formData.append('finalStatus', finalStatus);
+      // Si el usuario no cargó un archivo, creamos uno mock
+      const fileToUpload = this.selectedFile() || new File([new Blob(['Acta de Resolución'], { type: 'application/pdf' })], 'Carta_Resolucion_Consolidada.pdf', { type: 'application/pdf' });
 
-      // Create a mock PDF file for the resolution
-      const mockBlob = new Blob(['Contenido de la resolución para ' + formValue.protocolId], { type: 'application/pdf' });
-      formData.append('file', mockBlob, `Resolucion_` + formValue.protocolId + `.pdf`);
+      // 2. Solicitar URL firmada y realizar la subida a Cloudflare R2
+      this.s3StorageService.getUploadUrl(s3Key, 'application/pdf').pipe(
+        switchMap(urlRes => this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, fileToUpload).pipe(
+          filter(upRes => upRes.success),
+          map(() => urlRes.key)
+        )),
+        switchMap(uploadedKey => {
+          // Map resolution type to backend resolutionTypeId
+          let resolutionTypeId = 1; // Aprobación Definitiva
+          if (formValue.resolutionType === 'CONDITIONAL') resolutionTypeId = 4; // Pendiente de subsanación
+          if (formValue.resolutionType === 'REJECTION') resolutionTypeId = 2; // No aprobado / rechazado
+          if (formValue.resolutionType === 'EXEMPTION') resolutionTypeId = 3; // Exención de revisión
 
-      // Add other relevant data
-      formData.append('data', JSON.stringify(formValue));
+          const payload = {
+            protocolId: protocolIdNum,
+            resolutionTypeId: resolutionTypeId,
+            validityYears: formValue.validityMonths ? Math.round(formValue.validityMonths / 12) : 1,
+            followUpPeriodDays: formValue.reportPeriodicityMonths ? formValue.reportPeriodicityMonths * 30 : 180,
+            majorObservations: formValue.majorObservations || formValue.rejectionJustification || '',
+            minorObservations: formValue.minorObservations || '',
+            correctionProcedure: formValue.resolutionType === 'CONDITIONAL' ? 'Subir los anexos correspondientes corregidos en la sección de Subsanación en formato PDF.' : '',
+            pdfLetterPath: uploadedKey,
+            resolutionLabel: this.getResolutionLabel(formValue.resolutionType)
+          };
 
-      this.resolutionRepo.submitResolution(formData).subscribe({
-        next: () => {
-          this.snackBar.open('✅ Resolución generada, firmada y notificada con éxito', 'Cerrar', {
-            duration: 5000,
-          });
+          return this.resolutionRepo.submitResolution(payload);
+        })
+      ).subscribe({
+        next: (res) => {
+          this.snackBar.open('✅ Dictamen emitido y notificado con éxito', 'Cerrar', { duration: 5000 });
           
-          // Publish event for global state refresh
+          // Map resolution type to final status for local event broker
+          let finalStatus = ProtocolStatus.APPROVED;
+          if (formValue.resolutionType === 'REJECTION') finalStatus = ProtocolStatus.REJECTED;
+          if (formValue.resolutionType === 'CONDITIONAL') finalStatus = ProtocolStatus.OBSERVED;
+
           this.notificationBroker.publish('PROTOCOL_STATUS_UPDATED', {
             protocolId: formValue.protocolId,
             status: finalStatus
           });
 
           this.form.reset();
+          this.selectedFile.set(null);
           this.isSubmitting.set(false);
+          this.router.navigate(['/dashboard/home']);
         },
         error: (err) => {
           console.error('Error submitting resolution:', err);

@@ -24,11 +24,26 @@ export class S3StorageService {
   }
 
   /**
-   * Obtiene la URL firmada de visualización (GET) para un documento
+   * Obtiene la URL firmada de visualización (GET) para un documento de recepción
    */
   getDocumentDownloadUrl(documentId: number): Observable<GetDownloadUrlResponse> {
     return this.http.get<any>(
       `${environment.apiUrl}/reception/document/${documentId}/download-url`
+    ).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  /**
+   * TAREA 5: Obtiene la URL firmada de visualización (GET) para un documento
+   * de evaluación ya subido a R2/S3 usando su key relativa.
+   * Ruta: POST /api/storage/download-url
+   * @param key Ruta relativa en R2 — ej: protocols/83/docEvaluacion/informe_firmado.pdf
+   */
+  getEvaluationDocumentUrl(key: string): Observable<GetDownloadUrlResponse> {
+    return this.http.post<any>(
+      `${environment.apiUrl}/storage/download-url`,
+      { key }
     ).pipe(
       map(res => res.data || res)
     );

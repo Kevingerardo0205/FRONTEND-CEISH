@@ -4,6 +4,7 @@ import { catchError, finalize, tap } from 'rxjs/operators';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { resolveEstado } from '@domain/catalogs/estado.alias';
 
 export interface SecretariatMetrics {
   pendingReception: number;
@@ -52,12 +53,12 @@ export class SecretariatDashboardService {
 
     return {
       pendingReception: all.filter(p => {
-        const s = p.status?.toUpperCase();
-        return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INICIADO' || s === 'EN_REVISION_SECRETARIA';
+        const core = resolveEstado(p.status);
+        return core && core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code);
       }).length,
       observed: all.filter(p => {
-        const s = p.status?.toUpperCase();
-        return s === 'INCOMPLETO' || s === 'EN_REVISION_DOCUMENTAL' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
+        const core = resolveEstado(p.status);
+        return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION', 'DISCREPANCIA_RIESGO'].includes(core.code);
       }).length,
       overdue: all.filter(p => p.deadline && new Date(p.deadline) < now).length,
       slaRisk: all.filter(p => {

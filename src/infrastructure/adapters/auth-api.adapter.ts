@@ -136,10 +136,12 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
   }
 
   getUsers(): Observable<User[]> {
-    const mockUsers: User[] = [
-      { id: '1', nombre: 'Admin Sistema', email: 'admin@espoch.edu.ec', rol: 'ADMIN', activo: true, emailVerificado: true }
-    ];
-    return of(mockUsers).pipe(delay(300));
+    return this.get<any>(ENDPOINTS.USERS.BASE).pipe(
+      map(res => {
+        const users = res.data || res;
+        return Array.isArray(users) ? users.map((u: any) => this.mapBackendUser(u)) : [];
+      })
+    );
   }
   
   getUserById(id: string): Observable<User> { 

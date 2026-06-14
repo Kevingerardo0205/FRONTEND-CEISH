@@ -99,6 +99,7 @@ export interface ProtocoloResumen {
   isTimelineTermsAccepted?: boolean;
   timelineTermsAcceptedAt?: string | null;
   timelineTermsAcceptedIp?: string | null;
+  versionNumber?: number;
 }
 
 export interface ProtocoloDetalle extends CrearProtocoloDto {

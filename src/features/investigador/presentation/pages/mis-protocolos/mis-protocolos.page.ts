@@ -7,10 +7,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import { ProtocoloResumen } from '../../../domain/dtos/crear-protocolo.dto';
+import { ProtocoloResumen, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
 import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
+import { resolveEstado } from '@domain/catalogs/estado.alias';
+
+import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
+import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 
 @Component({
   selector: 'app-mis-protocolos',
@@ -18,7 +22,9 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
   imports: [
     CommonModule, MatCardModule, MatButtonModule, 
     MatIconModule, RouterModule, MatTooltipModule, 
-    MatMenuModule, MatDividerModule, MatProgressBarModule
+    MatMenuModule, MatDividerModule, MatProgressBarModule,
+    ProtocolStatusLabelPipe,
+    ProtocolStatusClassPipe
   ],
   template: `
     <div class="premium-viewport animate-fade-in">
@@ -42,14 +48,14 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
           
           <div class="card-header">
             <span class="protocol-id">{{ p.codigoCeish || 'TRÁMITE' }}</span>
-            <div class="status-chip" [ngClass]="getStatusClass(p.estado)">
+            <div class="status-chip" [ngClass]="p.estado | protocolStatusClass">
               <span class="dot"></span>
-              {{ formatStatus(p.estado) }}
+              {{ p.estado | protocolStatusLabel }}
             </div>
           </div>
 
           <!-- BADGE LLAMATIVO DE ACEPTACIÓN DE TIEMPOS -->
-          <div class="timeline-warning-badge animate-pulse-amber" *ngIf="p.estado === 'COMPLETO' && !p.isTimelineTermsAccepted">
+          <div class="timeline-warning-badge animate-pulse-amber" *ngIf="resolveEstado(p.estado)?.code === 'COMPLETO' && !p.isTimelineTermsAccepted">
             <mat-icon>warning</mat-icon>
             <span>Pendiente Aceptación de Tiempos</span>
           </div>
@@ -78,8 +84,8 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
             </button>
             
             <mat-menu #menu="matMenu" class="premium-menu">
-              <button mat-menu-item *ngIf="['REQUIERE_CORRECCION', 'INCOMPLETO', 'PENDIENTE_SUBSANACION', 'OBSERVADO'].includes(p.estado)"
-                      [routerLink]="['/dashboard/protocols/workspace', p.id, 'validation']">
+              <button mat-menu-item *ngIf="['REQUIERE_CORRECCION', 'INCOMPLETO', 'PENDIENTE_SUBSANACION', 'OBSERVADO', 'EVALUACION_SUBSANACIONES'].includes(p.estado)"
+                      (click)="onSubirCorrecciones(p)">
                 <mat-icon>edit_note</mat-icon>
                 <span>Subir Correcciones</span>
               </button>
@@ -223,8 +229,19 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
 export class MisProtocolosPage implements OnInit {
   private readonly protocoloService = inject(ProtocoloService);
   private readonly notificationBroker = inject(NotificationBrokerService);
+  private readonly router = inject(Router);
   
   protocolos = signal<ProtocoloResumen[]>([]);
+
+  onSubirCorrecciones(p: ProtocoloResumen) {
+    const isVersion1 = (p.versionNumber || 1) === 1;
+    const estadoStr = p.estado as any;
+    if (isVersion1 && (estadoStr === 'PENDIENTE_SUBSANACION' || estadoStr === 'INCOMPLETO' || estadoStr === 'REQUIERE_CORRECCION' || estadoStr === EstadoProtocolo.REQUIERE_CORRECCION)) {
+      this.router.navigate(['/dashboard/protocols/workspace', p.id, 'validation']);
+    } else {
+      this.router.navigate(['/dashboard/evaluacion-etica/subsanaciones'], { queryParams: { protocolId: p.id } });
+    }
+  }
 
   ngOnInit(): void {
     this.loadProtocolos();
@@ -237,41 +254,5 @@ export class MisProtocolosPage implements OnInit {
     });
   }
 
-  getStatusClass(estado: string): string {
-    if (!estado) return 'pending';
-    const s = estado.toUpperCase();
-    switch (s) {
-      case 'APROBADO_DEFINITIVO': 
-      case 'APROBADO_CONDICIONADO': 
-        return 'approved';
-      case 'EN_REVISION_DOCUMENTAL': 
-      case 'EN_REVISION_SECRETARIA': 
-      case 'EN_EVALUACION': 
-        return 'review';
-      case 'REQUIERE_CORRECCION': 
-      case 'NO_APROBADO': 
-      case 'INCOMPLETO': 
-      case 'OBSERVADO':
-      case 'DISCREPANCIA_RIESGO':
-      case 'DISCREPANCIA_DE_RIESGO':
-        return 'correction';
-      case 'COMPLETO': 
-      case 'INICIADO':
-        return 'pending';
-      default: 
-        return 'pending';
-    }
-  }
-
-  formatStatus(estado: string): string {
-    if (!estado) return 'Desconocido';
-    const s = estado.toUpperCase();
-    if (s === 'EN_REVISION_SECRETARIA') return 'Revisión Secretaría';
-    if (s === 'COMPLETO') return 'Validado / Pendiente Firma';
-    if (s === 'INCOMPLETO') return 'Incompleto (Requiere Subsanación)';
-    if (s === 'INICIADO') return 'Iniciado';
-    if (s === 'DISCREPANCIA_RIESGO' || s === 'DISCREPANCIA_DE_RIESGO') return 'Discrepancia de Riesgo';
-    if (s === 'ARCHIVADO_VENCIMIENTO' || s === 'ARCHIVADO') return 'Archivado por Vencimiento';
-    return estado.replace(/_/g, ' ');
-  }
+  resolveEstado = resolveEstado;
 }

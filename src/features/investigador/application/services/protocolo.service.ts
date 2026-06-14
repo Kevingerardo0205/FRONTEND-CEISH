@@ -183,7 +183,8 @@ export class ProtocoloService extends BaseApiService {
           tipoEstudio: p.studyType || p.tipoEstudio || '',
           isTimelineTermsAccepted: p.isTimelineTermsAccepted ?? false,
           timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
-          timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null
+          timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
+          versionNumber: p.versionNumber || p.version || 1
         })) as ProtocoloResumen[];
       }),
       catchError(err => {
@@ -192,6 +193,36 @@ export class ProtocoloService extends BaseApiService {
           duration: 5000,
           panelClass: ['snackbar-error']
         });
+        return of([]);
+      })
+    );
+  }
+
+  misProtocolosSubsanar(): Observable<ProtocoloResumen[]> {
+    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?subsanar=true&limit=100`).pipe(
+      map(res => {
+        let data = res?.data || res;
+        if (data && !Array.isArray(data) && Array.isArray(data.data)) {
+          data = data.data;
+        }
+        if (!data || !Array.isArray(data)) {
+          return [];
+        }
+        return data.map((p: any) => ({
+          id: p.id,
+          codigoCeish: p.ceishCode || p.codigoCeish || '',
+          titulo: p.title || p.titulo || 'Sin Título',
+          estado: p.receptionStatus || p.estado || 'BORRADOR',
+          fechaCreacion: p.createdAt || p.fechaCreacion || p.receptionDate || '',
+          tipoEstudio: p.studyType || p.tipoEstudio || '',
+          isTimelineTermsAccepted: p.isTimelineTermsAccepted ?? false,
+          timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
+          timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
+          versionNumber: p.versionNumber || p.version || 1
+        })) as ProtocoloResumen[];
+      }),
+      catchError(err => {
+        console.error('[ProtocoloService] Error al cargar mis-protocolos para subsanar:', err);
         return of([]);
       })
     );

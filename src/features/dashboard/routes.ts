@@ -37,6 +37,10 @@ export const DASHBOARD_ROUTES: Routes = [
         loadChildren: () => import('@features/evaluations/routes').then(m => m.EVALUATION_ROUTES)
       },
       {
+        path: 'evaluacion-etica',
+        loadChildren: () => import('@features/evaluations/routes').then(m => m.EVALUATION_ROUTES)
+      },
+      {
         path: 'follow-up',
         loadChildren: () => import('@features/follow-up/routes').then(m => m.FOLLOW_UP_ROUTES)
       },

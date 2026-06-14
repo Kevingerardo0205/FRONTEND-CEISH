@@ -8,6 +8,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
+import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
+import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 
 @Component({
   selector: 'app-workflow-table',
@@ -21,7 +23,9 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    ProtocolCodePipe
+    ProtocolCodePipe,
+    ProtocolStatusLabelPipe,
+    ProtocolStatusClassPipe
   ],
   template: `
     <div class="workflow-card shadow-soft">
@@ -67,8 +71,8 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
           <ng-container matColumnDef="status">
             <th mat-header-cell *matHeaderCellDef>ESTADO WORKFLOW</th>
             <td mat-cell *matCellDef="let p">
-              <span class="status-badge" [attr.data-status]="p.status?.toUpperCase()">
-                {{ getFriendlyStatus(p.status) }}
+              <span class="status-badge" [ngClass]="p.status | protocolStatusClass">
+                {{ p.status | protocolStatusLabel }}
               </span>
             </td>
           </ng-container>
@@ -179,21 +183,5 @@ export class WorkflowTableComponent {
     if (diffDays < 0) return `Vencido hace ${Math.abs(diffDays)}d`;
     if (diffDays === 0) return 'Vence hoy';
     return `${diffDays} días restantes`;
-  }
-
-  getFriendlyStatus(status: string): string {
-    if (!status) return 'DESCONOCIDO';
-    const s = status.toUpperCase();
-    if (s === 'SUBMITTED' || s === 'PRESENTADO') return 'INCOMPLETO';
-    if (s === 'DRAFT' || s === 'BORRADOR') return 'BORRADOR';
-    if (s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'INICIADO') return 'PENDIENTE';
-    if (s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE') return 'PENDIENTE';
-    if (s === 'VALIDATED' || s === 'VALIDADO' || s === 'COMPLETO') return 'VALIDADO';
-    if (s === 'INCOMPLETO') return 'INCOMPLETO';
-    if (s === 'EN_EVALUACION') return 'EN EVALUACIÓN';
-    if (s === 'DISCREPANCIA_RIESGO' || s === 'DISCREPANCIA_DE_RIESGO' || s === 'DISCREPANCIA DE RIESGO') return 'DISCREPANCIA DE RIESGO';
-    if (s === 'APPROVED' || s === 'APROBADO') return 'APROBADO';
-    if (s === 'ARCHIVADO' || s === 'ARCHIVADO_VENCIMIENTO') return 'ARCHIVADO';
-    return status;
   }
 }

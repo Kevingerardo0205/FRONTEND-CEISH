@@ -6,5 +6,5 @@ export abstract class IResolutionRepositoryPort {
    * Envía una resolución para un protocolo.
    * POST /resolutions
    */
-  abstract submitResolution(data: FormData): Observable<ResolutionEntity>;
+  abstract submitResolution(data: any): Observable<ResolutionEntity>;
 }

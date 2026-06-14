@@ -37,6 +37,7 @@ export const ENDPOINTS = {
     BY_ID: (id: string) => `/documents/${id}`,
   },
   EVALUATIONS: {
+    BASE: '/evaluations',
     DASHBOARD: '/evaluations/evaluators/dashboard',
     UPLOAD: '/evaluations/upload',
     MY_ASSIGNMENTS: '/evaluations/my-assignments',
@@ -59,6 +60,11 @@ export const ENDPOINTS = {
   },
   RESOLUTIONS: {
     BASE: '/resolutions',
+  },
+  // TAREA 7: Rutas de almacenamiento en Cloudflare R2/S3 centralizadas
+  STORAGE: {
+    UPLOAD_URL: '/storage/upload-url',   // POST — obtiene URL prefirmada para subir (PUT)
+    DOWNLOAD_URL: '/storage/download-url', // POST — obtiene URL prefirmada para descargar (GET)
   },
   HEALTH: '/'
 };

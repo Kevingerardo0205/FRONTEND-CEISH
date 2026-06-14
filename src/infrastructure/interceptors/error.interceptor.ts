@@ -37,6 +37,13 @@ export class ErrorInterceptor implements HttpInterceptor {
           return throwError(() => new Error('No tienes permisos para acceder a este recurso.'));
         }
 
+        if (error instanceof HttpErrorResponse && error.status === 409) {
+          return throwError(() => ({
+            type: 'CONCURRENCY_ERROR',
+            message: error.error?.message || 'Este trámite ha sido actualizado por otro usuario. Por favor, recargue el expediente.'
+          }));
+        }
+
         const errorMessage = error.error?.message || error.statusText;
         return throwError(() => new Error(errorMessage));
       })

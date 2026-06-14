@@ -20,6 +20,7 @@ export const REPORTS_ROUTES: Routes = [
     canActivate: [RoleGuard],
     data: { roles: ['SECRETARIA', 'PRESIDENTE', 'PRESIDENTA', 'ADMIN'] }
   },
+
   {
     path: '',
     redirectTo: 'stats',

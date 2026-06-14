@@ -74,6 +74,24 @@ export const EVALUATION_ROUTES: Routes = [
         }
       },
       {
+        path: 'consolidacion/:id',
+        component: EvaluationConsolidationPage,
+        canActivate: [AuthGuard],
+        data: { 
+          permissions: ['RESOLUCION_CREAR', 'EVALUACION_INFORMES', 'EVALUATION_REPORTS'],
+          permissionStrategy: 'any'
+        }
+      },
+      {
+        path: 'subsanaciones',
+        loadComponent: () => import('./presentation/pages/subsanacion/subsanacion.page').then(m => m.SubsanacionPage),
+        canActivate: [AuthGuard],
+        data: { 
+          permissions: ['EVALUACION_SUBSANACIONES'],
+          permissionStrategy: 'any'
+        }
+      },
+      {
         path: '',
         redirectTo: 'list',
         pathMatch: 'full'

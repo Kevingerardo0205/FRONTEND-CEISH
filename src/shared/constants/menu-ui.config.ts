@@ -44,7 +44,7 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
   'EVALUATORS_SUGGEST': { label: 'Asignación de Evaluadores', path: '/dashboard/evaluations/assignment', icon: 'how_to_reg' },
   'EVALUACION_EXPEDITA': { label: 'Revisión Expedita', path: '/dashboard/home', icon: 'bolt' },
   'EVALUACION_PLENO': { label: 'Sesión de Pleno', path: '/dashboard/home', icon: 'groups' },
-  'EVALUACION_SUBSANACIONES': { label: 'Control de Enmiendas', path: '/dashboard/home', icon: 'edit_calendar' },
+  'EVALUACION_SUBSANACIONES': { label: 'Subsanaciones', path: '/dashboard/evaluacion-etica/subsanaciones', icon: 'edit_calendar' },
   'EVALUATION_FILL': { label: 'Mis Evaluaciones', path: '/dashboard/evaluations/list', icon: 'rate_review' },
   'EVALUACION_COMPLETAR_FORMULARIO': { label: 'Mis Evaluaciones', path: '/dashboard/evaluations/list', icon: 'rate_review' },
   'EVALUACION_VER_PROPIAS': { label: 'Mis Evaluaciones', path: '/dashboard/evaluations/list', icon: 'rate_review' },

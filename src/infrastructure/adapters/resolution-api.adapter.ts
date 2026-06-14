@@ -11,7 +11,7 @@ import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 export class ResolutionApiAdapter extends IResolutionRepositoryPort {
   private apiClient = inject(ApiClientService);
 
-  submitResolution(data: FormData): Observable<ResolutionEntity> {
+  submitResolution(data: any): Observable<ResolutionEntity> {
     return this.apiClient.post<ResolutionEntity>(ENDPOINTS.RESOLUTIONS.BASE, data);
   }
 }

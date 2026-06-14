@@ -152,23 +152,17 @@ td {
   text-transform: uppercase;
   display: inline-block;
 
-  &[data-status="SUBMITTED"], &[data-status="PRESENTADO"], &[data-status="POR RECIBIR"] {
+  &.pending {
+    background: #fffbeb; color: #b45309;
+  }
+  &.review {
     background: #eff6ff; color: #1d4ed8;
   }
-  &[data-status="EN_REVISION_DOCUMENTAL"], &[data-status="EN_REVISION_SECRETARIA"], &[data-status="OBSERVADO"] {
-    background: #fff7ed; color: #c2410c;
-  }
-  &[data-status="VALIDATED"], &[data-status="VALIDADO"] {
-    background: #f0fdf4; color: #166534;
-  }
-  &[data-status="EN_EVALUACION"] {
-    background: #fdf2f8; color: #9d174d;
-  }
-  &[data-status="DISCREPANCIA_RIESGO"], &[data-status="DISCREPANCIA_DE_RIESGO"], &[data-status="DISCREPANCIA DE RIESGO"] {
-    background: #fff7ed; color: #c2410c;
-  }
-  &[data-status="APPROVED"], &[data-status="APROBADO"] {
+  &.approved {
     background: #ecfdf5; color: #065f46;
+  }
+  &.rejected {
+    background: #fee2e2; color: #991b1b;
   }
 }
 

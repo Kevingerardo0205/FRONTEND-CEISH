@@ -98,8 +98,10 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   /**
    * Evaluador: Envía el resultado de la evaluación.
    */
-  submitEvaluation(payload: any): Observable<void> {
-    return this.apiClient.post(ENDPOINTS.EVALUATIONS.SUBMIT, payload);
+  submitEvaluation(payload: any): Observable<any> {
+    return this.apiClient.post(ENDPOINTS.EVALUATIONS.SUBMIT, payload).pipe(
+      map((res: any) => res?.data || res)
+    );
   }
 
   /**
@@ -141,6 +143,24 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
    */
   consolidateEvaluation(protocolId: string): Observable<any> {
     return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.CONSOLIDATE(protocolId)).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  getChecklistDetails(evaluationId: string): Observable<any> {
+    return this.apiClient.get<any>(`/evaluations/${evaluationId}/checklist-details`).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  getDocumentDownloadUrl(evaluationId: string): Observable<any> {
+    return this.apiClient.get<any>(`/evaluations/${evaluationId}/document`).pipe(
+      map(res => res.data || res)
+    );
+  }
+
+  getDocxDownloadUrl(evaluationId: string): Observable<any> {
+    return this.apiClient.get<any>(`/evaluations/${evaluationId}/document/docx`).pipe(
       map(res => res.data || res)
     );
   }
@@ -199,6 +219,12 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
         const raw = res?.data || res;
         return Array.isArray(raw) ? raw : [];
       })
+    );
+  }
+
+  getProtocolObservations(protocolId: string): Observable<any> {
+    return this.apiClient.get<any>(`${ENDPOINTS.EVALUATIONS.BASE}/protocol/${protocolId}/observations`).pipe(
+      map(res => res.data || res)
     );
   }
 }

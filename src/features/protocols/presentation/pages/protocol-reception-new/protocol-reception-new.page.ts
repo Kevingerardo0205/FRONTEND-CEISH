@@ -11,7 +11,11 @@ import { FormsModule } from '@angular/forms';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { resolveEstado } from '@domain/catalogs/estado.alias';
 import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
+
+import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
+import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 
 @Component({
   selector: 'app-protocol-reception-new',
@@ -26,7 +30,9 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
     MatInputModule,
     RouterModule,
     FormsModule,
-    StatCardComponent
+    StatCardComponent,
+    ProtocolStatusLabelPipe,
+    ProtocolStatusClassPipe
   ],
   template: `
     <div class="dashboard-admin-container animate-fade-in">
@@ -98,8 +104,8 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
               <ng-container matColumnDef="estado">
                 <th mat-header-cell *matHeaderCellDef> ESTADO </th>
                 <td mat-cell *matCellDef="let p"> 
-                  <span class="status-badge" [ngClass]="p.status?.toLowerCase()">
-                    {{ p.status }}
+                  <span class="status-badge" [ngClass]="p.status | protocolStatusClass">
+                    {{ p.status | protocolStatusLabel }}
                   </span>
                 </td>
               </ng-container>
@@ -148,14 +154,9 @@ export class ProtocolReceptionNewPage implements OnInit {
         const list = Array.isArray(data) ? data : [];
         console.log(`[ProtocolReceptionNewPage] ${list.length} protocolos cargados.`);
         
-        // Incluimos todos por ahora para diagnóstico, filtrando por estados conocidos
         const initialProtocols = list.filter(p => {
-          const s = String(p.status).toUpperCase();
-          return s === 'BORRADOR' || 
-                 s === 'SUBMITTED' || 
-                 s === 'DRAFT' ||
-                 s === 'EN_REVISION_DOCUMENTAL' ||
-                 s === 'PRESENTADO';
+          const core = resolveEstado(p.status);
+          return core && core.categoria === 'RECEPCION' && core.code !== 'COMPLETO' && core.code !== 'ARCHIVADO_VENCIMIENTO';
         });
         
         this.protocols.set(initialProtocols);

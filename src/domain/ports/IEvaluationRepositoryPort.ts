@@ -22,7 +22,7 @@ export abstract class IEvaluationRepositoryPort {
    * POST /evaluations/submit
    * @param payload JSON con assignmentId, annex10, result, reportPath, etc.
    */
-  abstract submitEvaluation(payload: any): Observable<void>;
+  abstract submitEvaluation(payload: any): Observable<any>;
 
   /**
    * Obtener todos los perfiles de evaluadores.
@@ -53,6 +53,24 @@ export abstract class IEvaluationRepositoryPort {
    * GET /evaluations/consolidate/{id}
    */
   abstract consolidateEvaluation(protocolId: string): Observable<any>;
+
+  /**
+   * Obtiene el detalle de checklist guardado de una evaluación (Fase 1).
+   * GET /api/evaluations/:evaluationId/checklist-details
+   */
+  abstract getChecklistDetails(evaluationId: string): Observable<any>;
+
+  /**
+   * Obtiene la URL firmada del PDF oficial generado en R2 (Fase 2).
+   * GET /api/evaluations/:evaluationId/document
+   */
+  abstract getDocumentDownloadUrl(evaluationId: string): Observable<any>;
+
+  /**
+   * Obtiene la URL firmada del DOCX oficial generado en R2 (Fase 2).
+   * GET /api/evaluations/:evaluationId/document/docx
+   */
+  abstract getDocxDownloadUrl(evaluationId: string): Observable<any>;
 
   // Métodos de consulta existentes
   abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;
@@ -85,6 +103,12 @@ export abstract class IEvaluationRepositoryPort {
    * GET /api/evaluations/evaluators/active
    */
   abstract getActiveEvaluators(): Observable<any[]>;
+
+  /**
+   * Obtiene observaciones detalladas y consolidadas de cada evaluador para un protocolo.
+   * GET /api/evaluations/protocol/:protocolId/observations
+   */
+  abstract getProtocolObservations(protocolId: string): Observable<any>;
 }
 
 
