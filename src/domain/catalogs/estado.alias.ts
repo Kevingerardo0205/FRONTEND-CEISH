@@ -1,6 +1,6 @@
 import { EstadoCatalog, EstadoCore } from './estado.catalog';
 
-export const EstadoAliasMap: Record<string, EstadoCore> = {
+export const EstadoAliasMap = {
   DRAFT: EstadoCatalog.INICIADO,
   BORRADOR: EstadoCatalog.INICIADO,
   SUBMITTED: EstadoCatalog.EN_REVISION_SECRETARIA,
@@ -13,18 +13,7 @@ export const EstadoAliasMap: Record<string, EstadoCore> = {
   'DISCREPANCIA DE RIESGO': EstadoCatalog.DISCREPANCIA_RIESGO,
   VALIDATED: EstadoCatalog.COMPLETO,
   VALIDADO: EstadoCatalog.COMPLETO,
-  ARCHIVADO: EstadoCatalog.ARCHIVADO_VENCIMIENTO
-} as const;
-
-/** Resolver de estado puro e individual */
-export function resolveEstado(code: string | undefined): EstadoCore | null {
-  if (!code) return null;
-  const normalized = code.toUpperCase();
-  return EstadoCatalog[normalized] || EstadoAliasMap[normalized] || null;
-}
-
-/** Resolver específico para agrupaciones de categorías */
-export function isEstadoCategoria(code: string | undefined, categoria: 'RECEPCION' | 'PROTOCOLO'): boolean {
-  const core = resolveEstado(code);
-  return core ? core.categoria === categoria : false;
-}
+  ARCHIVADO: EstadoCatalog.ARCHIVADO_VENCIMIENTO,
+  REQUIERE_SUBSANACION_VERSION: EstadoCatalog.REQUIERE_SUBSANACION_VERSION,
+  EN_CONTROL_DOCUMENTAL: EstadoCatalog.EN_CONTROL_DOCUMENTAL
+} as const satisfies Record<string, EstadoCore>;

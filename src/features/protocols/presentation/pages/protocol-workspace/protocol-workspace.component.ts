@@ -12,8 +12,11 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { AssignPeersModalComponent } from '../../../../dashboard/presentation/components/assign-peers-modal/assign-peers-modal.component';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Component({
   selector: 'app-protocol-workspace',
@@ -31,7 +34,8 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
     MatTooltipModule,
     ProtocolCodePipe,
     MatSnackBarModule,
-    TimelineAcceptanceModalComponent
+    TimelineAcceptanceModalComponent,
+    MatDialogModule
   ],
   template: `
     <div class="workspace-shell" *ngIf="protocol(); else loading">
@@ -253,6 +257,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private workspaceService = inject(ProtocolWorkspaceService);
   private authFacade = inject(AuthFacade);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   protocol = this.workspaceService.protocol;
 
@@ -288,14 +293,17 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const actions = [];
     const role = this.authFacade.currentUser()?.rol?.toUpperCase();
     const status = p.status as string;
-    if (role === 'INVESTIGADOR' && (status === 'DRAFT' || status === 'BORRADOR' || status === 'REQUIERE_CORRECCION' || status === 'OBSERVED' || status === 'PENDIENTE_SUBSANACION')) {
+    const core = resolveEstado(status);
+    const code = core?.code || status;
+
+    if (role === 'INVESTIGADOR' && (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')) {
       actions.push({ id: 'EDIT_PROTOCOL', label: 'Completar / Editar', icon: 'edit' });
     }
 
-    if (p.status === ProtocolStatus.SUBMITTED || p.status === ProtocolStatus.PENDIENTE) {
+    if (code === 'EN_REVISION_SECRETARIA') {
       actions.push({ id: 'VALIDATE_ALL', label: 'Aprobar Todo', icon: 'done_all' });
     }
-    if (p.status === ProtocolStatus.VALIDATED || p.status === ProtocolStatus.EN_REVISION_DOCUMENTAL) {
+    if (code === 'COMPLETO' || code === 'INCOMPLETO') {
       actions.push({ id: 'ASSIGN_EVALUATORS', label: 'Asignar Pares', icon: 'person_add' });
     }
     return actions;
@@ -343,6 +351,47 @@ export class ProtocolWorkspaceComponent implements OnInit {
   onExecuteAction(actionId: string) {
     if (actionId === 'EDIT_PROTOCOL') {
       this.router.navigate(['/investigador/protocolo', this.protocol()?.id, 'editar']);
+    } else if (actionId === 'VALIDATE_ALL') {
+      this.router.navigate(['/dashboard/protocols/workspace', this.protocol()?.id, 'validation']);
+    } else if (actionId === 'ASSIGN_EVALUATORS') {
+      const p = this.protocol();
+      if (!p) return;
+      
+      const mappedProtocol: any = {
+        id: Number(p.id),
+        ceishCode: p.code || '',
+        title: p.title,
+        receptionStatus: p.status,
+        isRiskLevelDesignated: false,
+        createdAt: p.submissionDate ? new Date(p.submissionDate).toISOString() : new Date().toISOString(),
+        studyType: p.studyType ? {
+          id: p.studyType.id || 0,
+          codigo: p.studyType.codigo || p.studyType.code || '',
+          nombre: p.studyType.nombre || p.studyType.name || 'General'
+        } : {
+          id: 0,
+          codigo: p.studyTypeCode || '',
+          nombre: p.type || 'General'
+        },
+        principalInvestigatorRecord: {
+          id: 0,
+          fullName: p.principalInvestigator || 'Investigador Principal',
+          email: ''
+        }
+      };
+
+      const dialogRef = this.dialog.open(AssignPeersModalComponent, {
+        width: '600px',
+        data: { protocol: mappedProtocol },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((assigned: boolean) => {
+        if (assigned) {
+          this.snackBar.open('✅ Evaluadores asignados correctamente.', 'Cerrar', { duration: 4000 });
+          this.workspaceService.loadProtocol(p.id).subscribe();
+        }
+      });
     } else {
       console.log('[ProtocolWorkspace] Executing action:', actionId);
     }

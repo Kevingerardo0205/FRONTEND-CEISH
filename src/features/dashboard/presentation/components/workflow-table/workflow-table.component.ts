@@ -52,6 +52,9 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
             <th mat-header-cell *matHeaderCellDef>CÓDIGO CEISH</th>
             <td mat-cell *matCellDef="let p">
               <span class="code-badge">{{ p.code | protocolCode }}</span>
+              <span class="version-chip ms-2" *ngIf="p.version" style="font-size: 0.65rem; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: 700;">
+                V{{ p.version }}
+              </span>
             </td>
           </ng-container>
 

@@ -197,12 +197,11 @@ import { filter, switchMap, map } from 'rxjs/operators';
                 <div class="col-md-6">
                   <label class="field-label">Tipo de Resolución / Dictamen</label>
                   <mat-form-field appearance="outline" class="full-width custom-field">
-                    <mat-select formControlName="resolutionType" placeholder="Seleccione el dictamen">
-                      <mat-option value="APPROVAL">Aprobación Definitiva (Anexos 13/14)</mat-option>
-                      <mat-option value="CONDITIONAL">Aprobación Condicionada / Subsanación (Anexo 15)</mat-option>
-                      <mat-option value="REJECTION">No Aprobación (Anexo 16)</mat-option>
-                      <mat-option value="EXEMPTION">Exención de Revisión (Anexo 12)</mat-option>
-                    </mat-select>
+                      <mat-select formControlName="resolutionType" placeholder="Seleccione el dictamen">
+                        <mat-option value="APPROVAL">Aprobación Definitiva (Anexos 13/14)</mat-option>
+                        <mat-option value="CONDITIONAL">Aprobación Condicionada / Subsanación (Anexo 15)</mat-option>
+                        <mat-option value="REJECTION">No Aprobación (Anexo 16)</mat-option>
+                      </mat-select>
                   </mat-form-field>
                 </div>
               </div>
@@ -226,6 +225,12 @@ import { filter, switchMap, map } from 'rxjs/operators';
                     <label class="field-label">Observaciones Menores</label>
                     <mat-form-field appearance="outline" class="full-width custom-field">
                       <textarea matInput formControlName="minorObservations" rows="3" placeholder="Sugerencias no condicionantes para el investigador..."></textarea>
+                    </mat-form-field>
+                  </div>
+                  <div class="field-group mb-3">
+                    <label class="field-label">Procedimiento de Subsanación (Instrucciones)</label>
+                    <mat-form-field appearance="outline" class="full-width custom-field">
+                      <textarea matInput formControlName="correctionProcedure" rows="3" placeholder="Detalle los pasos o archivos que debe cargar el investigador para subsanar..."></textarea>
                     </mat-form-field>
                   </div>
                   <div class="col-md-4">
@@ -481,6 +486,7 @@ export class EvaluationConsolidationPage implements OnInit {
     // Conditional
     majorObservations: [''],
     minorObservations: [''],
+    correctionProcedure: [''],
     deadlineDays: [30],
     // Rejection
     rejectionJustification: [''],
@@ -543,21 +549,21 @@ export class EvaluationConsolidationPage implements OnInit {
   getResolutionLabel(type: string): string {
     const labels: any = {
       'APPROVAL': 'Aprobación Definitiva',
-      'CONDITIONAL': 'Aprobación Condicionada',
-      'REJECTION': 'No Aprobación',
-      'EXEMPTION': 'Exención de Revisión'
+      'CONDITIONAL': 'Aprobación con Observaciones',
+      'REJECTION': 'No Aprobación / Rechazado'
     };
     return labels[type] || '';
   }
 
   private updateValidators(type: string) {
-    ['majorObservations', 'rejectionJustification'].forEach(control => {
+    ['majorObservations', 'rejectionJustification', 'correctionProcedure'].forEach(control => {
       this.form.get(control)?.clearValidators();
       this.form.get(control)?.updateValueAndValidity();
     });
 
     if (type === 'CONDITIONAL') {
       this.form.get('majorObservations')?.setValidators([Validators.required]);
+      this.form.get('correctionProcedure')?.setValidators([Validators.required]);
     } else if (type === 'REJECTION') {
       this.form.get('rejectionJustification')?.setValidators([Validators.required, Validators.minLength(20)]);
     }
@@ -590,9 +596,8 @@ export class EvaluationConsolidationPage implements OnInit {
         )),
         switchMap(uploadedKey => {
           let resolutionTypeId = 1; // Aprobación Definitiva
-          if (formValue.resolutionType === 'CONDITIONAL') resolutionTypeId = 4; // Pendiente de subsanación
-          if (formValue.resolutionType === 'REJECTION') resolutionTypeId = 2; // No aprobado
-          if (formValue.resolutionType === 'EXEMPTION') resolutionTypeId = 3; // Exención
+          if (formValue.resolutionType === 'CONDITIONAL') resolutionTypeId = 2; // Aprobado con Observaciones / Subsanación
+          if (formValue.resolutionType === 'REJECTION') resolutionTypeId = 3; // Rechazado
 
           const payload = {
             protocolId: protocolIdNum,
@@ -601,7 +606,7 @@ export class EvaluationConsolidationPage implements OnInit {
             followUpPeriodDays: formValue.reportPeriodicityMonths ? formValue.reportPeriodicityMonths * 30 : 180,
             majorObservations: formValue.majorObservations || formValue.rejectionJustification || '',
             minorObservations: formValue.minorObservations || '',
-            correctionProcedure: formValue.resolutionType === 'CONDITIONAL' ? 'Subir los anexos correspondientes corregidos en la sección de Subsanación.' : '',
+            correctionProcedure: formValue.resolutionType === 'CONDITIONAL' ? formValue.correctionProcedure : '',
             pdfLetterPath: uploadedKey,
             resolutionLabel: this.getResolutionLabel(formValue.resolutionType)
           };
@@ -626,7 +631,11 @@ export class EvaluationConsolidationPage implements OnInit {
         },
         error: (err) => {
           console.error('[ConsolidationPage] Error al emitir resolución:', err);
-          this.snackBar.open('❌ Error al registrar el dictamen consolidado.', 'Cerrar', { duration: 5000 });
+          if (err.status === 409) {
+            this.snackBar.open('⚠️ El expediente de este protocolo ya ha sido versionado o modificado por otra transacción concurrente. Por favor, recargue la página.', 'Cerrar', { duration: 8000 });
+          } else {
+            this.snackBar.open('❌ Error al registrar el dictamen consolidado.', 'Cerrar', { duration: 5000 });
+          }
           this.isSubmitting.set(false);
         }
       });

@@ -11,7 +11,7 @@ import { Router, RouterModule } from '@angular/router';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { ProtocoloResumen, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
 import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
-import { resolveEstado } from '@domain/catalogs/estado.alias';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
@@ -84,7 +84,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
             </button>
             
             <mat-menu #menu="matMenu" class="premium-menu">
-              <button mat-menu-item *ngIf="['REQUIERE_CORRECCION', 'INCOMPLETO', 'PENDIENTE_SUBSANACION', 'OBSERVADO', 'EVALUACION_SUBSANACIONES'].includes(p.estado)"
+              <button mat-menu-item *ngIf="canSubirCorrecciones(p.estado)"
                       (click)="onSubirCorrecciones(p)">
                 <mat-icon>edit_note</mat-icon>
                 <span>Subir Correcciones</span>
@@ -233,10 +233,21 @@ export class MisProtocolosPage implements OnInit {
   
   protocolos = signal<ProtocoloResumen[]>([]);
 
+  canSubirCorrecciones(estado: string): boolean {
+    const core = resolveEstado(estado);
+    return !!(core && (
+      core.code === 'REQUIERE_SUBSANACION_DOC' || 
+      core.code === 'INCOMPLETO' || 
+      core.code === 'REQUIERE_SUBSANACION_VERSION' || 
+      core.code === 'EN_CONTROL_DOCUMENTAL'
+    ) || estado === 'EVALUACION_SUBSANACIONES');
+  }
+
   onSubirCorrecciones(p: ProtocoloResumen) {
     const isVersion1 = (p.versionNumber || 1) === 1;
-    const estadoStr = p.estado as any;
-    if (isVersion1 && (estadoStr === 'PENDIENTE_SUBSANACION' || estadoStr === 'INCOMPLETO' || estadoStr === 'REQUIERE_CORRECCION' || estadoStr === EstadoProtocolo.REQUIERE_CORRECCION)) {
+    const core = resolveEstado(p.estado);
+    const code = core?.code || p.estado;
+    if (isVersion1 && (code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')) {
       this.router.navigate(['/dashboard/protocols/workspace', p.id, 'validation']);
     } else {
       this.router.navigate(['/dashboard/evaluacion-etica/subsanaciones'], { queryParams: { protocolId: p.id } });

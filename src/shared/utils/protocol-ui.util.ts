@@ -1,11 +1,14 @@
-import { resolveEstado } from '@domain/catalogs/estado.alias';
+import { EstadoCatalog } from '@domain/catalogs/estado.catalog';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 export interface EstadoUIMetadata {
   readonly label: string;
   readonly cssClass: 'pending' | 'review' | 'approved' | 'rejected';
 }
 
-export const EstadoUIMap: Record<string, EstadoUIMetadata> = {
+export type EstadoCatalogKey = keyof typeof EstadoCatalog;
+
+export const EstadoUIMap: Record<EstadoCatalogKey, EstadoUIMetadata> = {
   INICIADO: { label: 'Iniciado', cssClass: 'pending' },
   COMPLETO: { label: 'Validado / Pendiente Firma', cssClass: 'pending' },
   INCOMPLETO: { label: 'Incompleto (Requiere Subsanación)', cssClass: 'rejected' },
@@ -16,20 +19,20 @@ export const EstadoUIMap: Record<string, EstadoUIMetadata> = {
   DISCREPANCIA_RIESGO: { label: 'Discrepancia de Riesgo', cssClass: 'rejected' },
   APROBADO: { label: 'Aprobado', cssClass: 'approved' },
   RECHAZADO: { label: 'Rechazado', cssClass: 'rejected' },
-  REQUIERE_SUBSANACION_VERSION: { label: 'Requiere Subsanación de Versión', cssClass: 'rejected' },
+  REQUIERE_SUBSANACION_VERSION: { label: 'Subsanación Científica', cssClass: 'rejected' },
   REQUIERE_SUBSANACION_DOC: { label: 'Subsanación Documental', cssClass: 'rejected' },
-  EN_CONTROL_DOCUMENTAL: { label: 'En Control Documental', cssClass: 'review' }
-} as const;
+  EN_CONTROL_DOCUMENTAL: { label: 'Control Documental', cssClass: 'review' }
+};
 
 export const ProtocolUI = {
   label: (status: string | undefined): string => {
     const core = resolveEstado(status);
     if (!core) return status || 'Desconocido';
-    return EstadoUIMap[core.code]?.label || core.code.replace(/_/g, ' ');
+    return EstadoUIMap[core.code as EstadoCatalogKey]?.label || core.code.replace(/_/g, ' ');
   },
   class: (status: string | undefined): string => {
     const core = resolveEstado(status);
     if (!core) return 'pending';
-    return EstadoUIMap[core.code]?.cssClass || 'pending';
+    return EstadoUIMap[core.code as EstadoCatalogKey]?.cssClass || 'pending';
   }
 };

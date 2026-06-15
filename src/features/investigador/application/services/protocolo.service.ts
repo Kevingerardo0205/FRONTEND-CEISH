@@ -89,11 +89,11 @@ export class ProtocoloService extends BaseApiService {
    * 3. Subida de Archivos vinculada a Requisito (Mapeo Investigador)
    * Endpoint Investigador: POST /protocols/:id/upload-document
    */
-  subirDocumento(file: File, protocolId: number, requirementId: number): Observable<any> {
+  subirDocumento(file: File, protocolId: number, requirementId: number, requirementCode?: string): Observable<any> {
     const sanitizedName = sanitizeFilename(file.name);
     const s3Key = `protocols/${protocolId}/requirements/${requirementId}/${sanitizedName}`;
 
-    console.log(`[ProtocoloService] Iniciando subida de documento para req ${requirementId}. S3 Key: ${s3Key}`);
+    console.log(`[ProtocoloService] Iniciando subida de documento para req ${requirementId} (code: ${requirementCode}). S3 Key: ${s3Key}`);
 
     return this.s3StorageService.getUploadUrl(s3Key, file.type || 'application/pdf').pipe(
       catchError(err => {
@@ -113,12 +113,16 @@ export class ProtocoloService extends BaseApiService {
               ? `/protocols/${protocolId}/upload-document`
               : ENDPOINTS.PROTOCOLS.UPLOAD_DOCUMENT(protocolId.toString());
 
-            const payload = {
+            const payload: any = {
               requirementId: requirementId,
               fileName: sanitizedName,
               path: urlRes.key,
               sizeBytes: file.size
             };
+
+            if (requirementCode) {
+              payload.requirementCode = requirementCode;
+            }
 
             console.log(`[ProtocoloService] Registrando documento S3 en BD: ${url}`, payload);
             return this.post<any>(url, payload).pipe(

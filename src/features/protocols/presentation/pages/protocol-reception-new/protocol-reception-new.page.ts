@@ -11,7 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
-import { resolveEstado } from '@domain/catalogs/estado.alias';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
 
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';

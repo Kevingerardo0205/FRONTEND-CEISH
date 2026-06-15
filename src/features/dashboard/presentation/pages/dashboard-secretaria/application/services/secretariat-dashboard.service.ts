@@ -4,7 +4,7 @@ import { catchError, finalize, tap } from 'rxjs/operators';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
-import { resolveEstado } from '@domain/catalogs/estado.alias';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 export interface SecretariatMetrics {
   pendingReception: number;
@@ -54,7 +54,7 @@ export class SecretariatDashboardService {
     return {
       pendingReception: all.filter(p => {
         const core = resolveEstado(p.status);
-        return core && core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code);
+        return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
       }).length,
       observed: all.filter(p => {
         const core = resolveEstado(p.status);

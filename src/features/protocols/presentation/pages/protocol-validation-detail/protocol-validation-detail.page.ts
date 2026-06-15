@@ -24,6 +24,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Component({
   selector: 'app-protocol-validation-detail',
@@ -520,7 +521,8 @@ export class ProtocolValidationDetailPage implements OnInit {
     if (!statusStr) {
       statusStr = this.globalStatus()?.status?.toUpperCase() || '';
     }
-    return ['PENDIENTE_SUBSANACION', 'OBSERVED', 'OBSERVADO', 'REQUIERE_CORRECCION', 'INCOMPLETO'].includes(statusStr);
+    const core = resolveEstado(statusStr);
+    return !!(core && (core.code === 'REQUIERE_SUBSANACION_DOC' || core.code === 'INCOMPLETO') || statusStr === 'EVALUACION_SUBSANACIONES');
   });
 
   isReadOnlyMode = computed(() => {
@@ -603,7 +605,7 @@ export class ProtocolValidationDetailPage implements OnInit {
         const processedChecklist = (data.checklist || []).map(item => {
           if (item.attachedDocument) {
             if (item.attachedDocument.pageCount === null || item.attachedDocument.pageCount === undefined) {
-              item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || null;
+              item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
             }
           }
           return item;
@@ -625,8 +627,13 @@ export class ProtocolValidationDetailPage implements OnInit {
   onValidateItem(item: ValidationChecklistItem, actionType: number) {
     if (!item.attachedDocument) return;
 
-    const pages = item.attachedDocument.pageCount;
-    if (pages !== null && pages !== undefined && (pages <= 0 || !Number.isInteger(pages))) {
+    let pages = item.attachedDocument.pageCount;
+    if (pages === null || pages === undefined) {
+      pages = item.attachedDocument.originalPageCount || 1;
+      item.attachedDocument.pageCount = pages;
+    }
+
+    if (pages <= 0 || !Number.isInteger(pages)) {
       this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
       return;
     }
@@ -665,8 +672,13 @@ export class ProtocolValidationDetailPage implements OnInit {
   onChangePageCount(item: ValidationChecklistItem) {
     if (!item.attachedDocument) return;
 
-    const pageCount = item.attachedDocument.pageCount;
-    if (pageCount !== null && pageCount !== undefined && (pageCount <= 0 || !Number.isInteger(pageCount))) {
+    let pageCount = item.attachedDocument.pageCount;
+    if (pageCount === null || pageCount === undefined) {
+      pageCount = item.attachedDocument.originalPageCount || 1;
+      item.attachedDocument.pageCount = pageCount;
+    }
+
+    if (pageCount <= 0 || !Number.isInteger(pageCount)) {
       this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
       // Restaurar el valor original
       item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
@@ -821,7 +833,7 @@ export class ProtocolValidationDetailPage implements OnInit {
 
     this.uploadingRequirements.update(state => ({ ...state, [item.id]: true }));
     
-    this.protocoloService.subirDocumento(file, Number(this.protocolId), item.id).subscribe({
+    this.protocoloService.subirDocumento(file, Number(this.protocolId), item.id, item.code).subscribe({
       next: () => {
         this.uploadingRequirements.update(state => ({ ...state, [item.id]: false }));
         this.snackBar.open(`✅ Archivo cargado con éxito para ${item.name}`, 'Cerrar', { duration: 3000 });

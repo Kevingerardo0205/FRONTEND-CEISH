@@ -17,6 +17,9 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
+import { resolveEstado } from '@shared/utils/estado.resolver';
+import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
+import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@features/investigador/domain/dtos/crear-protocolo.dto';
 
 @Component({
@@ -34,7 +37,9 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
     MatExpansionModule,
     MatTabsModule,
     MatDividerModule,
-    ProtocolCodePipe
+    ProtocolCodePipe,
+    ProtocolStatusLabelPipe,
+    ProtocolStatusClassPipe
   ],
   template: `
     <div class="subsanacion-container animate-fade-in">
@@ -62,10 +67,20 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
           </div>
           <div class="banner-body d-flex flex-column gap-2 w-100">
             <div>
-              <h4 class="m-0 fw-bold">Modificaciones en Versión 2.0 Requeridas</h4>
-              <p class="m-0 mt-1 small">
-                El comité ético ha emitido observaciones a su postulación. Por favor, revise detalladamente los informes de los evaluadores en el panel izquierdo y cargue los archivos corregidos en el listado de requisitos de la derecha. El trámite no podrá ser reenviado hasta completar las correcciones.
+              <h4 class="m-0 fw-bold" *ngIf="isEnControlDocumental(); else legacyBannerTitle">
+                Versión {{ protocolVersion() }}.0 en Control Documental
+              </h4>
+              <ng-template #legacyBannerTitle>
+                <h4 class="m-0 fw-bold">Modificaciones en Versión 2.0 Requeridas</h4>
+              </ng-template>
+              <p class="m-0 mt-1 small" *ngIf="isEnControlDocumental(); else legacyBannerText">
+                El protocolo se encuentra en fase de carga de nueva versión (Control Documental). Por favor, cargue los archivos corregidos para los requisitos observados o rechazados. El trámite no podrá ser reenviado hasta completar las correcciones.
               </p>
+              <ng-template #legacyBannerText>
+                <p class="m-0 mt-1 small">
+                  El comité ético ha emitido observaciones a su postulación. Por favor, revise detalladamente los informes de los evaluadores en el panel izquierdo y cargue los archivos corregidos en el listado de requisitos de la derecha. El trámite no podrá ser reenviado hasta completar las correcciones.
+                </p>
+              </ng-template>
             </div>
             <div class="banner-actions">
               <button mat-stroked-button class="btn-download-pdf d-inline-flex align-items-center gap-1" (click)="downloadConsolidatedPdf()">
@@ -186,7 +201,7 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
                               <mat-icon>cloud_upload</mat-icon>
                               Subir
                             </button>
-                            <input #fileInput type="file" (change)="onUploadFile($event, req.id)" accept="application/pdf" style="display: none;" />
+                            <input #fileInput type="file" (change)="onUploadFile($event, req.id, req.requirementCode)" accept="application/pdf" style="display: none;" />
                           </div>
                         </ng-template>
                       </td>
@@ -218,7 +233,7 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
         </div>
       </ng-container>
 
-      <!-- BANDEJA DE PROTOCOLOS PARA SUBSANAR (SI NO HAY PROTOCOLO SELECCIONADO) -->
+      <!-- BANDEJA DE PROTOCOLO PARA SUBSANAR (SI NO HAY PROTOCOLO SELECCIONADO) -->
       <ng-template #listTemplate>
         <header class="page-header mb-4">
           <div class="title-section">
@@ -249,7 +264,9 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
                   </td>
                   <td class="text-muted">{{ p.fechaCreacion ? (p.fechaCreacion | date:'dd/MM/yyyy') : 'N/A' }}</td>
                   <td class="text-center">
-                    <span class="badge-status observed">{{ p.estado }}</span>
+                    <span class="badge-status" [ngClass]="p.estado | protocolStatusClass">
+                      {{ p.estado | protocolStatusLabel }}
+                    </span>
                   </td>
                   <td class="text-end">
                     <button mat-flat-button color="primary" class="btn-sm" style="font-weight: 700; border-radius: 8px;" (click)="selectProtocol(p.id)">
@@ -317,6 +334,12 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
 
     .badge-status {
       padding: 4px 12px; border-radius: 100px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block;
+      &.approved { background: #dcfce7; color: #166534; }
+      &.rejected { background: #fee2e2; color: #991b1b; }
+      &.pending { background: #fef3c7; color: #92400e; }
+      &.review { background: #e0f2fe; color: #0369a1; }
+      
+      /* Mantener compatibilidad con los estados de los requisitos individuales de la checklist */
       &.aprobado, &.validado { background: #dcfce7; color: #166534; }
       &.no_presentado, &.rechazado { background: #fee2e2; color: #991b1b; }
       &.observado, &.pendiente { background: #fef3c7; color: #92400e; }
@@ -384,6 +407,8 @@ export class SubsanacionPage implements OnInit {
   protocolId = signal<number>(0);
   protocolCode = signal<string>('');
   protocolTitle = signal<string>('');
+  protocolStatus = signal<string>('');
+  protocolVersion = signal<number>(1);
   
   protocols = signal<ProtocoloResumen[]>([]);
   observations = signal<any[]>([]);
@@ -402,6 +427,11 @@ export class SubsanacionPage implements OnInit {
       ['APROBADO', 'VALIDADO', 'PRESENTADO', 'NO_APLICA'].includes(item.status as any)
     )
   );
+
+  readonly isEnControlDocumental = computed(() => {
+    const core = resolveEstado(this.protocolStatus());
+    return core && core.code === 'EN_CONTROL_DOCUMENTAL';
+  });
 
   ngOnInit() {
     const role = this.authFacade.currentUser()?.rol;
@@ -430,8 +460,10 @@ export class SubsanacionPage implements OnInit {
     } else {
       this.protocolRepo.getReceptionProtocols().subscribe({
         next: (list) => {
-          const subsanacionStatuses = ['PENDIENTE_SUBSANACION', 'EVALUACION_SUBSANACIONES'];
-          const filtered = (list || []).filter(p => subsanacionStatuses.includes(p.status));
+          const filtered = (list || []).filter(p => {
+            const core = resolveEstado(p.status);
+            return core && core.code === 'EVALUADO' || (p.status as string) === 'EVALUACION_SUBSANACIONES';
+          });
           const mapped = filtered.map(p => ({
             id: Number(p.id),
             codigoCeish: p.code || '',
@@ -451,6 +483,9 @@ export class SubsanacionPage implements OnInit {
     this.protocoloService.obtenerProtocolo(this.protocolId()).subscribe(p => {
       this.protocolCode.set(p.codigoCeish || '');
       this.protocolTitle.set(p.titulo || 'Protocolo de Investigación');
+      this.protocolStatus.set(p.estado || '');
+      const rawP = p as any;
+      this.protocolVersion.set(rawP.versionNumber || rawP.version || 1);
     });
 
     // 2. Obtener observaciones consolidadas
@@ -471,7 +506,7 @@ export class SubsanacionPage implements OnInit {
     });
   }
 
-  onUploadFile(event: any, requirementId: number) {
+  onUploadFile(event: any, requirementId: number, requirementCode?: string) {
     const file = event.target?.files?.[0];
     if (!file) return;
 
@@ -481,7 +516,7 @@ export class SubsanacionPage implements OnInit {
     }
 
     this.uploadingRequirementId.set(requirementId);
-    this.protocoloService.subirDocumento(file, this.protocolId(), requirementId).subscribe({
+    this.protocoloService.subirDocumento(file, this.protocolId(), requirementId, requirementCode).subscribe({
       next: () => {
         // Actualizar el estado en el Signal reactivo (checklist)
         this.checklist.update(items =>

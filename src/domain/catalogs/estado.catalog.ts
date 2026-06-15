@@ -4,7 +4,7 @@ export interface EstadoCore {
   readonly categoria: 'RECEPCION' | 'PROTOCOLO';
 }
 
-export const EstadoCatalog: Record<string, EstadoCore> = {
+export const EstadoCatalog = {
   INICIADO: { id: 9, code: 'INICIADO', categoria: 'RECEPCION' },
   COMPLETO: { id: 10, code: 'COMPLETO', categoria: 'RECEPCION' },
   INCOMPLETO: { id: 11, code: 'INCOMPLETO', categoria: 'RECEPCION' },
@@ -18,4 +18,4 @@ export const EstadoCatalog: Record<string, EstadoCore> = {
   REQUIERE_SUBSANACION_VERSION: { id: 19, code: 'REQUIERE_SUBSANACION_VERSION', categoria: 'PROTOCOLO' },
   REQUIERE_SUBSANACION_DOC: { id: 20, code: 'REQUIERE_SUBSANACION_DOC', categoria: 'RECEPCION' },
   EN_CONTROL_DOCUMENTAL: { id: 21, code: 'EN_CONTROL_DOCUMENTAL', categoria: 'PROTOCOLO' }
-} as const;
+} as const satisfies Record<string, EstadoCore>;

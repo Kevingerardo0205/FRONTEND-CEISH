@@ -221,7 +221,18 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       financingAmount: raw.financingAmount || raw.amount || nestedProtocol?.financingAmount || null,
       isTimelineTermsAccepted: raw.isTimelineTermsAccepted ?? nestedProtocol?.isTimelineTermsAccepted ?? false,
       timelineTermsAcceptedAt: raw.timelineTermsAcceptedAt ?? nestedProtocol?.timelineTermsAcceptedAt ?? null,
-      timelineTermsAcceptedIp: raw.timelineTermsAcceptedIp ?? nestedProtocol?.timelineTermsAcceptedIp ?? null
+      timelineTermsAcceptedIp: raw.timelineTermsAcceptedIp ?? nestedProtocol?.timelineTermsAcceptedIp ?? null,
+      versions: (raw.versions || nestedProtocol?.versions || []).map((v: any) => ({
+        id: v.id,
+        versionNumber: v.versionNumber || v.numeroVersion || v.version || 1,
+        status: v.status || v.estado || '',
+        statusId: v.statusId || v.estadoId || null,
+        resolutionType: v.resolutionType || v.tipoResolucion || null,
+        majorObservations: v.majorObservations || v.observacionesMayores || v.observaciones || '',
+        minorObservations: v.minorObservations || v.observacionesMenores || '',
+        correctionProcedure: v.correctionProcedure || v.procedimientoSubsanacion || '',
+        createdAt: v.createdAt ? new Date(v.createdAt) : null
+      }))
     };
   }
 

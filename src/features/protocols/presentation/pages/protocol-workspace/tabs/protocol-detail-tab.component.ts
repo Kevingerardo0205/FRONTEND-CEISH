@@ -8,6 +8,9 @@ import { RouterModule } from '@angular/router';
 import { ProtocolWorkspaceService } from '../../../../application/services/protocol-workspace.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { resolveEstado } from '@shared/utils/estado.resolver';
+import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
+import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 
 @Component({
   selector: 'app-protocol-detail-tab',
@@ -18,7 +21,9 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
     MatTabsModule,
     MatDividerModule,
     MatTooltipModule,
-    RouterModule
+    RouterModule,
+    ProtocolStatusLabelPipe,
+    ProtocolStatusClassPipe
   ],
   template: `
     <div class="tab-container animate-fade-in" *ngIf="protocol()">
@@ -118,6 +123,54 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
           </div>
         </div>
       </div>
+
+      <!-- SECCIÓN: HISTORIAL DE VERSIONES / LÍNEA DE TIEMPO -->
+      <div class="history-section mt-4" *ngIf="versions().length > 0">
+        <h3 class="section-title mb-3 d-flex align-items-center gap-2">
+          <mat-icon style="color: #003366;">history</mat-icon>
+          Historial de Versiones del Expediente
+        </h3>
+        
+        <div class="timeline-scaffold">
+          <div class="timeline-item" *ngFor="let ver of versions(); let first = first">
+            <div class="timeline-marker" [class.current]="ver.versionNumber === (protocol()?.version || 1)">
+              <div class="marker-dot"></div>
+              <div class="marker-line" *ngIf="!first"></div>
+            </div>
+            
+            <div class="timeline-content-card p-3 border rounded mb-3 bg-white shadow-sm">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="version-info">
+                  <span class="version-tag fw-bold">Versión {{ ver.versionNumber }}.0</span>
+                  <span class="current-badge ms-2" *ngIf="ver.versionNumber === (protocol()?.version || 1)">Versión Activa</span>
+                </div>
+                <span class="status-badge" [ngClass]="ver.status | protocolStatusClass">
+                  {{ ver.status | protocolStatusLabel }}
+                </span>
+              </div>
+              
+              <p class="small text-muted mb-1" *ngIf="ver.createdAt">
+                <strong>Creada el:</strong> {{ ver.createdAt | date:'dd MMM, yyyy - HH:mm' }}
+              </p>
+              
+              <!-- Detalles si fue observada / requiere subsanación -->
+              <div class="observation-details mt-2 p-3 bg-red-soft rounded border-start border-danger border-3"
+                   *ngIf="resolveEstado(ver.status)?.code === 'REQUIERE_SUBSANACION_VERSION' || ver.majorObservations || ver.minorObservations">
+                <h5 class="fw-bold small text-danger text-uppercase mb-2">Dictamen de Observaciones Ético-Científicas</h5>
+                <p class="small mb-2" *ngIf="ver.majorObservations">
+                  <strong>Observaciones Mayores:</strong> {{ ver.majorObservations }}
+                </p>
+                <p class="small mb-2" *ngIf="ver.minorObservations">
+                  <strong>Observaciones Menores:</strong> {{ ver.minorObservations }}
+                </p>
+                <p class="small mb-0" *ngIf="ver.correctionProcedure">
+                  <strong>Procedimiento de Subsanación:</strong> {{ ver.correctionProcedure }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -165,6 +218,22 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
         &:hover { background: #eff6ff; }
       }
     }
+    
+    /* Timeline styles */
+    .timeline-scaffold { display: flex; flex-direction: column-reverse; margin-top: 1.5rem; position: relative; }
+    .timeline-item { display: flex; gap: 1.5rem; position: relative; }
+    .timeline-marker {
+      display: flex; flex-direction: column; align-items: center; position: relative; width: 20px;
+      .marker-dot { width: 12px; height: 12px; border-radius: 50%; background: #cbd5e1; border: 2px solid white; z-index: 2; box-shadow: 0 0 0 2px #cbd5e1; margin-top: 6px; }
+      .marker-line { width: 2px; position: absolute; top: 18px; bottom: -18px; background: #e2e8f0; z-index: 1; }
+      &.current .marker-dot { background: var(--accent, #3b82f6); box-shadow: 0 0 0 2px var(--accent, #3b82f6), 0 0 8px rgba(59, 130, 246, 0.4); }
+    }
+    .timeline-content-card { flex: 1; transition: all 0.2s ease; border-radius: 12px !important; border: 1px solid #e2e8f0; }
+    .version-tag { font-size: 0.9rem; color: #1e293b; }
+    .current-badge { font-size: 0.7rem; background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+    .bg-red-soft { background: #fff5f5; }
+    .observation-details { border-radius: 8px !important; }
+
     .mt-4 { margin-top: 1.5rem; }
     .animate-fade-in { animation: fadeIn 0.3s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -174,8 +243,24 @@ export class ProtocolDetailTabPage {
   private workspaceService = inject(ProtocolWorkspaceService);
   private authFacade = inject(AuthFacade);
 
+  resolveEstado = resolveEstado;
+
   protocol = this.workspaceService.protocol;
   evaluations = this.workspaceService.evaluations;
+
+  versions = computed(() => {
+    const p = this.protocol();
+    if (!p) return [];
+    if (p.versions && p.versions.length > 0) {
+      return p.versions;
+    }
+    return [{
+      id: 0,
+      versionNumber: typeof p.version === 'number' ? p.version : (parseInt(p.version as string, 10) || 1),
+      status: p.status,
+      createdAt: p.submissionDate
+    }];
+  });
 
   showEvaluators(): boolean {
     const role = this.authFacade.currentUser()?.rol?.toUpperCase();
@@ -194,12 +279,12 @@ export class ProtocolDetailTabPage {
     if (!p) return false;
     const role = this.authFacade.currentUser()?.rol?.toUpperCase();
     const status = p.status as string;
+    const core = resolveEstado(status);
+    const code = core?.code || status;
     return role === 'INVESTIGADOR' && 
-      (status === 'DRAFT' || 
-       status === 'BORRADOR' || 
-       status === 'REQUIERE_CORRECCION' || 
-       status === 'OBSERVED' || 
-       status === 'PENDIENTE_SUBSANACION');
+      (code === 'INICIADO' || 
+       code === 'REQUIERE_SUBSANACION_DOC' || 
+       code === 'INCOMPLETO');
   }
 
   hasDeferredData(): boolean {

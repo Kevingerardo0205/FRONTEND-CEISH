@@ -9,6 +9,7 @@ import { StatCardComponent } from '../../../../dashboard/presentation/components
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Component({
   selector: 'app-protocol-validation-list',
@@ -85,7 +86,12 @@ import { NotificationBrokerService } from '@infrastructure/services/notification
       <ng-template #protocolCard let-p>
         <div class="p-card" [attr.data-status]="p.status">
           <div class="p-card-header">
-            <span class="p-id">{{ p.code || 'SIN CÓDIGO' }}</span>
+            <span class="p-id">
+              {{ p.code || 'SIN CÓDIGO' }}
+              <span class="version-chip ms-1" *ngIf="p.version" style="font-size: 0.65rem; background: #cbd5e1; color: #334155; padding: 1px 4px; border-radius: 4px; font-weight: 700;">
+                V{{ p.version }}
+              </span>
+            </span>
             <span class="p-date">{{ p.submissionDate | date:'dd MMM, yyyy' }}</span>
           </div>
           
@@ -181,8 +187,14 @@ export class ProtocolValidationListPage implements OnInit {
     this.protocolRepo.getReceptionProtocols().subscribe({
       next: (res) => {
         const protocols = Array.isArray(res) ? res : [];
-        this.pendingProtocols.set(protocols.filter(p => ['SUBMITTED', 'PRESENTADO', 'PENDIENTE', 'EN_REVISION_SECRETARIA'].includes(String(p.status).toUpperCase())));
-        this.observedProtocols.set(protocols.filter(p => ['INCOMPLETO', 'PENDIENTE_SUBSANACION', 'OBSERVADO'].includes(String(p.status).toUpperCase())));
+        this.pendingProtocols.set(protocols.filter(p => {
+          const core = resolveEstado(p.status);
+          return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
+        }));
+        this.observedProtocols.set(protocols.filter(p => {
+          const core = resolveEstado(p.status);
+          return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION'].includes(core.code);
+        }));
       }
     });
   }

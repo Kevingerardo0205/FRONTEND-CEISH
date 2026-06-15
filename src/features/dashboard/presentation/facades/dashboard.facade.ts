@@ -5,6 +5,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.port';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardFacade {
@@ -30,8 +31,8 @@ export class DashboardFacade {
     const protocols = this.myProtocols();
     return Array.isArray(protocols) 
       ? protocols.filter(p => {
-          const s = p.estado?.toUpperCase() || '';
-          return ['REQUIERE_CORRECCION', 'INCOMPLETO', 'OBSERVADO', 'OBSERVED', 'PENDIENTE_SUBSANACION'].includes(s);
+          const core = resolveEstado(p.estado);
+          return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC'].includes(core.code);
         }).length 
       : 0;
   });
@@ -39,8 +40,8 @@ export class DashboardFacade {
     const protocols = this.myProtocols();
     return Array.isArray(protocols) 
       ? protocols.filter(p => {
-          const s = p.estado?.toUpperCase() || '';
-          return ['APROBADO', 'APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO', 'COMPLETO', 'VALIDADO'].includes(s);
+          const core = resolveEstado(p.estado);
+          return core && ['COMPLETO', 'APROBADO'].includes(core.code);
         }).length 
       : 0;
   });
