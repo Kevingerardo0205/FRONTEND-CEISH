@@ -195,88 +195,32 @@ import { filter, switchMap, map } from 'rxjs/operators';
             <form [formGroup]="form">
               <div class="row g-3">
                 <div class="col-md-6">
-                  <label class="field-label">Tipo de Resolución / Dictamen</label>
+                  <label class="field-label">Vigencia (Años)</label>
                   <mat-form-field appearance="outline" class="full-width custom-field">
-                      <mat-select formControlName="resolutionType" placeholder="Seleccione el dictamen">
-                        <mat-option value="APPROVAL">Aprobación Definitiva (Anexos 13/14)</mat-option>
-                        <mat-option value="CONDITIONAL">Aprobación Condicionada / Subsanación (Anexo 15)</mat-option>
-                        <mat-option value="REJECTION">No Aprobación (Anexo 16)</mat-option>
-                      </mat-select>
+                    <input matInput type="number" formControlName="validityYears">
+                  </mat-form-field>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="field-label">Periodo Seguimiento (Días)</label>
+                  <mat-form-field appearance="outline" class="full-width custom-field">
+                    <input matInput type="number" formControlName="followUpPeriodDays">
                   </mat-form-field>
                 </div>
               </div>
 
-              <!-- Dynamic Fields -->
-              <div class="dynamic-fields mt-4 animate-slide-up" *ngIf="form.get('resolutionType')?.value">
-                <h4 class="section-sub-title mb-3">
-                  <mat-icon>edit_note</mat-icon>
-                  Campos Específicos del Dictamen
-                </h4>
-
-                <!-- Conditional Fields -->
-                <ng-container *ngIf="form.get('resolutionType')?.value === 'CONDITIONAL'">
-                  <div class="field-group mb-3">
-                    <label class="field-label">Observaciones Mayores (Obligatorias)</label>
-                    <mat-form-field appearance="outline" class="full-width custom-field">
-                      <textarea matInput formControlName="majorObservations" rows="3" placeholder="Detalle las correcciones obligatorias que debe realizar el investigador..."></textarea>
-                    </mat-form-field>
-                  </div>
-                  <div class="field-group mb-3">
-                    <label class="field-label">Observaciones Menores</label>
-                    <mat-form-field appearance="outline" class="full-width custom-field">
-                      <textarea matInput formControlName="minorObservations" rows="3" placeholder="Sugerencias no condicionantes para el investigador..."></textarea>
-                    </mat-form-field>
-                  </div>
-                  <div class="field-group mb-3">
-                    <label class="field-label">Procedimiento de Subsanación (Instrucciones)</label>
-                    <mat-form-field appearance="outline" class="full-width custom-field">
-                      <textarea matInput formControlName="correctionProcedure" rows="3" placeholder="Detalle los pasos o archivos que debe cargar el investigador para subsanar..."></textarea>
-                    </mat-form-field>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="field-label">Plazo de Subsanación (Días)</label>
-                    <mat-form-field appearance="outline" class="full-width custom-field">
-                      <input matInput type="number" formControlName="deadlineDays">
-                      <span matSuffix class="pe-3">días</span>
-                    </mat-form-field>
-                  </div>
-                </ng-container>
-
-                <!-- Rejection Fields -->
-                <ng-container *ngIf="form.get('resolutionType')?.value === 'REJECTION'">
-                  <div class="field-group mb-3">
-                    <label class="field-label">Justificación Ética y Metodológica del Rechazo (Obligatoria)</label>
-                    <mat-form-field appearance="outline" class="full-width custom-field">
-                      <textarea matInput formControlName="rejectionJustification" rows="5" placeholder="Detalle los motivos fundados del rechazo conforme a los criterios del CEISH..."></textarea>
-                    </mat-form-field>
-                  </div>
-                </ng-container>
-
-                <!-- Approval Fields -->
-                <ng-container *ngIf="form.get('resolutionType')?.value === 'APPROVAL'">
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <label class="field-label">Vigencia de la Aprobación</label>
-                      <mat-form-field appearance="outline" class="full-width custom-field">
-                        <input matInput type="number" formControlName="validityMonths">
-                        <span matSuffix class="pe-3">meses</span>
-                      </mat-form-field>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="field-label">Periodicidad de Informes de Seguimiento</label>
-                      <mat-form-field appearance="outline" class="full-width custom-field">
-                        <input matInput type="number" formControlName="reportPeriodicityMonths">
-                        <span matSuffix class="pe-3">meses</span>
-                      </mat-form-field>
-                    </div>
-                  </div>
-                </ng-container>
+              <!-- Consolidated Observations -->
+              <div class="field-group mt-4 mb-3">
+                <label class="field-label">Observaciones Consolidadas del Comité</label>
+                <mat-form-field appearance="outline" class="full-width custom-field">
+                  <textarea matInput formControlName="observations" rows="6" placeholder="Detalle la fundamentación y observaciones del comité ético-científico para la resolución consolidada..."></textarea>
+                </mat-form-field>
               </div>
 
               <!-- Upload and Submit Section -->
-              <mat-divider class="my-4" *ngIf="form.get('resolutionType')?.value"></mat-divider>
+              <mat-divider class="my-4"></mat-divider>
               
-              <div class="row align-items-center g-3" *ngIf="form.get('resolutionType')?.value">
+              <div class="row align-items-center g-3">
                 <div class="col-md-7">
                   <div class="file-upload-zone p-3 border rounded text-center" style="border-style: dashed !important; background: #fafafa; border-color: #cbd5e1; border-radius: 12px;">
                     <mat-icon style="font-size: 28px; width: 28px; height: 28px; color: #94a3b8;">upload_file</mat-icon>
@@ -482,26 +426,14 @@ export class EvaluationConsolidationPage implements OnInit {
   selectedFile = signal<File | null>(null);
 
   form: FormGroup = this.fb.group({
-    resolutionType: ['', Validators.required],
-    // Conditional
-    majorObservations: [''],
-    minorObservations: [''],
-    correctionProcedure: [''],
-    deadlineDays: [30],
-    // Rejection
-    rejectionJustification: [''],
-    // Approval
-    validityMonths: [12],
-    reportPeriodicityMonths: [6]
+    validityYears: [1, [Validators.required, Validators.min(1)]],
+    followUpPeriodDays: [180, [Validators.required, Validators.min(1)]],
+    observations: ['', Validators.required]
   });
 
   ngOnInit() {
     this.protocolId = this.route.snapshot.params['id'];
     this.loadConsolidation();
-
-    this.form.get('resolutionType')?.valueChanges.subscribe(type => {
-      this.updateValidators(type);
-    });
   }
 
   loadConsolidation() {
@@ -546,31 +478,6 @@ export class EvaluationConsolidationPage implements OnInit {
     }
   }
 
-  getResolutionLabel(type: string): string {
-    const labels: any = {
-      'APPROVAL': 'Aprobación Definitiva',
-      'CONDITIONAL': 'Aprobación con Observaciones',
-      'REJECTION': 'No Aprobación / Rechazado'
-    };
-    return labels[type] || '';
-  }
-
-  private updateValidators(type: string) {
-    ['majorObservations', 'rejectionJustification', 'correctionProcedure'].forEach(control => {
-      this.form.get(control)?.clearValidators();
-      this.form.get(control)?.updateValueAndValidity();
-    });
-
-    if (type === 'CONDITIONAL') {
-      this.form.get('majorObservations')?.setValidators([Validators.required]);
-      this.form.get('correctionProcedure')?.setValidators([Validators.required]);
-    } else if (type === 'REJECTION') {
-      this.form.get('rejectionJustification')?.setValidators([Validators.required, Validators.minLength(20)]);
-    }
-    
-    this.form.updateValueAndValidity();
-  }
-
   onProceedToResolution() {
     const el = document.querySelector('.dictamen-card');
     if (el) {
@@ -595,31 +502,26 @@ export class EvaluationConsolidationPage implements OnInit {
           map(() => urlRes.key)
         )),
         switchMap(uploadedKey => {
-          let resolutionTypeId = 1; // Aprobación Definitiva
-          if (formValue.resolutionType === 'CONDITIONAL') resolutionTypeId = 2; // Aprobado con Observaciones / Subsanación
-          if (formValue.resolutionType === 'REJECTION') resolutionTypeId = 3; // Rechazado
-
           const payload = {
             protocolId: protocolIdNum,
-            resolutionTypeId: resolutionTypeId,
-            validityYears: formValue.validityMonths ? Math.round(formValue.validityMonths / 12) : 1,
-            followUpPeriodDays: formValue.reportPeriodicityMonths ? formValue.reportPeriodicityMonths * 30 : 180,
-            majorObservations: formValue.majorObservations || formValue.rejectionJustification || '',
-            minorObservations: formValue.minorObservations || '',
-            correctionProcedure: formValue.resolutionType === 'CONDITIONAL' ? formValue.correctionProcedure : '',
-            pdfLetterPath: uploadedKey,
-            resolutionLabel: this.getResolutionLabel(formValue.resolutionType)
+            validityYears: Number(formValue.validityYears),
+            followUpPeriodDays: Number(formValue.followUpPeriodDays),
+            observations: formValue.observations,
+            pdfLetterPath: uploadedKey
           };
 
           return this.resolutionRepo.submitResolution(payload);
         })
       ).subscribe({
-        next: (res) => {
+        next: (res: any) => {
           this.snackBar.open('✅ Dictamen emitido y notificado con éxito', 'Cerrar', { duration: 5000 });
           
           let finalStatus = ProtocolStatus.APPROVED;
-          if (formValue.resolutionType === 'REJECTION') finalStatus = ProtocolStatus.REJECTED;
-          if (formValue.resolutionType === 'CONDITIONAL') finalStatus = ProtocolStatus.OBSERVED;
+          if (res && res.resolutionType === 'REJECTION') {
+            finalStatus = ProtocolStatus.REJECTED;
+          } else if (res && res.resolutionType === 'CONDITIONAL') {
+            finalStatus = ProtocolStatus.OBSERVED;
+          }
 
           this.notificationBroker.publish('PROTOCOL_STATUS_UPDATED', {
             protocolId: this.protocolId,

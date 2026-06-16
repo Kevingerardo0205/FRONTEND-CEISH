@@ -35,6 +35,9 @@ export const ENDPOINTS = {
     BASE: '/documents',
     UPLOAD: '/documents/upload',
     BY_ID: (id: string) => `/documents/${id}`,
+    TEMPLATES: '/documents/templates',
+    TEMPLATE_DOWNLOAD: (code: string) => `/documents/templates/${code}/download`,
+    TEMPLATE_FILE: (code: string) => `/documents/templates/${code}/file`,
   },
   EVALUATIONS: {
     BASE: '/evaluations',

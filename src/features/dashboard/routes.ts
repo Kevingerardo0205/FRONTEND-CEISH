@@ -29,6 +29,12 @@ export const DASHBOARD_ROUTES: Routes = [
         data: { permissions: ['PERMISOS_GESTIONAR'] }
       },
       {
+        path: 'admin/templates',
+        loadComponent: () => import('./presentation/pages/template-management/template-management.page').then(m => m.TemplateManagementPage),
+        canActivate: [AuthGuard],
+        data: { permissions: ['CONFIG_PLANTILLAS'] }
+      },
+      {
         path: 'protocols',
         loadChildren: () => import('@features/protocols/routes').then(m => m.PROTOCOL_ROUTES)
       },

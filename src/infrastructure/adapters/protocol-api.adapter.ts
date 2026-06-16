@@ -185,6 +185,8 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       if (principal) pi = principal.fullName || principal.nombre || '';
     }
 
+    const statusIdVal = raw.statusId || nestedProtocol?.statusId || null;
+
     return {
       id: protocolId?.toString() || '',
       title: raw.title || raw.titulo || nestedProtocol?.title || nestedProtocol?.titulo || 'Sin título',
@@ -194,6 +196,7 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       studyTypeCode: raw.studyType?.code || raw.studyTypeCode || nestedProtocol?.studyType?.code || nestedProtocol?.studyTypeCode || '',
       studyType: raw.studyType || nestedProtocol?.studyType || null,
       status: statusLabel.toUpperCase() as any,
+      statusId: statusIdVal ? Number(statusIdVal) : undefined,
       submissionDate: raw.receptionDate 
         ? new Date(raw.receptionDate) 
         : (raw.submissionDate 
@@ -244,6 +247,16 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       }),
       catchError(err => {
         console.error('[ProtocolApiAdapter] Error cargando catálogo de riesgos:', err);
+        return of([]);
+      })
+    );
+  }
+
+  getProtocolsByStatusId(statusId: number): Observable<ProtocolEntity[]> {
+    return this.apiClient.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}?statusId=${statusId}`).pipe(
+      map(res => this.extractAndMapList(res)),
+      catchError(err => {
+        console.error('[ProtocolApiAdapter] Error loading protocols by statusId:', err);
         return of([]);
       })
     );

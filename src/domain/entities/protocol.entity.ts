@@ -12,6 +12,7 @@ export interface ProtocolEntity {
   studyTypeCode?: string;
   studyType?: any;
   status: ProtocolStatus;
+  statusId?: number;
   submissionDate?: Date;
   validationDate?: Date;
   documents: DocumentEntity[];

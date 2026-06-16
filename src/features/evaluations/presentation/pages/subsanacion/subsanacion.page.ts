@@ -15,6 +15,7 @@ import { ProtocoloService } from '@features/investigador/application/services/pr
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
@@ -82,10 +83,14 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
                 </p>
               </ng-template>
             </div>
-            <div class="banner-actions">
+            <div class="banner-actions d-flex gap-2">
               <button mat-stroked-button class="btn-download-pdf d-inline-flex align-items-center gap-1" (click)="downloadConsolidatedPdf()">
                 <mat-icon style="font-size: 18px; width: 18px; height: 18px;">download</mat-icon>
                 <span>Descargar Anexo 12 Consolidado</span>
+              </button>
+              <button mat-stroked-button class="btn-download-pdf d-inline-flex align-items-center gap-1" style="color: #0369a1 !important; border-color: #0284c7 !important;" (click)="downloadResponseTemplate()">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">download_for_offline</mat-icon>
+                <span>Descargar Formato de Respuestas (DOCX)</span>
               </button>
             </div>
           </div>
@@ -400,6 +405,7 @@ export class SubsanacionPage implements OnInit {
   private authFacade = inject(AuthFacade);
   private evalRepo = inject(IEvaluationRepositoryPort);
   private protocolRepo = inject(IProtocolRepositoryPort);
+  private documentRepo = inject(IDocumentRepositoryPort);
   private protocoloService = inject(ProtocoloService);
   private s3StorageService = inject(S3StorageService);
 
@@ -598,6 +604,22 @@ export class SubsanacionPage implements OnInit {
       error: (err) => {
         console.error('Error fetching consolidated PDF download url:', err);
         this.snackBar.open('❌ Error al obtener el documento consolidado.', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  downloadResponseTemplate() {
+    this.documentRepo.downloadTemplate('RESPUESTA_OBSERVACIONES').subscribe({
+      next: (res) => {
+        if (res && res.downloadUrl) {
+          window.open(res.downloadUrl, '_blank');
+        } else {
+          window.open(`/api/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
+        }
+      },
+      error: (err) => {
+        console.warn('Error downloading template via repository, trying direct fallback:', err);
+        window.open(`/api/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
       }
     });
   }

@@ -20,4 +20,5 @@ export abstract class IProtocolRepositoryPort {
   abstract getValidationDetail(id: string): Observable<ValidationDetailResponse>;
   abstract acceptTimeline(id: string): Observable<any>;
   abstract getRiskLevels(): Observable<any[]>;
+  abstract getProtocolsByStatusId(statusId: number): Observable<ProtocolEntity[]>;
 }
