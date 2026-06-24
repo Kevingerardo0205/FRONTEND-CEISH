@@ -93,6 +93,9 @@
     <main class="content-body">
       <router-outlet></router-outlet>
     </main>
+
+    <!-- Asistente de IA Inteligente RAG -->
+    <app-ai-assistant *ngIf="showAssistant()"></app-ai-assistant>
   </mat-sidenav-content>
 
 </mat-sidenav-container>

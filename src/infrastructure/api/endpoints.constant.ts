@@ -62,5 +62,12 @@ export const ENDPOINTS = {
   RESOLUTIONS: {
     BASE: '/resolutions',
   },
+  AI_ASSISTANT: '/ai-assistant/chat',
+  AI_ASSISTANT_ALLOWED_ROLES: '/ai-assistant/allowed-roles',
+  AI_ASSISTANT_ADMIN: {
+    CONFIG: '/admin/ai-assistant/config',
+    UPLOAD_PET: '/admin/ai-assistant/upload-pet',
+    ROLES: '/admin/ai-assistant/roles',
+  },
   HEALTH: '/'
 };

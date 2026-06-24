@@ -9,6 +9,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { SidebarComponent } from '../components/sidebar/sidebar.component';
+import { AiAssistantComponent } from '@shared/components/ai-assistant/ai-assistant.component';
+import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
 
 @Component({
   selector: 'app-dashboard',
@@ -22,7 +24,8 @@ import { SidebarComponent } from '../components/sidebar/sidebar.component';
     MatButtonModule,
     MatMenuModule,
     MatDividerModule,
-    SidebarComponent
+    SidebarComponent,
+    AiAssistantComponent
   ],
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss']
@@ -30,12 +33,14 @@ import { SidebarComponent } from '../components/sidebar/sidebar.component';
 export class DashboardPage implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly router = inject(Router);
+  private readonly aiAssistantRepository = inject(IAiAssistantRepositoryPort);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
   // State
   isMobile = false;
   currentDate = signal(new Date());
+  allowedRoles = signal<string[]>([]);
   
   // Derived state from AuthFacade
   user = this.authFacade.currentUser;
@@ -43,6 +48,11 @@ export class DashboardPage implements OnInit {
   userName = computed(() => this.user()?.nombre || 'Usuario');
   userEmail = computed(() => this.user()?.email || '');
   userRole = computed(() => this.user()?.rol || 'Invitado');
+  showAssistant = computed(() => {
+    const role = this.userRole();
+    const allowed = this.allowedRoles();
+    return allowed.some(r => r.toUpperCase() === role.toUpperCase());
+  });
   userInitials = computed(() => {
     const name = this.userName();
     return name
@@ -60,6 +70,15 @@ export class DashboardPage implements OnInit {
 
   ngOnInit() {
     this.checkScreenSize();
+    
+    // Cargar dinámicamente los roles permitidos
+    this.aiAssistantRepository.getAllowedRoles().subscribe({
+      next: (res) => this.allowedRoles.set(res.allowedRoles),
+      error: (err) => {
+        console.warn('[DashboardPage] Error al cargar roles permitidos del asistente de IA. Usando lista de respaldo.', err);
+        this.allowedRoles.set(['SECRETARIA', 'EVALUADOR', 'PRESIDENTE', 'ADMIN_TI', 'INVESTIGADOR']); // Respaldo completo
+      }
+    });
   }
 
   private checkScreenSize() {

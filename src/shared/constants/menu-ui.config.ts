@@ -66,7 +66,8 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
   // Auditoría y Otros
   'ADMIN_ALL': { label: 'Bitácora de Auditoría', path: '/dashboard/audit', icon: 'security' },
   'REPORTES_VER': { label: 'Reportes y Estadísticas', path: '/dashboard/reports', icon: 'analytics' },
-  'NOTIFICACIONES_VER': { label: 'Notificaciones', path: '/dashboard/notifications', icon: 'notifications' }
+  'NOTIFICACIONES_VER': { label: 'Notificaciones', path: '/dashboard/notifications', icon: 'notifications' },
+  'CONFIG_PLANTILLAS': { label: 'Asistente de IA (PET)', path: '/dashboard/admin/ai-assistant', icon: 'smart_toy' }
 };
 
 /**

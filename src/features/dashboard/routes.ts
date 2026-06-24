@@ -29,6 +29,12 @@ export const DASHBOARD_ROUTES: Routes = [
         data: { permissions: ['PERMISOS_GESTIONAR'] }
       },
       {
+        path: 'admin/ai-assistant',
+        loadChildren: () => import('@features/ai-assistant-admin/routes').then(m => m.AI_ASSISTANT_ADMIN_ROUTES),
+        canActivate: [AuthGuard],
+        data: { permissions: ['CONFIG_PLANTILLAS'] }
+      },
+      {
         path: 'protocols',
         loadChildren: () => import('@features/protocols/routes').then(m => m.PROTOCOL_ROUTES)
       },
