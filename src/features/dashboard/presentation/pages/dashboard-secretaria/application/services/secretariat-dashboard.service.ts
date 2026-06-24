@@ -71,28 +71,28 @@ export class SecretariatDashboardService {
   });
 
   private loadFilteredData() {
-    this.loadingSignal.set(true);
     const filter = this.filterStatusSignal();
-    let apiStatus: string | undefined = undefined;
+    const all = this.allProtocolsSignal();
+    let filteredList = all;
+
     if (filter === 'SUBMITTED') {
-      apiStatus = 'pendientes';
+      filteredList = all.filter(p => {
+        const core = resolveEstado(p.status);
+        return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
+      });
     } else if (filter === 'EN_REVISION_DOCUMENTAL') {
-      apiStatus = 'incompletos';
+      filteredList = all.filter(p => {
+        const core = resolveEstado(p.status);
+        return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION', 'DISCREPANCIA_RIESGO'].includes(core.code);
+      });
     } else if (filter === 'VALIDATED') {
-      apiStatus = 'validados';
+      filteredList = all.filter(p => {
+        const core = resolveEstado(p.status);
+        return core && ['COMPLETO', 'APROBADO', 'RECHAZADO'].includes(core.code);
+      });
     }
 
-    this.protocolRepo.getReceptionProtocols(apiStatus).subscribe({
-      next: (data) => {
-        const list = Array.isArray(data) ? data : [];
-        this.protocolsSignal.set(list);
-        this.loadingSignal.set(false);
-      },
-      error: (err) => {
-        console.error('[SecretariatDashboardService] Error cargando protocolos filtrados:', err);
-        this.loadingSignal.set(false);
-      }
-    });
+    this.protocolsSignal.set(filteredList);
   }
 
   public loadDashboardData() {

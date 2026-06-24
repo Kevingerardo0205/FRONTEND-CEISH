@@ -158,6 +158,7 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
     if (!res) return [];
     if (Array.isArray(res)) return res;
     if (res.data && Array.isArray(res.data)) return res.data;
+    if (res.data && res.data.data && Array.isArray(res.data.data)) return res.data.data;
     return [];
   }
 

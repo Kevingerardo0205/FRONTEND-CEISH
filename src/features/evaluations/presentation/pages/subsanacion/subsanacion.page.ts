@@ -11,11 +11,13 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 
+import { environment } from 'src/environments/environment';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
+import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
@@ -83,90 +85,28 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
                 </p>
               </ng-template>
             </div>
-            <div class="banner-actions d-flex gap-2">
-              <button mat-stroked-button class="btn-download-pdf d-inline-flex align-items-center gap-1" (click)="downloadConsolidatedPdf()">
-                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">download</mat-icon>
-                <span>Descargar Anexo 12 Consolidado</span>
-              </button>
-              <button mat-stroked-button class="btn-download-pdf d-inline-flex align-items-center gap-1" style="color: #0369a1 !important; border-color: #0284c7 !important;" (click)="downloadResponseTemplate()">
-                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">download_for_offline</mat-icon>
-                <span>Descargar Formato de Respuestas (DOCX)</span>
-              </button>
-            </div>
           </div>
         </div>
 
         <div class="row g-4">
-          <!-- PANEL IZQUIERDO: Observaciones del Comité (Anónimas) -->
-          <div class="col-lg-5">
-            <div class="content-card shadow-soft p-4">
-              <h3 class="fw-bold mb-4 d-flex align-items-center gap-2 text-primary">
-                <mat-icon>speaker_notes</mat-icon>
-                Observaciones de los Evaluadores
-              </h3>
-
-              <div class="empty-state p-4 text-center rounded border" *ngIf="observations().length === 0">
-                <mat-icon style="font-size: 32px; width:32px; height:32px; color: #94a3b8;">chat_bubble_outline</mat-icon>
-                <p class="small text-muted m-0 mt-2">No se encontraron observaciones detalladas registradas.</p>
-              </div>
-
-              <!-- Acordeón de Evaluaciones Anónimas -->
-              <mat-accordion class="anonymous-accordion" multi>
-                <mat-expansion-panel *ngFor="let obs of observations(); let i = index" class="obs-panel mb-3 shadow-none border">
-                  <mat-expansion-panel-header>
-                    <mat-panel-title class="fw-bold">
-                      Evaluador {{ getProfileLabel(obs.evaluatorProfile) }}
-                    </mat-panel-title>
-                    <mat-panel-description>
-                      <span class="badge-result" [ngClass]="obs.result.toLowerCase()">
-                        {{ obs.result.replace('_', ' ') }}
-                      </span>
-                    </mat-panel-description>
-                  </mat-expansion-panel-header>
-
-                  <div class="panel-content pt-3">
-                    <h5 class="fw-bold small text-muted text-uppercase mb-2">Observaciones Generales</h5>
-                    <p class="obs-text p-3 bg-light rounded text-dark small mb-3">
-                      {{ obs.generalObservations || 'Sin observaciones generales redactadas.' }}
-                    </p>
-
-                    <!-- Lista de Requisitos Evaluados como "No Cumple" -->
-                    <div class="checklist-nc" *ngIf="obs.checklistDetails && obs.checklistDetails.length > 0">
-                      <h5 class="fw-bold small text-danger text-uppercase mb-2">Requisitos Observados (No Cumple)</h5>
-                      <div class="nc-item p-3 border-start border-danger border-3 bg-red-soft rounded mb-2" *ngFor="let item of obs.checklistDetails">
-                        <div class="d-flex justify-content-between align-items-start">
-                          <strong class="small text-dark">{{ item.itemCode }}: {{ item.description }}</strong>
-                        </div>
-                        <p class="m-0 mt-1 small text-muted"><strong>Observación:</strong> {{ item.observations || 'Se requiere corregir este documento.' }}</p>
-                      </div>
-                    </div>
-                  </div>
-                </mat-expansion-panel>
-              </mat-accordion>
-            </div>
-          </div>
-
-          <!-- PANEL DERECHO: Carga de Correcciones (Requisitos) -->
-          <div class="col-lg-7">
+          <!-- PANEL IZQUIERDO: Carga de Correcciones (Requisitos) -->
+          <div class="col-12 col-checklist">
             <div class="content-card shadow-soft p-4">
               <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="fw-bold m-0 d-flex align-items-center gap-2 text-primary">
-                  <mat-icon style="color: #003366;">upload_file</mat-icon>
+                <h3 class="fw-bold m-0 d-flex align-items-center gap-2 text-primary" style="color: #1e3a8a !important; font-weight: 800;">
+                  <mat-icon style="color: #1e3a8a;">list_alt</mat-icon>
                   Checklist de Documentación
                 </h3>
-                <span class="badge-pending" *ngIf="pendingRequirementsCount() > 0">
-                  {{ pendingRequirementsCount() }} Pendientes
-                </span>
-                <span class="badge-success-count" *ngIf="pendingRequirementsCount() === 0">
-                  Completo
-                </span>
               </div>
 
               <!-- Barra de Progreso de Subsanación -->
               <div class="progress-section mb-4">
+                <div class="mb-2">
+                  <span class="badge-success-count" *ngIf="pendingRequirementsCount() === 0">Completo</span>
+                  <span class="badge-pending" *ngIf="pendingRequirementsCount() > 0">Pendiente</span>
+                </div>
                 <div class="d-flex justify-content-between small text-muted mb-1 fw-bold">
-                  <span>Progreso de Carga</span>
-                  <span>{{ checklist().length - pendingRequirementsCount() }} / {{ checklist().length }}</span>
+                  <span>Progreso de Carga{{ checklist().length - pendingRequirementsCount() }} / {{ checklist().length }}</span>
                 </div>
                 <mat-progress-bar mode="determinate" [value]="getProgressValue()" color="primary" class="rounded-pill"></mat-progress-bar>
               </div>
@@ -175,28 +115,42 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
                 <table class="checklist-table w-100">
                   <thead>
                     <tr>
-                      <th>Requisito / Documento</th>
-                      <th class="text-center">Estado</th>
-                      <th class="text-end" *ngIf="isInvestigador()">Carga</th>
+                      <th style="color: #1e3a8a; font-weight: 800;">REQUISITO / DOCUMENTO</th>
+                      <th class="text-center" style="color: #1e3a8a; font-weight: 800;">ESTADO</th>
+                      <th class="text-end" *ngIf="isInvestigador()" style="color: #1e3a8a; font-weight: 800;">CARGA</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr *ngFor="let req of checklist()">
                       <td class="req-detail">
                         <strong class="text-dark">{{ req.requirementName }}</strong>
-                        <span class="d-block small text-muted" *ngIf="req.requirementCode">{{ req.requirementCode }}</span>
+                        <span class="text-muted" style="font-weight: normal; font-size: 0.85rem;" *ngIf="req.requirementCode"> ({{ req.requirementCode }})</span>
+                        
+                        <!-- Motivo de Observación -->
                         <div class="req-observation small text-danger p-2 bg-red-soft rounded border-start border-danger border-3 mt-2" *ngIf="req.observations">
                           <strong>Motivo:</strong> {{ req.observations }}
+                        </div>
+
+                        <!-- Enlace para ver documento previamente cargado (Accesible para Investigador y Secretaría) -->
+                        <div class="uploaded-doc-preview mt-2" *ngIf="getRequirementDocument(req.requirementCode) as doc">
+                          <button mat-button color="primary" class="btn-view-doc p-0 d-inline-flex align-items-center" (click)="verDocumento(doc.id)" type="button" style="text-transform: none; min-width: auto; line-height: normal; height: auto;">
+                            <mat-icon class="text-danger" style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;">picture_as_pdf</mat-icon>
+                            <span class="doc-link-text text-truncate" style="max-width: 250px; font-size: 0.82rem; font-weight: 600; text-decoration: underline;">
+                              {{ doc.name || doc.title || 'Ver Archivo Cargado' }}
+                            </span>
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px; margin-left: 4px; color: #64748b; vertical-align: middle;">open_in_new</mat-icon>
+                          </button>
                         </div>
                       </td>
                       <td class="text-center">
                         <span class="badge-status" [ngClass]="req.status.toLowerCase()">
-                          {{ req.status === 'NO_PRESENTADO' ? 'NO PRESENTADO' : req.status }}
+                          {{ req.status === 'NO_PRESENTADO' ? 'NO PRESENTADO' : (req.status === 'NO_APLICA' ? 'NO APLICA' : req.status) }}
                         </span>
                       </td>
                       <td class="text-end" *ngIf="isInvestigador()">
-                        <ng-container *ngIf="['APROBADO', 'VALIDADO'].includes(req.status); else uploadAction">
-                          <mat-icon class="text-success" matTooltip="Documento Aprobado y Validado">check_circle</mat-icon>
+                        <ng-container *ngIf="['APROBADO', 'VALIDADO', 'NO_APLICA'].includes(req.status); else uploadAction">
+                          <mat-icon class="text-success" matTooltip="Documento Aprobado y Validado (Inmutable)" *ngIf="req.status !== 'NO_APLICA'">check_circle</mat-icon>
+                          <mat-icon class="text-muted" matTooltip="Requisito No Aplica para este trámite" *ngIf="req.status === 'NO_APLICA'">remove_circle_outline</mat-icon>
                         </ng-container>
                         
                         <ng-template #uploadAction>
@@ -218,21 +172,130 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
               <mat-divider class="my-4"></mat-divider>
 
               <!-- Botón de Enviar Subsanación -->
-              <div class="actions-footer d-flex justify-content-end align-items-center gap-3" *ngIf="isInvestigador()">
-                <p class="small text-muted m-0" *ngIf="!isReadyToSubmit()">
+              <div class="actions-footer mt-4" *ngIf="isInvestigador()">
+                <p class="small text-muted m-0 mb-2" *ngIf="!isReadyToSubmit()">
                   * Debe cargar todos los documentos marcados como Pendientes/Observados para poder enviar.
                 </p>
-                <p class="small text-success m-0 fw-bold" *ngIf="isReadyToSubmit()">
-                  ✓ ¡Listo para enviar! Todos los requisitos están cubiertos.
-                </p>
-                
-                <button mat-flat-button class="emit-btn" 
-                        [disabled]="!isReadyToSubmit() || isSubmitting()"
-                        (click)="onSubmitSubsanacion()">
-                  <mat-icon>send</mat-icon>
-                  {{ isSubmitting() ? 'Enviando...' : 'Enviar Subsanación' }}
-                </button>
+                <div class="d-flex flex-column align-items-start gap-2" *ngIf="isReadyToSubmit()">
+                  <p class="small text-success m-0 fw-bold d-flex align-items-center gap-1 mb-2">
+                    <span>✓ ¡Listo para enviar! Todos los requisitos están cubiertos.</span>
+                  </p>
+                  
+                  <button mat-flat-button class="emit-btn" 
+                          [disabled]="!isReadyToSubmit() || isSubmitting()"
+                          (click)="onSubmitSubsanacion()">
+                    <mat-icon>send</mat-icon>
+                    {{ isSubmitting() ? 'Enviando...' : 'Enviar Subsanación' }}
+                  </button>
+                </div>
               </div>
+            </div>
+          </div>
+
+          <!-- PANEL DERECHO: Observaciones del Comité (Anónimas) -->
+          <div class="col-12 col-observations">
+            <div class="content-card shadow-soft p-4">
+              <h3 class="fw-bold mb-4 d-flex align-items-center gap-2 text-primary" style="color: #1e3a8a !important; font-weight: 800;">
+                <mat-icon style="color: #1e3a8a;">speaker_notes</mat-icon>
+                Observaciones de los Evaluadores
+              </h3>
+
+              <div class="empty-state p-4 text-center rounded border" *ngIf="observations().length === 0">
+                <mat-icon style="font-size: 32px; width:32px; height:32px; color: #94a3b8;">chat_bubble_outline</mat-icon>
+                <p class="small text-muted m-0 mt-2">No se encontraron observaciones detalladas registradas.</p>
+              </div>
+
+              <!-- Lista de Evaluaciones Anónimas Estáticas (Sin acordeón) -->
+              <div class="obs-list">
+                <div *ngFor="let obs of observations(); let i = index" class="obs-card mb-3">
+                  <div class="obs-card-header d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold text-dark m-0" style="font-size: 14px; font-weight: 700;">
+                      Evaluador {{ getProfileLabel(obs.evaluatorProfile) }}
+                    </h4>
+                    <span class="badge-result" [ngClass]="getObsResultClass(obs.result)">
+                      {{ getObsResultLabel(obs.result).replace('_', ' ') }}
+                    </span>
+                  </div>
+
+                  <div class="panel-content">
+                    <!-- Observaciones Generales (Se ocultan si están vacías o indican "Sin observaciones") -->
+                    <div class="mb-3" *ngIf="obs.generalObservations && obs.generalObservations.trim() !== '' && !isSinObservaciones(obs.generalObservations)">
+                      <span class="d-block fw-bold text-muted small text-uppercase mb-1" style="font-size: 12px; letter-spacing: 0.5px;">Observaciones Generales</span>
+                      <p class="m-0 text-dark" style="font-size: 14px; line-height: 1.5;">
+                        {{ obs.generalObservations }}
+                      </p>
+                    </div>
+
+                    <!-- Descargas de Documentos del Evaluador -->
+                    <div class="mb-3" *ngIf="obs.reportPath || obs.rutaPdf || obs.rutaDocx">
+                      <div class="ev-doc-list">
+                      
+                        <!-- Informe Adicional -->
+                        <div class="ev-doc-link" *ngIf="obs.reportPath" (click)="downloadFile(obs.reportPath)">
+                          <mat-icon class="text-danger">picture_as_pdf</mat-icon>
+                          <span class="doc-title-text">Informe Técnico Evaluador {{ i + 1 }} (PDF Adicional)</span>
+                          <mat-icon class="open-icon">open_in_new</mat-icon>
+                        </div>
+
+                        <!-- Anexo 9 PDF -->
+                        <div class="ev-doc-link" *ngIf="obs.rutaPdf" (click)="downloadFile(obs.rutaPdf)">
+                          <mat-icon class="text-danger">picture_as_pdf</mat-icon>
+                          <span class="doc-title-text">Informe Técnico Evaluador {{ i + 1 }} (PDF Oficial)</span>
+                          <mat-icon class="open-icon">open_in_new</mat-icon>
+                        </div>
+
+                        <!-- Anexo 9 Word / Docx -->
+                        <div class="ev-doc-link" *ngIf="obs.rutaDocx" (click)="downloadFile(obs.rutaDocx)">
+                          <mat-icon class="text-primary" style="color: #0284c7 !important;">description</mat-icon>
+                          <span class="doc-title-text">Informe Técnico Evaluador {{ i + 1 }} (Word Editable)</span>
+                          <mat-icon class="open-icon">download</mat-icon>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    <!-- Lista de Requisitos Evaluados como "No Cumple" -->
+                    <div class="checklist-nc" *ngIf="hasObservedItems(obs)">
+                      <h5 class="fw-bold small text-danger text-uppercase mb-2" style="font-size: 12px; letter-spacing: 0.5px;">Requisitos Observados (No Cumple)</h5>
+                      <ng-container *ngFor="let item of getChecklistDetails(obs)">
+                        <div class="nc-item p-3 border-start border-danger border-3 bg-red-soft rounded mb-2" *ngIf="isItemObserved(item)">
+                          <div class="d-flex justify-content-between align-items-start">
+                            <strong class="small text-dark">{{ getItemCode(item) }}: {{ getItemDescription(item) }}</strong>
+                          </div>
+                          <p class="m-0 mt-1 small text-muted"><strong>Observación:</strong> {{ getItemObservations(item) }}</p>
+                        </div>
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Documentos Consolidados del Comité (Anexo 12 y Formato de Respuestas) -->
+              <div class="mt-4 pt-3 border-top">
+                <h5 class="fw-bold small text-muted text-uppercase mb-3" style="font-size: 12px; letter-spacing: 0.5px;">Documentos Consolidados del Comité</h5>
+                <div class="ev-doc-list">
+                  
+                  <div class="ev-doc-link" (click)="downloadConsolidatedPdf()">
+                    <mat-icon class="text-danger" style="margin-top: 2px;">picture_as_pdf</mat-icon>
+                    <div class="d-flex flex-column align-items-start" style="flex: 1;">
+                      <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;">Anexo 12: Carta de Observaciones Consolidadas</span>
+                      <span class="text-muted small" style="font-size: 11px; margin-top: 2px; text-align: left;">Documento oficial con el detalle de las observaciones emitidas por el comité.</span>
+                    </div>
+                    <mat-icon class="open-icon" style="align-self: center;">open_in_new</mat-icon>
+                  </div>
+
+                  <div class="ev-doc-link" (click)="downloadResponseTemplate()">
+                    <mat-icon class="text-primary" style="color: #0284c7 !important; margin-top: 2px;">description</mat-icon>
+                    <div class="d-flex flex-column align-items-start" style="flex: 1;">
+                      <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;">Formato de Respuestas a Evaluadores</span>
+                      <span class="text-muted small" style="font-size: 11px; margin-top: 2px; text-align: left;">Descargue la plantilla de Word (DOCX) obligatoria para responder punto por punto a las observaciones.</span>
+                    </div>
+                    <mat-icon class="open-icon" style="align-self: center;">download</mat-icon>
+                  </div>
+
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -294,82 +357,251 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
     </div>
   `,
   styles: [`
-    .subsanacion-container { padding: 2rem; max-width: 1400px; margin: 0 auto; }
-    .page-header { display: flex; justify-content: space-between; align-items: flex-end; }
-    .breadcrumb { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
-    .protocol-badge { background: #003366; color: white; padding: 6px 16px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; }
-    .page-title { font-size: 2rem; font-weight: 900; color: #1e293b; margin: 0.25rem 0; }
-    .page-subtitle { font-size: 1rem; color: #64748b; margin: 0; font-style: italic; }
+    /* Grid system fallback - Spacing and padding based on 4px/8px scale */
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin-left: -12px;
+      margin-right: -12px;
+    }
+    .col-12 {
+      width: 100%;
+      padding-left: 12px;
+      padding-right: 12px;
+      box-sizing: border-box;
+    }
+    .col-checklist, .col-observations {
+      width: 100%;
+      padding-left: 12px;
+      padding-right: 12px;
+      box-sizing: border-box;
+    }
+    @media (min-width: 768px) {
+      .col-checklist {
+        flex: 0 0 65%;
+        max-width: 65%;
+      }
+      .col-observations {
+        flex: 0 0 35%;
+        max-width: 35%;
+      }
+    }
 
-    .content-card { background: white; border-radius: 24px; border: 1px solid #e2e8f0; }
+    .subsanacion-container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+    .breadcrumb { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .protocol-badge { background: #003366; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; }
+    .page-title { font-size: 32px; font-weight: 700; color: #1e293b; margin: 4px 0; line-height: 1.25; }
+    .page-subtitle { font-size: 16px; color: #64748b; margin: 0; line-height: 1.5; }
+
+    .content-card { 
+      background: white; 
+      border-radius: 16px; 
+      border: 1px solid #e2e8f0; 
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+      padding: 24px !important;
+    }
 
     .alert-banner {
-      display: flex; gap: 16px; padding: 1.5rem; border-radius: 16px; align-items: center;
+      display: flex; gap: 16px; padding: 16px 24px; border-radius: 16px; align-items: center;
       background: #fffbeb; color: #92400e; border: 1px solid #fef3c7; border-left: 6px solid #d97706;
+      margin-bottom: 24px;
       .banner-icon-container mat-icon { font-size: 40px; width: 40px; height: 40px; color: #d97706; }
     }
 
-    .obs-panel {
-      border-radius: 12px !important;
-      overflow: hidden;
+    /* Estilos de Tarjetas Estáticas de Evaluadores */
+    .obs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .obs-card {
+      background: transparent; 
+      border: none;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 16px 0 20px 0;
+      box-shadow: none;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+    .obs-card-header {
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      
+      h4 {
+        margin: 0;
+      }
     }
 
     .badge-result {
-      padding: 3px 10px; border-radius: 100px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
-      &.aprobado { background: #dcfce7; color: #166534; }
-      &.no_aprobado { background: #fee2e2; color: #991b1b; }
-      &.con_observaciones, &.aprobado_condicionado, &.requiere_cambios_menores, &.requiere_cambios_mayores { background: #fef3c7; color: #92400e; }
-    }
-
-    .obs-text {
-      line-height: 1.4;
-      font-style: italic;
+      padding: 4px 12px; 
+      border-radius: 100px; 
+      font-size: 12px; 
+      font-weight: 600; 
+      text-transform: uppercase;
+      display: inline-block;
+      letter-spacing: 0.5px;
+      
+      &.aprobado { 
+        background: #dcfce7; 
+        color: #166534; 
+        border: 1px solid rgba(22, 101, 52, 0.1);
+      }
+      &.no_aprobado { 
+        background: #fee2e2; 
+        color: #991b1b; 
+        border: 1px solid rgba(153, 27, 27, 0.1);
+      }
+      &.con_observaciones, &.aprobado_con_observaciones, &.aprobado_condicionado, &.requiere_cambios_menores, &.requiere_cambios_mayores { 
+        background: #fef3c7; 
+        color: #854d0e; 
+        border: 1px solid rgba(133, 77, 14, 0.15);
+      }
     }
 
     .bg-red-soft { background: #fff5f5; }
 
-    .badge-pending { background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; }
-    .badge-success-count { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; }
+    .badge-pending { 
+      background: rgba(245, 158, 11, 0.1); 
+      color: #d97706; 
+      padding: 4px 12px; 
+      border-radius: 100px; 
+      font-size: 12px; 
+      font-weight: 600;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+    .badge-success-count { 
+      background: #dcfce7; 
+      color: #166534; 
+      padding: 4px 12px; 
+      border-radius: 100px; 
+      font-size: 12px; 
+      font-weight: 600;
+      border: 1px solid rgba(22, 101, 52, 0.1);
+    }
 
     .checklist-table {
       border-collapse: collapse;
-      th { padding: 12px; font-size: 0.75rem; font-weight: 800; color: #64748b; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; }
-      td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+      margin-top: 16px;
+      th { 
+        padding: 12px 16px; 
+        font-size: 12px; 
+        font-weight: 600; 
+        color: #1e3a8a; 
+        border-bottom: 2px solid #e2e8f0; 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px;
+      }
+      td { 
+        padding: 12px 16px; 
+        border-bottom: 1px solid #f1f5f9; 
+        vertical-align: middle; 
+        transition: background-color 0.2s;
+      }
+      tr:hover td {
+        background-color: #f8fafc;
+      }
     }
 
     .badge-status {
-      padding: 4px 12px; border-radius: 100px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block;
-      &.approved { background: #dcfce7; color: #166534; }
-      &.rejected { background: #fee2e2; color: #991b1b; }
-      &.pending { background: #fef3c7; color: #92400e; }
-      &.review { background: #e0f2fe; color: #0369a1; }
+      padding: 4px 12px; 
+      border-radius: 100px; 
+      font-size: 12px; 
+      font-weight: 600; 
+      text-transform: uppercase; 
+      display: inline-block;
+      letter-spacing: 0.5px;
       
-      /* Mantener compatibilidad con los estados de los requisitos individuales de la checklist */
-      &.aprobado, &.validado { background: #dcfce7; color: #166534; }
-      &.no_presentado, &.rechazado { background: #fee2e2; color: #991b1b; }
-      &.observado, &.pendiente { background: #fef3c7; color: #92400e; }
-      &.presentado { background: #e0f2fe; color: #0369a1; }
+      &.approved { background: #dcfce7; color: #166534; border: 1px solid rgba(22, 101, 52, 0.1); }
+      &.rejected { background: #fee2e2; color: #991b1b; border: 1px solid rgba(153, 27, 27, 0.1); }
+      &.pending { background: #fef3c7; color: #854d0e; border: 1px solid rgba(133, 77, 14, 0.1); }
+      &.review { background: #e0f2fe; color: #0369a1; border: 1px solid rgba(3, 105, 161, 0.1); }
+      
+      /* Requisitos individuales - Presentado ahora es verde y redondeado */
+      &.aprobado, &.validado, &.presentado { 
+        background: #dcfce7 !important; 
+        color: #166534 !important; 
+        border: 1px solid rgba(22, 101, 52, 0.1) !important; 
+      }
+      &.no_presentado, &.rechazado { 
+        background: #fee2e2 !important; 
+        color: #991b1b !important; 
+        border: 1px solid rgba(153, 27, 27, 0.1) !important; 
+      }
+      &.observado, &.pendiente { 
+        background: #fef3c7 !important; 
+        color: #854d0e !important; 
+        border: 1px solid rgba(133, 77, 14, 0.15) !important; 
+      }
+      &.no_aplica { 
+        background: #f1f5f9 !important; 
+        color: #475569 !important; 
+        border: 1px solid rgba(71, 85, 105, 0.1) !important; 
+      }
+    }
+
+    /* Barra de Progreso de Carga en color Indigo */
+    .progress-section ::ng-deep .mat-mdc-progress-bar {
+      --mdc-linear-progress-active-indicator-color: #6366f1; /* Indigo */
+      --mdc-linear-progress-track-color: #e2e8f0;
+      height: 8px !important;
+      border-radius: 4px;
     }
 
     .btn-upload {
-      border-radius: 8px; font-weight: 700; font-size: 0.75rem; line-height: 28px; height: 28px;
-      mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+      border: 1.5px solid #3b82f6 !important;
+      color: #2563eb !important;
+      background-color: transparent !important;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 12px;
+      line-height: 28px;
+      height: 32px;
+      padding: 0 12px;
+      transition: all 0.2s ease;
+      &:hover {
+        background-color: rgba(37, 99, 235, 0.05) !important;
+      }
+      mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
     }
 
     .emit-btn {
-      height: 52px;
+      height: 40px;
       background: #10b981 !important;
       color: white !important;
-      border-radius: 12px;
-      font-weight: 800;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-      &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3); }
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 0 16px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      
+      &:hover:not(:disabled) {
+        background: #059669 !important;
+      }
+      
+      &:disabled {
+        background: #cbd5e1 !important;
+        color: #94a3b8 !important;
+        box-shadow: none;
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
     }
 
     .comparison-matrix {
       border-collapse: collapse;
-      th { padding: 12px; font-size: 0.75rem; font-weight: 800; color: #64748b; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; }
-      td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+      th { padding: 12px; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; }
+      td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     }
 
     .animate-fade-in { animation: fadeIn 0.4s ease-out; }
@@ -381,7 +613,8 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
     .btn-download-pdf {
       margin-top: 8px;
       border-radius: 8px;
-      font-weight: 700;
+      font-weight: 600;
+      font-size: 14px;
       background: white !important;
       color: #92400e !important;
       border: 1px solid #d97706 !important;
@@ -392,6 +625,60 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
       &:hover {
         background: #fef3c7 !important;
         transform: translateY(-1px);
+      }
+    }
+    
+    /* Documentos adjuntos en formato de enlace minimalista */
+    .ev-doc-list { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 6px; 
+      padding: 4px 0; 
+    }
+    .ev-doc-link {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      width: 100%;
+      box-sizing: border-box;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      &:hover {
+        background-color: #f8fafc;
+        
+        .doc-title-text {
+          color: #0250a3;
+          text-decoration: underline;
+        }
+      }
+      
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+      
+      .doc-title-text {
+        font-size: 13px;
+        font-weight: 600;
+        color: #2563eb;
+        transition: color 0.15s ease;
+      }
+      
+      .open-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+        color: #94a3b8;
+        margin-left: auto;
       }
     }
   `]
@@ -406,6 +693,7 @@ export class SubsanacionPage implements OnInit {
   private evalRepo = inject(IEvaluationRepositoryPort);
   private protocolRepo = inject(IProtocolRepositoryPort);
   private documentRepo = inject(IDocumentRepositoryPort);
+  private resolutionRepo = inject(IResolutionRepositoryPort);
   private protocoloService = inject(ProtocoloService);
   private s3StorageService = inject(S3StorageService);
 
@@ -419,19 +707,20 @@ export class SubsanacionPage implements OnInit {
   protocols = signal<ProtocoloResumen[]>([]);
   observations = signal<any[]>([]);
   checklist = signal<ChecklistRequirement[]>([]);
+  protocolDocuments = signal<any[]>([]);
   
   isSubmitting = signal(false);
   uploadingRequirementId = signal<number>(0);
 
   // Computed reactivos (Screen 2)
   readonly pendingRequirementsCount = computed(() => 
-    this.checklist().filter(item => item.status === RequirementStatus.NO_PRESENTADO || item.status === RequirementStatus.OBSERVADO).length
+    this.checklist().filter(item => 
+      !['APROBADO', 'VALIDADO', 'PRESENTADO', 'NO_APLICA'].includes(item.status as any)
+    ).length
   );
 
   readonly isReadyToSubmit = computed(() => 
-    this.checklist().length > 0 && this.checklist().every(item => 
-      ['APROBADO', 'VALIDADO', 'PRESENTADO', 'NO_APLICA'].includes(item.status as any)
-    )
+    this.checklist().length > 0 && this.pendingRequirementsCount() === 0
   );
 
   readonly isEnControlDocumental = computed(() => {
@@ -510,6 +799,12 @@ export class SubsanacionPage implements OnInit {
       },
       error: () => this.snackBar.open('❌ Error al obtener checklist de documentos.', 'Cerrar')
     });
+
+    // 4. Obtener expediente de documentos cargados (Mismo estilo que evaluador)
+    this.protocolRepo.getDocumentHistory(String(this.protocolId())).subscribe({
+      next: (docs) => this.protocolDocuments.set(docs || []),
+      error: (err) => console.error('[SubsanacionPage] Error cargando expediente:', err)
+    });
   }
 
   onUploadFile(event: any, requirementId: number, requirementCode?: string) {
@@ -528,6 +823,13 @@ export class SubsanacionPage implements OnInit {
         this.checklist.update(items =>
           items.map(item => item.id === requirementId ? { ...item, status: 'PRESENTADO' as any } : item)
         );
+
+        // Recargar expediente para reflejar el nuevo documento
+        this.protocolRepo.getDocumentHistory(String(this.protocolId())).subscribe({
+          next: (docs) => this.protocolDocuments.set(docs || []),
+          error: (err) => console.error('[SubsanacionPage] Error al recargar expediente:', err)
+        });
+
         this.uploadingRequirementId.set(0);
         this.snackBar.open('✅ Archivo corregido cargado con éxito.', 'Cerrar', { duration: 4000 });
       },
@@ -536,6 +838,29 @@ export class SubsanacionPage implements OnInit {
         this.uploadingRequirementId.set(0);
         this.snackBar.open('❌ Error al subir documento de subsanación.', 'Cerrar', { duration: 4000 });
       }
+    });
+  }
+
+  getRequirementDocument(requirementCode: string): any {
+    const docs = this.protocolDocuments();
+    if (!requirementCode) return null;
+    return docs.find(d => 
+      (d.path && d.path.toLowerCase().includes(requirementCode.toLowerCase())) || 
+      (d.type && d.type.toLowerCase().includes(requirementCode.toLowerCase()))
+    );
+  }
+
+  verDocumento(documentId: any) {
+    if (!documentId) return;
+    this.s3StorageService.getDocumentDownloadUrl(Number(documentId)).subscribe({
+      next: (res) => {
+        if (res && res.downloadUrl) {
+          window.open(res.downloadUrl, '_blank');
+        } else {
+          this.snackBar.open('⚠️ No se encontró la URL de descarga para el documento.', 'Cerrar', { duration: 3000 });
+        }
+      },
+      error: () => this.snackBar.open('❌ No se pudo abrir el documento.', 'Cerrar', { duration: 3000 })
     });
   }
 
@@ -567,9 +892,48 @@ export class SubsanacionPage implements OnInit {
     const map: any = {
       'METODOLOGIA': 'Metodológico',
       'BIOETICA': 'de Bioética',
-      'LEGAL': 'de Aspectos Jurídicos'
+      'LEGAL': 'de Aspectos Jurídicos',
+      'SOCIEDAD_CIVIL': 'Sociedad Civil',
+      'ETICA': 'Ética',
+      'CIENTIFICO': 'Científico',
+      'EXTERNO': 'Externo'
     };
     return map[profile] || profile;
+  }
+
+  getObsResultLabel(result: any): string {
+    if (!result) return 'PENDIENTE';
+    if (typeof result === 'string') return result;
+    if (typeof result === 'number') {
+      const map: any = {
+        1: 'APROBADO',
+        2: 'CON_OBSERVACIONES',
+        3: 'NO_APROBADO'
+      };
+      return map[result] || String(result);
+    }
+    if (typeof result === 'object') {
+      return result.name || result.code || result.label || result.verdict || 'CON_OBSERVACIONES';
+    }
+    return String(result);
+  }
+
+  getObsResultClass(result: any): string {
+    const label = this.getObsResultLabel(result).toLowerCase();
+    return label.replace(/\s+/g, '_');
+  }
+
+  isSinObservaciones(text: string): boolean {
+    if (!text) return true;
+    const clean = text.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ");
+    return (
+      clean === 'sin observaciones' ||
+      clean === 'sin observaciones generales' ||
+      clean === 'sin observaciones generales redactadas' ||
+      clean === 'ninguna' ||
+      clean === 'no aplica' ||
+      clean === ''
+    );
   }
 
   selectProtocol(id: number) {
@@ -591,19 +955,67 @@ export class SubsanacionPage implements OnInit {
   downloadConsolidatedPdf() {
     const protocolIdVal = this.protocolId();
     if (!protocolIdVal) return;
-    const s3Key = `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
     
+    this.resolutionRepo.getResolutionByProtocolId(String(protocolIdVal)).subscribe({
+      next: (res) => {
+        // En base al reporte, puede venir como array o como objeto único
+        const resolutionData = Array.isArray(res) ? res[0] : res;
+        const letterPath = resolutionData?.letterFilePath || resolutionData?.pdfLetterPath;
+        
+        // Si el backend retornó un path de carta específico, lo usamos; de lo contrario fallback al key por defecto
+        const s3Key = letterPath || `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
+        
+        console.log(`[SubsanacionPage] Descargando consolidado desde S3 Key: ${s3Key}`);
+        this.downloadFile(s3Key);
+      },
+      error: (err) => {
+        console.warn('[SubsanacionPage] Falló consulta de resolución, usando key por defecto:', err);
+        const s3Key = `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
+        this.downloadFile(s3Key);
+      }
+    });
+  }
+
+  getChecklistDetails(obs: any): any[] {
+    if (!obs) return [];
+    return obs.checklistDetails || obs.detallesChecklist || obs.checklist || [];
+  }
+
+  isItemObserved(item: any): boolean {
+    if (!item) return false;
+    const state = (item.state || item.estado || item.status || '').toUpperCase();
+    return ['NC', 'OBSERVADO', 'RECHAZADO', 'NO_CUMPLE'].includes(state);
+  }
+
+  hasObservedItems(obs: any): boolean {
+    const details = this.getChecklistDetails(obs);
+    return details.some(item => this.isItemObserved(item));
+  }
+
+  getItemCode(item: any): string {
+    return item.itemCode || item.itemCodigo || item.code || '';
+  }
+
+  getItemDescription(item: any): string {
+    return item.description || item.descripcion || item.criterio || item.criterion || '';
+  }
+
+  getItemObservations(item: any): string {
+    return item.observations || item.observaciones || 'Se requiere corregir este documento.';
+  }
+
+  downloadFile(s3Key: string) {
     this.s3StorageService.getEvaluationDocumentUrl(s3Key).subscribe({
       next: (res) => {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');
         } else {
-          this.snackBar.open('⚠️ No se encontró la URL de descarga para el consolidado.', 'Cerrar', { duration: 3000 });
+          this.snackBar.open('⚠️ No se encontró la URL de descarga para el documento.', 'Cerrar', { duration: 3000 });
         }
       },
       error: (err) => {
-        console.error('Error fetching consolidated PDF download url:', err);
-        this.snackBar.open('❌ Error al obtener el documento consolidado.', 'Cerrar', { duration: 3000 });
+        console.error('[SubsanacionPage] Error al obtener URL de descarga:', err);
+        this.snackBar.open('❌ Error al obtener el documento.', 'Cerrar', { duration: 3000 });
       }
     });
   }
@@ -614,12 +1026,12 @@ export class SubsanacionPage implements OnInit {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');
         } else {
-          window.open(`/api/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
+          window.open(`${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
         }
       },
       error: (err) => {
         console.warn('Error downloading template via repository, trying direct fallback:', err);
-        window.open(`/api/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
+        window.open(`${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
       }
     });
   }

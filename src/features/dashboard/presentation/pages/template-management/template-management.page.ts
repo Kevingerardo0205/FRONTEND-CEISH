@@ -14,6 +14,7 @@ import { switchMap, filter, map } from 'rxjs/operators';
 
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-template-management',
@@ -459,11 +460,11 @@ export class TemplateManagementPage implements OnInit {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');
         } else {
-          window.open(`/api/documents/templates/${code}/download`, '_blank');
+          window.open(`${environment.apiUrl}/documents/templates/${code}/download`, '_blank');
         }
       },
       error: () => {
-        window.open(`/api/documents/templates/${code}/download`, '_blank');
+        window.open(`${environment.apiUrl}/documents/templates/${code}/download`, '_blank');
       }
     });
   }

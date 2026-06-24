@@ -89,12 +89,6 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
             </div>
             
             <div class="eval-status-pills">
-              <!-- Badge de Riesgo Aleatorio -->
-              <span class="risk-badge" *ngIf="ev.reviewType === 'EXPEDITA' || isRiskPair(ev)" 
-                    matTooltip="Seleccionado aleatoriamente para estratificación de riesgo">
-                🎲 Par de Riesgo
-              </span>
-              
               <span class="status-pill" [ngClass]="ev.status.toLowerCase()">
                 {{ ev.status === 'COMPLETED' ? 'Dictamen Enviado' : 'Pendiente' }}
               </span>
@@ -187,7 +181,6 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
     .full-width { grid-column: span 2; }
     .header-row { display: flex; justify-content: space-between; align-items: center; }
     .badge-count { background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-
     /* Evaluators Styling */
     .eval-list { display: flex; flex-direction: column; gap: 0.75rem; }
     .eval-card {
@@ -200,13 +193,11 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
       .info { display: flex; flex-direction: column; .name { font-weight: 700; color: #1e293b; font-size: 0.9rem; } .role-tag { font-size: 0.7rem; color: #94a3b8; font-weight: 600; } }
     }
     .eval-status-pills { display: flex; align-items: center; gap: 8px; }
-    .risk-badge { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; gap: 4px; }
     .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
       &.pending { background: #f8fafc; color: #64748b; }
       &.completed { background: #f0fdf4; color: #166534; }
     }
     .empty-evals { padding: 3rem; text-align: center; color: #94a3b8; background: #f8fafc; border-radius: 16px; border: 1px dashed #e2e8f0; mat-icon { font-size: 32px; width: 32px; height: 32px; margin-bottom: 0.5rem; } p { margin: 0; font-size: 0.85rem; font-weight: 600; } }
-
     .doc-list { display: flex; flex-direction: column; gap: 0.75rem; }
     .doc-item {
       display: flex; align-items: center; gap: 1rem; padding: 1rem; background: white; border-radius: 12px; border: 1px solid #e2e8f0;
@@ -247,6 +238,11 @@ export class ProtocolDetailTabPage {
 
   protocol = this.workspaceService.protocol;
   evaluations = this.workspaceService.evaluations;
+  
+  showEvaluators(): boolean {
+    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
+    return ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE'].includes(role || '');
+  }
 
   versions = computed(() => {
     const p = this.protocol();
@@ -261,18 +257,6 @@ export class ProtocolDetailTabPage {
       createdAt: p.submissionDate
     }];
   });
-
-  showEvaluators(): boolean {
-    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
-    return ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE'].includes(role || '');
-  }
-
-  isRiskPair(ev: any): boolean {
-    // Si el backend no envía un flag explícito, podemos inferirlo 
-    // de la estructura de la respuesta o simplemente confiar en el reviewType si coincide.
-    // Según el reporte, se eligen 2 aleatoriamente.
-    return ev.isRiskEvaluator === true; 
-  }
 
   isEditable(): boolean {
     const p = this.protocol();

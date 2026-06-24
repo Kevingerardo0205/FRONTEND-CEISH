@@ -7,4 +7,10 @@ export abstract class IResolutionRepositoryPort {
    * POST /resolutions
    */
   abstract submitResolution(data: any): Observable<ResolutionEntity>;
+
+  /**
+   * Obtiene la resolución asociada a un protocolo.
+   * GET /resolutions/protocol/:protocolId
+   */
+  abstract getResolutionByProtocolId(protocolId: string): Observable<any>;
 }

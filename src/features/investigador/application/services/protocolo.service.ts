@@ -203,7 +203,7 @@ export class ProtocoloService extends BaseApiService {
   }
 
   misProtocolosSubsanar(): Observable<ProtocoloResumen[]> {
-    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?subsanar=true&limit=100`).pipe(
+    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-subsanaciones`).pipe(
       map(res => {
         let data = res?.data || res;
         if (data && !Array.isArray(data) && Array.isArray(data.data)) {
