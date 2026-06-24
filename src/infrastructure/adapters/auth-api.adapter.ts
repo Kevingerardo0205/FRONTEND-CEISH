@@ -73,7 +73,13 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       activo: data.isActive !== undefined ? data.isActive : (data.activo !== undefined ? data.activo : true),
       emailVerificado: data.isEmailVerified !== undefined ? data.isEmailVerified : (data.email_verificado || false),
       permissions: permissionCodes,
-      fullPermissions: fullPermissions
+      fullPermissions: fullPermissions,
+      perfil: data.investigatorProfile?.position || data.perfil || 'Docente Investigador',
+      telefono: data.investigatorProfile?.phone || data.telefono || '',
+      nationalId: data.nationalId || '',
+      institucion: data.investigatorProfile?.institution || '',
+      registroSenescyt: data.investigatorProfile?.senescytRegistration || '',
+      nacionalidad: data.investigatorProfile?.nationality || ''
     };
   }
 
@@ -130,10 +136,12 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
   }
 
   getUsers(): Observable<User[]> {
-    const mockUsers: User[] = [
-      { id: '1', nombre: 'Admin Sistema', email: 'admin@espoch.edu.ec', rol: 'ADMIN', activo: true, emailVerificado: true }
-    ];
-    return of(mockUsers).pipe(delay(300));
+    return this.get<any>(ENDPOINTS.USERS.BASE).pipe(
+      map(res => {
+        const users = res.data || res;
+        return Array.isArray(users) ? users.map((u: any) => this.mapBackendUser(u)) : [];
+      })
+    );
   }
   
   getUserById(id: string): Observable<User> { 
@@ -153,8 +161,13 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
   updateUser(id: string, userDto: any): Observable<User> {
     const payload: any = {};
     if (userDto.nombre) payload.fullName = userDto.nombre;
-    if (userDto.perfil) payload.perfil = userDto.perfil;
+    if (userDto.perfil) payload.position = userDto.perfil;
     if (userDto.email) payload.email = userDto.email;
+    if (userDto.telefono) payload.phone = userDto.telefono;
+    if (userDto.nacionalidad) payload.nationality = userDto.nacionalidad;
+    if (userDto.institucion) payload.institution = userDto.institucion;
+    if (userDto.registroSenescyt) payload.senescytRegistration = userDto.registroSenescyt;
+    if (userDto.nationalId) payload.nationalId = userDto.nationalId;
 
     return this.patch<any>(ENDPOINTS.USERS.BY_ID(id), payload).pipe(
       map(res => this.mapBackendUser(res.data || res))

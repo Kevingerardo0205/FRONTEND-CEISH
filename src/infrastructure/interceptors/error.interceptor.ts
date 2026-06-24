@@ -1,18 +1,30 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, filter, take, switchMap } from 'rxjs/operators';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { Router } from '@angular/router';
+import { environment } from 'src/environments/environment';
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
   private isRefreshing = false;
   private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
 
-  constructor(private authFacade: AuthFacade, private router: Router) {}
+  constructor(private injector: Injector, private router: Router) {}
+
+  private get authFacade(): AuthFacade {
+    return this.injector.get(AuthFacade);
+  }
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    const url = request.url || '';
+    const isLocalApi = url.startsWith('/') || url.startsWith(environment.apiUrl);
+
+    if (!isLocalApi) {
+      return next.handle(request);
+    }
+
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error instanceof HttpErrorResponse && error.status === 401) {
@@ -27,6 +39,13 @@ export class ErrorInterceptor implements HttpInterceptor {
           }
           this.router.navigate(['/dashboard']);
           return throwError(() => new Error('No tienes permisos para acceder a este recurso.'));
+        }
+
+        if (error instanceof HttpErrorResponse && error.status === 409) {
+          return throwError(() => ({
+            type: 'CONCURRENCY_ERROR',
+            message: error.error?.message || 'Este trámite ha sido actualizado por otro usuario. Por favor, recargue el expediente.'
+          }));
         }
 
         const errorMessage = error.error?.message || error.statusText;

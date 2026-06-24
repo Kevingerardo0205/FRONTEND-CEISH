@@ -24,6 +24,12 @@ export interface User {
   fullPermissions?: Permission[]; // Objetos completos para el Menú Dinámico
   fechaCreacion?: Date;
   ultimoAcceso?: Date;
+  telefono?: string;
+  nationalId?: string;
+  institucion?: string;
+  registroSenescyt?: string;
+  nacionalidad?: string;
+  cvPath?: string;
 }
 
 export interface UserDTO {

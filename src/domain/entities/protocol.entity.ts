@@ -12,6 +12,7 @@ export interface ProtocolEntity {
   studyTypeCode?: string;
   studyType?: any;
   status: ProtocolStatus;
+  statusId?: number;
   submissionDate?: Date;
   validationDate?: Date;
   documents: DocumentEntity[];
@@ -37,6 +38,19 @@ export interface ProtocolEntity {
   isTimelineTermsAccepted?: boolean;
   timelineTermsAcceptedAt?: string | null;
   timelineTermsAcceptedIp?: string | null;
+  versions?: ProtocolVersionEntity[];
+}
+
+export interface ProtocolVersionEntity {
+  id: string | number;
+  versionNumber: number;
+  status: string;
+  statusId?: number;
+  resolutionType?: any;
+  majorObservations?: string;
+  minorObservations?: string;
+  correctionProcedure?: string;
+  createdAt?: Date;
 }
 
 export interface ValidationHeader {

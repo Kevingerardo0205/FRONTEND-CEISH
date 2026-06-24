@@ -4,6 +4,7 @@ import { catchError, finalize, tap } from 'rxjs/operators';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 export interface SecretariatMetrics {
   pendingReception: number;
@@ -16,15 +17,15 @@ export interface SecretariatMetrics {
 @Injectable()
 export class SecretariatDashboardService {
   private protocolRepo = inject(IProtocolRepositoryPort);
-
   // 1. Master Signals
+  private allProtocolsSignal = signal<ProtocolEntity[]>([]);
   private protocolsSignal = signal<ProtocolEntity[]>([]);
   private loadingSignal = signal<boolean>(false);
   private searchQuerySignal = signal<string>('');
   private filterStatusSignal = signal<string>('ALL');
 
   // 2. Read-Only Signals
-  public protocols = this.protocolsSignal.asReadonly();
+  public protocols = this.allProtocolsSignal.asReadonly();
   public isLoading = this.loadingSignal.asReadonly();
   public searchQuery = this.searchQuerySignal.asReadonly();
   public filterStatus = this.filterStatusSignal.asReadonly();
@@ -32,24 +33,7 @@ export class SecretariatDashboardService {
   // 3. Computed: Filtros dinámicos reactivos
   public filteredProtocols = computed(() => {
     const query = this.searchQuerySignal().toLowerCase().trim();
-    const statusFilter = this.filterStatusSignal();
     let list = this.protocolsSignal();
-
-    if (statusFilter !== 'ALL') {
-      list = list.filter(p => {
-        const s = p.status?.toUpperCase();
-        if (statusFilter === 'SUBMITTED') {
-          return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INCOMPLETO';
-        }
-        if (statusFilter === 'EN_REVISION_DOCUMENTAL') {
-          return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
-        }
-        if (statusFilter === 'VALIDATED') {
-          return (s === 'COMPLETO' || s === 'VALIDATED' || s === 'VALIDADO') && (!!p.code && p.code !== 'S/C' && p.code !== 'Sin Código');
-        }
-        return s === statusFilter;
-      });
-    }
 
     if (query) {
       list = list.filter(p => 
@@ -64,17 +48,17 @@ export class SecretariatDashboardService {
 
   // 4. Computed: KPIs del Dashboard en tiempo real
   public metrics = computed((): SecretariatMetrics => {
-    const all = this.protocolsSignal();
+    const all = this.allProtocolsSignal();
     const now = new Date();
 
     return {
       pendingReception: all.filter(p => {
-        const s = p.status?.toUpperCase();
-        return s === 'SUBMITTED' || s === 'PRESENTADO' || s === 'BORRADOR' || s === 'INCOMPLETO';
+        const core = resolveEstado(p.status);
+        return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
       }).length,
       observed: all.filter(p => {
-        const s = p.status?.toUpperCase();
-        return s === 'EN_REVISION_DOCUMENTAL' || s === 'EN_REVISION_SECRETARIA' || s === 'OBSERVADO' || s === 'OBSERVED' || s === 'PENDIENTE_SUBSANACION' || s === 'PENDIENTE';
+        const core = resolveEstado(p.status);
+        return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION', 'DISCREPANCIA_RIESGO'].includes(core.code);
       }).length,
       overdue: all.filter(p => p.deadline && new Date(p.deadline) < now).length,
       slaRisk: all.filter(p => {
@@ -86,15 +70,41 @@ export class SecretariatDashboardService {
     };
   });
 
+  private loadFilteredData() {
+    const filter = this.filterStatusSignal();
+    const all = this.allProtocolsSignal();
+    let filteredList = all;
+
+    if (filter === 'SUBMITTED') {
+      filteredList = all.filter(p => {
+        const core = resolveEstado(p.status);
+        return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
+      });
+    } else if (filter === 'EN_REVISION_DOCUMENTAL') {
+      filteredList = all.filter(p => {
+        const core = resolveEstado(p.status);
+        return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION', 'DISCREPANCIA_RIESGO'].includes(core.code);
+      });
+    } else if (filter === 'VALIDATED') {
+      filteredList = all.filter(p => {
+        const core = resolveEstado(p.status);
+        return core && ['COMPLETO', 'APROBADO', 'RECHAZADO'].includes(core.code);
+      });
+    }
+
+    this.protocolsSignal.set(filteredList);
+  }
+
   public loadDashboardData() {
     this.loadingSignal.set(true);
     return this.protocolRepo.getReceptionProtocols().pipe(
       tap(data => {
         const list = Array.isArray(data) ? data : [];
-        this.protocolsSignal.set(list);
+        this.allProtocolsSignal.set(list);
+        this.loadFilteredData();
       }),
       catchError(err => {
-        console.error('[SecretariatDashboardService] Error cargando protocolos:', err);
+        console.error('[SecretariatDashboardService] Error cargando todos los protocolos:', err);
         return of([]);
       }),
       finalize(() => this.loadingSignal.set(false))
@@ -107,5 +117,6 @@ export class SecretariatDashboardService {
 
   public updateFilter(status: string) {
     this.filterStatusSignal.set(status);
+    this.loadFilteredData();
   }
 }

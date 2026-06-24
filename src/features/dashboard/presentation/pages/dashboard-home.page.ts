@@ -95,26 +95,44 @@ interface DashboardConfig {
                   <mat-icon>auto_graph</mat-icon>
                   <h2>{{ config().recentTitle }}</h2>
                 </div>
-                <button mat-button color="primary" class="view-all">
-                  Ver historial completo
+                <button mat-button color="primary" class="view-all" routerLink="/dashboard/investigador/mis-protocolos" *ngIf="userRole() === 'INVESTIGADOR' && myProtocols().length > 0">
+                  Ver mis protocolos
                 </button>
               </header>
 
-              <div class="empty-activity">
-                <div class="illustration-box">
-                  <mat-icon>query_stats</mat-icon>
-                  <div class="ring"></div>
+              <!-- Si tiene protocolos y es INVESTIGADOR, mostramos la lista compacta -->
+              <div class="protocols-compact-list" *ngIf="userRole() === 'INVESTIGADOR' && myProtocols().length > 0; else emptyActivity">
+                <div class="compact-item" *ngFor="let p of myProtocols()" [routerLink]="['/dashboard/protocols/workspace', p.id, 'info']" matRipple>
+                  <div class="compact-icon">
+                    <mat-icon>folder</mat-icon>
+                  </div>
+                  <div class="compact-info">
+                    <span class="compact-title">{{ p.titulo }}</span>
+                    <span class="compact-meta">{{ p.codigoCeish || 'TRÁMITE EN PROCESO' }} • {{ p.fechaCreacion | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                  <div class="status-chip-compact" [ngClass]="p.estado?.toLowerCase()">
+                    {{ getFriendlyStatusLabel(p.estado) }}
+                  </div>
                 </div>
-                <h3>{{ config().recentTitle }}</h3>
-                <p>{{ config().emptyMessage }}</p>
-                <button *ngIf="config().emptyActionLabel" 
-                        mat-flat-button 
-                        color="primary" 
-                        [routerLink]="config().emptyActionLink"
-                        class="cta-btn">
-                  {{ config().emptyActionLabel }}
-                </button>
               </div>
+
+              <ng-template #emptyActivity>
+                <div class="empty-activity">
+                  <div class="illustration-box">
+                    <mat-icon>query_stats</mat-icon>
+                    <div class="ring"></div>
+                  </div>
+                  <h3>{{ config().recentTitle }}</h3>
+                  <p>{{ config().emptyMessage }}</p>
+                  <button *ngIf="config().emptyActionLabel" 
+                          mat-flat-button 
+                          color="primary" 
+                          [routerLink]="config().emptyActionLink"
+                          class="cta-btn">
+                    {{ config().emptyActionLabel }}
+                  </button>
+                </div>
+              </ng-template>
             </div>
 
             <div *ngIf="config().showEvaluatorLoad" class="specialized-section">
@@ -241,6 +259,80 @@ interface DashboardConfig {
     .animate-fade-in { animation: fadeIn 0.6s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
+    .protocols-compact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .compact-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      &:hover {
+        border-color: #3b82f6;
+        background: #f8fafc;
+      }
+    }
+    .compact-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: #eff6ff;
+      color: #3b82f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .compact-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .compact-title {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .compact-meta {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .status-chip-compact {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      background: #f1f5f9;
+      color: #64748b;
+      &.requiere_correccion, &.incompleto, &.observado {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      &.discrepancia_riesgo, &.discrepancia_de_riesgo {
+        background: #fff7ed;
+        color: #c2410c;
+      }
+      &.aprobado_definitivo, &.aprobado_condicionado {
+        background: #dcfce7;
+        color: #166534;
+      }
+      &.en_revision_secretaria, &.en_revision_documental {
+        background: #eff6ff;
+        color: #1e40af;
+      }
+    }
+
     @media (max-width: 1100px) { .dashboard-layout { grid-template-columns: 1fr; } }
   `]
 })
@@ -251,9 +343,29 @@ export class DashboardHomePage implements OnInit {
   user = this.authFacade.currentUser;
   userName = computed(() => this.user()?.nombre?.split(' ')[0] || 'Usuario');
   userRole = computed(() => (this.user()?.rol?.toUpperCase() as UserRole) || 'INVESTIGADOR');
+  myProtocols = this.dashboardFacade.myProtocols;
   isMobile = window.innerWidth < 768;
 
   currentHour = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+  getFriendlyStatusLabel(status: string): string {
+    if (!status) return 'Borrador';
+    const labels: { [key: string]: string } = {
+      'CREADO': 'Borrador',
+      'BORRADOR': 'Borrador',
+      'PENDIENTE': 'Pendiente',
+      'REQUIERE_CORRECCION': 'Observado',
+      'INCOMPLETO': 'Incompleto',
+      'APROBADO_DEFINITIVO': 'Aprobado Definitivo',
+      'APROBADO_CONDICIONADO': 'Aprobado Condicionado',
+      'EN_EVALUACION': 'En Evaluación',
+      'EN_REVISION_SECRETARIA': 'Revisión Técnica',
+      'SUBMITTED': 'Sometido',
+      'DISCREPANCIA_RIESGO': 'Discrepancia de Riesgo',
+      'DISCREPANCIA_DE_RIESGO': 'Discrepancia de Riesgo',
+    };
+    return labels[status.toUpperCase()] || status.replace(/_/g, ' ');
+  }
 
   ngOnInit() {
     this.dashboardFacade.loadStats();
@@ -346,7 +458,6 @@ export class DashboardHomePage implements OnInit {
             { title: 'Sesiones Próximas', value: 1, icon: 'groups', color: '#2563eb' },
           ],
           quickActions: [
-            { label: 'Asignar Evaluadores', icon: 'people_alt', link: '/dashboard/evaluations/assignment', color: '#3b82f6' },
             { label: 'Generar Resoluciones', icon: 'gavel', link: '/dashboard/resolutions/generator', color: '#6366f1' },
             { label: 'Ver Reportes', icon: 'insights', link: '/dashboard/reports', color: '#10b981' }
           ],

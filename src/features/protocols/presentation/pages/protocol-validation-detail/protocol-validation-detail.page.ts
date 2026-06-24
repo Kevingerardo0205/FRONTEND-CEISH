@@ -21,6 +21,10 @@ import { IncompleteValidationDialog } from './incomplete-validation-dialog.compo
 import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
+import { S3StorageService } from '@infrastructure/services/s3-storage.service';
+import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Component({
   selector: 'app-protocol-validation-detail',
@@ -124,11 +128,15 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                       <span class="item-status-tag" [ngClass]="item.status.toLowerCase()">{{ item.status }}</span>
                     </div>
                   </td>
-                  <td class="text-center">
+                  <td class="text-center position-relative" 
+                      [class.drag-over]="dragOverReqId() === item.id"
+                      (dragover)="onDragOverReq($event, item.id)"
+                      (dragleave)="onDragLeaveReq($event)"
+                      (drop)="onDropReq($event, item)">
                     <div *ngIf="item.attachedDocument; else noDoc">
-                      <a [href]="item.attachedDocument.path" target="_blank" mat-icon-button color="primary" matTooltip="Ver documento cargado">
+                      <button type="button" (click)="verDocumento(item.attachedDocument.id)" mat-icon-button color="primary" matTooltip="Ver documento cargado">
                         <mat-icon>description</mat-icon>
-                      </a>
+                      </button>
                       <div class="small text-muted" style="font-size: 0.65rem;">{{ item.attachedDocument.fileName | slice:0:15 }}...</div>
                     </div>
                     <ng-template #noDoc>
@@ -136,44 +144,100 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                     </ng-template>
                   </td>
                    <td class="text-center">
-                    <div *ngIf="item.attachedDocument" class="d-flex flex-column align-items-center gap-1">
-                      <span class="small text-muted text-nowrap" style="font-size: 0.7rem; font-weight: 600;" 
-                            matTooltip="Hojas declaradas originalmente por el investigador">
-                        Decl: {{ item.attachedDocument.originalPageCount || '-' }}
-                      </span>
-                      <input type="number" 
-                             class="mini-input text-center pages-input" 
-                             [(ngModel)]="item.attachedDocument.pageCount" 
-                             [disabled]="isProcessing || isFinalized()"
-                             (change)="onChangePageCount(item)"
-                             (keypress)="onKeyPressPages($event)"
-                             min="1"
-                             placeholder="Validadas"
-                             matTooltip="Hojas físicas reales validadas por secretaría">
+                    <div *ngIf="!isInvestigador(); else investigatorPages">
+                      <div *ngIf="item.attachedDocument" class="d-flex flex-column align-items-center gap-1">
+                        <span class="small text-muted text-nowrap" style="font-size: 0.7rem; font-weight: 600;" 
+                              matTooltip="Hojas declaradas originalmente por el investigador">
+                          Decl: {{ item.attachedDocument.originalPageCount || '-' }}
+                        </span>
+                        <input type="number" 
+                               class="mini-input text-center pages-input" 
+                               [(ngModel)]="item.attachedDocument.pageCount" 
+                               [disabled]="isProcessing || isFinalized()"
+                               (change)="onChangePageCount(item)"
+                               (keypress)="onKeyPressPages($event)"
+                               min="1"
+                               placeholder="Validadas"
+                               matTooltip="Hojas físicas reales validadas por secretaría">
+                      </div>
+                      <span *ngIf="!item.attachedDocument" class="text-muted">-</span>
                     </div>
-                    <span *ngIf="!item.attachedDocument" class="text-muted">-</span>
+                    <ng-template #investigatorPages>
+                      <div *ngIf="item.attachedDocument" class="d-flex flex-column align-items-center">
+                        <span class="small text-muted text-nowrap" style="font-size: 0.7rem;">Decl: {{ item.attachedDocument.originalPageCount || '-' }}</span>
+                        <span class="small fw-bold text-success text-nowrap" *ngIf="item.attachedDocument.pageCount" style="font-size: 0.75rem;">Validadas: {{ item.attachedDocument.pageCount }}</span>
+                      </div>
+                      <span *ngIf="!item.attachedDocument" class="text-muted">-</span>
+                    </ng-template>
                   </td>
                   <td class="text-center">
-                    <div class="btn-group-validation" *ngIf="item.attachedDocument">
-                      <button mat-icon-button [color]="item.status === 'APROBADO' ? 'primary' : ''" 
-                              (click)="onValidateItem(item, 1)" 
-                              [disabled]="isProcessing || isFinalized()"
-                              matTooltip="Aprobar documento">
-                        <mat-icon>{{ item.status === 'APROBADO' ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
-                      </button>
-                      <button mat-icon-button [color]="item.status === 'RECHAZADO' ? 'warn' : ''" 
-                              (click)="onValidateItem(item, 2)" 
-                              [disabled]="isProcessing || isFinalized()"
-                              matTooltip="Rechazar documento">
-                        <mat-icon>{{ item.status === 'RECHAZADO' ? 'cancel' : 'highlight_off' }}</mat-icon>
-                      </button>
+                    <!-- Si no es investigador, renderiza la validación de la secretaría -->
+                    <div *ngIf="!isInvestigador()">
+                      <div class="btn-group-validation" *ngIf="item.attachedDocument">
+                        <button mat-icon-button [color]="item.status === 'APROBADO' ? 'primary' : ''" 
+                                (click)="onValidateItem(item, 1)" 
+                                [disabled]="isProcessing || isFinalized()"
+                                matTooltip="Aprobar documento">
+                          <mat-icon>{{ item.status === 'APROBADO' ? 'check_circle' : 'check_circle_outline' }}</mat-icon>
+                        </button>
+                        <button mat-icon-button [color]="item.status === 'RECHAZADO' ? 'warn' : ''" 
+                                (click)="onValidateItem(item, 2)" 
+                                [disabled]="isProcessing || isFinalized()"
+                                matTooltip="Rechazar documento">
+                          <mat-icon>{{ item.status === 'RECHAZADO' ? 'cancel' : 'highlight_off' }}</mat-icon>
+                        </button>
+                      </div>
+                      <span *ngIf="!item.attachedDocument" class="small text-muted">-</span>
                     </div>
-                    <span *ngIf="!item.attachedDocument" class="small text-muted">-</span>
+                    
+                    <!-- Si es investigador, renderiza el botón de carga o estado -->
+                    <div *ngIf="isInvestigador()">
+                      <!-- Modo Subsanación (Edición) -->
+                      <div *ngIf="isSubsanacionMode()">
+                        <!-- Requisitos aprobados: solo lectura -->
+                        <div *ngIf="item.status === 'APROBADO' || item.status === 'VALIDADO'" class="d-flex align-items-center justify-content-center text-success gap-1">
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">check_circle</mat-icon>
+                          <span class="small fw-bold">Listo</span>
+                        </div>
+                        
+                        <!-- Requisitos rechazados, observados o no presentados: cargador habilitado -->
+                        <div *ngIf="item.status !== 'APROBADO' && item.status !== 'VALIDADO'">
+                          <div *ngIf="uploadingRequirements()[item.id]" class="d-flex flex-column align-items-center justify-content-center">
+                            <span class="small text-primary animate-pulse">Subiendo...</span>
+                          </div>
+                          
+                          <div *ngIf="!uploadingRequirements()[item.id]" class="d-flex flex-column align-items-center gap-1">
+                            <button type="button" mat-flat-button color="accent" class="btn-upload-sm" (click)="fileInput.click()">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">cloud_upload</mat-icon>
+                              <span style="font-size: 0.75rem;">{{ item.attachedDocument ? 'Reemplazar' : 'Cargar PDF' }}</span>
+                            </button>
+                            <input #fileInput type="file" (change)="onFileSelectedForRequirement($event, item)" accept="application/pdf" style="display: none;" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Modo Solo Lectura (otros estados) -->
+                      <div *ngIf="!isSubsanacionMode()">
+                        <span class="badge-status-simple" [ngClass]="item.status.toLowerCase()">{{ item.status }}</span>
+                      </div>
+                    </div>
                   </td>
                   <td>
-                    <input type="text" class="mini-input" [(ngModel)]="item.observations" 
-                           [placeholder]="item.status === 'RECHAZADO' ? 'Motivo de rechazo (obligatorio)...' : 'Nota opcional...'"
-                           [disabled]="!item.attachedDocument || isProcessing || isFinalized()">
+                    <!-- Observaciones de la Secretaría (editable) -->
+                    <div *ngIf="!isInvestigador()">
+                      <input type="text" class="mini-input" [(ngModel)]="item.observations" 
+                             [placeholder]="item.status === 'RECHAZADO' ? 'Motivo de rechazo (obligatorio)...' : 'Nota opcional...'"
+                             [disabled]="!item.attachedDocument || isProcessing || isFinalized()">
+                    </div>
+                    
+                    <!-- Observaciones del Investigador (lectura) -->
+                    <div *ngIf="isInvestigador()">
+                      <div class="observations-display-box" *ngIf="item.observations">
+                        <mat-icon class="text-danger-custom" style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px;">warning</mat-icon>
+                        <span class="obs-text-custom">{{ item.observations }}</span>
+                      </div>
+                      <span *ngIf="!item.observations" class="text-muted small italic">Sin observaciones</span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -187,9 +251,15 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         </div>
 
         <!-- PANEL DE OBSERVACIONES GENERALES -->
-        <div class="verification-panel mt-4 p-4 shadow-soft">
-          <h3 class="section-title"><mat-icon>chat_bubble_outline</mat-icon> Observaciones Generales (Para correo al investigador)</h3>
-          <mat-form-field class="full-width" appearance="outline">
+        <div class="verification-panel mt-4 p-4 shadow-soft" *ngIf="!isInvestigador() || missingItemsList">
+          <h3 class="section-title">
+            <mat-icon>chat_bubble_outline</mat-icon> 
+            {{ isInvestigador() ? 'Observaciones de la Secretaría' : 'Observaciones Generales (Para correo al investigador)' }}
+          </h3>
+          <div *ngIf="isInvestigador()" class="p-3 bg-light rounded border border-warning" style="border-left: 4px solid #ffc107 !important; margin-bottom: 0;">
+            <p class="mb-0 text-dark fw-medium" style="white-space: pre-line;">{{ missingItemsList }}</p>
+          </div>
+          <mat-form-field class="full-width" appearance="outline" *ngIf="!isInvestigador()">
             <mat-label>Observaciones Generales / Lista de Faltantes</mat-label>
             <textarea matInput rows="3" [(ngModel)]="missingItemsList" placeholder="Ej: Se solicita revisar el formato del Anexo 2 que se encuentra ilegible..."></textarea>
           </mat-form-field>
@@ -198,7 +268,8 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         <!-- PANEL DE ACCIÓN Y NOTIFICACIONES -->
         <div class="action-footer mt-4">
           <div class="summary-panel full-width">
-            <div class="progress-container">
+            <!-- Si es secretario/comité, muestra progreso de validación -->
+            <div class="progress-container" *ngIf="!isInvestigador()">
               <div class="progress-labels">
                 <span>Progreso de validación (Ítems obligatorios): {{ validatedCount() }} / {{ mandatoryCount() }}</span>
                 <strong>{{ progress() }}%</strong>
@@ -207,12 +278,30 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                                 [color]="progress() === 100 ? 'primary' : 'accent'"></mat-progress-bar>
             </div>
 
+            <!-- Si es investigador en subsanación, muestra progreso de carga -->
+            <div class="progress-container" *ngIf="isInvestigador() && isSubsanacionMode()">
+              <div class="progress-labels">
+                <span>Progreso de Carga de Requisitos: {{ validatedCount() }} / {{ mandatoryCount() }} completados</span>
+                <strong>{{ progress() }}%</strong>
+              </div>
+              <mat-progress-bar mode="determinate" [value]="progress()" 
+                                [color]="progress() === 100 ? 'primary' : 'accent'"></mat-progress-bar>
+              <div class="alert alert-info mt-3 small mb-0 d-flex align-items-center gap-2" style="background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; padding: 12px; border-radius: 8px;">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">info</mat-icon>
+                <span>Por favor cargue los archivos corregidos (formato PDF) para todos los requisitos observados o rechazados. Una vez que cargue todos los documentos solicitados, haga clic en <strong>Enviar Subsanación</strong>.</span>
+              </div>
+            </div>
+
             <div class="action-buttons-row">
-              <button *ngIf="header()?.ceishCode && header()?.ceishCode !== 'TRÁMITE EN PROCESO'" mat-stroked-button color="accent" (click)="onDownloadCertificate()" class="btn-cert">
+              <!-- Botón para descargar certificado -->
+              <button *ngIf="(header()?.ceishCode && header()?.ceishCode !== 'TRÁMITE EN PROCESO') && (!isInvestigador() || isFinalized())" 
+                      mat-stroked-button color="accent" (click)="onDownloadCertificate()" class="btn-cert">
                 <mat-icon>download</mat-icon> DESCARGAR ANEXO 7 (CONSTANCIA)
               </button>
               
-              <button mat-flat-button class="btn-finalize" 
+              <!-- Botón de finalizar revisión para Secretaría -->
+              <button *ngIf="!isInvestigador()" 
+                      mat-flat-button class="btn-finalize" 
                       [disabled]="!allReviewed() || isProcessing || isFinalized()" 
                       (click)="onFinalize()">
                 <mat-icon>{{ progress() === 100 ? 'send' : 'notifications_active' }}</mat-icon>
@@ -220,9 +309,18 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                     ? 'REVISIÓN FINALIZADA' 
                     : (progress() === 100 ? 'FINALIZAR REVISIÓN Y GENERAR CONSTANCIA' : 'NOTIFICAR OBSERVACIONES AL INVESTIGADOR') }}
               </button>
+
+              <!-- Botón de enviar subsanación para Investigador -->
+              <button *ngIf="isInvestigador() && isSubsanacionMode()" 
+                      mat-flat-button class="btn-finalize" 
+                      [disabled]="!canSubmitSubsanacion() || isProcessing" 
+                      (click)="onSubmitSubsanacion()">
+                <mat-icon>send</mat-icon>
+                ENVIAR SUBSANACIÓN
+              </button>
             </div>
             
-            <div class="legal-disclaimer" *ngIf="allReviewed() && !isFinalized()">
+            <div class="legal-disclaimer" *ngIf="!isInvestigador() && allReviewed() && !isFinalized()">
                <mat-icon [color]="progress() === 100 ? 'primary' : 'warn'">info</mat-icon>
                <span *ngIf="progress() === 100">Todo correcto. Se generará el Anexo 7 y se notificará al investigador.</span>
                <span *ngIf="progress() < 100">Existen rechazos. Se enviará una notificación de subsanación con las observaciones ingresadas.</span>
@@ -320,6 +418,70 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .full-width { width: 100%; }
     .empty-docs-warning { mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px; } }
+
+    /* Estilos Premium Adicionales para Subsanación */
+    .btn-upload-sm {
+      height: 36px;
+      line-height: 36px;
+      border-radius: 6px;
+      font-weight: 600;
+      padding: 0 12px;
+      background-color: #3b82f6 !important;
+      color: white !important;
+      transition: all 0.2s ease;
+      &:hover {
+        background-color: #2563eb !important;
+        transform: translateY(-1px);
+      }
+    }
+    
+    .drag-over {
+      background-color: #eff6ff !important;
+      border: 2px dashed #3b82f6 !important;
+    }
+    
+    .observations-display-box {
+      display: inline-flex;
+      align-items: center;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #991b1b;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .text-danger-custom {
+      color: #ef4444;
+    }
+    
+    .obs-text-custom {
+      color: #991b1b;
+      text-align: left;
+    }
+    
+    .badge-status-simple {
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      display: inline-block;
+      &.aprobado, &.validado { background: #dcfce7; color: #166534; }
+      &.rechazado { background: #fee2e2; color: #991b1b; }
+      &.no_presentado { background: #f1f5f9; color: #64748b; }
+      &.presentado { background: #e0f2fe; color: #0369a1; }
+    }
+    
+    .animate-pulse {
+      animation: pulseText 1.5s infinite;
+    }
+    
+    @keyframes pulseText {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
   `]
 })
 export class ProtocolValidationDetailPage implements OnInit {
@@ -330,6 +492,9 @@ export class ProtocolValidationDetailPage implements OnInit {
   private docRepository = inject(IDocumentRepositoryPort);
   private validateUseCase = inject(ValidateDocumentaryUseCase);
   private dialog = inject(MatDialog);
+  private s3StorageService = inject(S3StorageService);
+  private authFacade = inject(AuthFacade);
+  private protocoloService = inject(ProtocoloService);
   
   // Workspace integration
   private workspaceService = inject(ProtocolWorkspaceService, { optional: true });
@@ -343,6 +508,36 @@ export class ProtocolValidationDetailPage implements OnInit {
   header = signal<ValidationHeader | null>(null);
   checklist = signal<ValidationChecklistItem[]>([]);
   globalStatus = signal<ValidationGlobalStatus | null>(null);
+
+  userRole = computed(() => this.authFacade.currentUser()?.rol?.toUpperCase() || '');
+  isInvestigador = computed(() => this.userRole() === 'INVESTIGADOR');
+  
+  uploadingRequirements = signal<Record<number, boolean>>({});
+  dragOverReqId = signal<number | null>(null);
+
+  isSubsanacionMode = computed(() => {
+    if (!this.isInvestigador()) return false;
+    let statusStr = this.workspaceService?.protocol()?.status?.toUpperCase() || '';
+    if (!statusStr) {
+      statusStr = this.globalStatus()?.status?.toUpperCase() || '';
+    }
+    const core = resolveEstado(statusStr);
+    return !!(core && (core.code === 'REQUIERE_SUBSANACION_DOC' || core.code === 'INCOMPLETO') || statusStr === 'EVALUACION_SUBSANACIONES');
+  });
+
+  isReadOnlyMode = computed(() => {
+    if (this.isInvestigador()) {
+      return !this.isSubsanacionMode();
+    }
+    return this.isFinalized();
+  });
+
+  canSubmitSubsanacion = computed(() => {
+    const items = this.checklist();
+    if (items.length === 0) return false;
+    // Permitir enviar la subsanación confiando en las validaciones y mensajes del backend
+    return true;
+  });
 
   // Verificación Global local (para observaciones)
   missingItemsList = '';
@@ -374,6 +569,19 @@ export class ProtocolValidationDetailPage implements OnInit {
     return this.progress() === 100 && !!this.header()?.ceishCode && this.header()?.ceishCode !== 'TRÁMITE EN PROCESO';
   });
 
+  verDocumento(documentId: any) {
+    if (!documentId) return;
+    this.s3StorageService.getDocumentDownloadUrl(Number(documentId)).subscribe({
+      next: (res) => {
+        window.open(res.downloadUrl, '_blank');
+      },
+      error: (err) => {
+        console.error('Error al generar la URL de descarga:', err);
+        this.snackBar.open('No se pudo abrir el documento.', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
   ngOnInit() {
     this.protocolId = this.route.snapshot.params['id'] || this.route.parent?.snapshot.params['id'];
     this.loadValidationData();
@@ -397,7 +605,7 @@ export class ProtocolValidationDetailPage implements OnInit {
         const processedChecklist = (data.checklist || []).map(item => {
           if (item.attachedDocument) {
             if (item.attachedDocument.pageCount === null || item.attachedDocument.pageCount === undefined) {
-              item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || null;
+              item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
             }
           }
           return item;
@@ -419,8 +627,13 @@ export class ProtocolValidationDetailPage implements OnInit {
   onValidateItem(item: ValidationChecklistItem, actionType: number) {
     if (!item.attachedDocument) return;
 
-    const pages = item.attachedDocument.pageCount;
-    if (pages !== null && pages !== undefined && (pages <= 0 || !Number.isInteger(pages))) {
+    let pages = item.attachedDocument.pageCount;
+    if (pages === null || pages === undefined) {
+      pages = item.attachedDocument.originalPageCount || 1;
+      item.attachedDocument.pageCount = pages;
+    }
+
+    if (pages <= 0 || !Number.isInteger(pages)) {
       this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
       return;
     }
@@ -459,8 +672,13 @@ export class ProtocolValidationDetailPage implements OnInit {
   onChangePageCount(item: ValidationChecklistItem) {
     if (!item.attachedDocument) return;
 
-    const pageCount = item.attachedDocument.pageCount;
-    if (pageCount !== null && pageCount !== undefined && (pageCount <= 0 || !Number.isInteger(pageCount))) {
+    let pageCount = item.attachedDocument.pageCount;
+    if (pageCount === null || pageCount === undefined) {
+      pageCount = item.attachedDocument.originalPageCount || 1;
+      item.attachedDocument.pageCount = pageCount;
+    }
+
+    if (pageCount <= 0 || !Number.isInteger(pageCount)) {
       this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
       // Restaurar el valor original
       item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
@@ -561,6 +779,88 @@ export class ProtocolValidationDetailPage implements OnInit {
       },
       error: () => {
         this.snackBar.open('❌ Error al descargar la constancia.', 'Cerrar');
+      }
+    });
+  }
+
+  onFileSelectedForRequirement(event: Event, item: ValidationChecklistItem) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.uploadFile(input.files[0], item);
+      input.value = ''; // Reset input
+    }
+  }
+
+  onDragOverReq(event: DragEvent, reqId: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    const item = this.checklist().find(i => i.id === reqId);
+    if (this.isSubsanacionMode() && item && item.status !== 'APROBADO' && item.status !== 'VALIDADO') {
+      this.dragOverReqId.set(reqId);
+    }
+  }
+
+  onDragLeaveReq(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverReqId.set(null);
+  }
+
+  onDropReq(event: DragEvent, item: ValidationChecklistItem) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverReqId.set(null);
+
+    if (!this.isSubsanacionMode()) return;
+    if (item.status === 'APROBADO' || item.status === 'VALIDADO') return;
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.uploadFile(files[0], item);
+    }
+  }
+
+  private uploadFile(file: File, item: ValidationChecklistItem) {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      this.snackBar.open('⚠️ Solo se permiten archivos en formato PDF.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+      this.snackBar.open('⚠️ El archivo supera el tamaño máximo permitido (10MB).', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.uploadingRequirements.update(state => ({ ...state, [item.id]: true }));
+    
+    this.protocoloService.subirDocumento(file, Number(this.protocolId), item.id, item.code).subscribe({
+      next: () => {
+        this.uploadingRequirements.update(state => ({ ...state, [item.id]: false }));
+        this.snackBar.open(`✅ Archivo cargado con éxito para ${item.name}`, 'Cerrar', { duration: 3000 });
+        this.loadValidationData(); // Recarga la información para actualizar la UI
+      },
+      error: (err) => {
+        this.uploadingRequirements.update(state => ({ ...state, [item.id]: false }));
+        console.error('Error al subir documento:', err);
+        const errorMsg = err.error?.message || 'Error al subir el documento.';
+        this.snackBar.open(`❌ ${errorMsg}`, 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  onSubmitSubsanacion() {
+    this.isProcessing = true;
+    this.protocoloService.finalizarProtocolo(Number(this.protocolId)).subscribe({
+      next: () => {
+        this.isProcessing = false;
+        this.snackBar.open('✅ Subsanación enviada exitosamente para revisión.', 'Entendido', { duration: 5000 });
+        this.router.navigate(['/dashboard/investigador/mis-protocolos']);
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        console.error('Error al enviar subsanación:', err);
+        const msg = err.error?.message || 'Error al enviar la subsanación';
+        this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
       }
     });
   }

@@ -16,6 +16,7 @@ export const ENDPOINTS = {
     ACCEPT_TIMELINE: (id: string) => `/protocols/${id}/accept-timeline`,
     CHECKLIST: (id: string) => `/reception/protocol/${id}`,
     REQUIREMENTS: '/protocols/requirements',
+    RISK_LEVELS: '/protocols/risk-levels',
     UPLOAD_DOCUMENT: (id: string) => `/reception/protocol/${id}/document`,
     RECEPTION: {
       CREATE: '/protocols',
@@ -34,13 +35,14 @@ export const ENDPOINTS = {
     BASE: '/documents',
     UPLOAD: '/documents/upload',
     BY_ID: (id: string) => `/documents/${id}`,
+    TEMPLATES: '/documents/templates',
+    TEMPLATE_DOWNLOAD: (code: string) => `/documents/templates/${code}/download`,
+    TEMPLATE_FILE: (code: string) => `/documents/templates/${code}/file`,
   },
   EVALUATIONS: {
+    BASE: '/evaluations',
     DASHBOARD: '/evaluations/evaluators/dashboard',
-    SUGGEST: '/evaluations/suggest',
-    PENDING_SUGGESTIONS: '/evaluations/pending-suggestions',
-    CONFIRM: '/evaluations/confirm-assignment',
-    REJECT_SUGGESTION: (id: string) => `/evaluations/reject-suggestion/${id}`,
+    UPLOAD: '/evaluations/upload',
     MY_ASSIGNMENTS: '/evaluations/my-assignments',
     SUBMIT: '/evaluations/submit',
     PROFILES: '/evaluations/profiles',
@@ -68,6 +70,10 @@ export const ENDPOINTS = {
     CONFIG: '/admin/ai-assistant/config',
     UPLOAD_PET: '/admin/ai-assistant/upload-pet',
     ROLES: '/admin/ai-assistant/roles',
+  // TAREA 7: Rutas de almacenamiento en Cloudflare R2/S3 centralizadas
+  STORAGE: {
+    UPLOAD_URL: '/storage/upload-url',   // POST — obtiene URL prefirmada para subir (PUT)
+    DOWNLOAD_URL: '/storage/download-url', // POST — obtiene URL prefirmada para descargar (GET)
   },
   HEALTH: '/'
-};
+}}

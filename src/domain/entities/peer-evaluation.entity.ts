@@ -40,6 +40,16 @@ export interface PeerAssignmentEntity {
   };
 }
 
+export interface AssignEvaluatorsResponse {
+  message: string;
+  totalEvaluators: number;
+  riskEvaluators: number[];
+  allEvaluators: number[];
+  versionId?: number;
+  evaluationAssignmentIds?: number[];
+  deadline: string;
+}
+
 export interface RiskLevelInfo {
   id: number;
   name: string;

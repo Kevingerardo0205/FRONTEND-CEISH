@@ -28,7 +28,7 @@ interface FileItem {
         <span class="limits">Máximo 50 archivos (Total 100MB)</span>
         
         <input type="file" #fileInput multiple (change)="onFileSelected($event)" style="display: none">
-        <button mat-flat-button color="primary" class="browse-btn" (click)="fileInput.click()">
+        <button type="button" mat-flat-button color="primary" class="browse-btn" (click)="fileInput.click()">
           Seleccionar Archivos
         </button>
       </div>
@@ -46,7 +46,7 @@ interface FileItem {
                              [color]="item.status === 'error' ? 'warn' : 'primary'">
             </mat-progress-bar>
           </div>
-          <button mat-icon-button color="warn" (click)="removeFile(i)">
+          <button type="button" mat-icon-button color="warn" (click)="removeFile(i)">
             <mat-icon>delete_outline</mat-icon>
           </button>
         </div>
@@ -60,7 +60,7 @@ interface FileItem {
             Total: {{ formatSize(totalSize()) }} / 100MB
           </span>
         </div>
-        <button mat-raised-button 
+        <button type="button" mat-raised-button 
                 class="upload-all-btn"
                 [disabled]="files().length === 0 || totalSize() > maxSizeBytes"
                 (click)="onUploadAll()">

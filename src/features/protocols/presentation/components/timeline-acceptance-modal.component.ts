@@ -2,7 +2,7 @@ import { Component, input, output, signal, inject, ChangeDetectionStrategy } fro
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ProtocoloService } from '../../../investigador/application/services/protocolo.service';
+import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 
 @Component({
   selector: 'app-timeline-acceptance-modal',
@@ -19,7 +19,7 @@ import { ProtocoloService } from '../../../investigador/application/services/pro
             <mat-icon class="legal-icon">gavel</mat-icon>
           </div>
           <h3>Sometimiento Obligatorio a Tiempos y Reglamentos (CEISH)</h3>
-          <p class="subtitle">Firma de conformidad del Investigador Principal</p>
+          <p class="subtitle">Aceptación de conformidad del Investigador Principal</p>
         </header>
         
         <!-- BODY -->
@@ -42,7 +42,7 @@ import { ProtocoloService } from '../../../investigador/application/services/pro
           </div>
 
           <p class="terms-text">
-            Al firmar digitalmente esta declaración, usted declara formalmente su conformidad y se compromete a someterse a los plazos, cronogramas, requerimientos de corrección y decisiones dictaminadas por el Comité de Ética en Investigación con Seres Humanos de la Escuela Superior Politécnica de Chimborazo (CEISH-ESPOCH).
+            Al aceptar esta declaración, usted declara formalmente su conformidad y se compromete a someterse a los plazos, cronogramas, requerimientos de corrección y decisiones dictaminadas por el Comité de Ética en Investigación con Seres Humanos de la Escuela Superior Politécnica de Chimborazo (CEISH-ESPOCH).
           </p>
           
           <label class="checkbox-container" [class.checked]="isAccepted()">
@@ -61,8 +61,8 @@ import { ProtocoloService } from '../../../investigador/application/services/pro
             [disabled]="!isAccepted() || isLoading()" 
             (click)="onConfirm()">
             <mat-progress-spinner *ngIf="isLoading()" diameter="20" mode="indeterminate" class="btn-spinner"></mat-progress-spinner>
-            <mat-icon *ngIf="!isLoading()">history_edu</mat-icon>
-            <span>{{ isLoading() ? 'Firmando y Enviando...' : 'Firmar Conformidad y Someter a Evaluación' }}</span>
+            <mat-icon *ngIf="!isLoading()">assignment_turned_in</mat-icon>
+            <span>{{ isLoading() ? 'Enviando aceptación...' : 'Aceptar Conformidad y Someter a Evaluación' }}</span>
           </button>
         </footer>
       </div>
@@ -188,7 +188,7 @@ import { ProtocoloService } from '../../../investigador/application/services/pro
   `]
 })
 export class TimelineAcceptanceModalComponent {
-  private protocolService = inject(ProtocoloService);
+  private protocolRepo = inject(IProtocolRepositoryPort);
 
   // Inputs & Outputs
   protocolId = input.required<number>();
@@ -206,7 +206,7 @@ export class TimelineAcceptanceModalComponent {
 
   onConfirm() {
     this.isLoading.set(true);
-    this.protocolService.acceptTimeline(this.protocolId()).subscribe({
+    this.protocolRepo.acceptTimeline(this.protocolId().toString()).subscribe({
       next: () => {
         this.isLoading.set(false);
         this.accepted.emit();

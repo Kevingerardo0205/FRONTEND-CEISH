@@ -313,13 +313,14 @@ export class NuevoProtocoloPage implements OnInit {
 
     this.documentUploadStatus[requirementCode] = 'subiendo';
     
-    this.protocoloService.subirDocumento(file, this.protocolId, requirement.id).subscribe({
+    this.protocoloService.subirDocumento(file, this.protocolId, requirement.id, requirementCode).subscribe({
       next: () => {
         this.documentUploadStatus[requirementCode] = 'exito';
         this.archivosCargados[requirementCode] = file.name;
         this.loadRequirements(); 
       },
-      error: () => {
+      error: (err) => {
+        console.error('[NuevoProtocoloPage] Error en subirDocumento:', err);
         this.documentUploadStatus[requirementCode] = 'error';
         this.snackBar.open('Error al subir documento técnico.', 'Cerrar');
       }

@@ -18,7 +18,10 @@ export enum EstadoProtocolo {
 export enum RequirementStatus {
   NO_PRESENTADO = 'NO_PRESENTADO',
   PRESENTADO = 'PRESENTADO',
-  OBSERVADO = 'OBSERVADO'
+  OBSERVADO = 'OBSERVADO',
+  APROBADO = 'APROBADO',
+  VALIDADO = 'VALIDADO',
+  NO_APLICA = 'NO_APLICA'
 }
 
 export interface ChecklistRequirement {
@@ -99,6 +102,7 @@ export interface ProtocoloResumen {
   isTimelineTermsAccepted?: boolean;
   timelineTermsAcceptedAt?: string | null;
   timelineTermsAcceptedIp?: string | null;
+  versionNumber?: number;
 }
 
 export interface ProtocoloDetalle extends CrearProtocoloDto {

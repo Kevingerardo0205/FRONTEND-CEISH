@@ -31,7 +31,7 @@ export const DASHBOARD_ROUTES: Routes = [
       {
         path: 'admin/ai-assistant',
         loadChildren: () => import('@features/ai-assistant-admin/routes').then(m => m.AI_ASSISTANT_ADMIN_ROUTES),
-        canActivate: [AuthGuard],
+         canActivate: [AuthGuard],
         data: { permissions: ['CONFIG_PLANTILLAS'] }
       },
       {
@@ -40,6 +40,10 @@ export const DASHBOARD_ROUTES: Routes = [
       },
       {
         path: 'evaluations',
+        loadChildren: () => import('@features/evaluations/routes').then(m => m.EVALUATION_ROUTES)
+      },
+      {
+        path: 'evaluacion-etica',
         loadChildren: () => import('@features/evaluations/routes').then(m => m.EVALUATION_ROUTES)
       },
       {

@@ -1,4 +1,5 @@
 import { Injectable, signal, inject, computed } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError, delay, tap, catchError } from 'rxjs';
 import { User, AuthResponse, LoginCredentials, Module, Permission } from '@domain/entities/user.entity';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
@@ -163,9 +164,17 @@ export class AuthFacade {
           this.currentUserSignal.set(user);
           localStorage.setItem('user', JSON.stringify(user));
         },
-        error: () => {
-          // Si el token es inválido o expiró, cerrar sesión
-          this.logout();
+        error: (err) => {
+          console.error('[AuthFacade] Error al validar sesión en inicio/refresco:', err);
+          // Solo cerrar sesión si el token es explícitamente inválido (401 o 403)
+          // Si es un error de red (status 0) o de servidor (5xx), conservamos los datos locales para evitar desconectar al usuario erróneamente.
+          const status = err?.status || (err instanceof HttpErrorResponse ? err.status : null);
+          if (status === 401 || status === 403) {
+            console.warn('[AuthFacade] Sesión inválida/expirada. Cerrando sesión.');
+            this.logout();
+          } else {
+            console.warn('[AuthFacade] Error no crítico de red/servidor. Conservando sesión local.');
+          }
         }
       });
     }

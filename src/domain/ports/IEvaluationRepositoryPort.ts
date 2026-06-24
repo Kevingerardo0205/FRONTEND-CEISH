@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { EvaluationEntity } from '../entities/evaluation.entity';
-import { PendingPeerAssignmentProtocol, PeerAssignmentEntity } from '../entities/peer-evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse } from '../entities/peer-evaluation.entity';
 
 export abstract class IEvaluationRepositoryPort {
   /**
@@ -9,29 +9,7 @@ export abstract class IEvaluationRepositoryPort {
    */
   abstract getEvaluatorsDashboard(profileId?: string): Observable<any>;
 
-  /**
-   * Presidenta: Sugiere evaluadores para un protocolo.
-   * POST /evaluations/suggest
-   */
-  abstract suggestEvaluators(payload: { protocolId: string; evaluatorIds: string[] }): Observable<void>;
 
-  /**
-   * Secretaria: Obtiene las sugerencias de evaluadores pendientes de confirmación.
-   * GET /evaluations/pending-suggestions
-   */
-  abstract getPendingSuggestions(): Observable<any[]>;
-
-  /**
-   * Secretaria: Confirma la asignación de un evaluador y fija fecha límite.
-   * PATCH /evaluations/confirm-assignment
-   */
-  abstract confirmAssignment(payload: { evaluationId: string; deadline: string }): Observable<void>;
-
-  /**
-   * Secretaria: Rechaza una sugerencia previa de la presidencia.
-   * DELETE /evaluations/reject-suggestion/{id}
-   */
-  abstract rejectSuggestion(id: string): Observable<void>;
 
   /**
    * Evaluador: Obtiene las tareas asignadas al evaluador actual.
@@ -40,11 +18,11 @@ export abstract class IEvaluationRepositoryPort {
   abstract getMyAssignments(): Observable<any[]>;
 
   /**
-   * Evaluador: Envía el resultado de la evaluación (JSON Anexo 10 + PDF).
+   * Evaluador: Envía el resultado de la evaluación.
    * POST /evaluations/submit
-   * @param data FormData conteniendo 'evaluationData' (JSON con assignmentId, annex10, result) y 'report' (archivo PDF)
+   * @param payload JSON con assignmentId, annex10, result, reportPath, etc.
    */
-  abstract submitEvaluation(data: FormData): Observable<void>;
+  abstract submitEvaluation(payload: any): Observable<any>;
 
   /**
    * Obtener todos los perfiles de evaluadores.
@@ -76,6 +54,24 @@ export abstract class IEvaluationRepositoryPort {
    */
   abstract consolidateEvaluation(protocolId: string): Observable<any>;
 
+  /**
+   * Obtiene el detalle de checklist guardado de una evaluación (Fase 1).
+   * GET /api/evaluations/:evaluationId/checklist-details
+   */
+  abstract getChecklistDetails(evaluationId: string): Observable<any>;
+
+  /**
+   * Obtiene la URL firmada del PDF oficial generado en R2 (Fase 2).
+   * GET /api/evaluations/:evaluationId/document
+   */
+  abstract getDocumentDownloadUrl(evaluationId: string): Observable<any>;
+
+  /**
+   * Obtiene la URL firmada del DOCX oficial generado en R2 (Fase 2).
+   * GET /api/evaluations/:evaluationId/document/docx
+   */
+  abstract getDocxDownloadUrl(evaluationId: string): Observable<any>;
+
   // Métodos de consulta existentes
   abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;
   abstract getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]>;
@@ -92,7 +88,7 @@ export abstract class IEvaluationRepositoryPort {
    * Secretaria: Asignar exactamente 2 pares evaluadores distintos a un protocolo.
    * POST /api/evaluations/protocols/:id/assign-peer-evaluators
    */
-  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<void>;
+  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse>;
 
   /**
    * Evaluador: Listar mis evaluaciones de riesgo pendientes.
@@ -100,15 +96,19 @@ export abstract class IEvaluationRepositoryPort {
    */
   abstract getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]>;
 
-  /**
-   * Evaluador: Enviar propuesta de nivel de riesgo para un protocolo.
-   * POST /api/evaluations/peer-assignments/:id/submit-risk
-   */
-  abstract submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string }): Observable<void>;
+  abstract submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string; reportPath: string }): Observable<void>;
 
   /**
    * General: Obtener lista ligera de evaluadores activos del sistema (Evita Error 403)
    * GET /api/evaluations/evaluators/active
    */
   abstract getActiveEvaluators(): Observable<any[]>;
+
+  /**
+   * Obtiene observaciones detalladas y consolidadas de cada evaluador para un protocolo.
+   * GET /api/evaluations/protocol/:protocolId/observations
+   */
+  abstract getProtocolObservations(protocolId: string): Observable<any>;
 }
+
+

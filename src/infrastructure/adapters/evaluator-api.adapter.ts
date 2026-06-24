@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of } from 'rxjs';
 import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
 import { EvaluatorEntity } from '@domain/entities/evaluator.entity';
 import { ApiClientService } from '../api/api-client.service';
@@ -27,17 +27,14 @@ export class EvaluatorApiAdapter extends IEvaluatorRepositoryPort {
   }
 
   suggestEvaluators(protocolId: string, evaluatorIds: string[]): Observable<void> {
-    return this.apiClient.post(ENDPOINTS.EVALUATIONS.SUGGEST, { protocolId, evaluatorIds });
+    return of(undefined);
   }
 
   confirmAssignment(protocolId: string, evaluatorIds: string[], deadlineDays: number): Observable<void> {
-    // Nota: El endpoint real podría variar un poco en su estructura de confirmación
-    return this.apiClient.patch(ENDPOINTS.EVALUATIONS.CONFIRM, { protocolId, evaluatorIds, deadlineDays });
+    return of(undefined);
   }
 
   getProtocolsForAssignment(): Observable<any[]> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PENDING_SUGGESTIONS).pipe(
-      map(res => res.data || res)
-    );
+    return of([]);
   }
 }

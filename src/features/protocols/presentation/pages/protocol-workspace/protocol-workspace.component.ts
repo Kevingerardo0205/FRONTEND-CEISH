@@ -12,8 +12,11 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { AssignPeersModalComponent } from '../../../../dashboard/presentation/components/assign-peers-modal/assign-peers-modal.component';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Component({
   selector: 'app-protocol-workspace',
@@ -31,7 +34,8 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
     MatTooltipModule,
     ProtocolCodePipe,
     MatSnackBarModule,
-    TimelineAcceptanceModalComponent
+    TimelineAcceptanceModalComponent,
+    MatDialogModule
   ],
   template: `
     <div class="workspace-shell" *ngIf="protocol(); else loading">
@@ -50,7 +54,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
             <div class="meta-row">
               <span class="protocol-id">{{ protocol()?.code | protocolCode }}</span>
               <span class="status-indicator" [attr.data-status]="protocol()!.status">
-                {{ protocol()!.status }}
+                {{ getFriendlyStatusLabel(protocol()!.status) }}
               </span>
             </div>
             <h1 class="protocol-title" [matTooltip]="protocol()?.title">
@@ -166,6 +170,7 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         &[data-status="DRAFT"] { background: #f1f5f9; color: #475569; }
         &[data-status="SUBMITTED"] { background: #ecfdf5; color: #065f46; }
         &[data-status="EN_EVALUACION"] { background: #eff6ff; color: #1e40af; }
+        &[data-status="DISCREPANCIA_RIESGO"], &[data-status="DISCREPANCIA_DE_RIESGO"] { background: #fff7ed; color: #c2410c; }
       }
       .protocol-title { 
         margin: 0 0 0.75rem; font-size: 1.5rem; color: var(--primary); font-weight: 700; 
@@ -252,6 +257,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private workspaceService = inject(ProtocolWorkspaceService);
   private authFacade = inject(AuthFacade);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   protocol = this.workspaceService.protocol;
 
@@ -273,7 +279,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     this.workspaceService.updateProtocol({
       isTimelineTermsAccepted: true
     });
-    this.snackBar.open('📋 Conformidad firmada con éxito. Su protocolo ha sido sometido formalmente a evaluación.', 'Entendido', {
+    this.snackBar.open('📋 Conformidad aceptada con éxito. Su protocolo ha sido sometido formalmente a evaluación.', 'Entendido', {
       duration: 5000,
       horizontalPosition: 'end',
       verticalPosition: 'top'
@@ -287,14 +293,17 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const actions = [];
     const role = this.authFacade.currentUser()?.rol?.toUpperCase();
     const status = p.status as string;
-    if (role === 'INVESTIGADOR' && (status === 'DRAFT' || status === 'BORRADOR' || status === 'REQUIERE_CORRECCION' || status === 'OBSERVED' || status === 'PENDIENTE_SUBSANACION')) {
+    const core = resolveEstado(status);
+    const code = core?.code || status;
+
+    if (role === 'INVESTIGADOR' && (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')) {
       actions.push({ id: 'EDIT_PROTOCOL', label: 'Completar / Editar', icon: 'edit' });
     }
 
-    if (p.status === ProtocolStatus.SUBMITTED || p.status === ProtocolStatus.PENDIENTE) {
+    if (code === 'EN_REVISION_SECRETARIA') {
       actions.push({ id: 'VALIDATE_ALL', label: 'Aprobar Todo', icon: 'done_all' });
     }
-    if (p.status === ProtocolStatus.VALIDATED || p.status === ProtocolStatus.EN_REVISION_DOCUMENTAL) {
+    if (code === 'COMPLETO' || code === 'INCOMPLETO') {
       actions.push({ id: 'ASSIGN_EVALUATORS', label: 'Asignar Pares', icon: 'person_add' });
     }
     return actions;
@@ -316,7 +325,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     }
 
     // Pestaña de Evaluación Ética: Para admins, secretaría, presidencia y evaluadores asignados
-    if ([ProtocolStatus.EN_EVALUACION, ProtocolStatus.APPROVED].includes(p.status)) {
+    if ([ProtocolStatus.EN_EVALUACION, ProtocolStatus.APPROVED, ProtocolStatus.DISCREPANCIA_RIESGO, ProtocolStatus.DISCREPANCIA_DE_RIESGO].includes(p.status)) {
       const canEvaluate = ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'EVALUADOR'].includes(role || '');
       if (canEvaluate) {
         tabs.push({ label: 'Evaluación Ética', icon: 'gavel', path: 'evaluation' });
@@ -342,6 +351,47 @@ export class ProtocolWorkspaceComponent implements OnInit {
   onExecuteAction(actionId: string) {
     if (actionId === 'EDIT_PROTOCOL') {
       this.router.navigate(['/investigador/protocolo', this.protocol()?.id, 'editar']);
+    } else if (actionId === 'VALIDATE_ALL') {
+      this.router.navigate(['/dashboard/protocols/workspace', this.protocol()?.id, 'validation']);
+    } else if (actionId === 'ASSIGN_EVALUATORS') {
+      const p = this.protocol();
+      if (!p) return;
+      
+      const mappedProtocol: any = {
+        id: Number(p.id),
+        ceishCode: p.code || '',
+        title: p.title,
+        receptionStatus: p.status,
+        isRiskLevelDesignated: false,
+        createdAt: p.submissionDate ? new Date(p.submissionDate).toISOString() : new Date().toISOString(),
+        studyType: p.studyType ? {
+          id: p.studyType.id || 0,
+          codigo: p.studyType.codigo || p.studyType.code || '',
+          nombre: p.studyType.nombre || p.studyType.name || 'General'
+        } : {
+          id: 0,
+          codigo: p.studyTypeCode || '',
+          nombre: p.type || 'General'
+        },
+        principalInvestigatorRecord: {
+          id: 0,
+          fullName: p.principalInvestigator || 'Investigador Principal',
+          email: ''
+        }
+      };
+
+      const dialogRef = this.dialog.open(AssignPeersModalComponent, {
+        width: '600px',
+        data: { protocol: mappedProtocol },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((assigned: boolean) => {
+        if (assigned) {
+          this.snackBar.open('✅ Evaluadores asignados correctamente.', 'Cerrar', { duration: 4000 });
+          this.workspaceService.loadProtocol(p.id).subscribe();
+        }
+      });
     } else {
       console.log('[ProtocolWorkspace] Executing action:', actionId);
     }
@@ -353,7 +403,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     switch (step) {
       case 'RECEPCION': return p.status === ProtocolStatus.SUBMITTED;
       case 'VALIDACION': return p.status === ProtocolStatus.VALIDATED;
-      case 'EVALUACION': return p.status === ProtocolStatus.EN_EVALUACION;
+      case 'EVALUACION': return p.status === ProtocolStatus.EN_EVALUACION || p.status === ProtocolStatus.DISCREPANCIA_RIESGO || p.status === ProtocolStatus.DISCREPANCIA_DE_RIESGO;
       case 'RESOLUCION': return p.status === ProtocolStatus.APPROVED;
       default: return false;
     }
@@ -363,7 +413,10 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const p = this.protocol();
     if (!p) return false;
     const statusOrder = [ProtocolStatus.DRAFT, ProtocolStatus.SUBMITTED, ProtocolStatus.VALIDATED, ProtocolStatus.EN_EVALUACION, ProtocolStatus.APPROVED];
-    const currentIdx = statusOrder.indexOf(p.status);
+    let currentIdx = statusOrder.indexOf(p.status);
+    if (p.status === ProtocolStatus.DISCREPANCIA_RIESGO || p.status === ProtocolStatus.DISCREPANCIA_DE_RIESGO) {
+      currentIdx = statusOrder.indexOf(ProtocolStatus.EN_EVALUACION);
+    }
     
     switch (step) {
       case 'RECEPCION': return currentIdx > 1;
@@ -372,5 +425,29 @@ export class ProtocolWorkspaceComponent implements OnInit {
       case 'RESOLUCION': return currentIdx >= 4;
       default: return false;
     }
+  }
+
+  getFriendlyStatusLabel(status: string): string {
+    if (!status) return '';
+    const labels: { [key: string]: string } = {
+      'DRAFT': 'Borrador',
+      'BORRADOR': 'Borrador',
+      'SUBMITTED': 'Recibido',
+      'PRESENTADO': 'Recibido',
+      'EN_REVISION_SECRETARIA': 'Revisión Técnica',
+      'EN_REVISION_DOCUMENTAL': 'Revisión Técnica',
+      'VALIDATED': 'Validado',
+      'VALIDADO': 'Validado',
+      'COMPLETO': 'Validado',
+      'EN_EVALUACION': 'En Evaluación',
+      'DISCREPANCIA_RIESGO': 'Discrepancia de Riesgo',
+      'DISCREPANCIA_DE_RIESGO': 'Discrepancia de Riesgo',
+      'APPROVED': 'Aprobado',
+      'APROBADO': 'Aprobado',
+      'REJECTED': 'Rechazado',
+      'OBSERVED': 'Observado',
+      'OBSERVADO': 'Observado',
+    };
+    return labels[status.toUpperCase()] || status.replace(/_/g, ' ');
   }
 }

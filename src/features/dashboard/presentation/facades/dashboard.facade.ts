@@ -5,6 +5,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.port';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
+import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardFacade {
@@ -29,13 +30,19 @@ export class DashboardFacade {
   public myObservedCount = computed(() => {
     const protocols = this.myProtocols();
     return Array.isArray(protocols) 
-      ? protocols.filter(p => p.estado === 'REQUIERE_CORRECCION').length 
+      ? protocols.filter(p => {
+          const core = resolveEstado(p.estado);
+          return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC'].includes(core.code);
+        }).length 
       : 0;
   });
   public myApprovedCount = computed(() => {
     const protocols = this.myProtocols();
     return Array.isArray(protocols) 
-      ? protocols.filter(p => ['APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO'].includes(p.estado)).length 
+      ? protocols.filter(p => {
+          const core = resolveEstado(p.estado);
+          return core && ['COMPLETO', 'APROBADO'].includes(core.code);
+        }).length 
       : 0;
   });
 
