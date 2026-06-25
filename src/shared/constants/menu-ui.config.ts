@@ -21,7 +21,6 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
   'USUARIOS_VER': { label: 'Gestión de Usuarios', icon: 'people', path: '/dashboard/admin/users' },
   'USUARIOS_CREAR': { label: 'Nuevo Profesional', icon: 'person_add', path: '/dashboard/admin/users' },
   'PERMISOS_GESTIONAR': { label: 'Roles y Permisos', icon: 'admin_panel_settings', path: '/dashboard/admin/security' },
-  'CONFIG_PLANTILLAS': { label: 'Configuración Plantillas', path: '/dashboard/admin/templates', icon: 'settings_system_daydream' },
   
   // Recepción de Protocolos (Secretaría / Admin)
   'RECEPCION_NUEVO': { label: 'Recepción Nueva', path: '/dashboard/protocols/reception/new', icon: 'add_task' },
