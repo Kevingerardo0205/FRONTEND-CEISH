@@ -27,7 +27,7 @@
           </mat-expansion-panel-header>
 
           <mat-nav-list class="sub-menu-list">
-            @for (sub of group.subItems; track sub.code) {
+            @for (sub of group.subItems; track sub.path) {
               <a mat-list-item 
                  [routerLink]="sub.path" 
                  routerLinkActive="active-link" 

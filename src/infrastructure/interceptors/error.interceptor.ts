@@ -28,6 +28,10 @@ export class ErrorInterceptor implements HttpInterceptor {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error instanceof HttpErrorResponse && error.status === 401) {
+          // Evitar intentar refrescar token si la petición fallida ya es de login o de refresco
+          if (url.includes('/auth/login') || url.includes('/auth/refresh')) {
+            return throwError(() => error);
+          }
           return this.handle401Error(request, next);
         }
         

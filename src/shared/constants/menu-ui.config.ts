@@ -15,12 +15,16 @@ export const MODULE_UI_MAP: Record<string, MenuUIItem> = {
   'MOD_CONFIG': { label: 'Configuración', icon: 'settings' }
 };
 
-export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
+export const PERMISSION_UI_MAP: Record<string, MenuUIItem | MenuUIItem[]> = {
   'DASHBOARD_VER_PRINCIPAL': { label: 'Inicio', icon: 'home', path: '/dashboard/home' },
   'DASHBOARD_RESUMEN': { label: 'Resumen', icon: 'analytics', path: '/dashboard/home' },
   'USUARIOS_VER': { label: 'Gestión de Usuarios', icon: 'people', path: '/dashboard/admin/users' },
   'USUARIOS_CREAR': { label: 'Nuevo Profesional', icon: 'person_add', path: '/dashboard/admin/users' },
   'PERMISOS_GESTIONAR': { label: 'Roles y Permisos', icon: 'admin_panel_settings', path: '/dashboard/admin/security' },
+  'CONFIG_PLANTILLAS': [
+    { label: 'Configuración Plantillas', path: '/dashboard/admin/templates', icon: 'settings_system_daydream' },
+    { label: 'Asistente de IA (PET)', path: '/dashboard/admin/ai-assistant', icon: 'smart_toy' }
+  ],
   
   // Recepción de Protocolos (Secretaría / Admin)
   'RECEPCION_NUEVO': { label: 'Recepción Nueva', path: '/dashboard/protocols/reception/new', icon: 'add_task' },
@@ -66,8 +70,7 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem> = {
   // Auditoría y Otros
   'ADMIN_ALL': { label: 'Bitácora de Auditoría', path: '/dashboard/audit', icon: 'security' },
   'REPORTES_VER': { label: 'Reportes y Estadísticas', path: '/dashboard/reports', icon: 'analytics' },
-  'NOTIFICACIONES_VER': { label: 'Notificaciones', path: '/dashboard/notifications', icon: 'notifications' },
-  'CONFIG_PLANTILLAS': { label: 'Asistente de IA (PET)', path: '/dashboard/admin/ai-assistant', icon: 'smart_toy' }
+  'NOTIFICACIONES_VER': { label: 'Notificaciones', path: '/dashboard/notifications', icon: 'notifications' }
 };
 
 /**

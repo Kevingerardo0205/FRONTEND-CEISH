@@ -4,7 +4,7 @@ import { Observable, of, throwError, delay, tap, catchError } from 'rxjs';
 import { User, AuthResponse, LoginCredentials, Module, Permission } from '@domain/entities/user.entity';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
-import { MODULE_UI_MAP, PERMISSION_UI_MAP, toSentenceCase } from '@shared/constants/menu-ui.config';
+import { MODULE_UI_MAP, PERMISSION_UI_MAP, toSentenceCase, MenuUIItem } from '@shared/constants/menu-ui.config';
 
 @Injectable({
   providedIn: 'root'
@@ -39,14 +39,7 @@ export class AuthFacade {
         subItems: any[] 
       }>();
 
-      perms.forEach(p => {
-        const mod = p.module;
-        const permUI = PERMISSION_UI_MAP[p.code];
-        
-        // Si no hay configuración de UI para este permiso, y no tiene módulo, lo ignoramos para el menú
-        if (!permUI && !mod) return;
-
-        // Si el permiso tiene UI pero no tiene módulo (ej. vino como string), lo asignamos al Dashboard por defecto
+      const addMenuItem = (item: MenuUIItem, code: string, mod: any) => {
         const modCode = mod?.code || 'MOD_DASHBOARD';
         const modUI = MODULE_UI_MAP[modCode];
 
@@ -60,17 +53,35 @@ export class AuthFacade {
           });
         }
 
-        const path = permUI?.path || '/dashboard/home';
+        const path = item.path || '/dashboard/home';
         const subItems = modulesMap.get(modCode)!.subItems;
 
-        // De-duplicación por path único
-        if (!subItems.some(item => item.path === path)) {
+        if (!subItems.some(sub => sub.path === path)) {
           subItems.push({
-            code: p.code,
-            label: permUI?.label || toSentenceCase(p.code),
-            icon: permUI?.icon || 'chevron_right',
+            code: code,
+            label: item.label,
+            icon: item.icon || 'chevron_right',
             path: path
           });
+        }
+      };
+
+      perms.forEach(p => {
+        const mod = p.module;
+        const permUI = PERMISSION_UI_MAP[p.code];
+        
+        if (!permUI && !mod) return;
+
+        if (permUI) {
+          const items = Array.isArray(permUI) ? permUI : [permUI];
+          items.forEach(item => addMenuItem(item, p.code, mod));
+        } else {
+          const defaultItem: MenuUIItem = {
+            label: toSentenceCase(p.code),
+            icon: 'chevron_right',
+            path: '/dashboard/home'
+          };
+          addMenuItem(defaultItem, p.code, mod);
         }
       });
 

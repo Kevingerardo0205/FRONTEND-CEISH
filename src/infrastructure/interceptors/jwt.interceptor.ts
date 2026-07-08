@@ -14,8 +14,9 @@ export class JwtInterceptor implements HttpInterceptor {
     // Incluir token solo si es ruta relativa (/) o coincide con la API base (environment.apiUrl)
     const url = request.url || '';
     const isLocalApi = url.startsWith('/') || url.startsWith(environment.apiUrl);
+    const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/refresh');
     
-    if (token && isLocalApi) {
+    if (token && isLocalApi && !isAuthRoute) {
       request = request.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`
