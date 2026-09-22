@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, tap, throwError } from 'rxjs';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { IEvaluationRepositoryPort, SubmitEvaluationPayload } from '@domain/ports/IEvaluationRepositoryPort';
 import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 
 @Injectable({
@@ -10,7 +10,7 @@ export class SubmitEvaluationUseCase {
   private repo = inject(IEvaluationRepositoryPort);
   private notificationBroker = inject(NotificationBrokerService);
 
-  execute(payload: any): Observable<any> {
+  execute(payload: SubmitEvaluationPayload): Observable<{ message?: string; assignmentId?: number }> {
     // Regla: El informe PDF firmado es obligatorio para completar (finalizar) la evaluación (cuando isDraft es false o no enviado)
     if (!payload.isDraft) {
       if (!payload.reportPath || typeof payload.reportPath !== 'string' || payload.reportPath.trim() === '') {

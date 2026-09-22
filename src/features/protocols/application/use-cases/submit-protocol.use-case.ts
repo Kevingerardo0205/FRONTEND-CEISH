@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { switchMap, map } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';

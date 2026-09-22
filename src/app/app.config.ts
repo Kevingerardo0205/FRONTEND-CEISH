@@ -31,6 +31,14 @@ import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepository
 import { AiAssistantApiAdapter } from '@infrastructure/adapters/ai-assistant-api.adapter';
 import { IAiAssistantAdminRepositoryPort } from '@domain/ports/IAiAssistantAdminRepositoryPort';
 import { AiAssistantAdminApiAdapter } from '@infrastructure/adapters/ai-assistant-admin-api.adapter';
+import { IAmendmentRepositoryPort } from '../features/amendments/domain/ports/amendment-repository.port';
+import { AmendmentApiAdapter } from '../features/amendments/infrastructure/amendment-api.adapter';
+import { IAuditRepositoryPort } from '../features/audit/domain/ports/audit-repository.port';
+import { AuditRepositoryAdapter } from '../features/audit/infrastructure/adapters/audit-repository.adapter';
+import { IReportRepositoryPort } from '../features/reports/domain/ports/report-repository.port';
+import { ReportRepositoryAdapter } from '../features/reports/infrastructure/adapters/report-repository.adapter';
+import { ICallRepositoryPort } from '@domain/ports/ICallRepositoryPort';
+import { CallApiAdapter } from '@infrastructure/adapters/call-api.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -49,6 +57,10 @@ export const appConfig: ApplicationConfig = {
     { provide: IResolutionRepositoryPort, useClass: ResolutionApiAdapter },
     { provide: ISecurityRepositoryPort, useClass: SecurityApiAdapter },
     { provide: IAiAssistantRepositoryPort, useClass: AiAssistantApiAdapter },
-    { provide: IAiAssistantAdminRepositoryPort, useClass: AiAssistantAdminApiAdapter }
+    { provide: IAiAssistantAdminRepositoryPort, useClass: AiAssistantAdminApiAdapter },
+    { provide: IAmendmentRepositoryPort, useClass: AmendmentApiAdapter },
+    { provide: IAuditRepositoryPort, useClass: AuditRepositoryAdapter },
+    { provide: IReportRepositoryPort, useClass: ReportRepositoryAdapter },
+    { provide: ICallRepositoryPort, useClass: CallApiAdapter }
   ]
 };

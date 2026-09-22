@@ -17,7 +17,7 @@ import { ApiClientService } from '@infrastructure/api/api-client.service';
 export class ReportRepositoryAdapter implements IReportRepositoryPort {
   private readonly apiClient = inject(ApiClientService);
 
-  getSummaryStats(startDate?: Date, endDate?: Date): Observable<SummaryStats> {
+  getSummaryStats(_startDate?: Date, _endDate?: Date): Observable<SummaryStats> {
     // Mock data for now, would use this.apiClient.get with params
     return of({
       totalProtocols: 145,
@@ -28,7 +28,7 @@ export class ReportRepositoryAdapter implements IReportRepositoryPort {
     });
   }
 
-  getProtocolsByType(startDate?: Date, endDate?: Date): Observable<ProtocolStats[]> {
+  getProtocolsByType(_startDate?: Date, _endDate?: Date): Observable<ProtocolStats[]> {
     return of([
       { type: 'Observacional (IO)', count: 65 },
       { type: 'Intervención (EI)', count: 45 },
@@ -36,7 +36,7 @@ export class ReportRepositoryAdapter implements IReportRepositoryPort {
     ]);
   }
 
-  getProtocolsByStatus(startDate?: Date, endDate?: Date): Observable<StatusStats[]> {
+  getProtocolsByStatus(_startDate?: Date, _endDate?: Date): Observable<StatusStats[]> {
     return of([
       { status: 'Aprobado', count: 90 },
       { status: 'Pendiente', count: 30 },
@@ -45,7 +45,7 @@ export class ReportRepositoryAdapter implements IReportRepositoryPort {
     ]);
   }
 
-  getEvaluationTimes(startDate?: Date, endDate?: Date): Observable<EvaluationTimeStats[]> {
+  getEvaluationTimes(_startDate?: Date, _endDate?: Date): Observable<EvaluationTimeStats[]> {
     return of([
       { month: 'Ene', avgDays: 15 },
       { month: 'Feb', avgDays: 18 },
@@ -56,7 +56,7 @@ export class ReportRepositoryAdapter implements IReportRepositoryPort {
     ]);
   }
 
-  getWorkloadByEvaluator(startDate?: Date, endDate?: Date): Observable<WorkloadStats[]> {
+  getWorkloadByEvaluator(_startDate?: Date, _endDate?: Date): Observable<WorkloadStats[]> {
     return of([
       { evaluator: 'Dr. Pérez', assignedCount: 12, completedCount: 10 },
       { evaluator: 'Dra. Gómez', assignedCount: 15, completedCount: 14 },
@@ -65,7 +65,7 @@ export class ReportRepositoryAdapter implements IReportRepositoryPort {
     ]);
   }
 
-  getMSPReport(period: 'monthly' | 'annual', year: number, month?: number): Observable<MSPReportData> {
+  getMSPReport(_period: 'monthly' | 'annual', _year: number, _month?: number): Observable<MSPReportData> {
     return of({
       sessions: { ordinary: 4, extraordinary: 1 },
       attendance: [

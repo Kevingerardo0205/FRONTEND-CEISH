@@ -9,22 +9,20 @@ export class RoleGuard implements CanActivate {
   constructor(private AuthFacade: AuthFacade, private router: Router) {}
 
   canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
-    const requiredRoles = route.data['roles'] as Array<string>;
+    const rawRoles = route.data['roles'];
+    if (!rawRoles) return true;
+
+    const requiredRoles = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
     const user = this.AuthFacade.currentUser();
 
     if (!user) return this.router.createUrlTree(['/auth/login']);
 
-    // Log para depuración
-    console.log('RoleGuard Check:', { userRole: user.rol, requiredRoles });
-
-    // Normalizar el rol del usuario (por si viene de un array o es minúscula)
-    const userRole = user.rol.toUpperCase();
-
-    if (requiredRoles.includes(userRole)) {
+    if (this.AuthFacade.hasAnyRole(requiredRoles)) {
       return true;
     }
 
-    console.warn(`Acceso denegado: Usuario con rol ${userRole} intentó acceder a ruta para ${requiredRoles}`);
+    const activeRoles = this.AuthFacade.getActiveRoles();
+    console.warn(`[RoleGuard] Acceso denegado: Usuario ${user.email} con roles [${activeRoles.join(', ')}] intentó acceder a ruta para [${requiredRoles.join(', ')}]`);
     return this.router.createUrlTree(['/dashboard']);
   }
 }

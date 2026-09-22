@@ -8,7 +8,7 @@ import { WorkflowTableComponent } from '../../components/workflow-table/workflow
 import { PeerRiskPendingTableComponent } from '../../components/peer-risk-pending-table/peer-risk-pending-table.component';
 import { DeadlinesRadarComponent } from './components/deadlines-radar/deadlines-radar.component';
 import { AuditFeedComponent } from './components/audit-feed/audit-feed.component';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { LoadPendingPeerAssignmentProtocolsUseCase } from '@features/evaluations/application/load-pending-peer-assignment-protocols.use-case';
 import { PendingPeerAssignmentProtocol } from '@domain/entities/peer-evaluation.entity';
 import { ActivatedRoute } from '@angular/router';
 
@@ -100,7 +100,7 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class DashboardSecretariaPage implements OnInit {
   private stateService = inject(SecretariatDashboardService);
-  private evaluationRepo = inject(IEvaluationRepositoryPort);
+  private loadPendingPeerProtocolsUC = inject(LoadPendingPeerAssignmentProtocolsUseCase);
   private route = inject(ActivatedRoute);
 
   isLoading = this.stateService.isLoading;
@@ -169,10 +169,9 @@ export class DashboardSecretariaPage implements OnInit {
 
   refreshData() {
     this.stateService.loadDashboardData().subscribe();
-    this.evaluationRepo.getPendingPeerAssignmentProtocols().subscribe({
+    this.loadPendingPeerProtocolsUC.execute().subscribe({
       next: (list) => {
         this.peerPendingProtocolsSignal.set(Array.isArray(list) ? list : []);
-        console.log(`[Secretaría] Cargados ${this.peerPendingProtocols().length} protocolos pendientes de asignación de pares desde el endpoint de evaluación.`);
       },
       error: (err) => {
         console.error('[Secretaría] Error al obtener protocolos listos para evaluadores desde el endpoint del backend:', err);

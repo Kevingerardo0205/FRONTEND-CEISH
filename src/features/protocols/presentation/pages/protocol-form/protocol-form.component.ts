@@ -206,7 +206,7 @@ export class ProtocolFormComponent {
     this.uploadedFiles.set(files);
   }
 
-  isDocLoaded(type: string): boolean {
+  isDocLoaded(_type: string): boolean {
     // En una implementación real, el uploader debería asignar el tipo a cada archivo
     return this.uploadedFiles().length > 0; // Simplificación para el demo
   }
@@ -217,7 +217,7 @@ export class ProtocolFormComponent {
 
   onSubmit() {
     this.submitUseCase.execute(this.infoForm.value, this.uploadedFiles()).subscribe({
-      next: (res) => console.log('Protocolo enviado:', res),
+      next: () => {},
       error: (err) => alert(err.message)
     });
   }

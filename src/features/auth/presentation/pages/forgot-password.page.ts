@@ -245,7 +245,7 @@ export class ForgotPasswordPage {
           });
           this.router.navigate(['/auth/reset-password'], { queryParams: { email } });
         },
-        error: (err) => {
+        error: (_err) => {
           this.isLoading.set(false);
           this.snackBar.open('❌ Error al procesar su solicitud. Verifique el correo ingresado.', 'Cerrar', {
             duration: 5000,

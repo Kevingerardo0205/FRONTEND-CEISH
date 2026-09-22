@@ -6,10 +6,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterModule } from '@angular/router';
 import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { LoadValidationQueuesUseCase } from '../../../application/use-cases/load-validation-queues.use-case';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
-import { resolveEstado } from '@shared/utils/estado.resolver';
+import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
+import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 
 @Component({
   selector: 'app-protocol-validation-list',
@@ -21,7 +22,9 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
     MatTooltipModule,
     MatTabsModule,
     RouterModule, 
-    StatCardComponent
+    StatCardComponent,
+    ProtocolStatusLabelPipe,
+    ProtocolStatusClassPipe
   ],
   template: `
     <div class="premium-viewport animate-fade-in">
@@ -105,8 +108,8 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
               <span class="type-tag" [ngClass]="p.studyTypeCode?.toLowerCase() || p.type?.toLowerCase()">
                 {{ p.studyTypeCode || p.type }}
               </span>
-              <span class="status-tag" [ngClass]="p.status?.toLowerCase()">
-                {{ p.status }}
+              <span class="status-tag" [ngClass]="p.status | protocolStatusClass">
+                {{ p.status | protocolStatusLabel }}
               </span>
             </div>
           </div>
@@ -169,7 +172,7 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
   `]
 })
 export class ProtocolValidationListPage implements OnInit {
-  private protocolRepo = inject(IProtocolRepositoryPort);
+  private loadValidationQueues = inject(LoadValidationQueuesUseCase);
   private notificationBroker = inject(NotificationBrokerService);
 
   pendingProtocols = signal<ProtocolEntity[]>([]);
@@ -184,17 +187,10 @@ export class ProtocolValidationListPage implements OnInit {
   }
 
   loadProtocols() {
-    this.protocolRepo.getReceptionProtocols().subscribe({
-      next: (res) => {
-        const protocols = Array.isArray(res) ? res : [];
-        this.pendingProtocols.set(protocols.filter(p => {
-          const core = resolveEstado(p.status);
-          return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
-        }));
-        this.observedProtocols.set(protocols.filter(p => {
-          const core = resolveEstado(p.status);
-          return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION'].includes(core.code);
-        }));
+    this.loadValidationQueues.execute().subscribe({
+      next: (queues) => {
+        this.pendingProtocols.set(queues.pending);
+        this.observedProtocols.set(queues.observed);
       }
     });
   }

@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal, computed, effect } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -13,8 +14,28 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { DashboardFacade } from '../../facades/dashboard.facade';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { LoadEvaluatorWorkloadUseCase } from '@features/evaluations/application/load-evaluator-workload.use-case';
+import { ProfileCvService } from '@features/dashboard/application/services/profile-cv.service';
+import { Permission } from '@domain/entities/user.entity';
 import { finalize } from 'rxjs/operators';
+
+interface AuditLogEntry {
+  action: string;
+  detail: string;
+  date: Date;
+  success: boolean;
+  icon: string;
+  ip: string;
+}
+
+interface ProtocolLogEntry {
+  titulo?: string;
+  title?: string;
+  codigoCeish?: string;
+  fechaCreacion?: Date | string;
+  estado?: string;
+  isTimelineTermsAccepted?: boolean;
+}
 
 @Component({
   selector: 'app-profile-page',
@@ -1039,14 +1060,16 @@ export class ProfilePage implements OnInit {
   private authFacade = inject(AuthFacade);
   private dashboardFacade = inject(DashboardFacade);
   private authRepository = inject(IAuthRepositoryPort);
-  private evalRepo = inject(IEvaluationRepositoryPort);
+  private loadWorkloadUC = inject(LoadEvaluatorWorkloadUseCase);
+  private cvService = inject(ProfileCvService);
+  private destroyRef = inject(DestroyRef);
   private snackBar = inject(MatSnackBar);
 
   user = this.authFacade.currentUser;
 
   isEvaluator = computed(() => {
     const role = this.user()?.rol?.toUpperCase() || '';
-    return role.includes('EVALUADOR') || this.user()?.fullPermissions?.some((p: any) => p.code?.startsWith('EVALUATION'));
+    return role.includes('EVALUADOR') || this.user()?.fullPermissions?.some((p: Permission) => p.code?.startsWith('EVALUATION'));
   });
 
   activeAssignmentsCount = signal<number>(0);
@@ -1075,6 +1098,7 @@ export class ProfilePage implements OnInit {
   cvName = signal<string | null>(null);
   cvSize = signal<string | null>(null);
   cvDate = signal<string | null>(null);
+  cvStorageKey = signal<string | null>(null);
   isUploadingCv = signal<boolean>(false);
 
   profileForm: FormGroup = this.fb.group({
@@ -1101,7 +1125,7 @@ export class ProfilePage implements OnInit {
   // Dynamically map real protocols and CV updates to audit logs
   auditLogs = computed(() => {
     const protocols = this.dashboardFacade.myProtocols() || [];
-    const logs: any[] = [];
+    const logs: AuditLogEntry[] = [];
     
     // Check if there is a CV subido
     const cvUploadedDate = this.cvDate();
@@ -1116,7 +1140,7 @@ export class ProfilePage implements OnInit {
       });
     }
 
-    protocols.forEach((p: any) => {
+    protocols.forEach((p: ProtocolLogEntry) => {
       // 1. Creación
       logs.push({
         action: 'Registro de Protocolo',
@@ -1140,7 +1164,7 @@ export class ProfilePage implements OnInit {
       }
 
       // 3. Aceptación de tiempos
-      if (p.isTimelineTermsAccepted || ['VALIDADO', 'APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO', 'EN_EVALUACION'].includes(p.estado)) {
+      if (p.isTimelineTermsAccepted || ['VALIDADO', 'APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO', 'EN_EVALUACION'].includes(p.estado || '')) {
         logs.push({
           action: 'Aceptación de Cronograma',
           detail: `Firma digital y aceptación del cronograma del protocolo: ${p.codigoCeish || 'Borrador'}`,
@@ -1152,7 +1176,7 @@ export class ProfilePage implements OnInit {
       }
 
       // 4. Envío a evaluación
-      if (['VALIDADO', 'APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO', 'EN_EVALUACION'].includes(p.estado)) {
+      if (['VALIDADO', 'APROBADO_DEFINITIVO', 'APROBADO_CONDICIONADO', 'EN_EVALUACION'].includes(p.estado || '')) {
         logs.push({
           action: 'Sometimiento Oficial CEISH',
           detail: `Protocolo ${p.codigoCeish || 'Borrador'} sometido exitosamente a evaluación por el Comité de Ética.`,
@@ -1192,17 +1216,14 @@ export class ProfilePage implements OnInit {
   }
 
   ngOnInit(): void {
-    console.log('[ProfilePage] Inicializado');
-    
     // Inject and load stats for audit logs
     this.dashboardFacade.loadStats();
     
     if (this.isEvaluator()) {
-      this.evalRepo.getMyAssignments().subscribe({
-        next: (assignments) => {
-          this.activeAssignmentsCount.set(assignments.length);
-          const urgent = assignments.filter((a: any) => a.isUrgent).length;
-          this.urgentAssignmentsCount.set(urgent);
+      this.loadWorkloadUC.execute().subscribe({
+        next: (workload) => {
+          this.activeAssignmentsCount.set(workload.activeCount);
+          this.urgentAssignmentsCount.set(workload.urgentCount);
         },
         error: (err) => {
           console.error('[ProfilePage] Error fetching assignments load:', err);
@@ -1210,14 +1231,15 @@ export class ProfilePage implements OnInit {
       });
     }
     
-    // Load CV details from localStorage
-    const savedName = localStorage.getItem('ceish_investigator_cv_name');
-    const savedSize = localStorage.getItem('ceish_investigator_cv_size');
-    const savedDate = localStorage.getItem('ceish_investigator_cv_date');
-    if (savedName) {
-      this.cvName.set(savedName);
-      this.cvSize.set(savedSize);
-      this.cvDate.set(savedDate);
+    const investigatorId = this.user()?.id;
+    if (investigatorId) {
+      const storedCv = this.cvService.getStoredCv(investigatorId);
+      if (storedCv) {
+        this.cvName.set(storedCv.fileName);
+        this.cvSize.set(storedCv.sizeLabel);
+        this.cvDate.set(storedCv.uploadedAt);
+        this.cvStorageKey.set(storedCv.storageKey);
+      }
     }
   }
 
@@ -1304,8 +1326,9 @@ export class ProfilePage implements OnInit {
   }
 
   // CV PDF Handling
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (file) {
       this.uploadCVFile(file);
     }
@@ -1338,53 +1361,60 @@ export class ProfilePage implements OnInit {
 
     this.isUploadingCv.set(true);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setTimeout(() => {
-        const base64 = reader.result as string;
-        const sizeStr = file.size > 1024 * 1024 
-          ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
-          : (file.size / 1024).toFixed(0) + ' KB';
-        const nowStr = new Date().toISOString();
+    const investigatorId = this.user()?.id;
+    if (!investigatorId) {
+      this.isUploadingCv.set(false);
+      this.snackBar.open('No se pudo identificar al investigador.', 'Cerrar', { duration: 4000 });
+      return;
+    }
 
-        localStorage.setItem('ceish_investigator_cv_name', file.name);
-        localStorage.setItem('ceish_investigator_cv_size', sizeStr);
-        localStorage.setItem('ceish_investigator_cv_date', nowStr);
-        localStorage.setItem('ceish_investigator_cv_data', base64);
-
-        this.cvName.set(file.name);
-        this.cvSize.set(sizeStr);
-        this.cvDate.set(nowStr);
-
-        this.isUploadingCv.set(false);
+    this.cvService.uploadCv(file, investigatorId).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.isUploadingCv.set(false))
+    ).subscribe({
+      next: metadata => {
+        this.cvName.set(metadata.fileName);
+        this.cvSize.set(metadata.sizeLabel);
+        this.cvDate.set(metadata.uploadedAt);
+        this.cvStorageKey.set(metadata.storageKey);
         this.snackBar.open('📄 CV académico subido y firmado con éxito.', 'Cerrar', { duration: 3000 });
-      }, 1500); // realistic delay for processing
-    };
-    reader.readAsDataURL(file);
+      },
+      error: (error: Error) => {
+        this.snackBar.open(error.message || 'No se pudo subir el CV.', 'Cerrar', { duration: 4000 });
+      }
+    });
   }
 
   downloadCV(): void {
-    const base64 = localStorage.getItem('ceish_investigator_cv_data');
+    const storageKey = this.cvStorageKey();
     const name = this.cvName() || 'CV_Investigador.pdf';
-    if (base64) {
-      const link = document.createElement('a');
-      link.href = base64;
-      link.download = name;
-      link.click();
+    if (storageKey) {
+      this.cvService.getDownloadUrl(storageKey).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: downloadUrl => {
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = name;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.click();
+        },
+        error: () => this.snackBar.open('No se pudo obtener el archivo de CV.', 'Cerrar', { duration: 4000 })
+      });
     } else {
       this.snackBar.open('❌ Archivo de CV no encontrado.', 'Cerrar', { duration: 3000 });
     }
   }
 
   deleteCV(): void {
-    localStorage.removeItem('ceish_investigator_cv_name');
-    localStorage.removeItem('ceish_investigator_cv_size');
-    localStorage.removeItem('ceish_investigator_cv_date');
-    localStorage.removeItem('ceish_investigator_cv_data');
+    const investigatorId = this.user()?.id;
+    if (investigatorId) {
+      this.cvService.deleteStoredCv(investigatorId);
+    }
 
     this.cvName.set(null);
     this.cvSize.set(null);
     this.cvDate.set(null);
+    this.cvStorageKey.set(null);
     this.snackBar.open('🗑️ CV académico eliminado.', 'Cerrar', { duration: 3000 });
   }
 }

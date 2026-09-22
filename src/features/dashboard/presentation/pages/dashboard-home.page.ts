@@ -10,10 +10,24 @@ import { EvaluatorLoadComponent } from '../components/evaluator-load/evaluator-l
 import { DashboardFacade } from '../facades/dashboard.facade';
 import { DashboardSecretariaPage } from './dashboard-secretaria/dashboard-secretaria.page';
 
+interface DashboardStat {
+  title: string;
+  value: number;
+  icon: string;
+  color: string;
+}
+
+interface DashboardQuickAction {
+  label: string;
+  icon: string;
+  link: string;
+  color: string;
+}
+
 interface DashboardConfig {
   greeting: string;
-  stats: any[];
-  quickActions: any[];
+  stats: DashboardStat[];
+  quickActions: DashboardQuickAction[];
   recentTitle: string;
   emptyMessage: string;
   emptyActionLabel?: string;

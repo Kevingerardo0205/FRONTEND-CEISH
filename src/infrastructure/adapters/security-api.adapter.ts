@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, map, catchError, of } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { BaseApiService } from '../api/base-api.service';
 import { ISecurityRepositoryPort } from '@domain/ports/ISecurityRepositoryPort';
 import { 
@@ -8,7 +8,11 @@ import {
   SecurityRole, 
   CreateModuleDTO, 
   CreatePermissionDTO,
-  UpdateRolePermissionsDTO
+  UpdateRolePermissionsDTO,
+  CreateRoleDTO,
+  UpdateRoleDTO,
+  RoleComplianceStatus,
+  RolePresetsMap
 } from '@domain/entities/security.entity';
 
 @Injectable({
@@ -19,36 +23,42 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
   private readonly PERMISSIONS_URL = '/auth/permissions';
   private readonly ROLES_URL = '/auth/roles';
 
-  // Módulos
   getModules(): Observable<SecurityModule[]> {
-    return this.get<any>(this.MODULES_URL).pipe(
-      map(res => this.extractArray(res)),
-      catchError(() => of([]))
+    return this.get<unknown>(this.MODULES_URL).pipe(
+      map(res => this.extractArray(res) as SecurityModule[])
     );
   }
 
   getModuleById(id: number): Observable<SecurityModule> {
-    return this.get<any>(`${this.MODULES_URL}/${id}`).pipe(
-      map(res => res.data || res)
+    return this.get<unknown>(`${this.MODULES_URL}/${id}`).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityModule };
+        return body.data ?? (res as SecurityModule);
+      })
     );
   }
 
   getModulePermissions(id: number): Observable<SecurityPermission[]> {
-    return this.get<any>(`${this.MODULES_URL}/${id}/permissions`).pipe(
-      map(res => this.extractArray(res)),
-      catchError(() => of([]))
+    return this.get<unknown>(`${this.MODULES_URL}/${id}/permissions`).pipe(
+      map(res => this.extractArray(res) as SecurityPermission[])
     );
   }
 
   createModule(data: CreateModuleDTO): Observable<SecurityModule> {
-    return this.post<any>(this.MODULES_URL, data).pipe(
-      map(res => res.data || res)
+    return this.post<unknown>(this.MODULES_URL, data).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityModule };
+        return body.data ?? (res as SecurityModule);
+      })
     );
   }
 
   updateModule(id: number, data: Partial<CreateModuleDTO>): Observable<SecurityModule> {
-    return this.patch<any>(`${this.MODULES_URL}/${id}`, data).pipe(
-      map(res => res.data || res)
+    return this.patch<unknown>(`${this.MODULES_URL}/${id}`, data).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityModule };
+        return body.data ?? (res as SecurityModule);
+      })
     );
   }
 
@@ -56,29 +66,36 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
     return this.delete<void>(`${this.MODULES_URL}/${id}`);
   }
 
-  // Permisos
   getPermissions(): Observable<SecurityPermission[]> {
-    return this.get<any>(this.PERMISSIONS_URL).pipe(
-      map(res => this.extractArray(res)),
-      catchError(() => of([]))
+    return this.get<unknown>(this.PERMISSIONS_URL).pipe(
+      map(res => this.extractArray(res) as SecurityPermission[])
     );
   }
 
   getPermissionById(id: number): Observable<SecurityPermission> {
-    return this.get<any>(`${this.PERMISSIONS_URL}/${id}`).pipe(
-      map(res => res.data || res)
+    return this.get<unknown>(`${this.PERMISSIONS_URL}/${id}`).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityPermission };
+        return body.data ?? (res as SecurityPermission);
+      })
     );
   }
 
   createPermission(data: CreatePermissionDTO): Observable<SecurityPermission> {
-    return this.post<any>(this.PERMISSIONS_URL, data).pipe(
-      map(res => res.data || res)
+    return this.post<unknown>(this.PERMISSIONS_URL, data).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityPermission };
+        return body.data ?? (res as SecurityPermission);
+      })
     );
   }
 
   updatePermission(id: number, data: Partial<CreatePermissionDTO>): Observable<SecurityPermission> {
-    return this.patch<any>(`${this.PERMISSIONS_URL}/${id}`, data).pipe(
-      map(res => res.data || res)
+    return this.patch<unknown>(`${this.PERMISSIONS_URL}/${id}`, data).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityPermission };
+        return body.data ?? (res as SecurityPermission);
+      })
     );
   }
 
@@ -86,24 +103,46 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
     return this.delete<void>(`${this.PERMISSIONS_URL}/${id}`);
   }
 
-  // Roles
   getRoles(): Observable<SecurityRole[]> {
-    return this.get<any>(this.ROLES_URL).pipe(
-      map(res => this.extractArray(res)),
-      catchError(() => of([]))
+    return this.get<unknown>(this.ROLES_URL).pipe(
+      map(res => this.extractArray(res) as SecurityRole[])
     );
   }
 
   getRoleById(id: number): Observable<SecurityRole> {
-    return this.get<any>(`${this.ROLES_URL}/${id}`).pipe(
-      map(res => res.data || res)
+    return this.get<unknown>(`${this.ROLES_URL}/${id}`).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityRole };
+        return body.data ?? (res as SecurityRole);
+      })
     );
   }
 
+  createRole(data: CreateRoleDTO): Observable<SecurityRole> {
+    return this.post<unknown>(this.ROLES_URL, data).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityRole };
+        return body.data ?? (res as SecurityRole);
+      })
+    );
+  }
+
+  updateRole(id: number, data: UpdateRoleDTO): Observable<SecurityRole> {
+    return this.patch<unknown>(`${this.ROLES_URL}/${id}`, data).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityRole };
+        return body.data ?? (res as SecurityRole);
+      })
+    );
+  }
+
+  deleteRole(id: number): Observable<void> {
+    return this.delete<void>(`${this.ROLES_URL}/${id}`);
+  }
+
   getRolePermissions(id: number): Observable<SecurityPermission[]> {
-    return this.get<any>(`${this.ROLES_URL}/${id}/permissions`).pipe(
-      map(res => this.extractArray(res)),
-      catchError(() => of([]))
+    return this.get<unknown>(`${this.ROLES_URL}/${id}/permissions`).pipe(
+      map(res => this.extractArray(res) as SecurityPermission[])
     );
   }
 
@@ -115,18 +154,45 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
     return this.put<void>(`${this.ROLES_URL}/${id}/permissions`, data);
   }
 
-  removeRolePermissions(id: number, data: UpdateRolePermissionsDTO): Observable<void> {
+  removeRolePermissions(id: number, _data: UpdateRolePermissionsDTO): Observable<void> {
     return this.delete<void>(`${this.ROLES_URL}/${id}/permissions`);
   }
 
-  /**
-   * Extrae de forma segura un array de la respuesta, manejando envolturas y nulos.
-   */
-  private extractArray(res: any): any[] {
+  getRolePresets(): Observable<RolePresetsMap> {
+    return this.get<unknown>(`${this.ROLES_URL}/presets`).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: RolePresetsMap };
+        return body.data ?? (res as RolePresetsMap);
+      })
+    );
+  }
+
+  getRoleCompliance(roleId: number): Observable<RoleComplianceStatus> {
+    return this.get<unknown>(`${this.ROLES_URL}/${roleId}/compliance`).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: RoleComplianceStatus };
+        return body.data ?? (res as RoleComplianceStatus);
+      })
+    );
+  }
+
+  resetRoleToPreset(roleId: number): Observable<SecurityRole> {
+    return this.post<unknown>(`${this.ROLES_URL}/${roleId}/reset-preset`, {}).pipe(
+      map((res: unknown) => {
+        const body = res as { data?: SecurityRole };
+        return body.data ?? (res as SecurityRole);
+      })
+    );
+  }
+
+  private extractArray(res: unknown): unknown[] {
     if (!res) return [];
     if (Array.isArray(res)) return res;
-    if (res.data && Array.isArray(res.data)) return res.data;
-    // Si es un objeto pero no tiene data array, devolvemos vacio para no romper el [Symbol.iterator]
+    if (res && typeof res === 'object' && 'data' in res) {
+      const data = (res as { data: unknown }).data;
+      if (Array.isArray(data)) return data;
+    }
     return [];
   }
 }
+

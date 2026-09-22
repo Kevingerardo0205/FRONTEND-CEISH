@@ -15,7 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
-import { AuditLog } from '@features/audit/domain/entities/audit.entity';
+import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.entity';
 
 @Component({
   selector: 'app-audit-logs',
@@ -218,7 +218,7 @@ export class AuditLogsPage implements OnInit {
 
   logs: AuditLog[] = [];
   displayedColumns = ['timestamp', 'userName', 'action', 'entity', 'recordId', 'ipAddress', 'actions'];
-  filters = {
+  filters: AuditFilters = {
     search: '',
     action: [],
     entity: [],

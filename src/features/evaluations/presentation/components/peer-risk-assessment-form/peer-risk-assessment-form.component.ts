@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, signal, inject, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, Inject, OnInit, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -13,9 +13,9 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { PeerAssignmentEntity, PET_RISK_LEVELS, RiskLevelInfo } from '@domain/entities/peer-evaluation.entity';
+import { ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
 import { FileUploaderComponent } from '@shared/components/file-uploader/file-uploader.component';
-import { forkJoin, of } from 'rxjs';
-import { switchMap, map, catchError, filter } from 'rxjs/operators';
+import { switchMap, map, filter } from 'rxjs/operators';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 
 @Component({
@@ -608,10 +608,10 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
   private s3StorageService = inject(S3StorageService);
 
   assessmentForm!: FormGroup;
-  riskLevels: any[] = PET_RISK_LEVELS; // Default fallback catalog
+  riskLevels: RiskLevelInfo[] = PET_RISK_LEVELS; // Default fallback catalog
   isSubmitting = signal<boolean>(false);
   selectedFiles = signal<File[]>([]);
-  protocolDocuments = signal<any[]>([]);
+  protocolDocuments = signal<ProtocolDocumentHistoryEntry[]>([]);
   
   assignment!: PeerAssignmentEntity;
 
@@ -622,13 +622,13 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
     this.assignment = data.assignment;
   }
 
-  verDocumento(documentId: any) {
+  verDocumento(documentId: number) {
     if (!documentId) return;
     this.s3StorageService.getDocumentDownloadUrl(Number(documentId)).subscribe({
       next: (res) => {
         window.open(res.downloadUrl, '_blank');
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error('Error al generar la URL de descarga:', err);
         this.snack.open('No se pudo abrir el documento.', 'Cerrar', { duration: 3000 });
       }
@@ -645,23 +645,23 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
     this.protocolRepo.getRiskLevels().subscribe({
       next: (levels) => {
         if (levels && levels.length > 0) {
-          this.riskLevels = levels;
+          this.riskLevels = levels as RiskLevelInfo[];
         }
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.warn('[PeerRiskAssessmentForm] Error al cargar catálogo dinámico de niveles de riesgo, usando fallback:', err);
       }
     });
   }
 
   private loadProtocolDocuments() {
-    const protocolId = this.assignment.protocolId || (this.assignment.protocol as any)?.id;
+    const protocolId = this.assignment.protocolId || this.assignment.protocol?.id;
     if (protocolId) {
       this.protocolRepo.getDocumentHistory(protocolId.toString()).subscribe({
         next: (docs) => {
           this.protocolDocuments.set(docs || []);
         },
-        error: (err) => {
+        error: (err: unknown) => {
           console.error('[PeerRiskAssessmentForm] Error cargando documentos:', err);
         }
       });
@@ -682,13 +682,13 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
   }
 
   getInvestigatorName(): string {
-    const p = this.assignment?.protocol as any;
-    return p?.principalInvestigatorRecord?.fullName || p?.investigator?.fullName || 'No especificado';
+    const p = this.assignment?.protocol;
+    return p?.principalInvestigatorRecord?.fullName || 'No especificado';
   }
 
   getStudyType(): string {
-    const p = this.assignment?.protocol as any;
-    return p?.studyType?.nombre || p?.studyType?.name || 'No especificado';
+    const p = this.assignment?.protocol;
+    return p?.studyType?.nombre || 'No especificado';
   }
 
   close() {
@@ -701,7 +701,7 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
     this.isSubmitting.set(true);
     const file = this.selectedFiles()[0];
     const sanitizedName = file.name.replace(/\s+/g, '_');
-    const protocolId = this.assignment.protocolId || (this.assignment.protocol as any)?.id;
+    const protocolId = this.assignment.protocolId || this.assignment.protocol?.id;
     const s3Key = `protocols/${protocolId}/docEvaluacion/${sanitizedName}`;
 
     this.s3StorageService.getUploadUrl(s3Key, file.type || 'application/pdf').pipe(
@@ -726,9 +726,10 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
         this.isSubmitting.set(false);
         this.dialogRef.close(true);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error('Error enviando dictamen:', err);
-        const msg = err.message || 'Error crítico al procesar la solicitud.';
+        const errorRecord = err as { message?: string };
+        const msg = errorRecord.message || 'Error crítico al procesar la solicitud.';
         this.snack.open(msg, 'Cerrar', { duration: 5000 });
         this.isSubmitting.set(false);
       }

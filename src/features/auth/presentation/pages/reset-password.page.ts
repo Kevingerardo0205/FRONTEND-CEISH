@@ -291,7 +291,7 @@ export class ResetPasswordPage implements OnInit {
           });
           this.router.navigate(['/auth/login']);
         },
-        error: (err) => {
+        error: (_err) => {
           this.isLoading.set(false);
           this.snackBar.open('❌ Código inválido o expirado. Intente nuevamente.', 'Cerrar', {
             duration: 5000,

@@ -2,9 +2,9 @@ import { Injectable } from '@angular/core';
 import { Subject, Observable } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 
-export interface BroadcastMessage {
+export interface BroadcastMessage<T = unknown> {
   type: string;
-  payload: any;
+  payload: T;
 }
 
 @Injectable({
@@ -13,15 +13,14 @@ export interface BroadcastMessage {
 export class NotificationBrokerService {
   private _bus = new Subject<BroadcastMessage>();
 
-  publish(type: string, payload: any): void {
-    console.log(`[NotificationBroker] Publicando evento: ${type}`, payload);
+  publish<T>(type: string, payload: T): void {
     this._bus.next({ type, payload });
   }
 
-  on(type: string): Observable<any> {
+  on<T>(type: string): Observable<T> {
     return this._bus.asObservable().pipe(
       filter(m => m.type === type),
-      map(m => m.payload)
+      map(m => m.payload as T)
     );
   }
 }

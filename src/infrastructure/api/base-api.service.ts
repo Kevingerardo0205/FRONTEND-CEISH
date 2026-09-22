@@ -3,6 +3,12 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ApiClientService } from './api-client.service';
 
+interface AxiosErrorResponse {
+  response?: { data?: { message?: string }; status?: number };
+  request?: unknown;
+  message?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -10,25 +16,25 @@ export abstract class BaseApiService {
 
   constructor(protected apiClient: ApiClientService) {}
 
-  protected get<T>(endpoint: string, params?: any): Observable<T> {
-    return this.apiClient.get<T>(endpoint, { params }).pipe(
+  protected get<T>(endpoint: string, params?: Record<string, string | number | boolean>): Observable<T> {
+    return this.apiClient.get<T>(endpoint, params).pipe(
       catchError(this.handleError)
     );
   }
 
-  protected post<T>(endpoint: string, body: any): Observable<T> {
+  protected post<T>(endpoint: string, body: unknown): Observable<T> {
     return this.apiClient.post<T>(endpoint, body).pipe(
       catchError(this.handleError)
     );
   }
 
-  protected put<T>(endpoint: string, body: any): Observable<T> {
+  protected put<T>(endpoint: string, body: unknown): Observable<T> {
     return this.apiClient.put<T>(endpoint, body).pipe(
       catchError(this.handleError)
     );
   }
 
-  protected patch<T>(endpoint: string, body: any): Observable<T> {
+  protected patch<T>(endpoint: string, body: unknown): Observable<T> {
     return this.apiClient.patch<T>(endpoint, body).pipe(
       catchError(this.handleError)
     );
@@ -40,7 +46,7 @@ export abstract class BaseApiService {
     );
   }
 
-  private handleError(error: any) {
+  private handleError(error: AxiosErrorResponse & Error) {
     let errorMessage = 'Ocurrió un error inesperado';
     
     if (error.response) {

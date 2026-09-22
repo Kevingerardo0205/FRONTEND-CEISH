@@ -12,18 +12,57 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 
 import { environment } from 'src/environments/environment';
-import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
-import { S3StorageService } from '@infrastructure/services/s3-storage.service';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
-import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { LoadSubsanacionDetailUseCase } from '../../../application/load-subsanacion-detail.use-case';
+import { UploadCorrectionUseCase } from '../../../application/upload-correction.use-case';
+import { SubmitSubsanacionUseCase } from '../../../application/submit-subsanacion.use-case';
+import { DownloadConsolidatedPdfUseCase } from '../../../application/download-consolidated-pdf.use-case';
+import { DownloadTemplateUseCase } from '@features/documents/application/use-cases/download-template.use-case';
+import { S3StorageService } from '@infrastructure/services/s3-storage.service';
+import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
+import { LoadReceptionProtocolsUseCase } from '@features/protocols/application/use-cases/load-reception-protocols.use-case';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
-import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@features/investigador/domain/dtos/crear-protocolo.dto';
+import { ChecklistRequirement, EstadoProtocolo, ProtocoloResumen } from '@features/investigador/domain/dtos/crear-protocolo.dto';
+import { ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
+import { RequirementStatus } from '@features/investigador/domain/dtos/crear-protocolo.dto';
+
+interface EvaluationObservation {
+  evaluatorProfile: string;
+  result: string | number | { name?: string; code?: string; label?: string; verdict?: string };
+  generalObservations?: string;
+  reportPath?: string;
+  rutaPdf?: string;
+  rutaDocx?: string;
+  checklistDetails?: ChecklistDetailObservation[];
+  detallesChecklist?: ChecklistDetailObservation[];
+  checklist?: ChecklistDetailObservation[];
+}
+
+interface ChecklistDetailObservation {
+  itemCode?: string;
+  itemCodigo?: string;
+  code?: string;
+  description?: string;
+  descripcion?: string;
+  criterio?: string;
+  criterion?: string;
+  observations?: string;
+  observaciones?: string;
+  state?: string;
+  estado?: string;
+  status?: string;
+}
+
+interface ProtocolDocument {
+  id: number;
+  path?: string;
+  type?: string;
+  name?: string;
+  title?: string;
+}
 
 @Component({
   selector: 'app-subsanacion',
@@ -132,7 +171,7 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
                         </div>
 
                         <!-- Enlace para ver documento previamente cargado (Accesible para Investigador y Secretaría) -->
-                        <div class="uploaded-doc-preview mt-2" *ngIf="getRequirementDocument(req.requirementCode) as doc">
+                        <div class="uploaded-doc-preview mt-2" *ngIf="getRequirementDocument(req) as doc">
                           <button mat-button color="primary" class="btn-view-doc p-0 d-inline-flex align-items-center" (click)="verDocumento(doc.id)" type="button" style="text-transform: none; min-width: auto; line-height: normal; height: auto;">
                             <mat-icon class="text-danger" style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;">picture_as_pdf</mat-icon>
                             <span class="doc-link-text text-truncate" style="max-width: 250px; font-size: 0.82rem; font-weight: 600; text-decoration: underline;">
@@ -148,8 +187,8 @@ import { ChecklistRequirement, ProtocoloResumen, RequirementStatus } from '@feat
                         </span>
                       </td>
                       <td class="text-end" *ngIf="isInvestigador()">
-                        <ng-container *ngIf="['APROBADO', 'VALIDADO', 'NO_APLICA'].includes(req.status); else uploadAction">
-                          <mat-icon class="text-success" matTooltip="Documento Aprobado y Validado (Inmutable)" *ngIf="req.status !== 'NO_APLICA'">check_circle</mat-icon>
+                        <ng-container *ngIf="isRequirementLocked(req); else uploadAction">
+                          <mat-icon class="text-success" matTooltip="Documento Inmutable" *ngIf="req.status !== 'NO_APLICA'">check_circle</mat-icon>
                           <mat-icon class="text-muted" matTooltip="Requisito No Aplica para este trámite" *ngIf="req.status === 'NO_APLICA'">remove_circle_outline</mat-icon>
                         </ng-container>
                         
@@ -690,12 +729,14 @@ export class SubsanacionPage implements OnInit {
   private destroyRef = inject(DestroyRef);
   
   private authFacade = inject(AuthFacade);
-  private evalRepo = inject(IEvaluationRepositoryPort);
-  private protocolRepo = inject(IProtocolRepositoryPort);
-  private documentRepo = inject(IDocumentRepositoryPort);
-  private resolutionRepo = inject(IResolutionRepositoryPort);
-  private protocoloService = inject(ProtocoloService);
+  private loadSubsanacionDetailUC = inject(LoadSubsanacionDetailUseCase);
+  private uploadCorrectionUC = inject(UploadCorrectionUseCase);
+  private submitSubsanacionUC = inject(SubmitSubsanacionUseCase);
+  private downloadConsolidatedPdfUC = inject(DownloadConsolidatedPdfUseCase);
+  private downloadTemplateUC = inject(DownloadTemplateUseCase);
+  private loadReceptionProtocolsUC = inject(LoadReceptionProtocolsUseCase);
   private s3StorageService = inject(S3StorageService);
+  private protocoloService = inject(ProtocoloService);
 
   isInvestigador = signal(true);
   protocolId = signal<number>(0);
@@ -705,18 +746,32 @@ export class SubsanacionPage implements OnInit {
   protocolVersion = signal<number>(1);
   
   protocols = signal<ProtocoloResumen[]>([]);
-  observations = signal<any[]>([]);
+  observations = signal<EvaluationObservation[]>([]);
   checklist = signal<ChecklistRequirement[]>([]);
-  protocolDocuments = signal<any[]>([]);
+  protocolDocuments = signal<ProtocolDocument[]>([]);
   
   isSubmitting = signal(false);
   uploadingRequirementId = signal<number>(0);
 
+  isRequirementLocked(req: ChecklistRequirement): boolean {
+    if (['APROBADO', 'VALIDADO', 'NO_APLICA'].includes(req.status as RequirementStatus)) {
+      return true;
+    }
+    if (req.status === 'PRESENTADO') {
+      const doc = this.getRequirementDocument(req);
+      if (doc && doc.id) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Computed reactivos (Screen 2)
   readonly pendingRequirementsCount = computed(() => 
-    this.checklist().filter(item => 
-      !['APROBADO', 'VALIDADO', 'PRESENTADO', 'NO_APLICA'].includes(item.status as any)
-    ).length
+    this.checklist().filter(item => {
+      if (item.status === 'NO_APLICA') return false;
+      return !this.isRequirementLocked(item);
+    }).length
   );
 
   readonly isReadyToSubmit = computed(() => 
@@ -729,8 +784,7 @@ export class SubsanacionPage implements OnInit {
   });
 
   ngOnInit() {
-    const role = this.authFacade.currentUser()?.rol;
-    this.isInvestigador.set(role === 'INVESTIGADOR');
+    this.isInvestigador.set(this.authFacade.hasRole('INVESTIGADOR'));
 
     this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const pId = Number(params['protocolId']);
@@ -753,19 +807,19 @@ export class SubsanacionPage implements OnInit {
         error: () => this.snackBar.open('❌ Error al cargar la bandeja de protocolos.', 'Cerrar')
       });
     } else {
-      this.protocolRepo.getReceptionProtocols().subscribe({
+      this.loadReceptionProtocolsUC.execute().subscribe({
         next: (list) => {
           const filtered = (list || []).filter(p => {
             const core = resolveEstado(p.status);
             return core && core.code === 'EVALUADO' || (p.status as string) === 'EVALUACION_SUBSANACIONES';
           });
-          const mapped = filtered.map(p => ({
-            id: Number(p.id),
-            codigoCeish: p.code || '',
-            titulo: p.title,
-            estado: p.status as any,
-            fechaCreacion: p.submissionDate ? p.submissionDate.toISOString() : ''
-          }));
+            const mapped = filtered.map(p => ({
+              id: Number(p.id),
+              codigoCeish: p.code || '',
+              titulo: p.title,
+              estado: p.status as unknown as EstadoProtocolo,
+              fechaCreacion: p.submissionDate ? p.submissionDate.toISOString() : ''
+            }));
           this.protocols.set(mapped);
         },
         error: () => this.snackBar.open('❌ Error al cargar la bandeja de protocolos de subsanación.', 'Cerrar')
@@ -774,41 +828,26 @@ export class SubsanacionPage implements OnInit {
   }
 
   loadProtocolDetail() {
-    // 1. Obtener detalles básicos
-    this.protocoloService.obtenerProtocolo(this.protocolId()).subscribe(p => {
-      this.protocolCode.set(p.codigoCeish || '');
-      this.protocolTitle.set(p.titulo || 'Protocolo de Investigación');
-      this.protocolStatus.set(p.estado || '');
-      const rawP = p as any;
-      this.protocolVersion.set(rawP.versionNumber || rawP.version || 1);
-    });
-
-    // 2. Obtener observaciones consolidadas
-    this.evalRepo.getProtocolObservations(String(this.protocolId())).subscribe({
-      next: (res) => {
-        const raw = res?.observations || res || [];
-        this.observations.set(Array.isArray(raw) ? raw : []);
-      },
-      error: () => this.snackBar.open('❌ Error al obtener observaciones del comité.', 'Cerrar')
-    });
-
-    // 3. Obtener checklist de requisitos
-    this.protocoloService.getChecklist(this.protocolId()).subscribe({
-      next: (list) => {
-        this.checklist.set(list || []);
-      },
-      error: () => this.snackBar.open('❌ Error al obtener checklist de documentos.', 'Cerrar')
-    });
-
-    // 4. Obtener expediente de documentos cargados (Mismo estilo que evaluador)
-    this.protocolRepo.getDocumentHistory(String(this.protocolId())).subscribe({
-      next: (docs) => this.protocolDocuments.set(docs || []),
-      error: (err) => console.error('[SubsanacionPage] Error cargando expediente:', err)
-    });
+    this.loadSubsanacionDetailUC.execute(this.protocolId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.protocolCode.set(result.protocol.codigoCeish || '');
+          this.protocolTitle.set(result.protocol.titulo || 'Protocolo de Investigación');
+          this.protocolStatus.set(result.protocol.estado || '');
+          const rawP = result.protocol as unknown as Record<string, unknown>;
+          this.protocolVersion.set((rawP['versionNumber'] as number) || (rawP['version'] as number) || 1);
+          this.observations.set((result.observations || []) as unknown as EvaluationObservation[]);
+          this.checklist.set((result.checklist || []) as unknown as ChecklistRequirement[]);
+          this.protocolDocuments.set(result.documents || []);
+        },
+        error: () => this.snackBar.open('❌ Error al cargar datos del protocolo.', 'Cerrar')
+      });
   }
 
-  onUploadFile(event: any, requirementId: number, requirementCode?: string) {
-    const file = event.target?.files?.[0];
+  onUploadFile(event: Event, requirementId: number, requirementCode?: string) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
@@ -817,19 +856,19 @@ export class SubsanacionPage implements OnInit {
     }
 
     this.uploadingRequirementId.set(requirementId);
-    this.protocoloService.subirDocumento(file, this.protocolId(), requirementId, requirementCode).subscribe({
-      next: () => {
-        // Actualizar el estado en el Signal reactivo (checklist)
+    this.uploadCorrectionUC.execute({
+      file,
+      protocolId: this.protocolId(),
+      requirementId,
+      requirementCode,
+      versionNumber: this.protocolVersion() || 1
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (docs) => {
         this.checklist.update(items =>
-          items.map(item => item.id === requirementId ? { ...item, status: 'PRESENTADO' as any } : item)
+          items.map(item => item.id === requirementId ? { ...item, status: RequirementStatus.PRESENTADO } : item)
         );
-
-        // Recargar expediente para reflejar el nuevo documento
-        this.protocolRepo.getDocumentHistory(String(this.protocolId())).subscribe({
-          next: (docs) => this.protocolDocuments.set(docs || []),
-          error: (err) => console.error('[SubsanacionPage] Error al recargar expediente:', err)
-        });
-
+        this.protocolDocuments.set(docs || []);
         this.uploadingRequirementId.set(0);
         this.snackBar.open('✅ Archivo corregido cargado con éxito.', 'Cerrar', { duration: 4000 });
       },
@@ -841,16 +880,31 @@ export class SubsanacionPage implements OnInit {
     });
   }
 
-  getRequirementDocument(requirementCode: string): any {
+  getRequirementDocument(req: ChecklistRequirement | string): ProtocolDocument | null {
     const docs = this.protocolDocuments();
-    if (!requirementCode) return null;
-    return docs.find(d => 
-      (d.path && d.path.toLowerCase().includes(requirementCode.toLowerCase())) || 
-      (d.type && d.type.toLowerCase().includes(requirementCode.toLowerCase()))
-    );
+    if (!req) return null;
+    
+    // Si se pasa un código directamente como string
+    if (typeof req === 'string') {
+      const reqCode = req.toLowerCase();
+      return docs.find(d => 
+        (d.path && d.path.toLowerCase().includes(reqCode)) || 
+        (d.type && d.type.toLowerCase().includes(reqCode))
+      ) || null;
+    }
+
+    // Si se pasa el objeto ChecklistRequirement completo
+    return docs.find(d => {
+      const matchId = req.id && (d as unknown as Record<string, unknown>)['requirementId'] === req.id;
+      const matchCode = req.requirementCode && (
+        (d.path && d.path.toLowerCase().includes(req.requirementCode.toLowerCase())) ||
+        (d.type && d.type.toLowerCase().includes(req.requirementCode.toLowerCase()))
+      );
+      return matchId || matchCode;
+    }) || null;
   }
 
-  verDocumento(documentId: any) {
+  verDocumento(documentId: number) {
     if (!documentId) return;
     this.s3StorageService.getDocumentDownloadUrl(Number(documentId)).subscribe({
       next: (res) => {
@@ -867,7 +921,7 @@ export class SubsanacionPage implements OnInit {
   onSubmitSubsanacion() {
     if (this.isReadyToSubmit()) {
       this.isSubmitting.set(true);
-      this.protocoloService.finalizarProtocolo(this.protocolId()).subscribe({
+      this.submitSubsanacionUC.execute(this.protocolId()).subscribe({
         next: () => {
           this.snackBar.open('✅ Subsanación enviada exitosamente a la Secretaría.', 'Cerrar', { duration: 5000 });
           this.isSubmitting.set(false);
@@ -889,7 +943,7 @@ export class SubsanacionPage implements OnInit {
   }
 
   getProfileLabel(profile: string): string {
-    const map: any = {
+    const map: Record<string, string> = {
       'METODOLOGIA': 'Metodológico',
       'BIOETICA': 'de Bioética',
       'LEGAL': 'de Aspectos Jurídicos',
@@ -901,11 +955,11 @@ export class SubsanacionPage implements OnInit {
     return map[profile] || profile;
   }
 
-  getObsResultLabel(result: any): string {
+  getObsResultLabel(result: string | number | Record<string, unknown> | null | undefined): string {
     if (!result) return 'PENDIENTE';
     if (typeof result === 'string') return result;
     if (typeof result === 'number') {
-      const map: any = {
+      const map: Record<number, string> = {
         1: 'APROBADO',
         2: 'CON_OBSERVACIONES',
         3: 'NO_APROBADO'
@@ -913,19 +967,19 @@ export class SubsanacionPage implements OnInit {
       return map[result] || String(result);
     }
     if (typeof result === 'object') {
-      return result.name || result.code || result.label || result.verdict || 'CON_OBSERVACIONES';
+      return (result['name'] as string) || (result['code'] as string) || (result['label'] as string) || (result['verdict'] as string) || 'CON_OBSERVACIONES';
     }
     return String(result);
   }
 
-  getObsResultClass(result: any): string {
+  getObsResultClass(result: string | number | Record<string, unknown> | null | undefined): string {
     const label = this.getObsResultLabel(result).toLowerCase();
     return label.replace(/\s+/g, '_');
   }
 
   isSinObservaciones(text: string): boolean {
     if (!text) return true;
-    const clean = text.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ");
+    const clean = text.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ");
     return (
       clean === 'sin observaciones' ||
       clean === 'sin observaciones generales' ||
@@ -956,16 +1010,14 @@ export class SubsanacionPage implements OnInit {
     const protocolIdVal = this.protocolId();
     if (!protocolIdVal) return;
     
-    this.resolutionRepo.getResolutionByProtocolId(String(protocolIdVal)).subscribe({
+    this.downloadConsolidatedPdfUC.execute(String(protocolIdVal)).subscribe({
       next: (res) => {
-        // En base al reporte, puede venir como array o como objeto único
-        const resolutionData = Array.isArray(res) ? res[0] : res;
-        const letterPath = resolutionData?.letterFilePath || resolutionData?.pdfLetterPath;
+        const resolutionData = (Array.isArray(res) ? res[0] : res) as Record<string, unknown> | undefined;
+        const letterPath = (resolutionData?.['letterFilePath'] || resolutionData?.['pdfLetterPath']) as string | undefined;
         
         // Si el backend retornó un path de carta específico, lo usamos; de lo contrario fallback al key por defecto
         const s3Key = letterPath || `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
         
-        console.log(`[SubsanacionPage] Descargando consolidado desde S3 Key: ${s3Key}`);
         this.downloadFile(s3Key);
       },
       error: (err) => {
@@ -976,31 +1028,37 @@ export class SubsanacionPage implements OnInit {
     });
   }
 
-  getChecklistDetails(obs: any): any[] {
+  getChecklistDetails(obs: EvaluationObservation): ChecklistDetailObservation[] {
     if (!obs) return [];
-    return obs.checklistDetails || obs.detallesChecklist || obs.checklist || [];
+    const list = obs.checklistDetails || obs.detallesChecklist || obs.checklist;
+    if (Array.isArray(list)) return list;
+    if (list && typeof list === 'object') {
+      const maybeArray = (list as Record<string, unknown>)['items'] || (list as Record<string, unknown>)['data'];
+      if (Array.isArray(maybeArray)) return maybeArray;
+    }
+    return [];
   }
 
-  isItemObserved(item: any): boolean {
+  isItemObserved(item: ChecklistDetailObservation): boolean {
     if (!item) return false;
-    const state = (item.state || item.estado || item.status || '').toUpperCase();
+    const state = ((item.state || item.estado || item.status || '') as string).toUpperCase();
     return ['NC', 'OBSERVADO', 'RECHAZADO', 'NO_CUMPLE'].includes(state);
   }
 
-  hasObservedItems(obs: any): boolean {
+  hasObservedItems(obs: EvaluationObservation): boolean {
     const details = this.getChecklistDetails(obs);
     return details.some(item => this.isItemObserved(item));
   }
 
-  getItemCode(item: any): string {
+  getItemCode(item: ChecklistDetailObservation): string {
     return item.itemCode || item.itemCodigo || item.code || '';
   }
 
-  getItemDescription(item: any): string {
+  getItemDescription(item: ChecklistDetailObservation): string {
     return item.description || item.descripcion || item.criterio || item.criterion || '';
   }
 
-  getItemObservations(item: any): string {
+  getItemObservations(item: ChecklistDetailObservation): string {
     return item.observations || item.observaciones || 'Se requiere corregir este documento.';
   }
 
@@ -1021,7 +1079,7 @@ export class SubsanacionPage implements OnInit {
   }
 
   downloadResponseTemplate() {
-    this.documentRepo.downloadTemplate('RESPUESTA_OBSERVACIONES').subscribe({
+    this.downloadTemplateUC.execute('RESPUESTA_OBSERVACIONES').subscribe({
       next: (res) => {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');

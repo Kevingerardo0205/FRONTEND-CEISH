@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { LoadAllProtocolsUseCase } from '../application/use-cases/load-all-protocols.use-case';
 
 @Component({
   selector: 'app-protocol-list',
@@ -121,7 +121,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
   `]
 })
 export class ProtocolListPage implements OnInit {
-  private protocolRepo = inject(IProtocolRepositoryPort);
+  private loadAllProtocolsUC = inject(LoadAllProtocolsUseCase);
 
   protocols = signal<ProtocolEntity[]>([]);
   displayedColumns = ['code', 'title', 'type', 'status', 'actions'];
@@ -132,7 +132,7 @@ export class ProtocolListPage implements OnInit {
   }
 
   loadProtocols() {
-    this.protocolRepo.getAll().subscribe((data: ProtocolEntity[]) => this.protocols.set(data));
+    this.loadAllProtocolsUC.execute().subscribe((data: ProtocolEntity[]) => this.protocols.set(data));
   }
 
   getStatusClass(status: string): string {

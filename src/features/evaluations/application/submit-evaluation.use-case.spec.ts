@@ -27,7 +27,7 @@ describe('SubmitEvaluationUseCase', () => {
   });
 
   it('debe fallar el envío sin PDF si el resultado es APROBADO', (done) => {
-    const payload = { result: 'APROBADO', assignmentId: '123' };
+    const payload = { result: 1, assignmentId: 123 };
 
     useCase.execute(payload).subscribe({
       next: () => fail('Debería haber fallado por falta de PDF'),
@@ -39,9 +39,9 @@ describe('SubmitEvaluationUseCase', () => {
   });
 
   it('debe permitir el envío con PDF si el resultado es APROBADO', (done) => {
-    const payload = { result: 'APROBADO', assignmentId: '123', reportPath: '/uploads/report123.pdf' };
+    const payload = { result: 1, assignmentId: 123, reportPath: '/uploads/report123.pdf' };
     
-    repoSpy.submitEvaluation.and.returnValue(of(undefined));
+    repoSpy.submitEvaluation.and.returnValue(of({ message: 'ok' }));
 
     useCase.execute(payload).subscribe({
       next: () => {
@@ -54,7 +54,7 @@ describe('SubmitEvaluationUseCase', () => {
   });
 
   it('debe fallar el envío si el resultado es NO_APROBADO y no hay PDF', (done) => {
-    const payload = { result: 'NO_APROBADO', assignmentId: '123' };
+    const payload = { result: 3, assignmentId: 123 };
 
     useCase.execute(payload).subscribe({
       next: () => fail('Debería haber fallado por falta de PDF'),
@@ -66,9 +66,9 @@ describe('SubmitEvaluationUseCase', () => {
   });
 
   it('debe permitir el envío si el resultado es CON_OBSERVACIONES y se adjunta un PDF', (done) => {
-    const payload = { result: 'CON_OBSERVACIONES', assignmentId: '123', reportPath: '/uploads/report123.pdf' };
+    const payload = { result: 1, assignmentId: 123, reportPath: '/uploads/report123.pdf' };
 
-    repoSpy.submitEvaluation.and.returnValue(of(undefined));
+    repoSpy.submitEvaluation.and.returnValue(of({ message: 'ok' }));
 
     useCase.execute(payload).subscribe({
       next: () => {

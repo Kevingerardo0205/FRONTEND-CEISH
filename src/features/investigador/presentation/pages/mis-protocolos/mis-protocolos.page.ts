@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,7 +9,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router, RouterModule } from '@angular/router';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import { ProtocoloResumen, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
+import { ProtocoloResumen } from '../../../domain/dtos/crear-protocolo.dto';
 import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 

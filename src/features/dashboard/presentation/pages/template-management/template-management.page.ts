@@ -10,11 +10,13 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
-import { of } from 'rxjs';
-import { switchMap, filter, map } from 'rxjs/operators';
 
-import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
-import { S3StorageService } from '@infrastructure/services/s3-storage.service';
+
+import { LoadTemplatesUseCase } from '@features/documents/application/use-cases/load-templates.use-case';
+import { CreateTemplateUseCase } from '@features/documents/application/use-cases/create-template.use-case';
+import { UploadTemplateFileUseCase } from '@features/documents/application/use-cases/upload-template-file.use-case';
+import { DownloadTemplateUseCase } from '@features/documents/application/use-cases/download-template.use-case';
+import { Template } from '@domain/ports/IDocumentRepositoryPort';
 import { environment } from 'src/environments/environment';
 
 @Component({
@@ -1156,10 +1158,12 @@ import { environment } from 'src/environments/environment';
 export class TemplateManagementPage implements OnInit {
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
-  private documentRepo = inject(IDocumentRepositoryPort);
-  private s3StorageService = inject(S3StorageService);
+  private loadTemplatesUC = inject(LoadTemplatesUseCase);
+  private createTemplateUC = inject(CreateTemplateUseCase);
+  private uploadTemplateFileUC = inject(UploadTemplateFileUseCase);
+  private downloadTemplateUC = inject(DownloadTemplateUseCase);
 
-  templates = signal<any[]>([]);
+  templates = signal<Template[]>([]);
   isSubmitting = signal(false);
   isUploading = signal(false);
   uploadTargetCode = signal<string | null>(null);
@@ -1199,7 +1203,7 @@ export class TemplateManagementPage implements OnInit {
   }
 
   loadTemplates() {
-    this.documentRepo.getTemplates().subscribe({
+    this.loadTemplatesUC.execute().subscribe({
       next: (list) => {
         this.templates.set(list || []);
       },
@@ -1249,8 +1253,8 @@ export class TemplateManagementPage implements OnInit {
     }
   }
 
-  onFormFileSelected(event: any) {
-    const file = event.target?.files?.[0];
+  onFormFileSelected(event: Event) {
+    const file = (event.target as HTMLInputElement)?.files?.[0];
     if (file) {
       this.handleFormFile(file);
     }
@@ -1286,21 +1290,7 @@ export class TemplateManagementPage implements OnInit {
       const { code, name } = this.form.value;
       const file = this.selectedFile();
 
-      this.documentRepo.createTemplateMetadata(code, name).pipe(
-        switchMap(() => {
-          if (file) {
-            const s3Key = `templates/${code.toLowerCase()}_template.docx`;
-            return this.s3StorageService.getUploadUrl(s3Key, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document').pipe(
-              switchMap(urlRes => this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, file).pipe(
-                filter(upRes => upRes.success),
-                map(() => urlRes.key)
-              )),
-              switchMap(uploadedKey => this.documentRepo.associateTemplateFile(code, uploadedKey))
-            );
-          }
-          return of(null);
-        })
-      ).subscribe({
+      this.createTemplateUC.execute({ code, name, file: file ?? undefined }).subscribe({
         next: () => {
           const msg = file 
             ? '✅ Plantilla y archivo .docx creados y subidos con éxito.' 
@@ -1328,8 +1318,8 @@ export class TemplateManagementPage implements OnInit {
     }
   }
 
-  onFileSelected(event: any) {
-    const file = event.target?.files?.[0];
+  onFileSelected(event: Event) {
+    const file = (event.target as HTMLInputElement)?.files?.[0];
     const code = this.uploadTargetCode();
 
     if (!file || !code) return;
@@ -1340,37 +1330,27 @@ export class TemplateManagementPage implements OnInit {
     }
 
     this.isUploading.set(true);
-    const s3Key = `templates/${code.toLowerCase()}_template.docx`;
 
-    // 1. Obtener URL firmada
-    this.s3StorageService.getUploadUrl(s3Key, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document').pipe(
-      // 2. Subir a S3
-      switchMap(urlRes => this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, file).pipe(
-        filter(upRes => upRes.success),
-        map(() => urlRes.key)
-      )),
-      // 3. Asociar en base de datos
-      switchMap(uploadedKey => this.documentRepo.associateTemplateFile(code, uploadedKey))
-    ).subscribe({
+    this.uploadTemplateFileUC.execute(code, file).subscribe({
       next: () => {
         this.snackBar.open(`✅ Archivo .docx asociado con éxito a la plantilla ${code}.`, 'Cerrar', { duration: 5000 });
         this.isUploading.set(false);
         this.uploadTargetCode.set(null);
         this.loadTemplates();
-        event.target.value = ''; // Reset input file
+        (event.target as HTMLInputElement).value = ''; // Reset input file
       },
       error: (err) => {
         console.error('Error uploading template file:', err);
         this.snackBar.open('❌ Error al subir y asociar el archivo de la plantilla.', 'Cerrar');
         this.isUploading.set(false);
         this.uploadTargetCode.set(null);
-        event.target.value = ''; // Reset input file
+        (event.target as HTMLInputElement).value = ''; // Reset input file
       }
     });
   }
 
   downloadFile(code: string) {
-    this.documentRepo.downloadTemplate(code).subscribe({
+    this.downloadTemplateUC.execute(code).subscribe({
       next: (res) => {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');

@@ -37,11 +37,11 @@ export class NotificationRepositoryAdapter implements INotificationRepositoryPor
     ]);
   }
 
-  markAsRead(notificationId: string): Observable<void> {
+  markAsRead(_notificationId: string): Observable<void> {
     return of(undefined);
   }
 
-  markAllAsRead(userId: string): Observable<void> {
+  markAllAsRead(_userId: string): Observable<void> {
     return of(undefined);
   }
 
@@ -68,11 +68,11 @@ export class NotificationRepositoryAdapter implements INotificationRepositoryPor
     ]);
   }
 
-  saveTemplate(template: EmailTemplate): Observable<void> {
+  saveTemplate(_template: EmailTemplate): Observable<void> {
     return of(undefined);
   }
 
-  sendTestEmail(templateId: string, email: string): Observable<void> {
+  sendTestEmail(_templateId: string, _email: string): Observable<void> {
     return of(undefined);
   }
 }

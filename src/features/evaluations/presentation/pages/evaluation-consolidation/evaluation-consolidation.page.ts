@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -16,13 +16,17 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDividerModule } from '@angular/material/divider';
 
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
-import { S3StorageService } from '@infrastructure/services/s3-storage.service';
-import { NotificationBrokerService } from '@infrastructure/services/notification-broker.service';
-import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
-import { filter, switchMap, map } from 'rxjs/operators';
+import { LoadEvaluationConsolidationUseCase } from '../../../application/load-evaluation-consolidation.use-case';
+import { EmitConsolidatedResolutionUseCase } from '../../../application/emit-consolidated-resolution.use-case';
+import { DownloadEvaluationDocumentUseCase } from '../../../application/download-evaluation-document.use-case';
+import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
+import { ProtocolEntity } from '@domain/entities/protocol.entity';
+import { NormalizedEvaluation } from '../../../application/load-evaluation-consolidation.use-case';
+
+interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
+  id: number | string;
+  observations?: string;
+}
 
 @Component({
   selector: 'app-evaluation-consolidation',
@@ -411,16 +415,15 @@ export class EvaluationConsolidationPage implements OnInit {
   private snackBar = inject(MatSnackBar);
   private fb = inject(FormBuilder);
   
-  private evalRepo = inject(IEvaluationRepositoryPort);
-  private protocolRepo = inject(IProtocolRepositoryPort);
-  private resolutionRepo = inject(IResolutionRepositoryPort);
-  private s3StorageService = inject(S3StorageService);
-  private notificationBroker = inject(NotificationBrokerService);
+  private loadConsolidation = inject(LoadEvaluationConsolidationUseCase);
+  private emitResolution = inject(EmitConsolidatedResolutionUseCase);
+  private downloadEvalDoc = inject(DownloadEvaluationDocumentUseCase);
+  private loadProtocolById = inject(LoadProtocolByIdUseCase);
   private destroyRef = inject(DestroyRef);
 
   protocolId = '';
-  protocol = signal<any>(null);
-  evaluations = signal<any[]>([]);
+  protocol = signal<ProtocolEntity | null>(null);
+  evaluations = signal<ConsolidatedEvaluationRow[]>([]);
   isUnanimous = signal(true);
   isSubmitting = signal(false);
   selectedFile = signal<File | null>(null);
@@ -433,42 +436,30 @@ export class EvaluationConsolidationPage implements OnInit {
 
   ngOnInit() {
     this.protocolId = this.route.snapshot.params['id'];
-    this.loadConsolidation();
+    this.loadConsolidationData();
   }
 
-  loadConsolidation() {
-    // 1. Obtener datos del protocolo para el encabezado
-    this.protocolRepo.getById(this.protocolId)
+  loadConsolidationData() {
+    this.loadProtocolById.execute(this.protocolId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(p => this.protocol.set(p));
- 
-    // 2. Consumir el nuevo endpoint de Consolidación (Anexo 12)
-    this.evalRepo.consolidateEvaluation(this.protocolId)
+
+    this.loadConsolidation.execute(this.protocolId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res) => {
-          const data = res.data || res;
-          const rawList = Array.isArray(data.evaluations) ? data.evaluations : [];
-          const normalized = rawList.map((ev: any) => ({
-            ...ev,
-            verdict: ev.verdict || ev.result || 'APROBADO',
-            ethicsResult: ev.ethicsResult || ev.ethicalAspects || ev.result || 'APROBADO',
-            methodologyResult: ev.methodologyResult || ev.methodologicalAspects || ev.result || 'APROBADO',
-            legalResult: ev.legalResult || ev.legalAspects || ev.result || 'APROBADO',
-            evaluatorProfile: ev.evaluatorProfile || 'Evaluador',
-            evaluatorName: ev.evaluatorName || ('Evaluador #' + (ev.evaluatorId || ev.id || ''))
-          }));
-          this.evaluations.set(normalized);
-          this.isUnanimous.set(data.isUnanimous ?? true);
+        next: (result) => {
+          this.evaluations.set(result.evaluations as ConsolidatedEvaluationRow[]);
+          this.isUnanimous.set(result.isUnanimous);
         },
-        error: (err) => {
+        error: () => {
           this.snackBar.open('❌ Error al cargar la consolidación', 'Cerrar');
         }
       });
   }
 
-  onFileSelected(event: any) {
-    const file = event.target?.files?.[0];
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (file) {
       if (file.type !== 'application/pdf') {
         this.snackBar.open('⚠️ Solo se permiten archivos PDF.', 'Cerrar', { duration: 3000 });
@@ -489,51 +480,23 @@ export class EvaluationConsolidationPage implements OnInit {
     if (this.form.valid) {
       this.isSubmitting.set(true);
       const formValue = this.form.value;
-      const protocolIdNum = Number(this.protocolId);
 
-      // 1. Generar la key/ruta en R2
-      const s3Key = `protocols/${protocolIdNum}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-      const fileToUpload = this.selectedFile() || new File([new Blob(['Acta de Resolución Consolidada'], { type: 'application/pdf' })], 'Carta_Resolucion_Consolidada.pdf', { type: 'application/pdf' });
-
-      // 2. Solicitar URL firmada y subir a R2
-      this.s3StorageService.getUploadUrl(s3Key, 'application/pdf').pipe(
-        switchMap(urlRes => this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, fileToUpload).pipe(
-          filter(upRes => upRes.success),
-          map(() => urlRes.key)
-        )),
-        switchMap(uploadedKey => {
-          const payload = {
-            protocolId: protocolIdNum,
-            validityYears: Number(formValue.validityYears),
-            followUpPeriodDays: Number(formValue.followUpPeriodDays),
-            observations: formValue.observations,
-            pdfLetterPath: uploadedKey
-          };
-
-          return this.resolutionRepo.submitResolution(payload);
-        })
-      ).subscribe({
-        next: (res: any) => {
+      this.emitResolution.execute({
+        protocolId: Number(this.protocolId),
+        validityYears: Number(formValue.validityYears),
+        followUpPeriodDays: Number(formValue.followUpPeriodDays),
+        observations: formValue.observations,
+        file: this.selectedFile() ?? undefined
+      }).subscribe({
+        next: () => {
           this.snackBar.open('✅ Dictamen emitido y notificado con éxito', 'Cerrar', { duration: 5000 });
-          
-          let finalStatus = ProtocolStatus.APPROVED;
-          if (res && res.resolutionType === 'REJECTION') {
-            finalStatus = ProtocolStatus.REJECTED;
-          } else if (res && res.resolutionType === 'CONDITIONAL') {
-            finalStatus = ProtocolStatus.OBSERVED;
-          }
-
-          this.notificationBroker.publish('PROTOCOL_STATUS_UPDATED', {
-            protocolId: this.protocolId,
-            status: finalStatus
-          });
-
           this.isSubmitting.set(false);
           this.router.navigate(['/dashboard/home']);
         },
-        error: (err) => {
+        error: (err: unknown) => {
           console.error('[ConsolidationPage] Error al emitir resolución:', err);
-          if (err.status === 409) {
+          const httpErr = err as { status?: number };
+          if (httpErr.status === 409) {
             this.snackBar.open('⚠️ El expediente de este protocolo ya ha sido versionado o modificado por otra transacción concurrente. Por favor, recargue la página.', 'Cerrar', { duration: 8000 });
           } else {
             this.snackBar.open('❌ Error al registrar el dictamen consolidado.', 'Cerrar', { duration: 5000 });
@@ -560,12 +523,13 @@ export class EvaluationConsolidationPage implements OnInit {
     return 'status-warn';
   }
 
-  downloadEvaluatorPdf(evaluationId: any) {
+  downloadEvaluatorPdf(evaluationId: number | string) {
     if (!evaluationId) return;
-    this.evalRepo.getDocumentDownloadUrl(String(evaluationId)).subscribe({
+    this.downloadEvalDoc.downloadPdf(String(evaluationId)).subscribe({
       next: (res) => {
-        if (res && res.downloadUrl) {
-          window.open(res.downloadUrl, '_blank');
+        const raw = res as Record<string, unknown>;
+        if (raw && raw['downloadUrl']) {
+          window.open(raw['downloadUrl'] as string, '_blank');
         } else {
           this.snackBar.open('❌ No se encontró la URL de descarga para el PDF.', 'Cerrar', { duration: 3000 });
         }
@@ -574,12 +538,13 @@ export class EvaluationConsolidationPage implements OnInit {
     });
   }
 
-  downloadEvaluatorDocx(evaluationId: any) {
+  downloadEvaluatorDocx(evaluationId: number | string) {
     if (!evaluationId) return;
-    this.evalRepo.getDocxDownloadUrl(String(evaluationId)).subscribe({
+    this.downloadEvalDoc.downloadDocx(String(evaluationId)).subscribe({
       next: (res) => {
-        if (res && res.downloadUrl) {
-          window.open(res.downloadUrl, '_blank');
+        const raw = res as Record<string, unknown>;
+        if (raw && raw['downloadUrl']) {
+          window.open(raw['downloadUrl'] as string, '_blank');
         } else {
           this.snackBar.open('❌ No se encontró la URL de descarga para el Word DOCX.', 'Cerrar', { duration: 3000 });
         }

@@ -10,63 +10,71 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
   imports: [CommonModule, MatIconModule, MatProgressSpinnerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="modal-overlay" *ngIf="isOpen()">
-      <div class="modal-card animate-zoom-in">
-        
-        <!-- HEADER PREMIUM -->
-        <header class="modal-header">
-          <div class="header-icon-container">
-            <mat-icon class="legal-icon">gavel</mat-icon>
-          </div>
-          <h3>Sometimiento Obligatorio a Tiempos y Reglamentos (CEISH)</h3>
-          <p class="subtitle">Aceptación de conformidad del Investigador Principal</p>
-        </header>
-        
-        <!-- BODY -->
-        <div class="modal-body">
-          <div class="protocol-badge">
-            <mat-icon>science</mat-icon>
-            <span>Protocolo: <strong>{{ ceishCode() || 'En trámite' }}</strong></span>
-          </div>
-
-          <p class="intro-text">
-            Estimado(a) Investigador(a), la Secretaría de la CEISH-ESPOCH ha completado y validado satisfactoriamente los requisitos documentales de su proyecto.
-          </p>
-
-          <div class="warning-banner">
-            <mat-icon>warning</mat-icon>
-            <div class="warning-content">
-              <strong>Plazos Reglamentarios de Evaluación</strong>
-              <p>El ciclo formal de evaluación por el comité de ética se somete a metodologías vigentes con plazos de resolución de hasta 45 o 60 días (según nivel de riesgo asignado).</p>
-            </div>
-          </div>
-
-          <p class="terms-text">
-            Al aceptar esta declaración, usted declara formalmente su conformidad y se compromete a someterse a los plazos, cronogramas, requerimientos de corrección y decisiones dictaminadas por el Comité de Ética en Investigación con Seres Humanos de la Escuela Superior Politécnica de Chimborazo (CEISH-ESPOCH).
-          </p>
+    @if (isOpen()) {
+      <div class="modal-overlay">
+        <div class="modal-card animate-zoom-in">
           
-          <label class="checkbox-container" [class.checked]="isAccepted()">
-            <input type="checkbox" (change)="toggleCheckbox()" [disabled]="isLoading()" />
-            <span class="custom-checkbox">
-              <mat-icon *ngIf="isAccepted()">check</mat-icon>
-            </span>
-            <span class="checkbox-label">Declaro solemnemente estar de acuerdo y someterme a los tiempos reglamentarios de la CEISH-ESPOCH.</span>
-          </label>
+          <!-- HEADER PREMIUM -->
+          <header class="modal-header">
+            <div class="header-icon-container">
+              <mat-icon class="legal-icon">gavel</mat-icon>
+            </div>
+            <h3>Sometimiento Obligatorio a Tiempos y Reglamentos (CEISH)</h3>
+            <p class="subtitle">Aceptación de conformidad del Investigador Principal</p>
+          </header>
+          
+          <!-- BODY -->
+          <div class="modal-body">
+            <div class="protocol-badge">
+              <mat-icon>science</mat-icon>
+              <span>Protocolo: <strong>{{ ceishCode() || 'En trámite' }}</strong></span>
+            </div>
+
+            <p class="intro-text">
+              Estimado(a) Investigador(a), la Secretaría de la CEISH-ESPOCH ha completado y validado satisfactoriamente los requisitos documentales de su proyecto.
+            </p>
+
+            <div class="warning-banner">
+              <mat-icon>warning</mat-icon>
+              <div class="warning-content">
+                <strong>Plazos Reglamentarios de Evaluación</strong>
+                <p>El ciclo formal de evaluación por el comité de ética se somete a metodologías vigentes con plazos de resolución de hasta 45 o 60 días (según nivel de riesgo asignado).</p>
+              </div>
+            </div>
+
+            <p class="terms-text">
+              Al aceptar esta declaración, usted declara formalmente su conformidad y se compromete a someterse a los plazos, cronogramas, requerimientos de corrección y decisiones dictaminadas por el Comité de Ética en Investigación con Seres Humanos de la Escuela Superior Politécnica de Chimborazo (CEISH-ESPOCH).
+            </p>
+            
+            <label class="checkbox-container" [class.checked]="isAccepted()">
+              <input type="checkbox" (change)="toggleCheckbox()" [disabled]="isLoading()" />
+              <span class="custom-checkbox">
+                @if (isAccepted()) {
+                  <mat-icon>check</mat-icon>
+                }
+              </span>
+              <span class="checkbox-label">Declaro solemnemente estar de acuerdo y someterme a los tiempos reglamentarios de la CEISH-ESPOCH.</span>
+            </label>
+          </div>
+          
+          <!-- FOOTER -->
+          <footer class="modal-footer">
+            <button 
+              class="btn-primary" 
+              [disabled]="!isAccepted() || isLoading()" 
+              (click)="onConfirm()">
+              @if (isLoading()) {
+                <mat-progress-spinner diameter="20" mode="indeterminate" class="btn-spinner"></mat-progress-spinner>
+                <span>Enviando aceptación...</span>
+              } @else {
+                <mat-icon>assignment_turned_in</mat-icon>
+                <span>Aceptar Conformidad y Someter a Evaluación</span>
+              }
+            </button>
+          </footer>
         </div>
-        
-        <!-- FOOTER -->
-        <footer class="modal-footer">
-          <button 
-            class="btn-primary" 
-            [disabled]="!isAccepted() || isLoading()" 
-            (click)="onConfirm()">
-            <mat-progress-spinner *ngIf="isLoading()" diameter="20" mode="indeterminate" class="btn-spinner"></mat-progress-spinner>
-            <mat-icon *ngIf="!isLoading()">assignment_turned_in</mat-icon>
-            <span>{{ isLoading() ? 'Enviando aceptación...' : 'Aceptar Conformidad y Someter a Evaluación' }}</span>
-          </button>
-        </footer>
       </div>
-    </div>
+    }
   `,
   styles: [`
     .modal-overlay {

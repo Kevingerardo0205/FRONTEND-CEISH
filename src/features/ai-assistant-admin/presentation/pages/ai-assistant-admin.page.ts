@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { IAiAssistantAdminRepositoryPort } from '@domain/ports/IAiAssistantAdminRepositoryPort';
 import { AiAssistantSharedService } from '@shared/components/ai-assistant/ai-assistant-shared.service';
 
@@ -16,7 +16,7 @@ interface SystemRole {
 @Component({
   selector: 'app-ai-assistant-admin-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
   template: `
     <div class="dashboard-admin-container animate-fade-in" style="padding: 24px; max-width: 1200px; margin: 0 auto;">
       

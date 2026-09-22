@@ -12,11 +12,15 @@ export interface Permission {
   module?: Module;
 }
 
+import { UserRoleItem } from './user-admin.entity';
+
 export interface User {
   id?: string;
   nombre: string;
   email: string;
   rol: string; 
+  roles?: string[]; // Soporte para múltiples roles
+  userRoles?: UserRoleItem[]; // Roles detallados con suplencias
   perfil?: string;
   activo: boolean;
   emailVerificado: boolean;

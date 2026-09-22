@@ -4,12 +4,103 @@ import { catchError, map, switchMap, filter } from 'rxjs/operators';
 import { BaseApiService } from '@infrastructure/api/base-api.service';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
 import { CrearProtocoloDto, ProtocoloCreadoResponse, ProtocoloResumen, ProtocoloDetalle, ChecklistRequirement, EstadoProtocolo } from '../../domain/dtos/crear-protocolo.dto';
-import { RequisitoDocumento } from '../../constants/anexos-pet.constants';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 import { sanitizeFilename } from '@domain/entities/storage.interface';
+import { RiskLevel } from '@domain/ports/IProtocolRepositoryPort';
+
+// --- Local response types ---
+
+/** Generic wrapper the backend uses: { data: T } */
+interface ApiEnvelope<T> {
+  data: T;
+}
+
+/** Study-type catalog item from GET /protocols/study-types */
+interface StudyTypeItem {
+  id: number;
+  name: string;
+  code?: string;
+}
+
+/** Raw protocol object (mixed snake_case / camelCase) from the backend */
+interface RawBackendProtocol {
+  id: number;
+  ceishCode?: string;
+  codigoCeish?: string;
+  title?: string;
+  titulo?: string;
+  receptionStatus?: string;
+  estado?: string;
+  createdAt?: string;
+  fechaCreacion?: string;
+  receptionDate?: string;
+  studyType?: string;
+  tipoEstudio?: string;
+  isTimelineTermsAccepted?: boolean;
+  timelineTermsAcceptedAt?: string | null;
+  timelineTermsAcceptedIp?: string | null;
+  versionNumber?: number;
+  version?: number;
+  checklist?: ChecklistRequirement[];
+  requirements?: ChecklistRequirement[];
+  protocolo_requisitos?: ChecklistRequirement[];
+  [key: string]: unknown;
+}
+
+/** POST /protocols/:id/upload-document payload */
+interface UploadDocumentPayload {
+  requirementId: number;
+  fileName: string;
+  path: string;
+  sizeBytes: number;
+  requirementCode?: string;
+}
+
+/** Document registration response */
+interface DocumentRegistrationResponse {
+  id: number;
+  fileName: string;
+  path: string;
+  protocolId?: number;
+}
+
+/** Response from finalize/submit endpoint */
+interface FinalizeResponse {
+  message?: string;
+  success?: boolean;
+  code?: string;
+}
+
+/** Dynamic requirement item from GET /protocols/requirements */
+interface RequirementItem {
+  id: number;
+  code?: string;
+  name: string;
+  description?: string;
+  mandatory?: boolean;
+  [key: string]: unknown;
+}
+
+/** Document history entry from backend */
+interface DocumentHistoryEntry {
+  id: number;
+  fileName: string;
+  uploadedAt: string;
+  status?: string;
+  requirementId?: number;
+  [key: string]: unknown;
+}
+
+/** Unwraps an API response that may be wrapped in { data: T } or returned directly */
+function unwrap<T>(response: { data: T } | T): T {
+  if (response !== null && typeof response === 'object' && 'data' in response) {
+    return (response as { data: T }).data;
+  }
+  return response as T;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ProtocoloService extends BaseApiService {
@@ -33,18 +124,22 @@ export class ProtocoloService extends BaseApiService {
   /**
    * Obtener tipos de estudio dinámicos del backend
    */
-  getStudyTypes(): Observable<any[]> {
-    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/study-types`).pipe(
-      map(res => (res?.data || res) as any[])
+  getStudyTypes(): Observable<StudyTypeItem[]> {
+    return this.get<ApiEnvelope<StudyTypeItem[]> | StudyTypeItem[]>(
+      `${ENDPOINTS.PROTOCOLS.BASE}/study-types`
+    ).pipe(
+      map(res => unwrap<StudyTypeItem[]>(res) ?? [])
     );
   }
 
   /**
    * Obtener niveles de riesgo dinámicos
    */
-  getRiskLevels(): Observable<any[]> {
-    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/risk-levels`).pipe(
-      map(res => (res?.data || res) as any[])
+  getRiskLevels(): Observable<RiskLevel[]> {
+    return this.get<ApiEnvelope<RiskLevel[]> | RiskLevel[]>(
+      `${ENDPOINTS.PROTOCOLS.BASE}/risk-levels`
+    ).pipe(
+      map(res => unwrap<RiskLevel[]>(res) ?? [])
     );
   }
 
@@ -54,19 +149,17 @@ export class ProtocoloService extends BaseApiService {
    */
   getChecklist(protocolId: number): Observable<ChecklistRequirement[]> {
     // Definido por Mapeo Investigador: GET /protocols/checklist/:id
-    const url = this.isInvestigador 
-      ? `/protocols/checklist/${protocolId}` 
+    const url = this.isInvestigador
+      ? `/protocols/checklist/${protocolId}`
       : ENDPOINTS.PROTOCOLS.CHECKLIST(protocolId.toString());
 
-    console.log(`[ProtocoloService] Consultando checklist en: ${url}`);
-    
-    return this.get<any>(url).pipe(
-      map(res => (res?.data || res) as ChecklistRequirement[]),
+    return this.get<ApiEnvelope<ChecklistRequirement[]> | ChecklistRequirement[]>(url).pipe(
+      map(res => unwrap<ChecklistRequirement[]>(res) ?? []),
       catchError((err) => {
         console.warn(`[ProtocoloService] Error en checklist oficial (${url}), intentando desde detalle...`, err);
         return this.obtenerProtocolo(protocolId).pipe(
-          map((protocol: any) => {
-            const proto = protocol?.data || protocol;
+          map((protocol: ProtocoloDetalle) => {
+            const proto = protocol as unknown as RawBackendProtocol;
             return proto.checklist || proto.requirements || proto.protocolo_requisitos || [];
           }),
           catchError(fallbackErr => {
@@ -89,11 +182,10 @@ export class ProtocoloService extends BaseApiService {
    * 3. Subida de Archivos vinculada a Requisito (Mapeo Investigador)
    * Endpoint Investigador: POST /protocols/:id/upload-document
    */
-  subirDocumento(file: File, protocolId: number, requirementId: number, requirementCode?: string): Observable<any> {
+  subirDocumento(file: File, protocolId: number, requirementId: number, requirementCode?: string, versionNumber: number = 1): Observable<DocumentRegistrationResponse> {
     const sanitizedName = sanitizeFilename(file.name);
-    const s3Key = `protocols/${protocolId}/requirements/${requirementId}/${sanitizedName}`;
-
-    console.log(`[ProtocoloService] Iniciando subida de documento para req ${requirementId} (code: ${requirementCode}). S3 Key: ${s3Key}`);
+    const vFolder = versionNumber > 1 ? `v${versionNumber}/` : '';
+    const s3Key = `protocols/${protocolId}/${vFolder}requirements/${requirementId}/${sanitizedName}`;
 
     return this.s3StorageService.getUploadUrl(s3Key, file.type || 'application/pdf').pipe(
       catchError(err => {
@@ -101,7 +193,6 @@ export class ProtocoloService extends BaseApiService {
         return throwError(() => err);
       }),
       switchMap(urlRes => {
-        console.log('[ProtocoloService] URL firmada obtenida con éxito. URL:', urlRes.uploadUrl);
         return this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, file).pipe(
           catchError(err => {
             console.error('[ProtocoloService] Error al realizar la subida PUT a S3/R2:', err);
@@ -113,7 +204,7 @@ export class ProtocoloService extends BaseApiService {
               ? `/protocols/${protocolId}/upload-document`
               : ENDPOINTS.PROTOCOLS.UPLOAD_DOCUMENT(protocolId.toString());
 
-            const payload: any = {
+            const payload: UploadDocumentPayload = {
               requirementId: requirementId,
               fileName: sanitizedName,
               path: urlRes.key,
@@ -124,8 +215,8 @@ export class ProtocoloService extends BaseApiService {
               payload.requirementCode = requirementCode;
             }
 
-            console.log(`[ProtocoloService] Registrando documento S3 en BD: ${url}`, payload);
-            return this.post<any>(url, payload).pipe(
+            return this.post<ApiEnvelope<DocumentRegistrationResponse> | DocumentRegistrationResponse>(url, payload).pipe(
+              map(res => unwrap<DocumentRegistrationResponse>(res)),
               catchError(err => {
                 console.error('[ProtocoloService] Error en el registro del documento en la BD:', err);
                 return throwError(() => err);
@@ -137,48 +228,54 @@ export class ProtocoloService extends BaseApiService {
     );
   }
 
-  getDocumentHistory(protocolId: number): Observable<any[]> {
+  getDocumentHistory(protocolId: number): Observable<DocumentHistoryEntry[]> {
     const url = this.isInvestigador
       ? `/protocols/${protocolId}/documents`
       : ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(protocolId.toString());
-    return this.get<any>(url).pipe(
-      map(res => (res?.data || res) as any[])
+    return this.get<ApiEnvelope<DocumentHistoryEntry[]> | DocumentHistoryEntry[]>(url).pipe(
+      map(res => unwrap<DocumentHistoryEntry[]>(res) ?? [])
     );
   }
 
-  subirDocumentosBulk(protocolId: number, files: File[]): Observable<any> {
+  subirDocumentosBulk(protocolId: number, files: File[]): Observable<DocumentRegistrationResponse[]> {
     const uploads = files.map(file => this.subirDocumento(file, protocolId, 0));
     return forkJoin(uploads);
   }
   /**
    * 4. Cierre y Envío para Revisión Técnica
    */
-  finalizarProtocolo(protocolId: number): Observable<any> {
+  finalizarProtocolo(protocolId: number): Observable<FinalizeResponse> {
     const url = this.isInvestigador
       ? `/protocols/${protocolId}/submit` // El backend espera 'submit' para el Investigador
       : ENDPOINTS.PROTOCOLS.RECEPTION.FINALIZE(protocolId.toString()); // 'finalize' para Secretaría
 
-    console.log(`[ProtocoloService] Enviando/Finalizando protocolo: ${url}`);
-    return this.post<any>(url, {});
+    return this.post<ApiEnvelope<FinalizeResponse> | FinalizeResponse>(url, {}).pipe(
+      map(res => unwrap<FinalizeResponse>(res))
+    );
   }
 
   misProtocolos(): Observable<ProtocoloResumen[]> {
-    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?limit=100`).pipe(
+    return this.get<ApiEnvelope<RawBackendProtocol[]> | RawBackendProtocol[]>(
+      `${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?limit=100`
+    ).pipe(
       map(res => {
-        let data = res?.data || res;
+        const unwrapped = unwrap<RawBackendProtocol[]>(res);
         // Soporte para respuestas paginadas del helper paginate: { data: [...], total: X }
-        if (data && !Array.isArray(data) && Array.isArray(data.data)) {
-          data = data.data;
+        let data: RawBackendProtocol[];
+        if (Array.isArray(unwrapped)) {
+          data = unwrapped;
+        } else if (unwrapped && typeof unwrapped === 'object' && Array.isArray((unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data)) {
+          data = (unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data;
+        } else {
+          data = [];
         }
 
         if (!data || !Array.isArray(data)) {
           console.warn('[ProtocoloService] No se encontró una estructura de datos de protocolo válida en el backend:', res);
           return [];
         }
-        console.log(`[ProtocoloService] Cargados ${data.length} protocolos reales desde la base de datos.`);
-        
         // Mapeo explícito para solucionar discrepancia de nombres de propiedades del backend
-        return data.map((p: any) => ({
+        return data.map((p: RawBackendProtocol) => ({
           id: p.id,
           codigoCeish: p.ceishCode || p.codigoCeish || '',
           titulo: p.title || p.titulo || 'Sin Título',
@@ -203,16 +300,23 @@ export class ProtocoloService extends BaseApiService {
   }
 
   misProtocolosSubsanar(): Observable<ProtocoloResumen[]> {
-    return this.get<any>(`${ENDPOINTS.PROTOCOLS.BASE}/mis-subsanaciones`).pipe(
+    return this.get<ApiEnvelope<RawBackendProtocol[]> | RawBackendProtocol[]>(
+      `${ENDPOINTS.PROTOCOLS.BASE}/mis-subsanaciones`
+    ).pipe(
       map(res => {
-        let data = res?.data || res;
-        if (data && !Array.isArray(data) && Array.isArray(data.data)) {
-          data = data.data;
+        const unwrapped = unwrap<RawBackendProtocol[]>(res);
+        let data: RawBackendProtocol[];
+        if (Array.isArray(unwrapped)) {
+          data = unwrapped;
+        } else if (unwrapped && typeof unwrapped === 'object' && Array.isArray((unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data)) {
+          data = (unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data;
+        } else {
+          data = [];
         }
         if (!data || !Array.isArray(data)) {
           return [];
         }
-        return data.map((p: any) => ({
+        return data.map((p: RawBackendProtocol) => ({
           id: p.id,
           codigoCeish: p.ceishCode || p.codigoCeish || '',
           titulo: p.title || p.titulo || 'Sin Título',
@@ -233,9 +337,11 @@ export class ProtocoloService extends BaseApiService {
   }
 
   obtenerProtocolo(codigo: string | number): Observable<ProtocoloDetalle> {
-    return this.get<any>(ENDPOINTS.PROTOCOLS.BY_ID(codigo.toString())).pipe(
+    return this.get<ApiEnvelope<RawBackendProtocol> | RawBackendProtocol>(
+      ENDPOINTS.PROTOCOLS.BY_ID(codigo.toString())
+    ).pipe(
       map(res => {
-        const p = res?.data || res;
+        const p = unwrap<RawBackendProtocol>(res);
         if (!p) throw new Error('No se encontró detalle de protocolo');
         return {
           ...p,
@@ -250,9 +356,9 @@ export class ProtocoloService extends BaseApiService {
           timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
           title: p.title || p.titulo || '',
           ceishCode: p.ceishCode || p.codigoCeish || ''
-        } as ProtocoloDetalle;
+        } as unknown as ProtocoloDetalle;
       }),
-      catchError(err => {
+      catchError(_err => {
         console.warn(`[ProtocoloService] Error al obtener detalle de protocolo ${codigo}. Usando fallback UAT...`);
         return of({
           id: 12,
@@ -293,25 +399,27 @@ export class ProtocoloService extends BaseApiService {
   }
 
   getRequisitos(
-    codigoTipo: string, 
-    muestras: boolean, 
-    vulnerable: boolean, 
-    indigena: boolean = false, 
+    codigoTipo: string,
+    muestras: boolean,
+    vulnerable: boolean,
+    indigena: boolean = false,
     multicentrico: boolean = false,
     riesgoMayor: boolean = false,
     institucionesPublicas: boolean = false
-  ): Observable<any[]> {
-    const params = { 
-      tipo: codigoTipo, 
-      muestras: muestras, 
-      vulnerable: vulnerable, 
+  ): Observable<RequirementItem[]> {
+    const params = {
+      tipo: codigoTipo,
+      muestras: muestras,
+      vulnerable: vulnerable,
       poblacionIndigena: indigena,
       multicentrico: multicentrico,
       riesgoMayor: riesgoMayor,
       institucionesPublicas: institucionesPublicas
     };
-    return this.get<any>(ENDPOINTS.PROTOCOLS.REQUIREMENTS, params).pipe(
-      map(res => (res?.data || res) as any[])
+    return this.get<ApiEnvelope<RequirementItem[]> | RequirementItem[]>(
+      ENDPOINTS.PROTOCOLS.REQUIREMENTS, params
+    ).pipe(
+      map(res => unwrap<RequirementItem[]>(res) ?? [])
     );
   }
 
@@ -319,8 +427,12 @@ export class ProtocoloService extends BaseApiService {
     return this.getChecklist(protocolId);
   }
 
-  actualizarProtocolo(id: number, data: Partial<CrearProtocoloDto>): Observable<any> {
-    return this.put<any>(`${ENDPOINTS.PROTOCOLS.BASE}/${id}`, data);
+  actualizarProtocolo(id: number, data: Partial<CrearProtocoloDto>): Observable<ProtocoloDetalle> {
+    return this.put<ApiEnvelope<ProtocoloDetalle> | ProtocoloDetalle>(
+      `${ENDPOINTS.PROTOCOLS.BASE}/${id}`, data
+    ).pipe(
+      map(res => unwrap<ProtocoloDetalle>(res))
+    );
   }
 
   acceptTimeline(protocolId: number): Observable<{ message: string; isTimelineTermsAccepted: boolean }> {

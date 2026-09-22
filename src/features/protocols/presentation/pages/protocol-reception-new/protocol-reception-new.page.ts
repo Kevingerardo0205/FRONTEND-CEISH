@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject, computed } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,10 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { LoadReceptionProtocolsUseCase } from '../../../application/use-cases/load-reception-protocols.use-case';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
-import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
-import { resolveEstado } from '@shared/utils/estado.resolver';
 import { StatCardComponent } from '../../../../dashboard/presentation/components/stat-card/stat-card.component';
 
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
@@ -136,7 +134,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
   styleUrls: ['./protocol-reception-new.page.scss']
 })
 export class ProtocolReceptionNewPage implements OnInit {
-  private protocolRepo = inject(IProtocolRepositoryPort);
+  private loadReceptionProtocols = inject(LoadReceptionProtocolsUseCase);
 
   displayedColumns = ['codigo', 'fecha', 'titulo', 'estado', 'acciones'];
   
@@ -149,18 +147,10 @@ export class ProtocolReceptionNewPage implements OnInit {
   }
 
   loadProtocols() {
-    this.protocolRepo.getReceptionProtocols().subscribe({
-      next: (data) => {
-        const list = Array.isArray(data) ? data : [];
-        console.log(`[ProtocolReceptionNewPage] ${list.length} protocolos cargados.`);
-        
-        const initialProtocols = list.filter(p => {
-          const core = resolveEstado(p.status);
-          return core && core.categoria === 'RECEPCION' && core.code !== 'COMPLETO' && core.code !== 'ARCHIVADO_VENCIMIENTO';
-        });
-        
-        this.protocols.set(initialProtocols);
-        this.filteredProtocols.set(initialProtocols);
+    this.loadReceptionProtocols.execute().subscribe({
+      next: (protocols) => {
+        this.protocols.set(protocols);
+        this.filteredProtocols.set(protocols);
       },
       error: (err) => {
         console.error('[ProtocolReceptionNewPage] Error:', err);

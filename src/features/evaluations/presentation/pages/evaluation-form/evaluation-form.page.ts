@@ -14,16 +14,35 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { FileUploaderComponent } from '@shared/components/file-uploader/file-uploader.component';
 import { SubmitEvaluationUseCase } from '../../../application/submit-evaluation.use-case';
+import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments.use-case';
+import { GetEvaluationChecklistDetailsUseCase } from '../../../application/get-evaluation-checklist-details.use-case';
+import { DownloadEvaluationDocumentUseCase } from '../../../application/download-evaluation-document.use-case';
+import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
+import { GetProtocolDocumentHistoryUseCase } from '../../../../protocols/application/use-cases/get-protocol-document-history.use-case';
 import { ANEXOS_EVALUACION, AnexoEvaluacion, ANNEX9_ITEMS } from '../../constants/anexos-evaluacion.constants';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
-import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
+import { ProtocolEntity } from '@domain/entities/protocol.entity';
+import { ComplianceStatus, SubmitEvaluationDto, Annex9PetDto, Annex10PetDto, Annex11PetDto, PetSectionResult, PetPlenoResult, PetAnnex9Section } from '@domain/entities/evaluation.entity';
+import { ChecklistDetailItem, SubmitEvaluationPayload, EvaluationAssignment } from '@domain/ports/IEvaluationRepositoryPort';
+import { ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
 import { of, Observable } from 'rxjs';
 import { switchMap, map, filter } from 'rxjs/operators';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 import { sanitizeFilename } from '@domain/entities/storage.interface';
 import { EvaluationMapper } from '@infrastructure/mappers/evaluation.mapper';
+
+interface ChecklistDetailsPayload {
+  items?: ChecklistDetailItem[];
+  evaluacionId?: number;
+}
+
+interface MyEvaluationTask {
+  id: number | string;
+  protocolId: number | string;
+  isSuspended?: boolean;
+  reviewType?: string;
+  annexToUse?: string;
+}
 
 @Component({
   selector: 'app-evaluation-form',
@@ -977,18 +996,20 @@ export class EvaluationFormPage implements OnInit {
   private router = inject(Router);
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
-  private protocolRepo = inject(IProtocolRepositoryPort);
-  private evalRepo = inject(IEvaluationRepositoryPort);
+  private getMyAssignmentsUC = inject(GetMyAssignmentsUseCase);
+  private loadProtocolById = inject(LoadProtocolByIdUseCase);
+  private getDocHistoryUC = inject(GetProtocolDocumentHistoryUseCase);
+  private getChecklistDetailsUC = inject(GetEvaluationChecklistDetailsUseCase);
+  private downloadEvalDoc = inject(DownloadEvaluationDocumentUseCase);
   private submitEvaluationUC = inject(SubmitEvaluationUseCase);
-  private docRepo = inject(IDocumentRepositoryPort);
   private destroyRef = inject(DestroyRef);
   private s3StorageService = inject(S3StorageService);
 
   evaluationId = '';
-  protocolInfo = signal<any>(null);
+  protocolInfo = signal<ProtocolEntity | null>(null);
   currentAnexo = signal<AnexoEvaluacion | null>(null);
   isSuspended = signal<boolean>(false);
-  protocolDocuments = signal<any[]>([]);
+  protocolDocuments = signal<ProtocolDocumentHistoryEntry[]>([]);
 
   readonly today = new Date().toISOString().split('T')[0];
 
@@ -1012,73 +1033,78 @@ export class EvaluationFormPage implements OnInit {
   }
 
   loadInitialData() {
-    this.evalRepo.getMyAssignments()
+    this.getMyAssignmentsUC.execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(assignments => {
-        const task = assignments.find(a => a.id === this.evaluationId);
+      .subscribe((assignments: EvaluationAssignment[]) => {
+        const task = assignments.find(a => String(a.id) === this.evaluationId);
         if (task) {
           this.isSuspended.set(task.isSuspended ?? false);
-          this.protocolRepo.getById(task.protocolId)
+          this.loadProtocolById.execute(String(task.protocolId))
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(protocol => {
               this.protocolInfo.set(protocol);
-              // reviewType de la asignación es la única fuente de verdad (Tarea 6)
-              const reviewType = (task as any).reviewType as string;
+              const reviewType = task.reviewType as string;
               let targetAnexo;
               if (reviewType === 'ENSAYO_CLINICO' || protocol.type === ProtocolType.EC) {
-                targetAnexo = ANEXOS_EVALUACION[2]; // Anexo 11
+                targetAnexo = ANEXOS_EVALUACION[2];
               } else if (reviewType === 'EXPEDITA') {
-                targetAnexo = ANEXOS_EVALUACION[0]; // Anexo 9
+                targetAnexo = ANEXOS_EVALUACION[0];
               } else {
-                targetAnexo = ANEXOS_EVALUACION[1]; // Anexo 10 — PLENO por defecto
+                targetAnexo = ANEXOS_EVALUACION[1];
               }
               this.currentAnexo.set(targetAnexo);
               if (!task.isSuspended) {
                 this.initDynamicForm();
 
-                // Cargar borrador existente si lo hay
-                this.evalRepo.getChecklistDetails(this.evaluationId)
+                this.getChecklistDetailsUC.execute(this.evaluationId)
                   .pipe(takeUntilDestroyed(this.destroyRef))
                   .subscribe({
                     next: (res) => {
-                      const data = res?.data || res;
-                      if (data && data.items && data.items.length > 0) {
+                      const raw = res as unknown;
+                      const payload = (typeof raw === 'object' && raw !== null && 'data' in (raw as Record<string, unknown>)
+                        ? (raw as Record<string, unknown>)['data']
+                        : raw) as ChecklistDetailsPayload | ChecklistDetailItem[] | null;
+                      const items = Array.isArray(payload)
+                        ? payload
+                        : payload?.items;
+                      if (items && items.length > 0) {
                         this.isDraftGenerated.set(true);
-                        this.generatedEvaluationId.set(data.evaluacionId);
-                        data.items.forEach((item: any) => {
+                        this.generatedEvaluationId.set(Array.isArray(payload) ? null : (payload?.evaluacionId ?? null));
+                        items.forEach((item: ChecklistDetailItem) => {
                           const stateCtrl = this.evaluationForm.get(`estado_${item.itemCodigo}`);
                           const obsCtrl = this.evaluationForm.get(`obs_${item.itemCodigo}`);
                           if (stateCtrl) stateCtrl.setValue(item.estado);
                           if (obsCtrl) obsCtrl.setValue(item.observaciones || '');
                         });
                         
-                        // Determinar los resultados de cada sección en base a si contienen NC
-                        const eticaHasNC = data.items.some((item: any) => item.itemCodigo?.startsWith('ET_') && item.estado === 'NC');
-                        const metHasNC = data.items.some((item: any) => item.itemCodigo?.startsWith('MET_') && item.estado === 'NC');
-                        const jurHasNC = data.items.some((item: any) => item.itemCodigo?.startsWith('JUR_') && item.estado === 'NC');
+                        const eticaHasNC = items.some((item: ChecklistDetailItem) => item.itemCodigo?.startsWith('ET_') && item.estado === 'NC');
+                        const metHasNC = items.some((item: ChecklistDetailItem) => item.itemCodigo?.startsWith('MET_') && item.estado === 'NC');
+                        const jurHasNC = items.some((item: ChecklistDetailItem) => item.itemCodigo?.startsWith('JUR_') && item.estado === 'NC');
 
-                        this.setResult('resultadoEtica', eticaHasNC ? 'CON_OBSERVACIONES' : 'APROBADO');
-                        this.setResult('resultadoMetodologia', metHasNC ? 'CON_OBSERVACIONES' : 'APROBADO');
-                        this.setResult('resultadoJuridica', jurHasNC ? 'CON_OBSERVACIONES' : 'APROBADO');
+                        this.setResult('resultadoEtica', (eticaHasNC ? 'CON_OBSERVACIONES' : 'APROBADO') as PetSectionResult);
+                        this.setResult('resultadoMetodologia', (metHasNC ? 'CON_OBSERVACIONES' : 'APROBADO') as PetSectionResult);
+                        this.setResult('resultadoJuridica', (jurHasNC ? 'CON_OBSERVACIONES' : 'APROBADO') as PetSectionResult);
 
-                        // Recalcular coherencias
                         this.checkSectionResultCoherency('ET_1');
                         this.checkSectionResultCoherency('MET_1');
                         this.checkSectionResultCoherency('JUR_1');
+                      } else {
+                        this.isDraftGenerated.set(false);
                       }
                     },
-                    error: (err) => {
-                      console.log('[EvaluationFormPage] No existing draft found for assignment:', this.evaluationId);
+                    error: () => {
+                      // Evaluación nueva sin borrador previo o fallo secundario: inicializar en blanco sin interrumpir al usuario
+                      this.isDraftGenerated.set(false);
                     }
                   });
               }
             });
 
-          this.protocolRepo.getDocumentHistory(task.protocolId)
+          this.getDocHistoryUC.execute(String(task.protocolId))
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
               next: (docs) => this.protocolDocuments.set(docs || []),
-              error: (err) => console.error('[EvaluationFormPage] Error cargando expediente:', err)
+              error: (err: unknown) => console.error('[EvaluationFormPage] Error cargando expediente:', err)
             });
         }
       });
@@ -1091,7 +1117,7 @@ export class EvaluationFormPage implements OnInit {
     
     // Si es Anexo 9, agregar controles dinámicos para los 27 criterios
     if (anexo.id === 'anexo9') {
-      Object.entries(ANNEX9_ITEMS).forEach(([seccion, items]) => {
+      Object.entries(ANNEX9_ITEMS).forEach(([_seccion, items]) => {
         items.forEach(item => {
           this.evaluationForm.addControl(`estado_${item.code}`, new FormControl('C', [Validators.required]));
           this.evaluationForm.addControl(`obs_${item.code}`, new FormControl(''));
@@ -1112,7 +1138,7 @@ export class EvaluationFormPage implements OnInit {
     this.autoAdjustGlobalResult();
   }
 
-  getItemsPorSeccion(sectionKey: string): readonly any[] {
+  getItemsPorSeccion(sectionKey: string): readonly { code: string; label: string }[] {
     if (this.currentAnexo()?.id !== 'anexo9') return [];
     const mapping: Record<string, string> = {
       'ETICA': 'etica',
@@ -1120,7 +1146,7 @@ export class EvaluationFormPage implements OnInit {
       'JURIDICA': 'juridica'
     };
     const key = mapping[sectionKey];
-    return key ? (ANNEX9_ITEMS as any)[key] : [];
+    return key ? (ANNEX9_ITEMS as Record<string, readonly { code: string; label: string }[]>)[key] : [];
   }
 
   setItemStatus(code: string, status: string) {
@@ -1220,16 +1246,17 @@ export class EvaluationFormPage implements OnInit {
   downloadPdf() {
     const id = this.generatedEvaluationId() || this.evaluationId;
     if (!id) return;
-    this.evalRepo.getDocumentDownloadUrl(String(id)).subscribe({
+    this.downloadEvalDoc.downloadPdf(String(id)).subscribe({
       next: (res) => {
-        const data = res?.data || res;
-        if (data && data.downloadUrl) {
-          window.open(data.downloadUrl, '_blank');
+        const raw = res as Record<string, unknown>;
+        const data = (raw?.['data'] || raw) as Record<string, unknown>;
+        if (data && data['downloadUrl']) {
+          window.open(data['downloadUrl'] as string, '_blank');
         } else {
           this.snackBar.open('No se pudo descargar el PDF oficial.', 'Cerrar', { duration: 3000 });
         }
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error('Download PDF error:', err);
         this.snackBar.open('No se pudo descargar el PDF oficial.', 'Cerrar', { duration: 3000 });
       }
@@ -1239,16 +1266,17 @@ export class EvaluationFormPage implements OnInit {
   downloadDocx() {
     const id = this.generatedEvaluationId() || this.evaluationId;
     if (!id) return;
-    this.evalRepo.getDocxDownloadUrl(String(id)).subscribe({
+    this.downloadEvalDoc.downloadDocx(String(id)).subscribe({
       next: (res) => {
-        const data = res?.data || res;
-        if (data && data.downloadUrl) {
-          window.open(data.downloadUrl, '_blank');
+        const raw = res as Record<string, unknown>;
+        const data = (raw?.['data'] || raw) as Record<string, unknown>;
+        if (data && data['downloadUrl']) {
+          window.open(data['downloadUrl'] as string, '_blank');
         } else {
           this.snackBar.open('No se pudo descargar el Word DOCX.', 'Cerrar', { duration: 3000 });
         }
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error('Download DOCX error:', err);
         this.snackBar.open('No se pudo descargar el Word DOCX.', 'Cerrar', { duration: 3000 });
       }
@@ -1347,7 +1375,7 @@ export class EvaluationFormPage implements OnInit {
     const observations = this.observationsControl.value?.trim()
       || (globalResult === 'APROBADO' ? 'Aprobado sin observaciones' : 'Evaluación con observaciones/condicionada');
 
-    let payload: any = {
+    const payload: SubmitEvaluationDto = {
       assignmentId: Number(this.evaluationId),
       result: EvaluationMapper.toBackendResult(globalResult),
       observations,
@@ -1356,14 +1384,14 @@ export class EvaluationFormPage implements OnInit {
     };
 
     if (isAnexo9) {
-      const buildSection = (secName: 'etica' | 'metodologia' | 'juridica', resKey: string, obsKey: string, plazoKey: string) => {
+      const buildSection = (secName: 'etica' | 'metodologia' | 'juridica', resKey: string, obsKey: string, plazoKey: string): PetAnnex9Section => {
         return {
-          resultado: formVal[resKey],
+          resultado: (formVal[resKey] === 'NO_APROBADO' ? 'NO_APROBADO' : formVal[resKey] === 'CON_OBSERVACIONES' ? 'CON_OBSERVACIONES' : 'APROBADO') as PetSectionResult,
           plazo: formVal[resKey] === 'CON_OBSERVACIONES' ? (formVal[plazoKey] || '') : null,
           observaciones: formVal[resKey] === 'CON_OBSERVACIONES' ? (formVal[obsKey] || '') : null,
           items: ANNEX9_ITEMS[secName].map(item => ({
             itemCodigo: item.code,
-            estado: formVal[`estado_${item.code}`],
+            estado: (formVal[`estado_${item.code}`] || 'C') as ComplianceStatus,
             observaciones: formVal[`estado_${item.code}`] === 'NC' ? (formVal[`obs_${item.code}`] || null) : null
           }))
         };
@@ -1373,49 +1401,54 @@ export class EvaluationFormPage implements OnInit {
         etica: buildSection('etica', 'resultadoEtica', 'eticaObservaciones', 'plazoEtica'),
         metodologia: buildSection('metodologia', 'resultadoMetodologia', 'metodologiaObservaciones', 'plazoMetodologia'),
         juridica: buildSection('juridica', 'resultadoJuridica', 'juridicaObservaciones', 'plazoJuridica')
-      };
+      } as Annex9PetDto;
     } else if (isAnexo10) {
       const annexResultado = this.isConditional(formVal.resultadoGlobal) ? 'APROBADO_CONDICIONADO'
         : formVal.resultadoGlobal === 'NO_APROBADO' ? 'NO_APROBADO' : 'APROBADO';
       payload.annex10 = {
-        resultado: annexResultado,
+        resultado: annexResultado as PetPlenoResult,
         condicionesDescripcion: formVal.condiciones || 'Sin condiciones'
-      };
+      } as Annex10PetDto;
     } else if (isAnexo11) {
       const annexResultado = this.isConditional(formVal.resultadoGlobal) ? 'APROBADO_CONDICIONADO'
         : formVal.resultadoGlobal === 'NO_APROBADO' ? 'NO_APROBADO' : 'APROBADO';
       payload.annex11 = {
-        resultado: annexResultado,
+        resultado: annexResultado as PetPlenoResult,
         fechaEvaluacion: formVal.fechaEvaluacion || this.today
-      };
+      } as Annex11PetDto;
     }
 
-    this.submitEvaluationUC.execute(payload)
+    this.submitEvaluationUC.execute(payload as unknown as SubmitEvaluationPayload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res: any) => {
+        next: (res) => {
           this.isDraftSubmitting.set(false);
           this.isDraftGenerated.set(true);
-          const data = res?.data || res;
-          if (data && data.id) {
-            this.generatedEvaluationId.set(data.id);
-          } else if (data && data.evaluationId) {
-            this.generatedEvaluationId.set(data.evaluationId);
+          const raw = res as Record<string, unknown>;
+          const data = (raw?.['data'] || raw) as Record<string, unknown>;
+          if (data && data['id']) {
+            this.generatedEvaluationId.set(data['id'] as number);
+          } else if (data && data['evaluationId']) {
+            this.generatedEvaluationId.set(data['evaluationId'] as number);
           }
           this.snackBar.open('📄 Borrador guardado. Los reportes han sido generados en R2. Descárguelos abajo para firmar.', 'Cerrar', { duration: 6000 });
         },
-        error: (err: any) => {
+        error: (err: unknown) => {
           this.isDraftSubmitting.set(false);
-          if (err?.type === 'CONCURRENCY_ERROR') {
-            this.snackBar.open(`❌ ${err.message}`, 'Recargar Página', { duration: 12000 })
+          const backendError = err as { type?: string; message?: string; error?: { message?: unknown; errors?: unknown[] } };
+          if (backendError?.type === 'CONCURRENCY_ERROR') {
+            this.snackBar.open(`❌ ${backendError.message}`, 'Recargar Página', { duration: 12000 })
               .onAction().subscribe(() => window.location.reload());
             return;
           }
+          const rawError = backendError.error;
+          const errorMessages = Array.isArray(rawError?.message) ? rawError.message as unknown[] : null;
+          const errorErrors = Array.isArray(rawError?.errors) ? rawError.errors as unknown[] : null;
           const backendMsg =
-            err.error?.message
-            || (Array.isArray(err.error?.errors) ? err.error.errors.join(' | ') : null)
-            || (Array.isArray(err.error?.message) ? err.error.message.join(' | ') : null)
-            || err.message
+            (rawError?.message as string)
+            || (errorErrors ? errorErrors.join(' | ') : null)
+            || (errorMessages ? errorMessages.join(' | ') : null)
+            || backendError.message
             || 'No se pudo generar el borrador. Verifique los datos e intente de nuevo.';
           this.snackBar.open(`❌ ${backendMsg}`, 'Cerrar', { duration: 8000 });
         }
@@ -1448,7 +1481,7 @@ export class EvaluationFormPage implements OnInit {
     const observations = this.observationsControl.value?.trim()
       || (globalResult === 'APROBADO' ? 'Aprobado sin observaciones' : 'Evaluación con observaciones/condicionada');
 
-    let payload: any = {
+    const payload: SubmitEvaluationDto = {
       assignmentId: Number(this.evaluationId),
       result: EvaluationMapper.toBackendResult(globalResult),
       observations,
@@ -1456,14 +1489,14 @@ export class EvaluationFormPage implements OnInit {
     };
 
     if (isAnexo9) {
-      const buildSection = (secName: 'etica' | 'metodologia' | 'juridica', resKey: string, obsKey: string, plazoKey: string) => {
+      const buildSection = (secName: 'etica' | 'metodologia' | 'juridica', resKey: string, obsKey: string, plazoKey: string): PetAnnex9Section => {
         return {
-          resultado: formVal[resKey],
+          resultado: (formVal[resKey] === 'NO_APROBADO' ? 'NO_APROBADO' : formVal[resKey] === 'CON_OBSERVACIONES' ? 'CON_OBSERVACIONES' : 'APROBADO') as PetSectionResult,
           plazo: formVal[resKey] === 'CON_OBSERVACIONES' ? (formVal[plazoKey] || '') : null,
           observaciones: formVal[resKey] === 'CON_OBSERVACIONES' ? (formVal[obsKey] || '') : null,
           items: ANNEX9_ITEMS[secName].map(item => ({
             itemCodigo: item.code,
-            estado: formVal[`estado_${item.code}`],
+            estado: (formVal[`estado_${item.code}`] || 'C') as ComplianceStatus,
             observaciones: formVal[`estado_${item.code}`] === 'NC' ? (formVal[`obs_${item.code}`] || null) : null
           }))
         };
@@ -1473,21 +1506,21 @@ export class EvaluationFormPage implements OnInit {
         etica: buildSection('etica', 'resultadoEtica', 'eticaObservaciones', 'plazoEtica'),
         metodologia: buildSection('metodologia', 'resultadoMetodologia', 'metodologiaObservaciones', 'plazoMetodologia'),
         juridica: buildSection('juridica', 'resultadoJuridica', 'juridicaObservaciones', 'plazoJuridica')
-      };
+      } as Annex9PetDto;
     } else if (isAnexo10) {
       const annexResultado = this.isConditional(formVal.resultadoGlobal) ? 'APROBADO_CONDICIONADO'
         : formVal.resultadoGlobal === 'NO_APROBADO' ? 'NO_APROBADO' : 'APROBADO';
       payload.annex10 = {
-        resultado: annexResultado,
+        resultado: annexResultado as PetPlenoResult,
         condicionesDescripcion: formVal.condiciones || 'Sin condiciones'
-      };
+      } as Annex10PetDto;
     } else if (isAnexo11) {
       const annexResultado = this.isConditional(formVal.resultadoGlobal) ? 'APROBADO_CONDICIONADO'
         : formVal.resultadoGlobal === 'NO_APROBADO' ? 'NO_APROBADO' : 'APROBADO';
       payload.annex11 = {
-        resultado: annexResultado,
+        resultado: annexResultado as PetPlenoResult,
         fechaEvaluacion: formVal.fechaEvaluacion || this.today
-      };
+      } as Annex11PetDto;
     }
 
     const sanitizedName = this.selectedFile ? sanitizeFilename(this.selectedFile.name) : '';
@@ -1508,40 +1541,44 @@ export class EvaluationFormPage implements OnInit {
     upload$.pipe(
       switchMap(path => {
         if (path) payload.reportPath = path;
-        return this.submitEvaluationUC.execute(payload);
+        return this.submitEvaluationUC.execute(payload as unknown as SubmitEvaluationPayload);
       }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
-      next: (res: any) => {
+      next: (res) => {
         this.snackBar.open('✅ Evaluación enviada con éxito.', 'Cerrar', { duration: 5000 });
         this.isSubmittedSuccessfully.set(true);
-        const data = res?.data || res;
-        if (data && data.id) {
-          this.generatedEvaluationId.set(data.id);
-        } else if (data && data.evaluationId) {
-          this.generatedEvaluationId.set(data.evaluationId);
+        const raw = res as Record<string, unknown>;
+        const data = (raw?.['data'] || raw) as Record<string, unknown>;
+        if (data && data['id']) {
+          this.generatedEvaluationId.set(data['id'] as number);
+        } else if (data && data['evaluationId']) {
+          this.generatedEvaluationId.set(data['evaluationId'] as number);
         }
       },
-      error: (err: any) => {
+      error: (err: unknown) => {
         this.isSubmitting.set(false);
-        if (err?.type === 'CONCURRENCY_ERROR') {
-          this.snackBar.open(`❌ ${err.message}`, 'Recargar Página', { duration: 12000 })
+        const backendError = err as { type?: string; message?: string; error?: { message?: unknown; errors?: unknown[] } };
+        if (backendError?.type === 'CONCURRENCY_ERROR') {
+          this.snackBar.open(`❌ ${backendError.message}`, 'Recargar Página', { duration: 12000 })
             .onAction().subscribe(() => window.location.reload());
           return;
         }
-        // Tarea 3: Extraer mensaje descriptivo del backend
+        const rawError = backendError.error;
+        const errorErrors = Array.isArray(rawError?.errors) ? rawError.errors as unknown[] : null;
+        const errorMessages = Array.isArray(rawError?.message) ? rawError.message as unknown[] : null;
         const backendMsg =
-          err.error?.message
-          || (Array.isArray(err.error?.errors) ? err.error.errors.join(' | ') : null)
-          || (Array.isArray(err.error?.message) ? err.error.message.join(' | ') : null)
-          || err.message
+          (rawError?.message as string)
+          || (errorErrors ? errorErrors.join(' | ') : null)
+          || (errorMessages ? errorMessages.join(' | ') : null)
+          || backendError.message
           || 'No se pudo enviar la evaluación. Verifique los datos e intente de nuevo.';
         this.snackBar.open(`❌ ${backendMsg}`, 'Cerrar', { duration: 8000 });
       }
     });
   }
 
-  verDocumento(documentId: any) {
+  verDocumento(documentId: number) {
     if (!documentId) return;
     this.s3StorageService.getDocumentDownloadUrl(Number(documentId)).subscribe({
       next: (res) => window.open(res.downloadUrl, '_blank'),

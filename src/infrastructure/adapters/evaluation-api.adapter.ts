@@ -1,11 +1,54 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { IEvaluationRepositoryPort } from 'src/domain/ports/IEvaluationRepositoryPort';
+import {
+  IEvaluationRepositoryPort,
+  EvaluatorsDashboardResponse,
+  EvaluationAssignment,
+  EvaluationProfile,
+  ChecklistDetailItem,
+  ObservationEntry,
+  SubmitEvaluationPayload,
+  CreateEvaluationProfilePayload,
+  ConsolidatedEvaluationResponse,
+  ActiveEvaluator,
+} from 'src/domain/ports/IEvaluationRepositoryPort';
 import { ApiClientService } from '../api/api-client.service';
 import { ENDPOINTS } from '../api/endpoints.constant';
 import { EvaluationEntity } from 'src/domain/entities/evaluation.entity';
-import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse } from 'src/domain/entities/peer-evaluation.entity';
+import {
+  PendingPeerAssignmentProtocol,
+  PeerAssignmentEntity,
+  AssignEvaluatorsResponse,
+} from 'src/domain/entities/peer-evaluation.entity';
+
+type ApiEnvelope<T> = { data: T };
+
+interface RawProtocolInfo {
+  id?: number;
+  ceishCode?: string;
+  title?: string;
+  reviewType?: string;
+  isRiskLevelDesignated?: boolean;
+  principalInvestigatorRecord?: { fullName?: string };
+}
+
+interface RawAssignmentResponse {
+  id?: number | string;
+  version?: { protocolId?: number; protocol?: RawProtocolInfo };
+  protocol?: RawProtocolInfo;
+  protocolId?: number | string;
+  protocolCode?: string;
+  protocolTitle?: string;
+  principalInvestigatorRecord?: { fullName?: string };
+  investigator?: string;
+  reviewType?: string;
+  annexToUse?: string | null;
+  isRiskLevelDesignated?: boolean;
+  deadline?: string;
+  daysRemaining?: number | null;
+  isUrgent?: boolean | null;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -16,32 +59,29 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   /**
    * Presidenta: Obtiene el dashboard de carga de evaluadores.
    */
-  getEvaluatorsDashboard(profileId?: string): Observable<any> {
-    const params: any = {};
+  getEvaluatorsDashboard(profileId?: string): Observable<EvaluatorsDashboardResponse> {
+    const params: Record<string, string> = {};
     if (profileId) {
-      params.profileId = profileId;
+      params['profileId'] = profileId;
     }
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.DASHBOARD, params).pipe(
-      map(res => res.data || res)
+    return this.apiClient.get<ApiEnvelope<EvaluatorsDashboardResponse>>(ENDPOINTS.EVALUATIONS.DASHBOARD, params).pipe(
+      map(res => res.data || (res as unknown as EvaluatorsDashboardResponse))
     );
   }
 
-
-
-  private normalizeAssignment(a: any): any {
-    if (!a) return a;
+  private normalizeAssignment(a: RawAssignmentResponse): EvaluationAssignment {
+    if (!a) return a as unknown as EvaluationAssignment;
     const version = a.version || {};
     const protocol = version.protocol || a.protocol || {};
     const protocolId = version.protocolId || protocol.id || a.protocolId;
     const protocolCode = protocol.ceishCode || a.protocolCode || '';
     const protocolTitle = protocol.title || a.protocolTitle || '';
-    
+
     const investigatorRecord = protocol.principalInvestigatorRecord || a.principalInvestigatorRecord || {};
     const investigatorName = investigatorRecord.fullName || a.investigator || 'Investigador Principal';
 
     const reviewType = protocol.reviewType || a.reviewType || '';
-    
-    // Si annexToUse original es nulo o el riesgo no está designado, está suspendida
+
     const rawAnnexToUse = a.annexToUse;
     const isRiskLevelDesignated = protocol.isRiskLevelDesignated ?? a.isRiskLevelDesignated ?? true;
     const isSuspended = !rawAnnexToUse || isRiskLevelDesignated === false;
@@ -57,7 +97,7 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     const deadlineDate = a.deadline ? new Date(a.deadline) : null;
     let daysRemaining = a.daysRemaining;
     let isUrgent = a.isUrgent;
-    
+
     if (!deadlineDate) {
       daysRemaining = null;
       isUrgent = false;
@@ -69,27 +109,27 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
 
     return {
       ...a,
-      id: a.id?.toString(),
-      protocolId: protocolId?.toString(),
+      id: a.id?.toString() as unknown as number,
+      protocolId: protocolId?.toString() as unknown as number,
       protocolCode,
       protocolTitle,
       investigator: investigatorName,
-      annexToUse,
+      annexToUse: annexToUse as string,
       rawAnnexToUse,
       isSuspended,
       reviewType,
-      daysRemaining,
-      isUrgent
-    };
+      daysRemaining: daysRemaining ?? undefined,
+      isUrgent: isUrgent ?? undefined,
+    } as unknown as EvaluationAssignment;
   }
 
   /**
    * Evaluador: Obtiene las tareas asignadas al evaluador actual.
    */
-  getMyAssignments(): Observable<any[]> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.MY_ASSIGNMENTS).pipe(
+  getMyAssignments(): Observable<EvaluationAssignment[]> {
+    return this.apiClient.get<ApiEnvelope<RawAssignmentResponse[]>>(ENDPOINTS.EVALUATIONS.MY_ASSIGNMENTS).pipe(
       map(res => {
-        const raw = res.data || res;
+        const raw = res.data || (res as unknown as RawAssignmentResponse[]);
         return Array.isArray(raw) ? raw.map(a => this.normalizeAssignment(a)) : [];
       })
     );
@@ -98,36 +138,36 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   /**
    * Evaluador: Envía el resultado de la evaluación.
    */
-  submitEvaluation(payload: any): Observable<any> {
-    return this.apiClient.post(ENDPOINTS.EVALUATIONS.SUBMIT, payload).pipe(
-      map((res: any) => res?.data || res)
+  submitEvaluation(payload: SubmitEvaluationPayload): Observable<{ message?: string; assignmentId?: number }> {
+    return this.apiClient.post<ApiEnvelope<{ message?: string; assignmentId?: number }>>(ENDPOINTS.EVALUATIONS.SUBMIT, payload).pipe(
+      map(res => res.data || (res as unknown as { message?: string; assignmentId?: number }))
     );
   }
 
   /**
    * Obtener todos los perfiles de evaluadores.
    */
-  getProfiles(): Observable<any[]> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PROFILES).pipe(
-      map(res => res.data || res)
+  getProfiles(): Observable<EvaluationProfile[]> {
+    return this.apiClient.get<ApiEnvelope<EvaluationProfile[]>>(ENDPOINTS.EVALUATIONS.PROFILES).pipe(
+      map(res => res.data || (res as unknown as EvaluationProfile[]))
     );
   }
 
   /**
    * Crear un nuevo perfil de evaluador.
    */
-  createProfile(profile: any): Observable<any> {
-    return this.apiClient.post<any>(ENDPOINTS.EVALUATIONS.PROFILES, profile).pipe(
-      map(res => res.data || res)
+  createProfile(profile: CreateEvaluationProfilePayload): Observable<EvaluationProfile> {
+    return this.apiClient.post<ApiEnvelope<EvaluationProfile>>(ENDPOINTS.EVALUATIONS.PROFILES, profile).pipe(
+      map(res => res.data || (res as unknown as EvaluationProfile))
     );
   }
 
   /**
    * Actualizar un perfil de evaluador.
    */
-  updateProfile(id: number, profile: any): Observable<any> {
-    return this.apiClient.patch<any>(ENDPOINTS.EVALUATIONS.PROFILE_BY_ID(id), profile).pipe(
-      map(res => res.data || res)
+  updateProfile(id: number, profile: Partial<CreateEvaluationProfilePayload>): Observable<EvaluationProfile> {
+    return this.apiClient.patch<ApiEnvelope<EvaluationProfile>>(ENDPOINTS.EVALUATIONS.PROFILE_BY_ID(id), profile).pipe(
+      map(res => res.data || (res as unknown as EvaluationProfile))
     );
   }
 
@@ -141,27 +181,27 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
   /**
    * Obtiene la consolidación de evaluaciones para un protocolo (Anexo 12).
    */
-  consolidateEvaluation(protocolId: string): Observable<any> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.CONSOLIDATE(protocolId)).pipe(
-      map(res => res.data || res)
+  consolidateEvaluation(protocolId: string): Observable<ConsolidatedEvaluationResponse> {
+    return this.apiClient.get<ApiEnvelope<ConsolidatedEvaluationResponse>>(ENDPOINTS.EVALUATIONS.CONSOLIDATE(protocolId)).pipe(
+      map(res => res.data || (res as unknown as ConsolidatedEvaluationResponse))
     );
   }
 
-  getChecklistDetails(evaluationId: string): Observable<any> {
-    return this.apiClient.get<any>(`/evaluations/${evaluationId}/checklist-details`).pipe(
-      map(res => res.data || res)
+  getChecklistDetails(evaluationId: string): Observable<ChecklistDetailItem[]> {
+    return this.apiClient.get<ApiEnvelope<ChecklistDetailItem[]>>(`/evaluations/${evaluationId}/checklist-details`).pipe(
+      map(res => res.data || (res as unknown as ChecklistDetailItem[]))
     );
   }
 
-  getDocumentDownloadUrl(evaluationId: string): Observable<any> {
-    return this.apiClient.get<any>(`/evaluations/${evaluationId}/document`).pipe(
-      map(res => res.data || res)
+  getDocumentDownloadUrl(evaluationId: string): Observable<{ downloadUrl: string }> {
+    return this.apiClient.get<ApiEnvelope<{ downloadUrl: string }>>(`/evaluations/${evaluationId}/document`).pipe(
+      map(res => res.data || (res as unknown as { downloadUrl: string }))
     );
   }
 
-  getDocxDownloadUrl(evaluationId: string): Observable<any> {
-    return this.apiClient.get<any>(`/evaluations/${evaluationId}/document/docx`).pipe(
-      map(res => res.data || res)
+  getDocxDownloadUrl(evaluationId: string): Observable<{ downloadUrl: string }> {
+    return this.apiClient.get<ApiEnvelope<{ downloadUrl: string }>>(`/evaluations/${evaluationId}/document/docx`).pipe(
+      map(res => res.data || (res as unknown as { downloadUrl: string }))
     );
   }
 
@@ -169,8 +209,8 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
    * Obtiene evaluaciones por ID de protocolo.
    */
   getByProtocolId(protocolId: string): Observable<EvaluationEntity[]> {
-    return this.apiClient.get<any>(`${ENDPOINTS.EVALUATIONS.SUBMIT}/protocol/${protocolId}`).pipe(
-      map(res => res.data || res)
+    return this.apiClient.get<ApiEnvelope<EvaluationEntity[]>>(`${ENDPOINTS.EVALUATIONS.SUBMIT}/protocol/${protocolId}`).pipe(
+      map(res => res.data || (res as unknown as EvaluationEntity[]))
     );
   }
 
@@ -178,31 +218,31 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
    * Obtiene evaluaciones por ID de evaluador.
    */
   getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]> {
-    return this.apiClient.get<any>(`${ENDPOINTS.EVALUATIONS.SUBMIT}/evaluator/${evaluatorId}`).pipe(
-      map(res => res.data || res)
+    return this.apiClient.get<ApiEnvelope<EvaluationEntity[]>>(`${ENDPOINTS.EVALUATIONS.SUBMIT}/evaluator/${evaluatorId}`).pipe(
+      map(res => res.data || (res as unknown as EvaluationEntity[]))
     );
   }
 
   // --- IMPLEMENTACIÓN DE ESTRATIFICACIÓN DE RIESGO POR PARES (PET 4.2.1) ---
 
   getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.PENDING_ASSIGNMENT).pipe(
-      map(res => res.data || res)
+    return this.apiClient.get<ApiEnvelope<PendingPeerAssignmentProtocol[]>>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.PENDING_ASSIGNMENT).pipe(
+      map(res => res.data || (res as unknown as PendingPeerAssignmentProtocol[]))
     );
   }
 
   assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse> {
-    return this.apiClient.post<any>(
+    return this.apiClient.post<ApiEnvelope<AssignEvaluatorsResponse>>(
       ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ASSIGN_PEERS(protocolId),
       { evaluatorIds }
     ).pipe(
-      map(res => res.data || res)
+      map(res => res.data || (res as unknown as AssignEvaluatorsResponse))
     );
   }
 
   getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.MY_PENDING).pipe(
-      map(res => res.data || res)
+    return this.apiClient.get<ApiEnvelope<PeerAssignmentEntity[]>>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.MY_PENDING).pipe(
+      map(res => res.data || (res as unknown as PeerAssignmentEntity[]))
     );
   }
 
@@ -213,18 +253,18 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     );
   }
 
-  getActiveEvaluators(): Observable<any[]> {
-    return this.apiClient.get<any>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ACTIVE_EVALUATORS).pipe(
+  getActiveEvaluators(): Observable<ActiveEvaluator[]> {
+    return this.apiClient.get<ApiEnvelope<ActiveEvaluator[]>>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ACTIVE_EVALUATORS).pipe(
       map(res => {
-        const raw = res?.data || res;
+        const raw = res?.data || (res as unknown as ActiveEvaluator[]);
         return Array.isArray(raw) ? raw : [];
       })
     );
   }
 
-  getProtocolObservations(protocolId: string): Observable<any> {
-    return this.apiClient.get<any>(`${ENDPOINTS.EVALUATIONS.BASE}/protocol/${protocolId}/observations`).pipe(
-      map(res => res.data || res)
+  getProtocolObservations(protocolId: string): Observable<ObservationEntry[]> {
+    return this.apiClient.get<ApiEnvelope<ObservationEntry[]>>(`${ENDPOINTS.EVALUATIONS.BASE}/protocol/${protocolId}/observations`).pipe(
+      map(res => res.data || (res as unknown as ObservationEntry[]))
     );
   }
 }

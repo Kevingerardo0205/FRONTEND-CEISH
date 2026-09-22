@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -7,10 +7,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { ProtocolWorkspaceService } from '../../../../application/services/protocol-workspace.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
+import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
+import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity';
 
 @Component({
   selector: 'app-protocol-detail-tab',
@@ -41,7 +42,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
         <div class="info-grid">
           <div class="info-item">
             <label>Tipo de Estudio</label>
-            <p>{{ protocol()?.studyType?.name || protocol()?.type }}</p>
+            <p>{{ protocol()?.studyType?.nombre || protocol()?.type }}</p>
           </div>
           <div class="info-item">
             <label>Investigador Principal</label>
@@ -165,6 +166,44 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
           </div>
         </div>
       </div>
+
+      <!-- SECCIÓN: TRAZABILIDAD Y LOGS DE AUDITORÍA (Fase 7) -->
+      <div class="audit-section mt-4" *ngIf="auditTrail().length > 0">
+        <h3 class="section-title mb-3 d-flex align-items-center gap-2">
+          <mat-icon style="color: #003366;">verified</mat-icon>
+          Bitácora de Trazabilidad de Auditoría (Firma Digital / PET)
+        </h3>
+        
+        <div class="timeline-scaffold">
+          <div class="timeline-item" *ngFor="let ev of auditTrail(); let first = first">
+            <div class="timeline-marker" [class.current]="first">
+              <div class="marker-dot"></div>
+              <div class="marker-line" *ngIf="!first"></div>
+            </div>
+            
+            <div class="timeline-content-card p-3 border rounded mb-3 bg-white shadow-sm">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bold text-primary">{{ ev.action }}</span>
+                <span class="badge-status-simple text-uppercase" style="font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1;" [ngClass]="ev.status.toLowerCase()">
+                  {{ ev.status }}
+                </span>
+              </div>
+              
+              <p class="small mb-1" style="margin: 0; font-size: 0.8rem; color: #334155;">
+                <strong>Responsable:</strong> {{ ev.responsible }}
+              </p>
+              
+              <p class="small text-muted mb-1" style="margin: 0; font-size: 0.75rem;">
+                <strong>Fecha/Hora:</strong> {{ ev.date | date:'dd MMM, yyyy - HH:mm:ss' }}
+              </p>
+              
+              <p class="small text-muted mb-0 font-monospace" style="margin: 0; font-size: 0.65rem; word-break: break-all; color: #64748b;">
+                <strong>Huella Digital (SHA-256):</strong> {{ ev.integrityHash }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -233,10 +272,24 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
 export class ProtocolDetailTabPage {
   private workspaceService = inject(ProtocolWorkspaceService);
   private authFacade = inject(AuthFacade);
+  private auditUseCase = inject(AuditUseCase);
 
   resolveEstado = resolveEstado;
 
   protocol = this.workspaceService.protocol;
+  auditTrail = signal<ProtocolTrailEvent[]>([]);
+
+  constructor() {
+    effect(() => {
+      const p = this.protocol();
+      if (p && p.id) {
+        this.auditUseCase.getProtocolTrail(String(p.id)).subscribe({
+          next: (trail) => this.auditTrail.set(trail),
+          error: (err) => console.error('Error cargando trazabilidad de auditoría:', err)
+        });
+      }
+    });
+  }
   evaluations = this.workspaceService.evaluations;
   
   showEvaluators(): boolean {

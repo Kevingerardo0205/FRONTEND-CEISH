@@ -114,6 +114,7 @@ export interface EvaluationEntity {
   annex10?: Annex10;
   annex11?: Annex11;
   status: 'PENDING' | 'COMPLETED' | 'CONSOLIDATED';
+  evaluatorProfile?: string | { name?: string };
 }
 
 // -------------------------------------------------------------------------

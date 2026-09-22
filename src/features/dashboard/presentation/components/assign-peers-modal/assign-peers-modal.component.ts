@@ -1,6 +1,6 @@
-import { Component, Inject, OnInit, signal, inject, computed } from '@angular/core';
+import { Component, Inject, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -9,8 +9,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { PendingPeerAssignmentProtocol, AssignEvaluatorsResponse } from '@domain/entities/peer-evaluation.entity';
-import { UserAdmin } from '@domain/entities/user-admin.entity';
-import { UserRole } from '@domain/entities/user.entity';
 
 @Component({
   selector: 'app-assign-peers-modal',
@@ -42,7 +40,7 @@ import { UserRole } from '@domain/entities/user.entity';
           <span class="code">{{ data.protocol.ceishCode }}</span>
           <h3 class="title">{{ data.protocol.title }}</h3>
           <div class="metadata">
-            <span><strong>Investigador:</strong> {{ data.protocol.principalInvestigatorRecord.fullName }}</span>
+            <span><strong>Investigador:</strong> {{ getInvestigatorName() }}</span>
             <span><strong>Tipo:</strong> {{ data.protocol.studyType.nombre }}</span>
           </div>
         </div>
@@ -63,7 +61,7 @@ import { UserRole } from '@domain/entities/user.entity';
             <mat-label>Seleccionar Evaluadores (Mínimo 4)</mat-label>
             <mat-select [formControl]="evaluatorsControl" multiple placeholder="Busque y seleccione evaluadores">
               <mat-select-trigger>
-                {{ evaluatorsControl.value.length }} evaluadores seleccionados
+                {{ getSelectedUniqueCount() }} evaluadores seleccionados
               </mat-select-trigger>
               <mat-option *ngFor="let ev of evaluators()" [value]="ev.id">
                 <div class="eval-option">
@@ -77,19 +75,19 @@ import { UserRole } from '@domain/entities/user.entity';
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint align="end">{{ evaluatorsControl.value.length }} seleccionados</mat-hint>
+            <mat-hint align="end">{{ getSelectedUniqueCount() }} seleccionados</mat-hint>
           </mat-form-field>
 
-          <div class="selection-summary" *ngIf="evaluatorsControl.value.length > 0">
+          <div class="selection-summary" *ngIf="getSelectedUniqueCount() > 0">
             <div class="summary-chip" *ngFor="let id of evaluatorsControl.value">
               {{ getEvaluatorName(id) }}
               <mat-icon (click)="removeEvaluator(id)">cancel</mat-icon>
             </div>
           </div>
 
-          <div *ngIf="evaluatorsControl.value.length < 4 && evaluatorsControl.touched" class="error-banner animate-fade-in">
+          <div *ngIf="getSelectedUniqueCount() < 4 && evaluatorsControl.touched" class="error-banner animate-fade-in">
             <mat-icon>warning</mat-icon>
-            <span>Se requieren al menos 4 evaluadores para continuar.</span>
+            <span>Se requieren al menos 4 evaluadores distintos para continuar.</span>
           </div>
         </form>
 
@@ -141,7 +139,7 @@ import { UserRole } from '@domain/entities/user.entity';
         <button 
           mat-flat-button 
           color="primary" 
-          [disabled]="evaluatorsControl.value.length < 4 || isSubmitting()"
+          [disabled]="getSelectedUniqueCount() < 4 || isSubmitting()"
           (click)="onSubmit()">
           <mat-icon>{{ isSubmitting() ? 'hourglass_empty' : 'how_to_reg' }}</mat-icon>
           Finalizar Asignación
@@ -212,7 +210,7 @@ export class AssignPeersModalComponent implements OnInit {
   private snack = inject(MatSnackBar);
 
   evaluatorsControl = new FormControl<string[]>([], { nonNullable: true });
-  evaluators = signal<any[]>([]);
+  evaluators = signal<{ id: string; nombre: string; email: string; perfil: string; cargaActiva: number; completadasMes: number }[]>([]);
   isSubmitting = signal<boolean>(false);
   successData = signal<AssignEvaluatorsResponse | null>(null);
 
@@ -223,6 +221,18 @@ export class AssignPeersModalComponent implements OnInit {
 
   ngOnInit() {
     this.loadEvaluators();
+  }
+
+  getInvestigatorName(): string {
+    const inv = this.data?.protocol?.principalInvestigatorRecord as any;
+    if (!inv) return 'Investigador Principal';
+    if (typeof inv === 'string') return inv;
+    return inv.fullName || inv.nombre || (inv.principalInvestigatorRecord?.fullName) || 'Investigador Principal';
+  }
+
+  getSelectedUniqueCount(): number {
+    const vals = this.evaluatorsControl.value || [];
+    return new Set(vals).size;
   }
 
   getEvaluatorName(id: string | number): string {
@@ -251,14 +261,25 @@ export class AssignPeersModalComponent implements OnInit {
     this.evaluationRepo.getEvaluatorsDashboard().subscribe({
       next: (data) => {
         const rawList = Array.isArray(data.evaluators) ? data.evaluators : [];
-        const mapped = rawList.map((u: any) => ({
-          id: u.id.toString(),
-          nombre: u.fullName || u.nombre || 'Evaluador',
-          email: u.email || '',
-          perfil: Array.isArray(u.profiles) ? u.profiles.map((p: any) => p.name).join(', ') : (u.perfil || 'Investigador'),
-          cargaActiva: u.currentLoad ?? u.cargaActiva ?? 0,
-          completadasMes: u.completedThisMonth ?? u.terminadosMes ?? 0
-        })).sort((a: any, b: any) => a.cargaActiva - b.cargaActiva);
+        
+        // Map y deduplicar por ID único de evaluador
+        const evaluatorsMap = new Map<string, { id: string; nombre: string; email: string; perfil: string; cargaActiva: number; completadasMes: number }>();
+        
+        rawList.forEach((u: any) => {
+          const id = String(u.evaluatorId || u.id);
+          if (id && !evaluatorsMap.has(id)) {
+            evaluatorsMap.set(id, {
+              id,
+              nombre: u.fullName || u.nombre || 'Evaluador',
+              email: u.email || '',
+              perfil: Array.isArray(u.profiles) && u.profiles.length ? u.profiles[0].name : (u.perfil || 'Evaluador'),
+              cargaActiva: u.currentLoad ?? u.assignedCount ?? 0,
+              completadasMes: u.completedThisMonth ?? u.completedCount ?? 0
+            });
+          }
+        });
+
+        const mapped = Array.from(evaluatorsMap.values()).sort((a, b) => a.cargaActiva - b.cargaActiva);
         this.evaluators.set(mapped);
       },
       error: () => {
@@ -272,12 +293,17 @@ export class AssignPeersModalComponent implements OnInit {
   }
 
   onSubmit() {
-    if (this.evaluatorsControl.value.length < 4) return;
+    const rawValues = this.evaluatorsControl.value || [];
+    const uniqueEvaluatorIds = Array.from(new Set(rawValues.map(id => Number(id))));
+
+    if (uniqueEvaluatorIds.length < 4) {
+      this.snack.open('Se requieren al menos 4 evaluadores distintos.', 'Cerrar', { duration: 4000 });
+      return;
+    }
 
     this.isSubmitting.set(true);
-    const evaluatorIds = this.evaluatorsControl.value.map(id => Number(id));
 
-    this.evaluationRepo.assignPeerEvaluators(this.data.protocol.id.toString(), evaluatorIds).subscribe({
+    this.evaluationRepo.assignPeerEvaluators(this.data.protocol.id.toString(), uniqueEvaluatorIds).subscribe({
       next: (res) => {
         this.successData.set(res);
         this.isSubmitting.set(false);

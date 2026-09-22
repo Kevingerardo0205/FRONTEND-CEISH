@@ -5,7 +5,11 @@ import {
   SecurityRole, 
   CreateModuleDTO, 
   CreatePermissionDTO,
-  UpdateRolePermissionsDTO
+  UpdateRolePermissionsDTO,
+  CreateRoleDTO,
+  UpdateRoleDTO,
+  RoleComplianceStatus,
+  RolePresetsMap
 } from '../entities/security.entity';
 
 export abstract class ISecurityRepositoryPort {
@@ -27,8 +31,18 @@ export abstract class ISecurityRepositoryPort {
   // Roles
   abstract getRoles(): Observable<SecurityRole[]>;
   abstract getRoleById(id: number): Observable<SecurityRole>;
+  abstract createRole(data: CreateRoleDTO): Observable<SecurityRole>;
+  abstract updateRole(id: number, data: UpdateRoleDTO): Observable<SecurityRole>;
+  abstract deleteRole(id: number): Observable<void>;
   abstract getRolePermissions(id: number): Observable<SecurityPermission[]>;
   abstract addRolePermissions(id: number, data: UpdateRolePermissionsDTO): Observable<void>;
   abstract updateRolePermissions(id: number, data: UpdateRolePermissionsDTO): Observable<void>;
   abstract removeRolePermissions(id: number, data: UpdateRolePermissionsDTO): Observable<void>;
+
+  // Plantillas Normativas & Cumplimiento (CEISH Presets & Compliance)
+  abstract getRolePresets(): Observable<RolePresetsMap>;
+  abstract getRoleCompliance(roleId: number): Observable<RoleComplianceStatus>;
+  abstract resetRoleToPreset(roleId: number): Observable<SecurityRole>;
 }
+
+

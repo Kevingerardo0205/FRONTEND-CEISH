@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { IEvaluationRepositoryPort, EvaluationAssignment } from '@domain/ports/IEvaluationRepositoryPort';
 
 @Injectable({
   providedIn: 'root'
@@ -8,7 +8,7 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 export class GetMyAssignmentsUseCase {
   private repo = inject(IEvaluationRepositoryPort);
 
-  execute(): Observable<any[]> {
+  execute(): Observable<EvaluationAssignment[]> {
     return this.repo.getMyAssignments();
   }
 }

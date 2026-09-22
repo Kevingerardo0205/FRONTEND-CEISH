@@ -15,12 +15,23 @@ export class ApiClientService {
   /**
    * Método genérico para peticiones GET
    */
-  get<T>(url: string, params?: any): Observable<T> {
+  get<T>(url: string, params?: Record<string, any>): Observable<T> {
     let httpParams = new HttpParams();
     if (params) {
       Object.keys(params).forEach(key => {
-        if (params[key] !== undefined && params[key] !== null) {
-          httpParams = httpParams.append(key, params[key]);
+        const val = params[key];
+        if (val !== undefined && val !== null) {
+          if (Array.isArray(val)) {
+            val.forEach(item => {
+              if (item !== undefined && item !== null) {
+                httpParams = httpParams.append(key, String(item));
+              }
+            });
+          } else if (val instanceof Date) {
+            httpParams = httpParams.append(key, val.toISOString());
+          } else {
+            httpParams = httpParams.append(key, String(val));
+          }
         }
       });
     }
@@ -30,7 +41,7 @@ export class ApiClientService {
   /**
    * Método genérico para peticiones POST
    */
-  post<T>(url: string, data?: any, config?: any): Observable<T> {
+  post<T>(url: string, data?: unknown, config?: Record<string, unknown>): Observable<T> {
     if (!config || Object.keys(config).length === 0) {
       return this.http.post<T>(`${this.baseUrl}${url}`, data);
     }
@@ -40,7 +51,7 @@ export class ApiClientService {
   /**
    * Método genérico para peticiones PUT
    */
-  put<T>(url: string, data?: any, config?: any): Observable<T> {
+  put<T>(url: string, data?: unknown, config?: Record<string, unknown>): Observable<T> {
     if (!config || Object.keys(config).length === 0) {
       return this.http.put<T>(`${this.baseUrl}${url}`, data);
     }
@@ -50,7 +61,7 @@ export class ApiClientService {
   /**
    * Método genérico para peticiones PATCH
    */
-  patch<T>(url: string, data?: any, config?: any): Observable<T> {
+  patch<T>(url: string, data?: unknown, config?: Record<string, unknown>): Observable<T> {
     if (!config || Object.keys(config).length === 0) {
       return this.http.patch<T>(`${this.baseUrl}${url}`, data);
     }
@@ -60,7 +71,7 @@ export class ApiClientService {
   /**
    * Método genérico para peticiones DELETE
    */
-  delete<T>(url: string, config?: any): Observable<T> {
+  delete<T>(url: string, config?: Record<string, unknown>): Observable<T> {
     if (!config || Object.keys(config).length === 0) {
       return this.http.delete<T>(`${this.baseUrl}${url}`);
     }

@@ -8,7 +8,7 @@ import { environment } from 'src/environments/environment';
 export class JwtInterceptor implements HttpInterceptor {
   constructor(private tokenService: TokenStoreAdapter) {}
 
-  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const token = this.tokenService.getToken();
     
     // Incluir token solo si es ruta relativa (/) o coincide con la API base (environment.apiUrl)

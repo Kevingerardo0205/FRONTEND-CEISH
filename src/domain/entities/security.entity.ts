@@ -1,4 +1,4 @@
-import { Module as AuthModule, Permission as AuthPermission } from './user.entity';
+import { Module as AuthModule } from './user.entity';
 
 export interface SecurityModule extends AuthModule {
   id: number;
@@ -17,10 +17,28 @@ export interface SecurityPermission {
 
 export interface SecurityRole {
   id: number;
+  code: string;
   name: string;
   description?: string;
+  isActive?: boolean;
   permissions?: SecurityPermission[];
+  compliance?: RoleComplianceStatus;
 }
+
+export type RoleComplianceType = 'STANDARD' | 'CUSTOM';
+
+export interface RoleComplianceStatus {
+  roleId: number;
+  roleCode: string;
+  status: RoleComplianceType;
+  isCompliant: boolean;
+  missingPermissions: string[];
+  extraPermissions: string[];
+  currentPermissionCount: number;
+  expectedPermissionCount: number;
+}
+
+export type RolePresetsMap = Record<string, string[]>;
 
 export interface CreateModuleDTO {
   code: string;
@@ -39,3 +57,23 @@ export interface CreatePermissionDTO {
 export interface UpdateRolePermissionsDTO {
   permissionIds: number[];
 }
+
+export interface CreateRoleDTO {
+  code: string;
+  name: string;
+  description: string;
+}
+
+export interface UpdateRoleDTO {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface PermissionDiff {
+  added: number[];
+  removed: number[];
+  total: number;
+}
+
+

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
+import { AmendmentListPage } from './presentation/pages/amendment-list/amendment-list.page';
 import { AmendmentRequestPage } from './presentation/pages/amendment-request/amendment-request.page';
 
 export const AMENDMENT_ROUTES: Routes = [
@@ -7,15 +8,16 @@ export const AMENDMENT_ROUTES: Routes = [
     path: '',
     children: [
       {
-        path: 'request',
-        component: AmendmentRequestPage,
+        path: '',
+        component: AmendmentListPage,
         canActivate: [AuthGuard]
       },
       {
-        path: '',
-        redirectTo: 'request',
-        pathMatch: 'full'
+        path: 'request',
+        component: AmendmentRequestPage,
+        canActivate: [AuthGuard]
       }
     ]
   }
 ];
+

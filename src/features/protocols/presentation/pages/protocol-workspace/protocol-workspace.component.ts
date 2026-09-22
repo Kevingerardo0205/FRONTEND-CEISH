@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -268,7 +268,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const user = this.authFacade.currentUser();
     if (!p || !user) return false;
     
-    const isIp = user.rol?.toUpperCase() === 'INVESTIGADOR';
+    const isIp = this.authFacade.hasRole('INVESTIGADOR');
     const isComplete = p.status?.toUpperCase() === 'COMPLETO';
     const isNotSigned = !p.isTimelineTermsAccepted;
     
@@ -291,12 +291,12 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (!p) return [];
 
     const actions = [];
-    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
+    const isInvestigador = this.authFacade.hasRole('INVESTIGADOR');
     const status = p.status as string;
     const core = resolveEstado(status);
     const code = core?.code || status;
 
-    if (role === 'INVESTIGADOR' && (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')) {
+    if (isInvestigador && (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')) {
       actions.push({ id: 'EDIT_PROTOCOL', label: 'Completar / Editar', icon: 'edit' });
     }
 
@@ -313,22 +313,21 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const p = this.protocol();
     if (!p) return [];
 
-    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
     const tabs = [{ label: 'Resumen', icon: 'dashboard', path: 'info' }];
 
     // Pestaña de Validación Documental: Para admins, secretaría, presidencia y el propio investigador (después de borrador)
     if (p.status !== ProtocolStatus.DRAFT) {
-      const canValidate = ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE'].includes(role || '');
-      if (canValidate || role === 'INVESTIGADOR') {
+      const canValidate = this.authFacade.hasAnyRole(['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'ADMIN_TI']);
+      if (canValidate || this.authFacade.hasRole('INVESTIGADOR')) {
         tabs.push({ label: 'Validación Técnica', icon: 'fact_check', path: 'validation' });
       }
     }
 
     // Pestaña de Evaluación Ética: Para admins, secretaría, presidencia y evaluadores asignados
     if ([ProtocolStatus.EN_EVALUACION, ProtocolStatus.APPROVED, ProtocolStatus.DISCREPANCIA_RIESGO, ProtocolStatus.DISCREPANCIA_DE_RIESGO].includes(p.status)) {
-      const canEvaluate = ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'EVALUADOR'].includes(role || '');
+      const canEvaluate = this.authFacade.hasAnyRole(['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'EVALUADOR', 'ADMIN_TI']);
       if (canEvaluate) {
-        tabs.push({ label: 'Evaluación Ética', icon: 'gavel', path: 'evaluation' });
+        tabs.push({ label: 'Evaluación Ética', icon: 'rate_review', path: 'evaluation' });
       }
     }
 
@@ -366,8 +365,8 @@ export class ProtocolWorkspaceComponent implements OnInit {
         createdAt: p.submissionDate ? new Date(p.submissionDate).toISOString() : new Date().toISOString(),
         studyType: p.studyType ? {
           id: p.studyType.id || 0,
-          codigo: p.studyType.codigo || p.studyType.code || '',
-          nombre: p.studyType.nombre || p.studyType.name || 'General'
+          codigo: p.studyType.codigo || '',
+          nombre: p.studyType.nombre || 'General'
         } : {
           id: 0,
           codigo: p.studyTypeCode || '',
@@ -392,8 +391,6 @@ export class ProtocolWorkspaceComponent implements OnInit {
           this.workspaceService.loadProtocol(p.id).subscribe();
         }
       });
-    } else {
-      console.log('[ProtocolWorkspace] Executing action:', actionId);
     }
   }
 

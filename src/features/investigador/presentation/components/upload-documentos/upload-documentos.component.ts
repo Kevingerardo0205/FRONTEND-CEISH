@@ -369,7 +369,7 @@ export class UploadDocumentosComponent {
     this.archivosSubidos.emit(listos);
   }
 
-  condicionAplica(req: RequisitoDocumento): boolean {
+  condicionAplica(_req: RequisitoDocumento): boolean {
     return true;
   }
 

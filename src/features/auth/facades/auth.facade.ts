@@ -1,10 +1,18 @@
 import { Injectable, signal, inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, throwError, delay, tap, catchError } from 'rxjs';
-import { User, AuthResponse, LoginCredentials, Module, Permission } from '@domain/entities/user.entity';
+import { Observable, throwError, tap, catchError } from 'rxjs';
+import { User, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { MODULE_UI_MAP, PERMISSION_UI_MAP, toSentenceCase, MenuUIItem } from '@shared/constants/menu-ui.config';
+import { Permission, Module } from '@domain/entities/user.entity';
+
+interface SubMenuItem {
+  code: string;
+  label: string;
+  icon: string;
+  path: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -36,10 +44,10 @@ export class AuthFacade {
         label: string; 
         icon: string; 
         order: number;
-        subItems: any[] 
+        subItems: SubMenuItem[] 
       }>();
 
-      const addMenuItem = (item: MenuUIItem, code: string, mod: any) => {
+      const addMenuItem = (item: MenuUIItem, code: string, mod: Module | undefined) => {
         const modCode = mod?.code || 'MOD_DASHBOARD';
         const modUI = MODULE_UI_MAP[modCode];
 
@@ -86,7 +94,6 @@ export class AuthFacade {
       });
 
       const finalMenu = Array.from(modulesMap.values()).sort((a, b) => a.order - b.order);
-      console.log('[AuthFacade] Menú generado:', finalMenu.length, 'módulos.');
       return finalMenu;
       
     } catch (err) {
@@ -136,7 +143,8 @@ export class AuthFacade {
 
   private resetAttempts(email: string) {
     const current = this.attemptsSignal();
-    const { [email]: _, ...rest } = current;
+    const rest = { ...current };
+    delete rest[email];
     this.attemptsSignal.set(rest);
   }
 
@@ -195,7 +203,79 @@ export class AuthFacade {
     return !!this.tokenService.getToken();
   }
 
-  refreshToken(): Observable<any> {
+  /**
+   * Obtiene la lista de roles normalizados del usuario activo (excluyendo roles temporales expirados si aplica).
+   */
+  getActiveRoles(): string[] {
+    const user = this.currentUserSignal();
+    if (!user) return [];
+
+    if (user.userRoles && user.userRoles.length > 0) {
+      return user.userRoles
+        .filter(ur => !ur.isExpired)
+        .map(ur => ur.code.toUpperCase());
+    }
+
+    const rawRoles = user.roles && user.roles.length > 0 ? user.roles : [user.rol];
+    return rawRoles.map(r => r.toUpperCase());
+  }
+
+  /**
+   * Verifica si el usuario actual posee un rol específico (soporta multi-rol).
+   */
+  hasRole(roleCode: string): boolean {
+    if (!roleCode) return false;
+    const activeRoles = this.getActiveRoles();
+    return activeRoles.includes(roleCode.toUpperCase());
+  }
+
+  /**
+   * Verifica si el usuario actual posee al menos uno de los roles especificados.
+   */
+  hasAnyRole(roleCodes: string[]): boolean {
+    if (!roleCodes || roleCodes.length === 0) return false;
+    const activeRoles = this.getActiveRoles();
+    return roleCodes.some(r => activeRoles.includes(r.toUpperCase()));
+  }
+
+  /**
+   * Verifica si el usuario actual cuenta con un permiso específico (PBAC).
+   */
+  hasPermission(permCode: string): boolean {
+    if (!permCode) return false;
+    const user = this.currentUserSignal();
+    if (!user) return false;
+    const perms = user.permissions || [];
+    if (perms.includes('ADMIN_ALL')) return true;
+    return perms.includes(permCode);
+  }
+
+  /**
+   * Verifica si el usuario cuenta con al menos uno de los permisos indicados.
+   */
+  hasAnyPermission(permCodes: string[]): boolean {
+    if (!permCodes || permCodes.length === 0) return false;
+    return permCodes.some(p => this.hasPermission(p));
+  }
+
+  /**
+   * Verifica si el usuario cuenta con todos los permisos requeridos.
+   */
+  hasAllPermissions(permCodes: string[]): boolean {
+    if (!permCodes || permCodes.length === 0) return false;
+    return permCodes.every(p => this.hasPermission(p));
+  }
+
+  refreshSession(): Observable<User> {
+    return this.authRepository.getUserById('me').pipe(
+      tap((user) => {
+        this.currentUserSignal.set(user);
+        localStorage.setItem('user', JSON.stringify(user));
+      })
+    );
+  }
+
+  refreshToken(): Observable<{ accessToken: string; refreshToken: string }> {
     const refreshToken = this.tokenService.getRefreshToken();
     if (!refreshToken) {
       return throwError(() => new Error('No refresh token available'));
@@ -210,3 +290,4 @@ export class AuthFacade {
     );
   }
 }
+

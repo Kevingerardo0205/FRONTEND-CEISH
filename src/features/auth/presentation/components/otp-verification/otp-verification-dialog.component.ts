@@ -208,7 +208,7 @@ export class OtpVerificationDialogComponent implements OnDestroy {
   errorMessage = signal('');
   resendDisabled = signal(false);
   timer = signal(60);
-  private intervalId: any;
+  private intervalId: ReturnType<typeof setInterval> | undefined;
 
   constructor() {
     this.otpForm = this.fb.group({
@@ -240,10 +240,10 @@ export class OtpVerificationDialogComponent implements OnDestroy {
           this.isLoading.set(false);
           this.dialogRef.close(true);
         },
-        error: (err: any) => {
-          this.isLoading.set(false);
-          this.errorMessage.set(err.message || 'Código incorrecto');
-        }
+error: (err: { message?: string }) => {
+  this.isLoading.set(false);
+  this.errorMessage.set(err.message || 'Código incorrecto');
+}
       });
     }
   }
@@ -255,7 +255,6 @@ export class OtpVerificationDialogComponent implements OnDestroy {
   onResend() {
     this.resendDisabled.set(true);
     this.startTimer();
-    console.log('Reenviando código a:', this.data.email);
   }
 
   private startTimer() {

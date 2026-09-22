@@ -5,6 +5,14 @@ import { map } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { GetUploadUrlResponse, GetDownloadUrlResponse } from '@domain/entities/storage.interface';
 
+interface UploadUrlApiResponse {
+  data: GetUploadUrlResponse;
+}
+
+interface DownloadUrlApiResponse {
+  data: GetDownloadUrlResponse;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -15,11 +23,11 @@ export class S3StorageService {
    * Obtiene la URL firmada de subida (PUT)
    */
   getUploadUrl(key: string, contentType: string): Observable<GetUploadUrlResponse> {
-    return this.http.post<any>(
+    return this.http.post<UploadUrlApiResponse>(
       `${environment.apiUrl}/storage/upload-url`,
       { key, contentType }
     ).pipe(
-      map(res => res.data || res)
+      map(res => res.data || res as unknown as GetUploadUrlResponse)
     );
   }
 
@@ -27,10 +35,10 @@ export class S3StorageService {
    * Obtiene la URL firmada de visualización (GET) para un documento de recepción
    */
   getDocumentDownloadUrl(documentId: number): Observable<GetDownloadUrlResponse> {
-    return this.http.get<any>(
+    return this.http.get<DownloadUrlApiResponse>(
       `${environment.apiUrl}/reception/document/${documentId}/download-url`
     ).pipe(
-      map(res => res.data || res)
+      map(res => res.data || res as unknown as GetDownloadUrlResponse)
     );
   }
 
@@ -41,11 +49,11 @@ export class S3StorageService {
    * @param key Ruta relativa en R2 — ej: protocols/83/docEvaluacion/informe_firmado.pdf
    */
   getEvaluationDocumentUrl(key: string): Observable<GetDownloadUrlResponse> {
-    return this.http.post<any>(
+    return this.http.post<DownloadUrlApiResponse>(
       `${environment.apiUrl}/storage/download-url`,
       { key }
     ).pipe(
-      map(res => res.data || res)
+      map(res => res.data || res as unknown as GetDownloadUrlResponse)
     );
   }
 
@@ -64,11 +72,12 @@ export class S3StorageService {
     });
 
     return this.http.request(req).pipe(
-      map((event: HttpEvent<any>) => {
+      map((event: HttpEvent<unknown>) => {
         switch (event.type) {
-          case HttpEventType.UploadProgress:
+          case HttpEventType.UploadProgress: {
             const progress = Math.round(100 * event.loaded / (event.total || 1));
             return { progress, success: false };
+          }
           case HttpEventType.Response:
             return { progress: 100, success: true };
           default:

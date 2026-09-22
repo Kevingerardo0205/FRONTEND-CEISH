@@ -18,7 +18,6 @@ import { RegisterInvestigadorUseCase } from '../../use-cases';
 import { RegisterInvestigadorRequest } from '../../domain/entities/register.request';
 
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { OtpVerificationDialogComponent } from '../components/otp-verification/otp-verification-dialog.component';
 
 @Component({
   selector: 'app-register-page',
@@ -426,15 +425,14 @@ export class RegisterPage {
       const rawData = this.registerForm.value;
       
       // Construir el payload exacto eliminando campos no deseados por el backend (confirmPassword)
-      const { confirmPassword, ...securityData } = rawData.stepThree;
+      const securityData = { ...rawData.stepThree };
+      delete securityData.confirmPassword;
       
       const payload: RegisterInvestigadorRequest = {
         ...rawData.stepOne,
         ...rawData.stepTwo,
         ...securityData
       };
-
-      console.log('[RegisterPage] Enviando payload al backend:', payload);
 
       this.registerUseCase.execute(payload).subscribe({
         next: (response) => {

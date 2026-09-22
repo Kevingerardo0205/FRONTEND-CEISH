@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { forkJoin, of, catchError, map } from 'rxjs';
+import { of, catchError } from 'rxjs';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.port';
@@ -47,21 +47,19 @@ export class DashboardFacade {
   });
 
   public loadStats() {
-    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
-
-    if (role === 'ADMIN') {
+    if (this.authFacade.hasAnyRole(['ADMIN', 'ADMIN_TI'])) {
       this.userAdminRepo.getAll().pipe(
         catchError(() => of([]))
       ).subscribe(users => this.usersCountSignal.set(users.length));
     }
 
-    if (role === 'INVESTIGADOR') {
+    if (this.authFacade.hasRole('INVESTIGADOR')) {
       this.investigatorService.misProtocolos().pipe(
         catchError(() => of([]))
       ).subscribe(protocols => this.myProtocolsSignal.set(protocols));
     }
 
-    if (role === 'SECRETARIA' || role === 'PRESIDENTA') {
+    if (this.authFacade.hasAnyRole(['SECRETARIA', 'PRESIDENTA', 'PRESIDENTE'])) {
       this.protocolRepo.getReceptionProtocols().pipe(
         catchError(() => of([]))
       ).subscribe(protocols => {

@@ -7,7 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ReportsUseCase } from '@features/reports/application/use-cases/reports.use-case';
 import { MSPReportData } from '@features/reports/domain/entities/report.entity';
 
@@ -16,6 +16,8 @@ import { MSPReportData } from '@features/reports/domain/entities/report.entity';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+type AutoTableJsPDF = jsPDF & { lastAutoTable?: { finalY: number } };
 
 @Component({
   selector: 'app-msp-reports',
@@ -28,8 +30,7 @@ import autoTable from 'jspdf-autotable';
     MatSelectModule,
     MatFormFieldModule,
     MatIconModule,
-    MatTableModule,
-    MatSnackBarModule
+    MatTableModule
   ],
   template: `
     <div class="msp-container">
@@ -262,10 +263,11 @@ export class MSPReportsPage {
         ['Extraordinarias', this.reportData.sessions.extraordinary]
       ]
     });
+    const sessionsFinalY = (doc as AutoTableJsPDF).lastAutoTable?.finalY ?? 50;
 
-    doc.text('2. MODALIDADES DE EVALUACIÓN', 20, (doc as any).lastAutoTable.finalY + 15);
+    doc.text('2. MODALIDADES DE EVALUACIÓN', 20, sessionsFinalY + 15);
     autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 20,
+      startY: sessionsFinalY + 20,
       head: [['Modalidad', 'Protocolos']],
       body: [
         ['Exento', this.reportData.modalities.exempt],

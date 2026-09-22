@@ -3,14 +3,18 @@ import { User, UserDTO, AuthResponse, LoginCredentials } from '../entities/user.
 import { RegisterInvestigadorRequest } from '@features/auth/domain/entities/register.request';
 import { SetupAccountRequest } from '@features/auth/domain/entities/setup-account.request';
 
+export interface MessageResponse {
+  message: string;
+}
+
 export abstract class IAuthRepositoryPort {
   abstract login(credentials: LoginCredentials): Observable<AuthResponse>;
-  abstract refreshToken(token: string): Observable<any>;
-  abstract registerInvestigador(data: RegisterInvestigadorRequest): Observable<any>;
-  abstract verifyOTP(email: string, code: string): Observable<any>;
-  abstract setupAccount(data: SetupAccountRequest): Observable<any>;
-  abstract forgotPassword(email: string): Observable<any>;
-  abstract resetPassword(email: string, code: string, password: string): Observable<any>;
+  abstract refreshToken(token: string): Observable<{ accessToken: string; refreshToken: string }>;
+  abstract registerInvestigador(data: RegisterInvestigadorRequest): Observable<MessageResponse>;
+  abstract verifyOTP(email: string, code: string): Observable<MessageResponse>;
+  abstract setupAccount(data: SetupAccountRequest): Observable<MessageResponse>;
+  abstract forgotPassword(email: string): Observable<MessageResponse>;
+  abstract resetPassword(email: string, code: string, password: string): Observable<MessageResponse>;
   abstract getUsers(): Observable<User[]>;
   abstract getUserById(id: string): Observable<User>;
   abstract checkEmailExists(email: string): Observable<boolean>;

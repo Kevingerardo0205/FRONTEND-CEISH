@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -13,9 +13,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { FileUploaderComponent } from '@shared/components/file-uploader/file-uploader.component';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { LoadPendingPeerAssignmentsUseCase } from '../../../application/load-pending-peer-assignments.use-case';
+import { SubmitPeerRiskAssessmentUseCase } from '../../../application/submit-peer-risk-assessment.use-case';
+import { LoadRiskLevelsUseCase } from '../../../../protocols/application/use-cases/load-risk-levels.use-case';
+import { GetProtocolDocumentHistoryUseCase } from '../../../../protocols/application/use-cases/get-protocol-document-history.use-case';
 import { PeerAssignmentEntity, PET_RISK_LEVELS, RiskLevelInfo } from '@domain/entities/peer-evaluation.entity';
+import { ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
 import { switchMap, map, filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
@@ -434,30 +437,32 @@ export class PeerRiskAssessmentPage implements OnInit {
   private router = inject(Router);
   private fb = inject(FormBuilder);
   private snack = inject(MatSnackBar);
-  private evaluationRepo = inject(IEvaluationRepositoryPort);
-  private protocolRepo = inject(IProtocolRepositoryPort);
+  private loadPendingPeersUC = inject(LoadPendingPeerAssignmentsUseCase);
+  private submitPeerRiskUC = inject(SubmitPeerRiskAssessmentUseCase);
+  private loadRiskLevelsUC = inject(LoadRiskLevelsUseCase);
+  private getDocHistoryUC = inject(GetProtocolDocumentHistoryUseCase);
   private destroyRef = inject(DestroyRef);
   private s3StorageService = inject(S3StorageService);
 
   assignmentId = '';
   assignment = signal<PeerAssignmentEntity | null>(null);
-  protocolDocuments = signal<any[]>([]);
+  protocolDocuments = signal<ProtocolDocumentHistoryEntry[]>([]);
   
   showPreview = signal(true);
   isSubmitting = signal(false);
   progressValue = signal(20);
   
   assessmentForm!: FormGroup;
-  riskLevels: any[] = PET_RISK_LEVELS; // Default fallback catalog
+  riskLevels: RiskLevelInfo[] = PET_RISK_LEVELS; // Default fallback catalog
   selectedFiles = signal<File[]>([]);
 
-  verDocumento(documentId: any) {
+  verDocumento(documentId: number) {
     if (!documentId) return;
     this.s3StorageService.getDocumentDownloadUrl(Number(documentId)).subscribe({
       next: (res) => {
         window.open(res.downloadUrl, '_blank');
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error('Error al generar la URL de descarga:', err);
         this.snack.open('No se pudo abrir el documento.', 'Cerrar', { duration: 3000 });
       }
@@ -472,7 +477,7 @@ export class PeerRiskAssessmentPage implements OnInit {
   }
 
   private loadRiskLevelsCatalog() {
-    this.protocolRepo.getRiskLevels()
+    this.loadRiskLevelsUC.execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (levels) => {
@@ -480,7 +485,7 @@ export class PeerRiskAssessmentPage implements OnInit {
             this.riskLevels = levels;
           }
         },
-        error: (err) => {
+        error: (err: unknown) => {
           console.warn('[PeerRiskAssessmentPage] Error al cargar catálogo dinámico de niveles de riesgo, usando fallback:', err);
         }
       });
@@ -494,7 +499,7 @@ export class PeerRiskAssessmentPage implements OnInit {
   }
 
   private loadData() {
-    this.evaluationRepo.getMyPendingPeerAssignments()
+    this.loadPendingPeersUC.execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (assignments) => {
@@ -509,16 +514,15 @@ export class PeerRiskAssessmentPage implements OnInit {
               this.assessmentForm.get('observations')?.setValue(current.observations);
             }
 
-            // Cargar expediente de documentos
-            const protocolId = current.protocolId || (current.protocol as any)?.id;
+            const protocolId = current.protocolId || current.protocol?.id;
             if (protocolId) {
-              this.protocolRepo.getDocumentHistory(protocolId.toString())
+              this.getDocHistoryUC.execute(protocolId.toString())
                 .pipe(takeUntilDestroyed(this.destroyRef))
                 .subscribe({
                   next: (docs) => {
                     this.protocolDocuments.set(docs || []);
                   },
-                  error: (err) => {
+                  error: (err: unknown) => {
                     console.error('[PeerRiskAssessmentPage] Error loading protocol documents:', err);
                   }
                 });
@@ -528,7 +532,7 @@ export class PeerRiskAssessmentPage implements OnInit {
             this.router.navigate(['/dashboard/evaluations/list']);
           }
         },
-        error: (err) => {
+        error: (err: unknown) => {
           console.error('[PeerRiskAssessmentPage] Error loading assignments:', err);
           this.snack.open('No se pudo cargar la información de la asignación.', 'Cerrar');
         }
@@ -542,13 +546,13 @@ export class PeerRiskAssessmentPage implements OnInit {
   }
 
   getInvestigatorName(): string {
-    const p = this.assignment()?.protocol as any;
-    return p?.principalInvestigatorRecord?.fullName || p?.investigator?.fullName || 'No especificado';
+    const p = this.assignment()?.protocol;
+    return p?.principalInvestigatorRecord?.fullName || 'No especificado';
   }
 
   getStudyType(): string {
-    const p = this.assignment()?.protocol as any;
-    return p?.studyType?.nombre || p?.studyType?.name || 'No especificado';
+    const p = this.assignment()?.protocol;
+    return p?.studyType?.nombre || 'No especificado';
   }
 
   onSubmit() {
@@ -557,7 +561,7 @@ export class PeerRiskAssessmentPage implements OnInit {
     this.isSubmitting.set(true);
     const file = this.selectedFiles()[0];
     const sanitizedName = sanitizeFilename(file.name);
-    const protocolId = this.assignment()?.protocolId || (this.assignment()?.protocol as any)?.id;
+    const protocolId = this.assignment()?.protocolId || this.assignment()?.protocol?.id;
     const key = `protocols/${protocolId}/docEvaluacion/${sanitizedName}`;
 
     this.s3StorageService.getUploadUrl(key, file.type || 'application/pdf').pipe(
@@ -574,7 +578,7 @@ export class PeerRiskAssessmentPage implements OnInit {
           reportPath: filePath
         };
 
-        return this.evaluationRepo.submitPeerRiskProposed(this.assignmentId, payload);
+        return this.submitPeerRiskUC.execute(this.assignmentId, payload);
       }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
@@ -583,9 +587,10 @@ export class PeerRiskAssessmentPage implements OnInit {
         this.isSubmitting.set(false);
         this.router.navigate(['/dashboard/evaluations/list']);
       },
-      error: (err: any) => {
+      error: (err: unknown) => {
         console.error('[PeerRiskAssessmentPage] Error submitting risk assessment:', err);
-        const msg = err.message || err.error?.message || 'Error al enviar la evaluación de riesgo.';
+        const errorRecord = err as { message?: string; error?: { message?: string } };
+        const msg = errorRecord.message || errorRecord.error?.message || 'Error al enviar la evaluación de riesgo.';
         this.snack.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
         this.isSubmitting.set(false);
       }

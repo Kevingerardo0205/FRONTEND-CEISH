@@ -53,6 +53,7 @@ import { SetupAccountRequest } from '../../domain/entities/setup-account.request
                   class="otp-field"
                   (keyup)="onOtpKeyUp($event, $index)"
                   (keypress)="onKeyPressNumber($event)"
+                  (paste)="onOtpPaste($event)"
                   autocomplete="off"
                   inputmode="numeric"
                 />
@@ -280,6 +281,21 @@ export class SetupAccountPage implements OnInit {
     const inputChar = String.fromCharCode(event.charCode);
     if (!pattern.test(inputChar)) {
       event.preventDefault();
+    }
+  }
+
+  onOtpPaste(event: ClipboardEvent) {
+    event.preventDefault();
+    const pastedText = event.clipboardData?.getData('text')?.trim() || '';
+    if (/^\d{6}$/.test(pastedText)) {
+      const digits = pastedText.split('');
+      digits.forEach((digit, i) => {
+        this.otpControls.at(i).setValue(digit);
+      });
+      const inputs = this.otpInputs.toArray();
+      if (inputs.length > 5) {
+        inputs[5].nativeElement.focus();
+      }
     }
   }
 

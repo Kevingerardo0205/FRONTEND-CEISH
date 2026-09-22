@@ -1,4 +1,4 @@
-import { ProtocolType } from '../enums/protocol-type.enum';
+
 
 export interface PendingPeerAssignmentProtocol {
   id: number;

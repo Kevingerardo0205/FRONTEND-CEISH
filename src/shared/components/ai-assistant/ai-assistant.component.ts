@@ -108,7 +108,7 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
       if (this.activeProtocolId() !== id) {
         this.activeProtocolId.set(id);
         // Opcional: Reiniciar chat o añadir mensaje de cambio de contexto
-        this.loggerLog(`Asistente IA enfocado en el protocolo ID: ${id}`);
+
       }
     } else {
       this.activeProtocolId.set(undefined);
@@ -181,7 +181,7 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
           const element = this.chatMessagesContainer.nativeElement;
           element.scrollTop = element.scrollHeight;
         }
-      } catch (err) {}
+      } catch { /* scroll failure ignored */ }
     }, 100);
   }
 
@@ -221,9 +221,5 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
     html = html.replace(/\n/g, '<br/>');
 
     return html;
-  }
-
-  private loggerLog(msg: string) {
-    console.log(`[AiAssistantComponent] ${msg}`);
   }
 }

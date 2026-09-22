@@ -7,7 +7,6 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
-import { ProtocolEntity } from '@domain/entities/protocol.entity';
 
 @Component({
   selector: 'app-protocol-detail',

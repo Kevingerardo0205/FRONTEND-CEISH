@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, Validators, ReactiveFormsModule, FormArray, AbstractControl, ValidationErrors, FormsModule } from '@angular/forms';
+import { FormBuilder, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 
 // Angular Material
@@ -20,10 +20,32 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import { CrearProtocoloDto, InvestigadorEquipo, InstitucionParticipante, EstadoProtocolo, ChecklistRequirement, RequirementStatus } from '../../../domain/dtos/crear-protocolo.dto';
+import { CrearProtocoloDto, RequirementStatus, ChecklistRequirement } from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-import { forkJoin, of } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
+import { finalize } from 'rxjs/operators';
+
+interface StudyType {
+  id: number;
+  code?: string;
+  name?: string;
+  nombre?: string;
+  description?: string;
+}
+
+interface RequiredDocument {
+  id?: number;
+  code: string;
+  nombre: string;
+  isRequired: boolean;
+  status: RequirementStatus;
+  observations: string;
+  icon: string;
+  alert: string | null;
+  color: string;
+  _resolvedCode?: string;
+  _resolvedName?: string;
+  _resolvedId?: number;
+}
 
 // --- Validadores Técnicos ---
 
@@ -67,8 +89,8 @@ export class NuevoProtocoloPage implements OnInit {
   isRequirementsLoading = false;
   protocolId: number | null = null;
   
-  tiposEstudio: any[] = [];
-  documentosRequeridos: any[] = [];
+  tiposEstudio: StudyType[] = [];
+  documentosRequeridos: RequiredDocument[] = [];
   documentUploadStatus: { [key: string]: string } = {};
   archivosCargados: { [key: string]: string } = {};
 
@@ -86,14 +108,15 @@ export class NuevoProtocoloPage implements OnInit {
   });
 
   ngOnInit(): void {
-    console.log('[DEBUG] NuevoProtocoloPage inicializado');
     this.loadStudyTypes();
   }
 
   private loadStudyTypes() {
     this.protocoloService.getStudyTypes().subscribe({
-      next: (types: any) => {
-        this.tiposEstudio = Array.isArray(types) ? types : (types?.data || []);
+      next: (types) => {
+        const raw = types as unknown;
+        const list = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.['data'] as unknown[]);
+        this.tiposEstudio = (list || []) as StudyType[];
       },
       error: () => this.snackBar.open('Error al cargar tipos de estudio.', 'Cerrar')
     });
@@ -114,9 +137,9 @@ export class NuevoProtocoloPage implements OnInit {
       title: formVal.titulo!,
       principalInvestigatorId: Number(user?.id),
       studyTypeId: Number(formVal.tipoEstudio),
-      riskLevelId: null as any,
-      geographicCoverage: null as any,
-      studyDurationMonths: null as any,
+      riskLevelId: null as unknown as number,
+      geographicCoverage: null as unknown as string,
+      studyDurationMonths: null as unknown as number,
       
       usesBiologicalSamples: !!formVal.usesBiologicalSamples,
       isVulnerablePopulation: !!formVal.isVulnerablePopulation,
@@ -124,11 +147,11 @@ export class NuevoProtocoloPage implements OnInit {
       isMulticentric: !!formVal.isMulticentric,
       hasExternalInstitutions: !!formVal.isExternal,
       
-      sponsorRuc: null as any,
-      sponsorPhone: null as any,
-      sponsorAddress: null as any,
+      sponsorRuc: null as unknown as string,
+      sponsorPhone: null as unknown as string,
+      sponsorAddress: null as unknown as string,
       sponsorWeb: '',
-      sponsorExecutingAgency: null as any,
+      sponsorExecutingAgency: null as unknown as string,
       financingAmount: 0,
       isAffidavitAccepted: !!formVal.isAffidavitAccepted,
       
@@ -137,9 +160,8 @@ export class NuevoProtocoloPage implements OnInit {
     };
 
     this.protocoloService.guardarProtocoloInicial(payload).subscribe({
-      next: (res: any) => {
-        const id = res?.id || res?.data?.id;
-        console.log('[DEBUG] Protocolo creado exitosamente. ID:', id);
+      next: (res) => {
+        const id = res.id || (res as unknown as { data?: { id?: number } })?.data?.id;
         if (id) {
           this.protocolId = id;
           this.snackBar.open('Protocolo registrado. Cargando requisitos oficiales...', 'Info', { duration: 3000 });
@@ -174,12 +196,11 @@ export class NuevoProtocoloPage implements OnInit {
     const idToUse = protocolId || this.protocolId;
     
     if (idToUse) {
-      console.log(`[DEBUG] Consultando checklist oficial para ID: ${idToUse}`);
       this.isRequirementsLoading = true;
       this.protocoloService.getChecklist(Number(idToUse)).pipe(
         finalize(() => this.isRequirementsLoading = false)
       ).subscribe({
-        next: (res: any) => {
+        next: (res) => {
           const list = this.extractList(res);
           this.processRequirements(list);
         },
@@ -191,25 +212,26 @@ export class NuevoProtocoloPage implements OnInit {
     }
   }
 
-  private extractList(data: any): any[] {
+  private extractList(data: unknown): unknown[] {
     if (!data) return [];
     if (Array.isArray(data)) return data;
     
+    const obj = data as Record<string, unknown>;
     const possibleKeys = ['data', 'results', 'checklist', 'requirements', 'protocolo_requisitos', 'items', 'list'];
     for (const key of possibleKeys) {
-      if (data[key] && Array.isArray(data[key])) {
-        return data[key];
+      if (obj[key] && Array.isArray(obj[key])) {
+        return obj[key] as unknown[];
       }
     }
 
-    for (const key in data) {
-      if (Array.isArray(data[key])) return data[key];
+    for (const key in obj) {
+      if (Array.isArray(obj[key])) return obj[key] as unknown[];
     }
 
     return [];
   }
 
-  private processRequirements(list: any[]) {
+  private processRequirements(list: unknown[]) {
     let isEmergencyMode = false;
     if (list.length === 0) {
         isEmergencyMode = true;
@@ -221,33 +243,35 @@ export class NuevoProtocoloPage implements OnInit {
         ];
     }
 
-    const uniqueMap = new Map<string, any>();
-    list.forEach((item, index) => {
-      const code = item.code || item.requirementCode || item.codigo_requisito || item.requirement?.code || item.requisito?.codigo || `GENERIC_${index}`;
-      const name = item.name || item.requirementName || item.nombre_requisito || item.requirement?.name || item.requirement?.description || item.requisito?.nombre || 'Documento';
-      const id = item.id || item.requirementId || item.requirement?.id || item.requisito?.id;
+    const uniqueMap = new Map<string, Record<string, unknown>>();
+    list.forEach((rawItem, index) => {
+      const item = (typeof rawItem === 'object' && rawItem !== null ? rawItem : {}) as Record<string, unknown>;
+      const requirementObj = (item['requirement'] || item['requisito']) as Record<string, unknown> | undefined;
+      const code = (item['code'] || item['requirementCode'] || item['codigo_requisito'] || requirementObj?.['code'] || requirementObj?.['codigo'] || `GENERIC_${index}`) as string;
+      const name = (item['name'] || item['requirementName'] || item['nombre_requisito'] || requirementObj?.['name'] || requirementObj?.['description'] || requirementObj?.['nombre'] || 'Documento') as string;
+      const id = (item['id'] || item['requirementId'] || requirementObj?.['id'] || requirementObj?.['id']) as number | undefined;
       
-      item._resolvedCode = code;
-      item._resolvedName = name;
-      item._resolvedId = id;
+      item['_resolvedCode'] = code;
+      item['_resolvedName'] = name;
+      item['_resolvedId'] = id;
 
-      if (!uniqueMap.has(code) || item.status === RequirementStatus.PRESENTADO) {
+      if (!uniqueMap.has(code) || item['status'] === RequirementStatus.PRESENTADO) {
         uniqueMap.set(code, item);
       }
     });
 
     const dedupedList = Array.from(uniqueMap.values());
 
-    this.documentosRequeridos = dedupedList.map((r: any) => ({
-      id: r._resolvedId,
-      code: r._resolvedCode,
-      nombre: isEmergencyMode ? `⚠️ ${r._resolvedName}` : r._resolvedName,
-      isRequired: r.isRequired !== undefined ? r.isRequired : true,
-      status: r.status || r.estado || RequirementStatus.NO_PRESENTADO,
-      observations: r.observations || r.observaciones || '',
-      icon: this.getTechnicalIcon(r._resolvedCode),
-      alert: isEmergencyMode ? 'Modo de emergencia: El servidor no envió requisitos oficiales.' : this.getTechnicalAlert(r._resolvedCode),
-      color: this.getStatusColor(r.status || r.estado)
+    this.documentosRequeridos = dedupedList.map((r) => ({
+      id: r['_resolvedId'] as number | undefined,
+      code: r['_resolvedCode'] as string,
+      nombre: isEmergencyMode ? `⚠️ ${r['_resolvedName']}` : r['_resolvedName'] as string,
+      isRequired: r['isRequired'] !== undefined ? (r['isRequired'] as boolean) : true,
+      status: (r['status'] || r['estado'] || RequirementStatus.NO_PRESENTADO) as RequirementStatus,
+      observations: (r['observations'] || r['observaciones'] || '') as string,
+      icon: this.getTechnicalIcon(r['_resolvedCode'] as string),
+      alert: isEmergencyMode ? 'Modo de emergencia: El servidor no envió requisitos oficiales.' : this.getTechnicalAlert(r['_resolvedCode'] as string),
+      color: this.getStatusColor((r['status'] || r['estado']) as RequirementStatus)
     }));
 
     this.documentosRequeridos.forEach(doc => {
@@ -290,8 +314,9 @@ export class NuevoProtocoloPage implements OnInit {
     return map[code] || null;
   }
 
-  onDocumentSelected(event: any, requirementCode: string) {
-    const file = event.target.files[0];
+  onDocumentSelected(event: Event, requirementCode: string) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file || !this.protocolId) return;
 
     const requirement = this.documentosRequeridos.find(d => d.code === requirementCode);
@@ -327,8 +352,9 @@ export class NuevoProtocoloPage implements OnInit {
     });
   }
 
-  onBulkUpload(event: any) {
-    const files: File[] = Array.from(event.target.files);
+  onBulkUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const files: File[] = Array.from(input.files || []);
     if (!files.length || !this.protocolId) return;
 
     this.isLoading = true;
@@ -371,9 +397,10 @@ export class NuevoProtocoloPage implements OnInit {
 
     this.isLoading = true;
     this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
-      next: (res: any) => {
+      next: (res) => {
         this.isLoading = false;
-        const codigo = res?.code || res?.data?.code || 'CEISH-GEN-001';
+        const raw = res as Record<string, unknown>;
+        const codigo = (raw?.['code'] as string) || ((raw?.['data'] as Record<string, unknown>)?.['code'] as string) || 'CEISH-GEN-001';
         this.snackBar.open(`✅ Protocolo ${codigo} enviado exitosamente.`, 'Cerrar', { duration: 5000 });
         this.router.navigate(['/investigador/mis-protocolos']);
       },

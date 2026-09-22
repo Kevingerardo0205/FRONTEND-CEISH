@@ -21,7 +21,7 @@ export class VerificadoGuard implements CanActivate {
 
     // Roles administrativos no requieren verificación de email para gestionar el sistema
     const adminRoles = ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'ADMIN_TI'];
-    if (adminRoles.includes(user.rol.toUpperCase())) {
+    if (this.authFacade.hasAnyRole(adminRoles)) {
       return true;
     }
 

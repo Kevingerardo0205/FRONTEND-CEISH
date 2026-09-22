@@ -18,8 +18,56 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import { CrearProtocoloDto, InvestigadorEquipo, InstitucionParticipante } from '../../../domain/dtos/crear-protocolo.dto';
+import { CrearProtocoloDto, InstitucionParticipante, InvestigadorEquipo } from '../../../domain/dtos/crear-protocolo.dto';
 import { ecuadorianPhoneValidator, ecuadorianIdValidator } from '../nuevo-protocolo/nuevo-protocolo.page';
+import { RiskLevel } from '@domain/ports/IProtocolRepositoryPort';
+
+interface ProtocoloEdicion {
+  title?: string;
+  riskLevel?: { id?: number };
+  riskLevelId?: number;
+  geographicCoverage?: string;
+  studyDurationMonths?: number;
+  lugarEjecucion?: string;
+  fechaInicioEstimada?: string;
+  fechaFinEstimada?: string;
+  sponsorRuc?: string;
+  sponsorPhone?: string;
+  sponsorAddress?: string;
+  sponsorWeb?: string;
+  sponsorExecutingAgency?: string;
+  executingOrgan?: string;
+  financingAmount?: number;
+  amount?: number;
+  principalInvestigatorId?: number;
+  studyTypeId?: number;
+  studyType?: { id?: number; name?: string; nombre?: string; };
+  usesBiologicalSamples?: boolean;
+  isVulnerablePopulation?: boolean;
+  isIndigenousPopulation?: boolean;
+  isMulticentric?: boolean;
+  hasExternalInstitutions?: boolean;
+  isAffidavitAccepted?: boolean;
+  investigators: InvestigatorFormData[];
+  institutions: InstitutionFormData[];
+}
+
+interface InvestigatorFormData {
+  position?: string;
+  fullName?: string;
+  identification?: string;
+  education?: string;
+  institution?: string;
+  email?: string;
+  phone?: string;
+}
+
+interface InstitutionFormData {
+  name?: string;
+  type?: string;
+  address?: string;
+  contactPerson?: string;
+}
 
 @Component({
   selector: 'app-editar-protocolo',
@@ -43,9 +91,9 @@ export class EditarProtocoloPage implements OnInit {
   isLoading = false;
   isSaving = false;
   protocolId!: number;
-  protocoloOriginal: any = null;
+  protocoloOriginal: ProtocoloEdicion | null = null;
 
-  nivelesRiesgo: any[] = [];
+  nivelesRiesgo: RiskLevel[] = [];
   readonly coberturas = [
     { value: 'LOCAL', label: 'Local (Cantonal)' },
     { value: 'PROVINCIAL', label: 'Provincial' },
@@ -93,8 +141,10 @@ export class EditarProtocoloPage implements OnInit {
 
   private loadRiskLevels() {
     this.protocoloService.getRiskLevels().subscribe({
-      next: (levels: any) => {
-        this.nivelesRiesgo = Array.isArray(levels) ? levels : (levels?.data || []);
+      next: (levels) => {
+        const raw = levels as unknown;
+        const list = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.['data'] as unknown[]);
+        this.nivelesRiesgo = (list || []) as RiskLevel[];
       }
     });
   }
@@ -102,13 +152,16 @@ export class EditarProtocoloPage implements OnInit {
   private loadProtocolDetails() {
     this.isLoading = true;
     this.protocoloService.obtenerProtocolo(this.protocolId).subscribe({
-      next: (res: any) => {
+      next: (res) => {
         this.isLoading = false;
-        const data = res?.data || res;
+        const raw = res as unknown;
+        const data = ((typeof raw === 'object' && raw !== null && 'data' in (raw as Record<string, unknown>))
+          ? (raw as Record<string, unknown>)['data']
+          : raw) as ProtocoloEdicion;
         this.protocoloOriginal = data;
 
         // Formatear fechas para los inputs date de HTML
-        const formatDate = (dateStr: string) => {
+        const formatDate = (dateStr: string | undefined | null) => {
           if (!dateStr) return '';
           return dateStr.split('T')[0];
         };
@@ -131,7 +184,7 @@ export class EditarProtocoloPage implements OnInit {
 
         // Rellenar investigadores
         if (data.investigators && Array.isArray(data.investigators)) {
-          data.investigators.forEach((inv: any) => {
+          data.investigators.forEach((inv: InvestigatorFormData) => {
             this.investigators.push(this.fb.group({
               funcion: [inv.position || '', Validators.required],
               nombreCompleto: [inv.fullName || '', [Validators.required, Validators.minLength(5)]],
@@ -146,7 +199,7 @@ export class EditarProtocoloPage implements OnInit {
 
         // Rellenar instituciones
         if (data.institutions && Array.isArray(data.institutions)) {
-          data.institutions.forEach((inst: any) => {
+          data.institutions.forEach((inst: InstitutionFormData) => {
             this.institutions.push(this.fb.group({
               nombre: [inst.name || '', Validators.required],
               tipo: [inst.type === 'PUBLIC' ? 'PUBLICA' : 'PRIVADA', Validators.required],
@@ -204,9 +257,9 @@ export class EditarProtocoloPage implements OnInit {
     const formVal = this.editForm.getRawValue();
 
     const payload: Partial<CrearProtocoloDto> = {
-      riskLevelId: formVal.riskLevelId ? Number(formVal.riskLevelId) : null as any,
+      riskLevelId: formVal.riskLevelId ? Number(formVal.riskLevelId) : null as unknown as number,
       geographicCoverage: formVal.geographicCoverage!,
-      studyDurationMonths: formVal.studyDurationMonths ? Number(formVal.studyDurationMonths) : null as any,
+      studyDurationMonths: formVal.studyDurationMonths ? Number(formVal.studyDurationMonths) : null as unknown as number,
       lugarEjecucion: formVal.lugarEjecucion!,
       fechaInicioEstimada: formVal.fechaInicioEstimada || undefined,
       fechaFinEstimada: formVal.fechaFinEstimada || undefined,

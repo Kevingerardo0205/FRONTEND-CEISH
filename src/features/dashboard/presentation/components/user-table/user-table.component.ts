@@ -5,12 +5,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
-import { UserAdmin } from '@domain/entities/user-admin.entity';
+import { MatMenuModule } from '@angular/material/menu';
+import { UserAdmin, UserRoleItem } from '@domain/entities/user-admin.entity';
 
 @Component({
   selector: 'app-user-table',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatTooltipModule, MatChipsModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatTooltipModule, MatChipsModule, MatMenuModule],
   template: `
     <div class="table-container">
       <table mat-table [dataSource]="users()">
@@ -39,13 +40,44 @@ import { UserAdmin } from '@domain/entities/user-admin.entity';
         </ng-container>
 
         <ng-container matColumnDef="rol">
-          <th mat-header-cell *matHeaderCellDef> Roles / Permisos </th>
+          <th mat-header-cell *matHeaderCellDef> Roles / Suplencias </th>
           <td mat-cell *matCellDef="let user"> 
             <div class="roles-container">
-              <span *ngFor="let r of (user.roles?.length ? user.roles : [user.rol])" 
-                    class="badge" [ngClass]="r.toLowerCase()">
-                {{ r }}
-              </span>
+              <ng-container *ngFor="let r of getUserRoles(user)">
+                <!-- ROL PERMANENTE -->
+                <span *ngIf="!r.validUntil" 
+                      class="badge" 
+                      [ngClass]="r.code.toLowerCase()"
+                      [matTooltip]="getRoleTooltip(r)">
+                  {{ r.name || r.code }}
+                </span>
+
+                <!-- ROL TEMPORAL CON MENÚ DE ACCIÓN RÁPIDA -->
+                <span *ngIf="r.validUntil" 
+                      class="badge temporal-interactive-badge" 
+                      [ngClass]="[r.code.toLowerCase(), r.isExpired ? 'expired' : 'temporal']"
+                      [matTooltip]="getRoleTooltip(r)"
+                      [matMenuTriggerFor]="roleMenu">
+                  <span *ngIf="!r.isExpired" class="temporal-icon">⏳</span>
+                  <span *ngIf="r.isExpired" class="expired-icon">⌛</span>
+                  {{ r.name || r.code }}
+                  <span *ngIf="!r.validUntil && !r.isExpired" class="temporal-tag">({{ formatDate(r.validUntil) }})</span>
+                  <span *ngIf="r.validUntil && !r.isExpired" class="temporal-tag">({{ formatDate(r.validUntil) }})</span>
+                  <span *ngIf="r.isExpired" class="expired-tag">(Expirado)</span>
+                  <mat-icon class="badge-arrow">expand_more</mat-icon>
+                </span>
+
+                <mat-menu #roleMenu="matMenu" class="role-context-menu">
+                  <button mat-menu-item (click)="extendRole.emit({ user: user, role: r })">
+                    <mat-icon class="text-teal">more_time</mat-icon>
+                    <span>Prorrogar Vigencia...</span>
+                  </button>
+                  <button mat-menu-item (click)="suspendRole.emit({ user: user, role: r })" *ngIf="!r.isExpired">
+                    <mat-icon class="text-danger">cancel_schedule_send</mat-icon>
+                    <span>Suspender Suplencia</span>
+                  </button>
+                </mat-menu>
+              </ng-container>
             </div>
           </td>
         </ng-container>
@@ -63,6 +95,9 @@ import { UserAdmin } from '@domain/entities/user-admin.entity';
         <ng-container matColumnDef="acciones">
           <th mat-header-cell *matHeaderCellDef class="text-right"> Gestión </th>
           <td mat-cell *matCellDef="let user" class="text-right">
+            <button mat-icon-button class="action-btn email" (click)="resendInvitation.emit(user)" matTooltip="Reenviar correo de verificación / invitación">
+              <mat-icon class="text-teal">forward_to_inbox</mat-icon>
+            </button>
             <button mat-icon-button class="action-btn edit" (click)="edit.emit(user)" matTooltip="Editar profesional">
               <mat-icon>edit_note</mat-icon>
             </button>
@@ -77,115 +112,44 @@ import { UserAdmin } from '@domain/entities/user-admin.entity';
       </table>
     </div>
   `,
-  styles: [`
-    .table-container {
-      background: white;
-      border-radius: 20px;
-      padding: 1rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0 0.5rem;
-    }
-
-    th {
-      border: none;
-      color: #94a3b8;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 1px;
-      padding: 1.5rem 1rem;
-    }
-
-    td {
-      border: none;
-      padding: 1.5rem 1rem;
-      background: transparent;
-      color: #475569;
-      font-size: 0.9rem;
-      border-bottom: 1px solid #f8fafc;
-    }
-
-    .professional-cell {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-
-      .avatar-box {
-        width: 40px;
-        height: 40px;
-        background: #f1f5f9;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: #4DB6AC;
-      }
-
-      .info {
-        display: flex;
-        flex-direction: column;
-        .name { font-weight: 700; color: #0f172a; }
-        .sub { font-size: 0.75rem; color: #94a3b8; }
-      }
-    }
-
-    .roles-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    .badge {
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      background: #f1f5f9;
-      text-transform: uppercase;
-      
-      &.admin_ti { background: #e0f2f1; color: #00796b; }
-      &.investigador { background: #e3f2fd; color: #1565c0; }
-      &.evaluador { background: #fff3e0; color: #e65100; }
-      &.secretaria { background: #f3e5f5; color: #7b1fa2; }
-      &.presidente, &.presidenta { background: #efebe9; color: #4e342e; }
-    }
-
-    .status-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 100px;
-      font-size: 0.75rem;
-      font-weight: 600;
-
-      .dot { width: 6px; height: 6px; border-radius: 50%; }
-
-      &.active { background: #f0fdf4; color: #166534; .dot { background: #10b981; } }
-      &.inactive { background: #fef2f2; color: #991b1b; .dot { background: #ef4444; } }
-    }
-
-    .action-btn {
-      color: #cbd5e1;
-      transition: all 0.2s ease;
-      &:hover { color: #0f172a; background: #f8fafc; }
-      &.delete:hover { color: #ef4444; background: #fef2f2; }
-    }
-
-    .text-right { text-align: right; }
-  `]
+  styleUrl: './user-table.component.scss'
 })
 export class UserTableComponent {
   users = input.required<UserAdmin[]>();
   edit = output<UserAdmin>();
   delete = output<UserAdmin>();
+  extendRole = output<{ user: UserAdmin; role: UserRoleItem }>();
+  suspendRole = output<{ user: UserAdmin; role: UserRoleItem }>();
+  resendInvitation = output<UserAdmin>();
   displayedColumns = ['cedula', 'nombre', 'email', 'rol', 'estado', 'acciones'];
+
+  getUserRoles(user: UserAdmin): UserRoleItem[] {
+    if (user.userRoles && user.userRoles.length > 0) {
+      return user.userRoles;
+    }
+    return [{
+      code: (user.rol || '').toUpperCase(),
+      name: (user.rol || '').toUpperCase()
+    }];
+  }
+
+  getRoleTooltip(role: UserRoleItem): string {
+    if (!role.validUntil) return `Rol permanente: ${role.name || role.code}`;
+    const dateStr = this.formatDate(role.validUntil);
+    if (role.isExpired) {
+      return `⌛ Suplencia finalizada el ${dateStr}${role.reason ? ' (' + role.reason + ')' : ''}`;
+    }
+    return `⏳ Suplencia temporal vigente hasta ${dateStr}${role.reason ? ' - Motivo: ' + role.reason : ''}`;
+  }
+
+  formatDate(dateStr?: string | null): string {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  }
 }

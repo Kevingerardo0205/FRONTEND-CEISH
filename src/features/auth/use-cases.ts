@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { User, UserDTO, AuthResponse, LoginCredentials } from '../../domain/entities/user.entity';
-import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
+import { IAuthRepositoryPort, MessageResponse } from '@domain/ports/IAuthRepositoryPort';
 import { AuthFacade } from './facades/auth.facade';
 
 import { RegisterInvestigadorRequest } from './domain/entities/register.request';
@@ -11,7 +11,7 @@ import { SetupAccountRequest } from './domain/entities/setup-account.request';
 export class RegisterInvestigadorUseCase {
   constructor(private authRepository: IAuthRepositoryPort) {}
 
-  execute(data: RegisterInvestigadorRequest): Observable<any> {
+  execute(data: RegisterInvestigadorRequest): Observable<MessageResponse> {
     return this.authRepository.registerInvestigador(data).pipe(
       tap(() => this.authRepository.logAudit('INVESTIGADOR_REGISTRATION', `Registro de investigador: ${data.email}`).subscribe())
     );
@@ -22,7 +22,7 @@ export class RegisterInvestigadorUseCase {
 export class VerifyOtpUseCase {
   constructor(private authRepository: IAuthRepositoryPort) {}
 
-  execute(email: string, code: string): Observable<any> {
+  execute(email: string, code: string): Observable<MessageResponse> {
     return this.authRepository.verifyOTP(email, code).pipe(
       tap(() => this.authRepository.logAudit('OTP_VERIFICATION', `Verificación de correo: ${email}`).subscribe())
     );
@@ -33,7 +33,7 @@ export class VerifyOtpUseCase {
 export class SetupAccountUseCase {
   constructor(private authRepository: IAuthRepositoryPort) {}
 
-  execute(data: SetupAccountRequest): Observable<any> {
+  execute(data: SetupAccountRequest): Observable<MessageResponse> {
     return this.authRepository.setupAccount(data).pipe(
       tap(() => this.authRepository.logAudit('SETUP_ACCOUNT', `Configuración de cuenta: ${data.email}`).subscribe())
     );
@@ -94,7 +94,7 @@ export class DeleteUserUseCase {
 export class UpdateUserUseCase {
   constructor(private authRepository: IAuthRepositoryPort) {}
 
-  execute(id: string, userData: any): Observable<User> {
+  execute(id: string, userData: Partial<UserDTO>): Observable<User> {
     return this.authRepository.updateUser(id, userData).pipe(
       tap(user => this.authRepository.logAudit('USER_UPDATE', `Se actualizó el usuario: ${user.email}`).subscribe())
     );
@@ -105,7 +105,7 @@ export class UpdateUserUseCase {
 export class ForgotPasswordUseCase {
   constructor(private authRepository: IAuthRepositoryPort) {}
 
-  execute(email: string): Observable<any> {
+  execute(email: string): Observable<MessageResponse> {
     return this.authRepository.forgotPassword(email).pipe(
       tap(() => this.authRepository.logAudit('PASSWORD_RECOVERY_REQUEST', `Solicitud de recuperación de contraseña: ${email}`).subscribe())
     );
@@ -116,7 +116,7 @@ export class ForgotPasswordUseCase {
 export class ResetPasswordUseCase {
   constructor(private authRepository: IAuthRepositoryPort) {}
 
-  execute(email: string, code: string, password: string): Observable<any> {
+  execute(email: string, code: string, password: string): Observable<MessageResponse> {
     return this.authRepository.resetPassword(email, code, password).pipe(
       tap(() => this.authRepository.logAudit('PASSWORD_RECOVERY_SUCCESS', `Restablecimiento de contraseña exitoso: ${email}`).subscribe())
     );

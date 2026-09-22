@@ -3,7 +3,6 @@ import { of } from 'rxjs';
 import { catchError, finalize, tap } from 'rxjs/operators';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 
 export interface SecretariatMetrics {

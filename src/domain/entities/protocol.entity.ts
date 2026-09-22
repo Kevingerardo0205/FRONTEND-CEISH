@@ -10,7 +10,7 @@ export interface ProtocolEntity {
   principalInvestigator?: string;
   type: ProtocolType;
   studyTypeCode?: string;
-  studyType?: any;
+  studyType?: { id: number; codigo: string; nombre: string };
   status: ProtocolStatus;
   statusId?: number;
   submissionDate?: Date;
@@ -20,7 +20,7 @@ export interface ProtocolEntity {
   deadline?: string | Date;
 
   // Campos Diferidos Adicionales
-  riskLevel?: any;
+  riskLevel?: { id: number; name: string; description?: string };
   riskLevelId?: number;
   geographicCoverage?: string;
   studyDurationMonths?: number;
@@ -46,7 +46,7 @@ export interface ProtocolVersionEntity {
   versionNumber: number;
   status: string;
   statusId?: number;
-  resolutionType?: any;
+  resolutionType?: string | { id: number; name: string };
   majorObservations?: string;
   minorObservations?: string;
   correctionProcedure?: string;
@@ -82,6 +82,7 @@ export interface ValidationChecklistItem {
 export interface ValidationGlobalStatus {
   isComplete: boolean;
   status: string;
+  version?: number;
   hasMissingItems: boolean;
   missingItemsList: string | null;
   submissionDeadline: string | null;

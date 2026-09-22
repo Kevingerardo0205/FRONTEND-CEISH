@@ -1,5 +1,3 @@
-import { TipoEstudio } from '../../constants/anexos-pet.constants';
-
 export enum EstadoProtocolo {
   BORRADOR = 'BORRADOR',
   EN_REVISION_DOCUMENTAL = 'EN_REVISION_DOCUMENTAL',

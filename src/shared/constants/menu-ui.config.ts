@@ -55,8 +55,9 @@ export const PERMISSION_UI_MAP: Record<string, MenuUIItem | MenuUIItem[]> = {
   'EVALUACION_INFORMES': { label: 'Consolidación (Anexo 12)', path: '/dashboard/evaluations/consolidation', icon: 'summarize' },
   
   // Resoluciones
-  'RESOLUCION_CREAR': { label: 'Generar Resoluciones', path: '/dashboard/resolutions', icon: 'description' },
+  'RESOLUCION_CREAR': { label: 'Generar Resoluciones', path: '/dashboard/resolutions/generator', icon: 'description' },
   'RESOLUCION_FIRMAR': { label: 'Firma Electrónica', path: '/dashboard/home', icon: 'draw' },
+  'RESOLUCION_CONVOCATORIAS': { label: 'Gestión de Convocatorias y Actas', path: '/dashboard/resolutions/calls', icon: 'event_note' },
   'RESOLUCION_NOTIF': { label: 'Notificar Resoluciones', path: '/dashboard/home', icon: 'mail' },
   'RESOLUCION_HISTORIAL': { label: 'Historial Resoluciones', path: '/dashboard/home', icon: 'history_edu' },
   

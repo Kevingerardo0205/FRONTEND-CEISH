@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProtocolFormComponent } from '../presentation/pages/protocol-form/protocol-form.component';
 

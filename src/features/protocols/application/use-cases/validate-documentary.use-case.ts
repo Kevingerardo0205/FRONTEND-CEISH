@@ -8,7 +8,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 export class ValidateDocumentaryUseCase {
   private repository = inject(IProtocolRepositoryPort);
 
-  execute(protocolId: string): Observable<any> {
+  execute(protocolId: string): Observable<{ message?: string }> {
     return this.repository.finalizeValidation(protocolId);
   }
 }

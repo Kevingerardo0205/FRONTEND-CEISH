@@ -1,41 +1,42 @@
 import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
 import { IReportRepositoryPort } from '../../domain/ports/report-repository.port';
-import { ReportRepositoryAdapter } from '../../infrastructure/adapters/report-repository.adapter';
+import { 
+  SummaryStats, 
+  ProtocolStats, 
+  StatusStats, 
+  EvaluationTimeStats, 
+  WorkloadStats,
+  MSPReportData 
+} from '../../domain/entities/report.entity';
 
-@Injectable({
-  providedIn: 'root',
-  useClass: ReportRepositoryAdapter // In a real scenario, this would be provided in app.config.ts or similar
-})
-export abstract class ReportService extends IReportRepositoryPort {}
-
-// For simplicity in this implementation, I'll provide it directly
 @Injectable({
   providedIn: 'root'
 })
 export class ReportsUseCase {
-  private readonly reportRepo = inject(ReportRepositoryAdapter);
+  private readonly reportRepo = inject(IReportRepositoryPort);
 
-  getSummaryStats(startDate?: Date, endDate?: Date) {
+  getSummaryStats(startDate?: Date, endDate?: Date): Observable<SummaryStats> {
     return this.reportRepo.getSummaryStats(startDate, endDate);
   }
 
-  getProtocolsByType(startDate?: Date, endDate?: Date) {
+  getProtocolsByType(startDate?: Date, endDate?: Date): Observable<ProtocolStats[]> {
     return this.reportRepo.getProtocolsByType(startDate, endDate);
   }
 
-  getProtocolsByStatus(startDate?: Date, endDate?: Date) {
+  getProtocolsByStatus(startDate?: Date, endDate?: Date): Observable<StatusStats[]> {
     return this.reportRepo.getProtocolsByStatus(startDate, endDate);
   }
 
-  getEvaluationTimes(startDate?: Date, endDate?: Date) {
+  getEvaluationTimes(startDate?: Date, endDate?: Date): Observable<EvaluationTimeStats[]> {
     return this.reportRepo.getEvaluationTimes(startDate, endDate);
   }
 
-  getWorkloadByEvaluator(startDate?: Date, endDate?: Date) {
+  getWorkloadByEvaluator(startDate?: Date, endDate?: Date): Observable<WorkloadStats[]> {
     return this.reportRepo.getWorkloadByEvaluator(startDate, endDate);
   }
 
-  getMSPReport(period: 'monthly' | 'annual', year: number, month?: number) {
+  getMSPReport(period: 'monthly' | 'annual', year: number, month?: number): Observable<MSPReportData> {
     return this.reportRepo.getMSPReport(period, year, month);
   }
 }

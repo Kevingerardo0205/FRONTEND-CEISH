@@ -9,8 +9,8 @@ export interface AuditLog {
   recordId: string;
   ipAddress: string;
   changes?: {
-    before: any;
-    after: any;
+    before: unknown;
+    after: unknown;
   };
   details?: string;
 }
@@ -24,4 +24,12 @@ export interface ProtocolTrailEvent {
   comments?: string;
   documents?: { name: string, url: string }[];
   integrityHash: string;
+}
+
+export interface AuditFilters {
+  search?: string;
+  action?: string[];
+  entity?: string[];
+  startDate?: Date | null;
+  endDate?: Date | null;
 }

@@ -13,9 +13,10 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
-import { ValidateDocumentaryUseCase } from '../../../application/use-cases/validate-documentary.use-case';
-import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
+import { LoadValidationDetailUseCase } from '../../../application/use-cases/load-validation-detail.use-case';
+import { ValidateChecklistItemUseCase } from '../../../application/use-cases/validate-checklist-item.use-case';
+import { FinalizeDocumentaryValidationUseCase } from '../../../application/use-cases/finalize-documentary-validation.use-case';
+import { DownloadProtocolDocumentUseCase } from '../../../application/use-cases/download-protocol-document.use-case';
 import { ValidationChecklistItem, ValidationHeader, ValidationGlobalStatus } from '@domain/entities/protocol.entity';
 import { IncompleteValidationDialog } from './incomplete-validation-dialog.component';
 import { ReceptionSuccessDialog } from './reception-success-dialog.component';
@@ -25,6 +26,8 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
 import { resolveEstado } from '@shared/utils/estado.resolver';
+import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
+import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 
 @Component({
   selector: 'app-protocol-validation-detail',
@@ -42,7 +45,9 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
     MatTooltipModule,
     MatDialogModule, 
     MatDividerModule, 
-    FormsModule
+    FormsModule,
+    ProtocolStatusLabelPipe,
+    ProtocolStatusClassPipe
   ],
   template: `
     <div class="validation-wrapper animate-fade-in" [class.in-workspace]="isInsideWorkspace()">
@@ -84,10 +89,14 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
               <span class="label">CÓDIGO DE TRÁMITE:</span>
               <div class="d-flex align-items-center justify-content-between gap-2">
                 <span class="value code">{{ header()?.ceishCode || 'TRÁMITE EN PROCESO' }}</span>
-                <span class="badge-status" [ngClass]="globalStatus()?.status?.toLowerCase() || ''">
-                  {{ globalStatus()?.status || 'PENDIENTE' }}
+                <span class="badge-status" [ngClass]="globalStatus()?.status | protocolStatusClass">
+                  {{ globalStatus()?.status | protocolStatusLabel }}
                 </span>
               </div>
+            </div>
+            <div class="info-item">
+              <span class="label">VERSIÓN ACTIVA:</span>
+              <span class="value code" style="color: #003366; font-weight: 800;">V{{ globalStatus()?.version || '1.0' }}</span>
             </div>
             <div class="info-item">
               <span class="label">FECHA DE ENVÍO:</span>
@@ -348,7 +357,7 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
     }
 
     .protocol-info-grid {
-      display: grid; grid-template-columns: 250px 1fr; gap: 0; border: 1px solid #000;
+      display: grid; grid-template-columns: 250px 150px 1fr; gap: 0; border: 1px solid #000;
       .info-item { padding: 0.75rem; border-right: 1px solid #000; border-bottom: 1px solid #000; display: flex; flex-direction: column;
         &.full { grid-column: 1 / -1; border-right: none; }
         &:last-child { border-bottom: none; }
@@ -396,9 +405,10 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
     .section-title { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; font-weight: 700; color: #003366; margin-bottom: 1rem; }
 
     .badge-status { padding: 4px 12px; border-radius: 100px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
-      &.en_revision_secretaria { background: #fef3c7; color: #92400e; }
-      &.completo { background: #dcfce7; color: #166534; }
-      &.incompleto { background: #fee2e2; color: #991b1b; }
+      &.pending { background: #f1f5f9; color: #475569; }
+      &.review { background: #eff6ff; color: #1d4ed8; }
+      &.approved { background: #dcfce7; color: #166534; }
+      &.rejected { background: #fee2e2; color: #991b1b; }
     }
 
     .action-footer { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 12px; }
@@ -488,9 +498,10 @@ export class ProtocolValidationDetailPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
-  private repository = inject(IProtocolRepositoryPort);
-  private docRepository = inject(IDocumentRepositoryPort);
-  private validateUseCase = inject(ValidateDocumentaryUseCase);
+  private loadValidationDetail = inject(LoadValidationDetailUseCase);
+  private validateChecklistItem = inject(ValidateChecklistItemUseCase);
+  private finalizeValidation = inject(FinalizeDocumentaryValidationUseCase);
+  private downloadDocument = inject(DownloadProtocolDocumentUseCase);
   private dialog = inject(MatDialog);
   private s3StorageService = inject(S3StorageService);
   private authFacade = inject(AuthFacade);
@@ -589,7 +600,7 @@ export class ProtocolValidationDetailPage implements OnInit {
 
   loadValidationData() {
     this.isLoading.set(true);
-    this.repository.getValidationDetail(this.protocolId).pipe(
+    this.loadValidationDetail.execute(this.protocolId).pipe(
       catchError(err => {
         console.error('[ProtocolValidationDetailPage] Error al cargar detalle:', err);
         this.protocolNotFound.set(true);
@@ -597,21 +608,8 @@ export class ProtocolValidationDetailPage implements OnInit {
       })
     ).subscribe(data => {
       if (data) {
-        console.log('[ProtocolValidationDetailPage] Detalle cargado:', data);
-        
         this.header.set(data.header);
-        
-        // Autocompletar conteo sugerido si viene nulo
-        const processedChecklist = (data.checklist || []).map(item => {
-          if (item.attachedDocument) {
-            if (item.attachedDocument.pageCount === null || item.attachedDocument.pageCount === undefined) {
-              item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
-            }
-          }
-          return item;
-        });
-        
-        this.checklist.set(processedChecklist);
+        this.checklist.set(data.checklist || []);
         this.globalStatus.set(data.globalStatus);
         
         if (data.globalStatus) {
@@ -625,28 +623,10 @@ export class ProtocolValidationDetailPage implements OnInit {
   }
 
   onValidateItem(item: ValidationChecklistItem, actionType: number) {
-    if (!item.attachedDocument) return;
-
-    let pages = item.attachedDocument.pageCount;
-    if (pages === null || pages === undefined) {
-      pages = item.attachedDocument.originalPageCount || 1;
-      item.attachedDocument.pageCount = pages;
-    }
-
-    if (pages <= 0 || !Number.isInteger(pages)) {
-      this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
-      return;
-    }
-
-    if (actionType === 2 && (!item.observations || item.observations.trim().length < 5)) {
-      this.snackBar.open('⚠️ Por favor ingrese un motivo de rechazo técnico (mín. 5 carácteres).', 'Cerrar');
-      return;
-    }
-
     this.isProcessing = true;
-    this.docRepository.validateDocument(item.attachedDocument.id.toString(), actionType, item.observations || '', pages).subscribe({
+    this.validateChecklistItem.execute(item, actionType, item.observations || '').subscribe({
       next: () => {
-        // Actualizar la señal checklist con una nueva referencia para activar la reactividad de Angular
+        const pages = item.attachedDocument?.pageCount || item.attachedDocument?.originalPageCount || 1;
         this.checklist.update(list => list.map(i => {
           if (i.id === item.id) {
             return { 
@@ -662,9 +642,9 @@ export class ProtocolValidationDetailPage implements OnInit {
         const msg = actionType === 1 ? 'Ítem aprobado' : 'Ítem rechazado';
         this.snackBar.open(`✅ ${msg}`, 'Cerrar', { duration: 2000 });
       },
-      error: () => {
+      error: (err: Error) => {
         this.isProcessing = false;
-        this.snackBar.open('❌ Error al procesar la validación', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(`❌ ${err.message || 'Error al procesar la validación'}`, 'Cerrar', { duration: 3000 });
       }
     });
   }
@@ -680,21 +660,14 @@ export class ProtocolValidationDetailPage implements OnInit {
 
     if (pageCount <= 0 || !Number.isInteger(pageCount)) {
       this.snackBar.open('⚠️ El número de páginas debe ser un número entero mayor a 0.', 'Cerrar');
-      // Restaurar el valor original
       item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
       return;
     }
 
-    // Si ya está aprobado o rechazado, guardamos inmediatamente el cambio en la base de datos
     if (item.status === 'APROBADO' || item.status === 'VALIDADO' || item.status === 'RECHAZADO') {
       const actionType = (item.status === 'APROBADO' || item.status === 'VALIDADO') ? 1 : 2;
       this.isProcessing = true;
-      this.docRepository.validateDocument(
-        item.attachedDocument.id.toString(), 
-        actionType, 
-        item.observations || '', 
-        item.attachedDocument.pageCount
-      ).subscribe({
+      this.validateChecklistItem.execute(item, actionType, item.observations || '').subscribe({
         next: () => {
           this.isProcessing = false;
           this.snackBar.open('✅ Conteo de páginas actualizado.', 'Cerrar', { duration: 1500 });
@@ -723,52 +696,42 @@ export class ProtocolValidationDetailPage implements OnInit {
     this.isProcessing = true;
     const isComplete = this.progress() === 100;
 
-    // Guardar automáticamente observaciones en la base de datos antes de finalizar
-    this.repository.verifyProtocol(this.protocolId, isComplete, this.missingItemsList).subscribe({
-      next: () => {
-        // Continuar con la finalización del trámite
-        this.validateUseCase.execute(this.protocolId).subscribe({
-          next: (res) => {
-            this.isProcessing = false;
-            const code = res.ceishCode || res.code || 'GENERADO';
-            
-            const dialogRef = this.dialog.open(ReceptionSuccessDialog, {
-              width: '500px',
-              disableClose: true,
-              data: { code: code }
-            });
+    this.finalizeValidation.execute(this.protocolId, isComplete, this.missingItemsList).subscribe({
+      next: (res) => {
+        this.isProcessing = false;
+        const code = res.ceishCode || res.code || 'GENERADO';
+        
+        const dialogRef = this.dialog.open(ReceptionSuccessDialog, {
+          width: '500px',
+          disableClose: true,
+          data: { code: code }
+        });
 
-            dialogRef.afterClosed().subscribe(result => {
-              if (result === 'download') {
-                this.onDownloadCertificate();
-              }
-              this.router.navigate(['/dashboard/protocols/validation/list']);
-            });
-          },
-          error: (err) => {
-            this.isProcessing = false;
-            if (err.status === 400 && err.error?.missingDocuments) {
-              this.dialog.open(IncompleteValidationDialog, {
-                width: '500px',
-                data: { missingDocuments: err.error.missingDocuments, deadline: err.error.deadline }
-              });
-            } else {
-              const msg = err.error?.message || 'Error al finalizar la recepción';
-              this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
-            }
+        dialogRef.afterClosed().subscribe(result => {
+          if (result === 'download') {
+            this.onDownloadCertificate();
           }
+          this.router.navigate(['/dashboard/protocols/validation/list']);
         });
       },
-      error: () => {
+      error: (err) => {
         this.isProcessing = false;
-        this.snackBar.open('❌ Error al guardar las observaciones generales.', 'Cerrar');
+        if (err.status === 400 && err.error?.missingDocuments) {
+          this.dialog.open(IncompleteValidationDialog, {
+            width: '500px',
+            data: { missingDocuments: err.error.missingDocuments, deadline: err.error.deadline }
+          });
+        } else {
+          const msg = err.error?.message || err.message || 'Error al finalizar la recepción';
+          this.snackBar.open(`❌ ${msg}`, 'Cerrar', { duration: 5000 });
+        }
       }
     });
   }
 
   onDownloadCertificate() {
     const code = this.header()?.ceishCode || 'CONSTANCIA';
-    this.repository.getCertificate(this.protocolId).subscribe({
+    this.downloadDocument.executeCertificate(this.protocolId).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');

@@ -1,114 +1,111 @@
 import { Observable } from 'rxjs';
 import { EvaluationEntity } from '../entities/evaluation.entity';
-import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse } from '../entities/peer-evaluation.entity';
+import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse, RiskLevelInfo } from '../entities/peer-evaluation.entity';
 
-export abstract class IEvaluationRepositoryPort {
-  /**
-   * Presidenta: Obtiene el dashboard de carga de evaluadores.
-   * GET /evaluations/evaluators/dashboard
-   */
-  abstract getEvaluatorsDashboard(profileId?: string): Observable<any>;
-
-
-
-  /**
-   * Evaluador: Obtiene las tareas asignadas al evaluador actual.
-   * GET /evaluations/my-assignments
-   */
-  abstract getMyAssignments(): Observable<any[]>;
-
-  /**
-   * Evaluador: Envía el resultado de la evaluación.
-   * POST /evaluations/submit
-   * @param payload JSON con assignmentId, annex10, result, reportPath, etc.
-   */
-  abstract submitEvaluation(payload: any): Observable<any>;
-
-  /**
-   * Obtener todos los perfiles de evaluadores.
-   * GET /evaluations/profiles
-   */
-  abstract getProfiles(): Observable<any[]>;
-
-  /**
-   * Crear un nuevo perfil de evaluador.
-   * POST /evaluations/profiles
-   */
-  abstract createProfile(profile: any): Observable<any>;
-
-  /**
-   * Actualizar un perfil de evaluador.
-   * PATCH /evaluations/profiles/{id}
-   */
-  abstract updateProfile(id: number, profile: any): Observable<any>;
-
-  /**
-   * Eliminar un perfil de evaluador.
-   * DELETE /evaluations/profiles/{id}
-   */
-  abstract deleteProfile(id: number): Observable<void>;
-
-  /**
-   * Obtiene la consolidación de evaluaciones para un protocolo (Anexo 12).
-   * GET /evaluations/consolidate/{id}
-   */
-  abstract consolidateEvaluation(protocolId: string): Observable<any>;
-
-  /**
-   * Obtiene el detalle de checklist guardado de una evaluación (Fase 1).
-   * GET /api/evaluations/:evaluationId/checklist-details
-   */
-  abstract getChecklistDetails(evaluationId: string): Observable<any>;
-
-  /**
-   * Obtiene la URL firmada del PDF oficial generado en R2 (Fase 2).
-   * GET /api/evaluations/:evaluationId/document
-   */
-  abstract getDocumentDownloadUrl(evaluationId: string): Observable<any>;
-
-  /**
-   * Obtiene la URL firmada del DOCX oficial generado en R2 (Fase 2).
-   * GET /api/evaluations/:evaluationId/document/docx
-   */
-  abstract getDocxDownloadUrl(evaluationId: string): Observable<any>;
-
-  // Métodos de consulta existentes
-  abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;
-  abstract getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]>;
-
-  // --- NUEVOS MÉTODOS PARA ESTRATIFICACIÓN DE RIESGO POR PARES (PET 4.2.1) ---
-  
-  /**
-   * Secretaria: Listar protocolos pendientes de pares evaluadores.
-   * GET /api/evaluations/protocols/pending-peer-assignment
-   */
-  abstract getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]>;
-
-  /**
-   * Secretaria: Asignar exactamente 2 pares evaluadores distintos a un protocolo.
-   * POST /api/evaluations/protocols/:id/assign-peer-evaluators
-   */
-  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse>;
-
-  /**
-   * Evaluador: Listar mis evaluaciones de riesgo pendientes.
-   * GET /api/evaluations/peer-assignments/my-pending
-   */
-  abstract getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]>;
-
-  abstract submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string; reportPath: string }): Observable<void>;
-
-  /**
-   * General: Obtener lista ligera de evaluadores activos del sistema (Evita Error 403)
-   * GET /api/evaluations/evaluators/active
-   */
-  abstract getActiveEvaluators(): Observable<any[]>;
-
-  /**
-   * Obtiene observaciones detalladas y consolidadas de cada evaluador para un protocolo.
-   * GET /api/evaluations/protocol/:protocolId/observations
-   */
-  abstract getProtocolObservations(protocolId: string): Observable<any>;
+export interface EvaluatorsDashboardResponse {
+  evaluators: EvaluatorsDashboardEntry[];
+  totalEvaluators?: number;
 }
 
+export interface EvaluatorsDashboardEntry {
+  evaluatorId: number;
+  nombre: string;
+  email: string;
+  fullName?: string;
+  perfil?: string;
+  assignedCount: number;
+  completedCount: number;
+  pendingCount: number;
+}
 
+export interface EvaluationAssignment {
+  id?: number | string;
+  assignmentId: number;
+  protocolId: number;
+  protocolCode?: string;
+  protocolTitle?: string;
+  investigator?: string;
+  deadline?: string;
+  daysRemaining?: number;
+  isUrgent?: boolean;
+  reviewType?: string;
+  annexToUse?: string;
+  isSuspended?: boolean;
+}
+
+export interface EvaluationProfile {
+  id: number;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface ChecklistDetailItem {
+  itemCodigo: string;
+  estado: string;
+  observaciones: string | null;
+}
+
+export interface ObservationEntry {
+  evaluatorName: string;
+  section: string;
+  observations: string;
+  date?: string;
+}
+
+export abstract class IEvaluationRepositoryPort {
+  abstract getEvaluatorsDashboard(profileId?: string): Observable<EvaluatorsDashboardResponse>;
+  abstract getMyAssignments(): Observable<EvaluationAssignment[]>;
+  abstract submitEvaluation(payload: SubmitEvaluationPayload): Observable<{ message?: string; assignmentId?: number }>;
+  abstract getProfiles(): Observable<EvaluationProfile[]>;
+  abstract createProfile(profile: CreateEvaluationProfilePayload): Observable<EvaluationProfile>;
+  abstract updateProfile(id: number, profile: Partial<CreateEvaluationProfilePayload>): Observable<EvaluationProfile>;
+  abstract deleteProfile(id: number): Observable<void>;
+  abstract consolidateEvaluation(protocolId: string): Observable<ConsolidatedEvaluationResponse>;
+  abstract getChecklistDetails(evaluationId: string): Observable<ChecklistDetailItem[]>;
+  abstract getDocumentDownloadUrl(evaluationId: string): Observable<{ downloadUrl: string }>;
+  abstract getDocxDownloadUrl(evaluationId: string): Observable<{ downloadUrl: string }>;
+  abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;
+  abstract getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]>;
+  abstract getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]>;
+  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse>;
+  abstract getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]>;
+  abstract submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string; reportPath: string }): Observable<void>;
+  abstract getActiveEvaluators(): Observable<ActiveEvaluator[]>;
+  abstract getProtocolObservations(protocolId: string): Observable<ObservationEntry[]>;
+}
+
+export interface ActiveEvaluator {
+  id: number;
+  nombre: string;
+  email: string;
+}
+
+export interface ConsolidatedEvaluationResponse {
+  data?: ConsolidatedEvaluation;
+  evaluations?: unknown[];
+  isUnanimous?: boolean;
+}
+
+export interface ConsolidatedEvaluation {
+  protocolId: string;
+  evaluations: EvaluationEntity[];
+  isUnanimous?: boolean;
+  summary?: string;
+}
+
+export interface SubmitEvaluationPayload {
+  assignmentId: number;
+  result: number;
+  observations?: string;
+  reportPath?: string;
+  isDraft?: boolean;
+  annex9?: Record<string, unknown>;
+  annex10?: Record<string, unknown>;
+  annex11?: Record<string, unknown>;
+}
+
+export interface CreateEvaluationProfilePayload {
+  name: string;
+  description?: string;
+}

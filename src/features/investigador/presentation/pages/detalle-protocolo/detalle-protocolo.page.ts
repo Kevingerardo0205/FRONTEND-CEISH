@@ -12,6 +12,19 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { ProtocoloDetalle, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
 
+interface ProtocoloDocumentoItem {
+  nombre: string;
+  tipo: string;
+  size: string;
+}
+
+interface ProtocoloHistorialEvento {
+  titulo: string;
+  descripcion: string;
+  fecha: Date;
+  tipo: 'success' | 'info' | 'warning';
+}
+
 @Component({
   selector: 'app-detalle-protocolo',
   standalone: true,
@@ -252,13 +265,13 @@ export class DetalleProtocoloPage implements OnInit {
   
   EstadoProtocolo = EstadoProtocolo;
   protocolo: ProtocoloDetalle | null = null;
-  documentos: any[] = [
+  documentos: ProtocoloDocumentoItem[] = [
     { nombre: 'Anexo 1 - Solicitud.pdf', tipo: 'Anexo 1', size: '1.2 MB' },
     { nombre: 'Protocolo Tecnico v1.pdf', tipo: 'Técnico', size: '4.5 MB' },
     { nombre: 'CV Investigador.pdf', tipo: 'Soporte', size: '800 KB' }
   ];
 
-  historial: any[] = [
+  historial: ProtocoloHistorialEvento[] = [
     { titulo: 'Protocolo Registrado', descripcion: 'Envío inicial del investigador.', fecha: new Date(), tipo: 'success' },
     { titulo: 'En Revisión Documental', descripcion: 'Secretaría técnica validando anexos.', fecha: new Date(), tipo: 'info' }
   ];

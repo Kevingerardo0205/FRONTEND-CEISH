@@ -11,7 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { GetMyAssignmentsUseCase } from '../../../application/get-my-assignments.use-case';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { LoadPendingPeerAssignmentsUseCase } from '../../../application/load-pending-peer-assignments.use-case';
 import { PeerAssignmentEntity } from '@domain/entities/peer-evaluation.entity';
 
 @Component({
@@ -327,7 +327,7 @@ import { PeerAssignmentEntity } from '@domain/entities/peer-evaluation.entity';
 export class EvaluationListPage implements OnInit {
   private authFacade = inject(AuthFacade);
   private getMyAssignmentsUC = inject(GetMyAssignmentsUseCase);
-  private evaluationRepo = inject(IEvaluationRepositoryPort);
+  private loadPendingPeersUC = inject(LoadPendingPeerAssignmentsUseCase);
   private snackBar = inject(MatSnackBar);
   private destroyRef = inject(DestroyRef);
 
@@ -351,7 +351,7 @@ export class EvaluationListPage implements OnInit {
   }
 
   loadPeerRiskData() {
-    this.evaluationRepo.getMyPendingPeerAssignments()
+    this.loadPendingPeersUC.execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {

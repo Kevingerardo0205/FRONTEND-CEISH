@@ -11,10 +11,15 @@ import {
   GetUsersAdminUseCase, 
   RegisterUserAdminUseCase, 
   UpdateUserAdminUseCase,
-  DeleteUserAdminUseCase
+  DeleteUserAdminUseCase,
+  ExtendTemporaryRoleUseCase,
+  SuspendTemporaryRoleUseCase,
+  SendConfirmationEmailUseCase
 } from '@features/dashboard/use-cases';
-import { UserAdmin } from '@domain/entities/user-admin.entity';
+import { UserAdmin, UserRoleItem } from '@domain/entities/user-admin.entity';
 import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confirm-dialog.component';
+import { ExtendRoleDialogComponent } from '../components/extend-role-dialog/extend-role-dialog.component';
+import { SuspendRoleDialogComponent } from '../components/suspend-role-dialog/suspend-role-dialog.component';
 
 @Component({
   selector: 'app-user-management',
@@ -54,24 +59,23 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
       <!-- Management Section -->
       <div class="management-layout">
         <main class="table-section shadow-soft">
-          <div class="section-toolbar">
-            <div class="title-group">
-              <h2 class="section-title">Listado de Personal</h2>
-              <div class="filter-pills">
-                <button 
-                  [class.active]="filterMode() === 'COMITE'" 
-                  (click)="filterMode.set('COMITE')">
-                  Miembros del Comité
-                </button>
-                <button 
-                  [class.active]="filterMode() === 'INVESTIGADOR'" 
-                  (click)="filterMode.set('INVESTIGADOR')">
-                  Investigadores
-                </button>
-              </div>
+          <div class="table-header">
+            <div class="filter-tabs">
+              <button 
+                class="tab-btn" 
+                [class.active]="filterMode() === 'COMITE'" 
+                (click)="filterMode.set('COMITE')">
+                Miembros del Comité / Admin
+              </button>
+              <button 
+                class="tab-btn" 
+                [class.active]="filterMode() === 'INVESTIGADOR'" 
+                (click)="filterMode.set('INVESTIGADOR')">
+                Investigadores Principales
+              </button>
             </div>
-            <div class="spacer"></div>
-            <div class="search-mini">
+            
+            <div class="search-box">
               <mat-icon>search</mat-icon>
               <input 
                 type="text" 
@@ -83,13 +87,17 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
           <app-user-table 
             [users]="filteredUsers()" 
             (edit)="onEdit($event)"
-            (delete)="onDelete($event)">
+            (delete)="onDelete($event)"
+            (extendRole)="onExtendRole($event)"
+            (suspendRole)="onSuspendRole($event)"
+            (resendInvitation)="onResendInvitation($event)">
           </app-user-table>
         </main>
 
         <aside class="form-section" id="userFormSection">
           <app-user-registration-form 
             [userToEdit]="selectedUser()" 
+            [forcedRole]="filterMode() === 'INVESTIGADOR' ? 'INVESTIGADOR' : null"
             (save)="onSave($event)" 
             (cancel)="onCancel()">
           </app-user-registration-form>
@@ -100,10 +108,13 @@ import { ConfirmDialogComponent } from '@shared/components/confirm-dialog/confir
   styleUrls: ['./user-management.page.scss']
 })
 export class UserManagementPage implements OnInit {
-  private getUsersUseCase = inject(GetUsersAdminUseCase);
-  private registerUseCase = inject(RegisterUserAdminUseCase);
-  private updateUseCase = inject(UpdateUserAdminUseCase);
-  private deleteUseCase = inject(DeleteUserAdminUseCase);
+  private getUsersUseCase: GetUsersAdminUseCase = inject(GetUsersAdminUseCase);
+  private registerUseCase: RegisterUserAdminUseCase = inject(RegisterUserAdminUseCase);
+  private updateUseCase: UpdateUserAdminUseCase = inject(UpdateUserAdminUseCase);
+  private deleteUseCase: DeleteUserAdminUseCase = inject(DeleteUserAdminUseCase);
+  private extendUseCase: ExtendTemporaryRoleUseCase = inject(ExtendTemporaryRoleUseCase);
+  private suspendUseCase: SuspendTemporaryRoleUseCase = inject(SuspendTemporaryRoleUseCase);
+  private sendConfirmationEmailUseCase: SendConfirmationEmailUseCase = inject(SendConfirmationEmailUseCase);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -165,8 +176,23 @@ export class UserManagementPage implements OnInit {
         this.loadUsers();
         this.selectedUser.set(null);
       },
-      error: () => {
-        this.snackBar.open('❌ Error al procesar la solicitud', 'Entendido', { duration: 5000 });
+      error: (err: any) => {
+        console.error('[UserManagementPage] Error en onSave:', err);
+        let message = 'Error al procesar la solicitud del usuario';
+        if (err?.error) {
+          if (typeof err.error === 'string') {
+            message = err.error;
+          } else if (Array.isArray(err.error.message)) {
+            message = err.error.message.join(', ');
+          } else if (typeof err.error.message === 'string') {
+            message = err.error.message;
+          } else if (err.error.error) {
+            message = err.error.error;
+          }
+        } else if (err?.message) {
+          message = err.message;
+        }
+        this.snackBar.open(`❌ ${message}`, 'Entendido', { duration: 6000 });
       }
     });
   }
@@ -195,6 +221,76 @@ export class UserManagementPage implements OnInit {
           this.snackBar.open('🚫 Acceso revocado correctamente', 'Cerrar', { duration: 4000 });
           this.loadUsers();
         });
+      }
+    });
+  }
+
+  onExtendRole(event: { user: UserAdmin; role: UserRoleItem }) {
+    if (!event.user.id) return;
+    const dialogRef = this.dialog.open(ExtendRoleDialogComponent, {
+      width: '520px',
+      data: {
+        userId: event.user.id,
+        userName: event.user.nombre,
+        roleCode: event.role.code,
+        roleName: event.role.name,
+        currentValidUntil: event.role.validUntil
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result && event.user.id) {
+        this.extendUseCase.execute(event.user.id, event.role.code, result.validUntil, result.reason).subscribe({
+          next: () => {
+            this.snackBar.open(`⏱️ Vigencia de suplencia prorrogada exitosamente hasta el ${result.validUntil}`, 'Cerrar', { duration: 4000 });
+            this.loadUsers();
+          },
+          error: (err: { error?: { message?: string | string[] } }) => {
+            const msg = Array.isArray(err.error?.message) ? err.error.message.join(', ') : err.error?.message;
+            this.snackBar.open(`❌ ${msg || 'Error al prorrogar suplencia'}`, 'Entendido', { duration: 5000 });
+          }
+        });
+      }
+    });
+  }
+
+  onSuspendRole(event: { user: UserAdmin; role: UserRoleItem }) {
+    if (!event.user.id) return;
+    const dialogRef = this.dialog.open(SuspendRoleDialogComponent, {
+      width: '500px',
+      data: {
+        userId: event.user.id,
+        userName: event.user.nombre,
+        roleCode: event.role.code,
+        roleName: event.role.name,
+        validUntil: event.role.validUntil
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result && event.user.id) {
+        this.suspendUseCase.execute(event.user.id, event.role.code, result.reason).subscribe({
+          next: () => {
+            this.snackBar.open(`🚫 Suplencia temporal finalizada y registrada en auditoría`, 'Cerrar', { duration: 4000 });
+            this.loadUsers();
+          },
+          error: (err: { error?: { message?: string | string[] } }) => {
+            const msg = Array.isArray(err.error?.message) ? err.error.message.join(', ') : err.error?.message;
+            this.snackBar.open(`❌ ${msg || 'Error al suspender suplencia'}`, 'Entendido', { duration: 5000 });
+          }
+        });
+      }
+    });
+  }
+
+  onResendInvitation(user: UserAdmin) {
+    this.sendConfirmationEmailUseCase.execute(user.email).subscribe({
+      next: () => {
+        this.snackBar.open(`✉️ Correo de invitación / verificación enviado a ${user.email}`, 'Cerrar', { duration: 4000 });
+      },
+      error: (err: { error?: { message?: string | string[] } }) => {
+        const msg = Array.isArray(err.error?.message) ? err.error.message.join(', ') : err.error?.message;
+        this.snackBar.open(`❌ ${msg || 'Error al reenviar correo de invitación'}`, 'Entendido', { duration: 5000 });
       }
     });
   }
