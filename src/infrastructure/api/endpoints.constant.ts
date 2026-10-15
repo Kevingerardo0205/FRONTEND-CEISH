@@ -70,6 +70,14 @@ export const ENDPOINTS = {
     BY_ID: (id: string | number) => `/evaluations/calls/${id}`,
     PROTOCOLS_BY_ID: (id: string | number) => `/evaluations/calls/${id}/protocols`,
   },
+  MEETINGS: {
+    BASE: '/evaluations/meetings',
+    BY_ID: (id: string) => `/evaluations/meetings/${id}`,
+    PENDING_PROTOCOLS: '/evaluations/meetings/pending-protocols',
+    PLACES: '/evaluations/meetings/places',
+    CALCULATE_EVAL_DATE: '/evaluations/meetings/calculate-eval-date',
+    PDF: (id: string) => `/evaluations/meetings/${id}/pdf`,
+  },
   AI_ASSISTANT: '/ai-assistant/chat',
   AI_ASSISTANT_ALLOWED_ROLES: '/ai-assistant/allowed-roles',
   AI_ASSISTANT_ADMIN: {
