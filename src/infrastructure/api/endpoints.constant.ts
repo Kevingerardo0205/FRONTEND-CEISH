@@ -64,12 +64,6 @@ export const ENDPOINTS = {
   RESOLUTIONS: {
     BASE: '/resolutions',
   },
-  CALLS: {
-    BASE: '/evaluations/calls',
-    PENDING_PROTOCOLS: '/evaluations/calls/protocols/pending',
-    BY_ID: (id: string | number) => `/evaluations/calls/${id}`,
-    PROTOCOLS_BY_ID: (id: string | number) => `/evaluations/calls/${id}/protocols`,
-  },
   MEETINGS: {
     BASE: '/evaluations/meetings',
     BY_ID: (id: string) => `/evaluations/meetings/${id}`,
