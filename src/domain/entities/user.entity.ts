@@ -1,0 +1,56 @@
+export type UserRole = 'ADMIN' | 'SECRETARIA' | 'EVALUADOR' | 'INVESTIGADOR' | 'PRESIDENTE' | 'PRESIDENTA' | 'ADMIN_TI';
+
+export interface Module {
+  code: string;
+  name: string;
+  icon: string;
+  order: number;
+}
+
+export interface Permission {
+  code: string;
+  module?: Module;
+}
+
+import { UserRoleItem } from './user-admin.entity';
+
+export interface User {
+  id?: string;
+  nombre: string;
+  email: string;
+  rol: string; 
+  roles?: string[]; // Soporte para múltiples roles
+  userRoles?: UserRoleItem[]; // Roles detallados con suplencias
+  perfil?: string;
+  activo: boolean;
+  emailVerificado: boolean;
+  permissions?: string[]; // Códigos planos para compatibilidad con Guards/Directivas
+  fullPermissions?: Permission[]; // Objetos completos para el Menú Dinámico
+  fechaCreacion?: Date;
+  ultimoAcceso?: Date;
+  telefono?: string;
+  nationalId?: string;
+  institucion?: string;
+  registroSenescyt?: string;
+  nacionalidad?: string;
+  cvPath?: string;
+}
+
+export interface UserDTO {
+  nombre: string;
+  email: string;
+  rol: UserRole;
+  perfil: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user?: User;
+  permissions?: Permission[];
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}

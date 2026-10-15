@@ -1,0 +1,314 @@
+@use 'variables' as vars;
+
+/* Contenedor Principal (El fondo de toda la página) */
+.dashboard-register-layout {
+  min-height: 100vh;
+  background-color: #f1f5f9; /* Gris azulado muy suave */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Toolbar Superior (Idéntico al registro) */
+.register-toolbar {
+  background: white;
+  height: 70px;
+  padding: 0;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  
+  .toolbar-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .brand-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    .logo-box {
+      width: 40px;
+      height: 40px;
+      background: vars.$color-primary;
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      mat-icon { font-size: 24px; width: 24px; height: 24px; }
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+      .main-title { font-weight: 800; font-size: 1rem; color: #0f172a; }
+      .sub-title { font-size: 0.7rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    }
+  }
+
+  .back-btn {
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    border-radius: 8px;
+    color: vars.$color-primary;
+    &:hover { background-color: #f8fafc; }
+  }
+}
+
+/* Espacio de contenido (La Vitrina) */
+.register-main-content {
+  width: 100%;
+  max-width: 1000px; /* Ancho controlado */
+  margin: 0 auto;
+  padding: 3rem 1rem;
+}
+
+.content-header {
+  margin-bottom: 2.5rem;
+  text-align: left;
+  .page-title { 
+    font-size: 2.25rem; 
+    font-weight: 900; 
+    color: #1e293b; 
+    letter-spacing: -1px;
+    margin-bottom: 0.5rem;
+  }
+  .page-subtitle { 
+    color: #64748b; 
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+}
+
+/* La Tarjeta que contiene el formulario (Shadow Soft) */
+.register-stepper-card {
+  background: white;
+  border-radius: 24px; /* Bordes muy suaves */
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+}
+
+/* Ajustes del Stepper para que encaje perfecto */
+::ng-deep .custom-stepper {
+  background: transparent !important;
+  
+  .mat-horizontal-stepper-header-container {
+    background: #fafbfc;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 1rem 0;
+  }
+
+  .mat-step-header {
+    height: 72px !important;
+    &:hover { background: #f8fafc !important; }
+  }
+
+  .mat-step-icon-selected, .mat-step-icon-state-edit {
+    background-color: vars.$color-primary !important;
+  }
+
+  .mat-step-label {
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+    color: #94a3b8;
+  }
+
+  .mat-step-label-selected {
+    color: vars.$color-primary !important;
+  }
+}
+
+/* Animaciones */
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- FASE 2: Estética de los Cuadros (Inputs) --- */
+
+.step-content {
+  padding: 2.5rem !important; /* Más aire interno */
+}
+
+/* Etiquetas Superiores (Estilo Registro) */
+.field-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155; /* Slate 700 */
+  margin-bottom: 8px;
+  text-transform: none;
+  letter-spacing: -0.2px;
+}
+
+/* El "Cuadro" de Material (mat-form-field) */
+::ng-deep .mat-mdc-form-field {
+  width: 100%;
+  margin-bottom: 4px;
+
+  /* Quitar el espacio de la etiqueta flotante (porque usamos etiquetas fijas arriba) */
+  .mat-mdc-form-field-subscript-wrapper {
+    font-size: 0.75rem;
+    padding-left: 4px;
+  }
+
+  /* Bordes y Fondo del Cuadro */
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    border-color: #e2e8f0 !important; /* Borde gris suave por defecto */
+    border-width: 1px !important;
+  }
+
+  /* Fondo blanco y altura controlada */
+  .mat-mdc-text-field-wrapper {
+    background-color: white !important;
+    border-radius: 10px !important;
+    padding-top: 0 !important;
+  }
+
+  /* Al hacer FOCO (Click) */
+  &.mat-focused {
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: vars.$color-primary !important;
+      border-width: 2px !important;
+    }
+  }
+
+  /* Cuando hay ERROR */
+  &.mat-form-field-invalid {
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: vars.$color-secondary !important;
+    }
+  }
+}
+
+/* Textareas (Cuadros grandes) */
+textarea.mat-mdc-input-element {
+  line-height: 1.5 !important;
+  padding: 8px 0 !important;
+}
+
+/* Íconos dentro del cuadro */
+::ng-deep .mat-mdc-form-field-icon-suffix {
+  color: #94a3b8;
+}
+
+/* --- Fin Fase 2 --- */
+
+/* --- FASE 3: Vitrina de Equipo Investigador (El ADD) --- */
+
+.team-section-inner {
+  margin-top: 2rem;
+  
+  .section-header-inline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f1f5f9;
+
+    h4 {
+      font-weight: 800;
+      color: vars.$color-primary;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      mat-icon { color: vars.$color-primary; }
+    }
+  }
+}
+
+.team-member-card {
+  background: #f8fafc; /* Fondo gris tenue */
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+
+  &:hover {
+    border-color: vars.$color-primary;
+    background: #f1f5f9;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .card-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: vars.$color-primary;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-radius: 100px;
+    margin-bottom: 1.25rem;
+  }
+
+  .delete-btn-wrapper {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+}
+
+.btn-add-member {
+  height: 44px;
+  font-weight: 800;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  padding: 0 1.5rem;
+  border-width: 2px;
+}
+
+/* Especial para el botón de firma final */
+.submit-btn {
+  height: 56px;
+  font-weight: 800;
+  font-size: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 10px 15px -3px rgba(vars.$color-primary, 0.2);
+}
+
+.legal-box {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 12px;
+  color: #92400e;
+  
+  .small-text {
+    line-height: 1.4;
+    display: block;
+  }
+}
+
+/* --- Fin Fase 3 --- */
+
+@media (max-width: 768px) {
+
+
+  .register-main-content { padding: 1.5rem 1rem; }
+  .register-toolbar { height: auto; padding: 0.75rem 0; }
+  .content-header .page-title { font-size: 1.75rem; }
+}

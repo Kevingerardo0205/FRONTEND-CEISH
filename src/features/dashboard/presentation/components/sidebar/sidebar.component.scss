@@ -1,0 +1,174 @@
+@use 'variables' as vars;
+
+.sidebar-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: vars.$color-bg-surface;
+  border-right: 1px solid vars.$color-border;
+}
+
+.sidenav-header {
+  padding: 2rem 1.5rem 1.5rem;
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .sidenav-logo-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      color: vars.$color-primary;
+    }
+
+    .logo-text {
+      h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+        color: vars.$color-primary;
+        line-height: 1.1;
+      }
+      p {
+        margin: 0;
+        font-size: 0.6rem;
+        color: vars.$color-text-muted;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+}
+
+.nav-section-title {
+  padding: 1rem 1.5rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: vars.$color-text-muted;
+  letter-spacing: 1.2px;
+  opacity: 0.7;
+}
+
+.menu-container {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0 0.5rem;
+}
+
+/* Accordion Customization */
+.sidebar-accordion {
+  background: transparent;
+  box-shadow: none !important;
+
+  .module-panel {
+    background: transparent;
+    box-shadow: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+
+    &::before { display: none; } // Remove default angular material divider
+
+    .module-header {
+      padding: 0 1rem;
+      height: 48px !important;
+      border-radius: 8px;
+      transition: background 0.2s;
+
+      &:hover { background: rgba(vars.$color-primary, 0.04); }
+
+      .module-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        margin-right: 12px;
+        color: vars.$color-text-muted;
+        opacity: 0.8;
+      }
+
+      .module-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: vars.$color-text-main;
+      }
+
+      ::v-deep .mat-expansion-indicator { color: vars.$color-text-muted; }
+    }
+
+    /* Sub-menu styling */
+    .sub-menu-list {
+      padding: 4px 0 8px 1.5rem;
+
+      .menu-item {
+        height: 40px;
+        margin: 2px 0;
+        border-radius: 8px;
+        color: vars.$color-text-muted;
+        position: relative;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: vars.$color-primary;
+          background-color: transparent;
+          .item-label { font-weight: 600; }
+        }
+
+        &.active-link {
+          color: vars.$color-primary;
+          background-color: transparent;
+          
+          .item-label { font-weight: 700; }
+          .item-icon { color: vars.$color-primary; }
+
+          &::before {
+            content: '';
+            position: absolute;
+            left: -12px; // Adjusted for padding-left of sub-menu
+            top: 8px;
+            bottom: 8px;
+            width: 3px;
+            background-color: vars.$color-primary;
+            border-radius: 0 4px 4px 0;
+          }
+        }
+
+        .item-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          margin-right: 10px;
+          color: vars.$color-text-muted;
+          opacity: 0.6;
+        }
+
+        .item-label {
+          font-size: 0.8rem;
+          letter-spacing: -0.1px;
+        }
+      }
+    }
+  }
+}
+
+.sidebar-spacer { flex: 1; }
+
+.sidenav-footer {
+  padding: 1.25rem;
+  border-top: 1px solid vars.$color-border;
+  
+  .logout-button {
+    width: 100%;
+    justify-content: flex-start;
+    height: 44px;
+    border-radius: 8px;
+    color: vars.$color-text-muted;
+    font-size: 0.8rem;
+    font-weight: 600;
+    
+    mat-icon { margin-right: 12px; font-size: 18px; width: 18px; height: 18px; }
+    &:hover { color: vars.$color-secondary; background-color: rgba(vars.$color-secondary, 0.05); }
+  }
+}
