@@ -37,8 +37,8 @@ import { IAuditRepositoryPort } from '../features/audit/domain/ports/audit-repos
 import { AuditRepositoryAdapter } from '../features/audit/infrastructure/adapters/audit-repository.adapter';
 import { IReportRepositoryPort } from '../features/reports/domain/ports/report-repository.port';
 import { ReportRepositoryAdapter } from '../features/reports/infrastructure/adapters/report-repository.adapter';
-import { ICallRepositoryPort } from '@domain/ports/ICallRepositoryPort';
-import { CallApiAdapter } from '@infrastructure/adapters/call-api.adapter';
+import { IMeetingRepositoryPort } from '@domain/ports/IMeetingRepositoryPort';
+import { MeetingApiAdapter } from '@infrastructure/adapters/meeting-api.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -61,6 +61,6 @@ export const appConfig: ApplicationConfig = {
     { provide: IAmendmentRepositoryPort, useClass: AmendmentApiAdapter },
     { provide: IAuditRepositoryPort, useClass: AuditRepositoryAdapter },
     { provide: IReportRepositoryPort, useClass: ReportRepositoryAdapter },
-    { provide: ICallRepositoryPort, useClass: CallApiAdapter }
+    { provide: IMeetingRepositoryPort, useClass: MeetingApiAdapter }
   ]
 };
