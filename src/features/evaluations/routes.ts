@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { AssignmentPage } from './presentation/pages/assignment/assignment.page';
+import { ReassignmentPage } from './presentation/pages/reassignment/reassignment.page';
 import { EvaluationListPage } from './presentation/pages/evaluation-list/evaluation-list.page';
 import { EvaluationFormPage } from './presentation/pages/evaluation-form/evaluation-form.page';
 import { PeerRiskAssessmentPage } from './presentation/pages/peer-risk-assessment/peer-risk-assessment.page';
@@ -13,6 +14,24 @@ export const EVALUATION_ROUTES: Routes = [
       {
         path: 'assignment',
         component: AssignmentPage,
+        canActivate: [AuthGuard],
+        data: { 
+          permissions: ['EVALUATORS_ASSIGN', 'EVALUATORS_SUGGEST', 'EVALUACION_ASIGNAR'],
+          permissionStrategy: 'any'
+        }
+      },
+      {
+        path: 'reassignment/:protocolId',
+        component: ReassignmentPage,
+        canActivate: [AuthGuard],
+        data: { 
+          permissions: ['EVALUATORS_ASSIGN', 'EVALUATORS_SUGGEST', 'EVALUACION_ASIGNAR'],
+          permissionStrategy: 'any'
+        }
+      },
+      {
+        path: 'reassign/:id',
+        component: ReassignmentPage,
         canActivate: [AuthGuard],
         data: { 
           permissions: ['EVALUATORS_ASSIGN', 'EVALUATORS_SUGGEST', 'EVALUACION_ASIGNAR'],

@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { of } from 'rxjs';
 import { SessionExpiredDialogComponent } from '@shared/components/session-expired-dialog/session-expired-dialog.component';
+import { ERROR_400_ARRAY_BODY, ERROR_400_BODY, ERROR_404_BODY } from '@features/evaluations/testing/reassignment.fixtures';
 
 describe('ErrorInterceptor', () => {
   let httpMock: HttpTestingController;
@@ -117,6 +118,40 @@ describe('ErrorInterceptor', () => {
 
     const req = httpMock.expectOne('/api/protocols');
     req.flush({ message: 'Conflicto de versiones' }, { status: 409, statusText: 'Conflict' });
+  });
+
+  describe('mensaje anidado en body.error.message (cuerpos reales del backend)', () => {
+    function expectMessage(body: object, status: number, statusText: string, expected: string, done: DoneFn): void {
+      httpClient.get('/api/evaluations/protocol/0/active-assignments').subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(error.message).toBe(expected);
+          done();
+        }
+      });
+      httpMock.expectOne('/api/evaluations/protocol/0/active-assignments').flush(body, { status, statusText });
+    }
+
+    it('400 real: "Validation failed (numeric string is expected)"', (done) => {
+      expectMessage(ERROR_400_BODY, 400, 'Bad Request', 'Validation failed (numeric string is expected)', done);
+    });
+
+    it('404 real: "El protocolo con ID 0 no existe."', (done) => {
+      expectMessage(ERROR_404_BODY, 404, 'Not Found', 'El protocolo con ID 0 no existe.', done);
+    });
+
+    it('400 con message como arreglo: une los mensajes con "; "', (done) => {
+      expectMessage(
+        ERROR_400_ARRAY_BODY, 400, 'Bad Request',
+        'replacementEvaluatorId must be a number; reason must be one of the following values',
+        done
+      );
+    });
+
+    it('sin mensaje en el cuerpo sigue usando statusText', (done) => {
+      expectMessage({ statusCode: 400 }, 400, 'Bad Request', 'Bad Request', done);
+    });
   });
 
   it('debe cerrar sesión y abrir la ventana flotante centrada SessionExpiredDialogComponent si /auth/refresh falla con 401', (done) => {

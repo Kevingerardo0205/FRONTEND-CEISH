@@ -51,6 +51,9 @@ export const ENDPOINTS = {
     PEER_ASSIGNMENTS: {
       PENDING_ASSIGNMENT: '/evaluations/protocols/pending-peer-assignment',
       ASSIGN_PEERS: (id: string) => `/evaluations/protocols/${id}/assign-peer-evaluators`,
+      REASSIGN: '/evaluations/reassign',
+      HISTORY: (protocolId: string) => `/evaluations/protocol/${protocolId}/reassignment-history`,
+      ACTIVE_ASSIGNMENTS: (protocolId: number) => `/evaluations/protocol/${protocolId}/active-assignments`,
       MY_PENDING: '/evaluations/peer-assignments/my-pending',
       SUBMIT_RISK: (id: string) => `/evaluations/peer-assignments/${id}/submit-risk`,
       ACTIVE_EVALUATORS: '/evaluations/evaluators/active'

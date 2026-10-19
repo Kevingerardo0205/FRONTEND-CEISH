@@ -20,9 +20,18 @@ import {
   PendingPeerAssignmentProtocol,
   PeerAssignmentEntity,
   AssignEvaluatorsResponse,
+  ReassignPeerEvaluatorPayload,
+  ReassignPeerEvaluatorResponse,
+  AssignmentHistoryEntry,
+  ActiveAssignmentsResult,
 } from 'src/domain/entities/peer-evaluation.entity';
 
+
 type ApiEnvelope<T> = { data: T };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 interface RawProtocolInfo {
   id?: number;
@@ -267,6 +276,61 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
       map(res => res.data || (res as unknown as ObservationEntry[]))
     );
   }
+
+  /**
+   * RF-12.3: Reasignar evaluador de pares por vencimiento o conflicto de interés.
+   */
+  reassignPeerEvaluator(payload: ReassignPeerEvaluatorPayload): Observable<ReassignPeerEvaluatorResponse> {
+    const body = {
+      currentAssignmentId: payload.outgoingAssignmentId,
+      replacementEvaluatorId: payload.replacementEvaluatorId,
+      replacementEvaluatorProfile: payload.replacementEvaluatorProfile,
+      reason: payload.reason,
+      reasonDescription: payload.reasonDescription,
+    };
+    // Un 2xx significa que la reasignación ya se ejecutó: la forma interna de la respuesta
+    // no está verificada, así que no se valida para no convertir una escritura exitosa en error.
+    return this.apiClient.post<Partial<ApiEnvelope<ReassignPeerEvaluatorResponse>>>(
+      ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.REASSIGN,
+      body
+    ).pipe(
+      map(res => (isRecord(res?.data) ? res.data : {}) as ReassignPeerEvaluatorResponse)
+    );
+  }
+
+  /**
+   * RF-12.3: Asignaciones activas del protocolo (capa única {data, statusCode, message}).
+   */
+  getActiveAssignments(protocolId: number): Observable<ActiveAssignmentsResult> {
+    return this.apiClient.get<Partial<ApiEnvelope<unknown>>>(
+      ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ACTIVE_ASSIGNMENTS(protocolId)
+    ).pipe(
+      map(res => {
+        const data = res?.data;
+        if (!isRecord(data) || !Array.isArray(data['assignments'])) {
+          throw new Error(
+            'Respuesta inesperada del servidor al consultar asignaciones activas: falta data.assignments.'
+          );
+        }
+        return data as unknown as ActiveAssignmentsResult;
+      })
+    );
+  }
+
+  /**
+   * RF-12.3: Obtener historial inmutable de reasignaciones de evaluadores.
+   */
+  getAssignmentHistory(protocolId: number): Observable<AssignmentHistoryEntry[]> {
+    return this.apiClient.get<ApiEnvelope<AssignmentHistoryEntry[]>>(
+      ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.HISTORY(String(protocolId))
+    ).pipe(
+      map(res => {
+        const raw = res?.data || (res as unknown as AssignmentHistoryEntry[]);
+        return Array.isArray(raw) ? raw : [];
+      })
+    );
+  }
 }
+
 
 

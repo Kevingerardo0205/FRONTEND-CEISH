@@ -105,7 +105,7 @@ export class ErrorInterceptor implements HttpInterceptor {
           }
         }
 
-        const errorMessage = error.error?.message || error.statusText;
+        const errorMessage = error.error?.message || this.nestedErrorMessage(error.error) || error.statusText;
         return throwError(() => new Error(errorMessage));
       })
     );
@@ -138,6 +138,17 @@ export class ErrorInterceptor implements HttpInterceptor {
         })
       );
     }
+  }
+
+  /** Lee body.error.message (string, o arreglo unido con "; ") del filtro de excepciones del backend. */
+  private nestedErrorMessage(body: unknown): string | null {
+    const nested = (body as { error?: { message?: unknown } } | null)?.error?.message;
+    if (typeof nested === 'string') return nested || null;
+    if (Array.isArray(nested)) {
+      const parts = nested.filter((m): m is string => typeof m === 'string' && m.length > 0);
+      return parts.length ? parts.join('; ') : null;
+    }
+    return null;
   }
 
   private showSessionExpiredModal(): void {
