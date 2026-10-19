@@ -1,0 +1,34 @@
+<div class="evaluator-card" *ngIf="assignment">
+  <div class="card-header">
+    <div class="profile-badge-group">
+      <span class="badge badge-profile" [ngClass]="profileCssClass">
+        {{ profileLabel }}
+      </span>
+      <span *ngIf="assignment.isAssignedForAnnex10" class="badge badge-annex10">
+        <mat-icon class="badge-icon">security</mat-icon> Anexo 10 (Estratificación)
+      </span>
+    </div>
+    <span class="badge badge-status" [ngClass]="'status-' + assignment.status.toLowerCase()">
+      {{ statusLabel }}
+    </span>
+  </div>
+
+  <div class="card-body">
+    <h3 class="evaluator-name">{{ assignment.evaluatorFullName }}</h3>
+    <div class="assignment-meta">
+      <span class="deadline-label">Plazo límite:</span>
+      <span class="deadline-value">{{ deadlineLabel }}</span>
+    </div>
+    <div class="submission-meta" *ngIf="assignment.submittedAt">
+      <span class="submitted-label">Enviado el:</span>
+      <span class="submitted-value">{{ assignment.submittedAt | date:'medium' }}</span>
+    </div>
+  </div>
+
+  <div class="card-footer" *ngIf="showReassignAction">
+    <button mat-stroked-button color="warn" type="button" class="btn-reassign" (click)="handleReassign()">
+      <mat-icon>swap_horiz</mat-icon>
+      Reasignar Evaluador
+    </button>
+  </div>
+</div>

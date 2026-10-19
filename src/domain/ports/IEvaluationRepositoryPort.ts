@@ -1,8 +1,18 @@
 import { Observable } from 'rxjs';
 import { EvaluationEntity } from '../entities/evaluation.entity';
-import { PendingPeerAssignmentProtocol, PeerAssignmentEntity, AssignEvaluatorsResponse, RiskLevelInfo } from '../entities/peer-evaluation.entity';
+import {
+  PendingPeerAssignmentProtocol,
+  PeerAssignmentEntity,
+  AssignEvaluatorsResponse,
+  RiskLevelInfo,
+  ReassignPeerEvaluatorPayload,
+  ReassignPeerEvaluatorResponse,
+  AssignmentHistoryEntry,
+  ActiveAssignmentsResult
+} from '../entities/peer-evaluation.entity';
 
 export interface EvaluatorsDashboardResponse {
+
   evaluators: EvaluatorsDashboardEntry[];
   totalEvaluators?: number;
 }
@@ -73,7 +83,11 @@ export abstract class IEvaluationRepositoryPort {
   abstract submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string; reportPath: string }): Observable<void>;
   abstract getActiveEvaluators(): Observable<ActiveEvaluator[]>;
   abstract getProtocolObservations(protocolId: string): Observable<ObservationEntry[]>;
+  abstract reassignPeerEvaluator(payload: ReassignPeerEvaluatorPayload): Observable<ReassignPeerEvaluatorResponse>;
+  abstract getAssignmentHistory(protocolId: number): Observable<AssignmentHistoryEntry[]>;
+  abstract getActiveAssignments(protocolId: number): Observable<ActiveAssignmentsResult>;
 }
+
 
 export interface ActiveEvaluator {
   id: number;
