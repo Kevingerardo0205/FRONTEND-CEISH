@@ -14,9 +14,9 @@
     <div class="outgoing-card">
       <div class="card-header-small">
         <span class="badge-role" [ngClass]="'badge-' + (outgoingProfile() ?? 'sin-perfil').toLowerCase()">
-          {{ outgoingProfile() ?? 'Sin perfil reconocido' }}
+          {{ outgoingProfileLabel() }}
         </span>
-        <span class="badge-status">{{ data.outgoingAssignment.status }}</span>
+        <span class="badge-status">{{ outgoingStatusLabel }}</span>
       </div>
       <div class="outgoing-info">
         <span class="label">Evaluador Actual (Saliente):</span>
@@ -31,7 +31,7 @@
     <div *ngIf="outgoingProfile() === null" class="no-candidates-alert outgoing-profile-error">
       <mat-icon>error</mat-icon>
       <span>
-        El evaluador saliente no tiene un perfil reconocido (JURIDICO, SOCIEDAD_CIVIL, METODOLOGICO o SALUD).
+        El evaluador saliente no tiene un perfil reconocido (Jurídico, Sociedad Civil, Metodológico o Salud).
         No es posible proponer un sustituto del mismo perfil.
       </span>
     </div>
@@ -45,7 +45,7 @@
     <form [formGroup]="form" class="reassign-form">
       <!-- Selección de sustituto del mismo perfil -->
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Nuevo Evaluador Sustituto (Mismo Perfil: {{ outgoingProfile() ?? 'sin perfil' }})</mat-label>
+        <mat-label>Nuevo Evaluador Sustituto (Mismo Perfil: {{ outgoingProfileLabel() }})</mat-label>
         <mat-select formControlName="newEvaluatorId" placeholder="Seleccione un candidato disponible">
           <mat-option *ngFor="let candidate of filteredCandidates()" [value]="candidate.id">
             <div class="eval-option">
@@ -61,7 +61,7 @@
 
       <div *ngIf="outgoingProfile() !== null && filteredCandidates().length === 0" class="no-candidates-alert">
         <mat-icon>warning</mat-icon>
-        <span>No hay evaluadores disponibles con el perfil {{ outgoingProfile() }} que no estén ya asignados a este protocolo.</span>
+        <span>No hay evaluadores disponibles con el perfil {{ outgoingProfileLabel() }} que no estén ya asignados a este protocolo.</span>
       </div>
 
       <div *ngIf="unrecognizedProfileCount() > 0" class="candidates-note">

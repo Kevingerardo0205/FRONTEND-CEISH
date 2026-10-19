@@ -57,6 +57,15 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('5 evaluador(es) del catálogo no tienen un perfil reconocido');
   });
 
+  it('insignias del saliente en español: estado "Asignado" y perfil "Metodológico" (no los códigos crudos)', () => {
+    setup(ana);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.outgoing-card .badge-status')?.textContent?.trim()).toBe('Asignado');
+    expect(el.querySelector('.outgoing-card .badge-role')?.textContent?.trim()).toBe('Metodológico');
+    expect(el.querySelector('mat-label')?.textContent).toContain('Mismo Perfil: Metodológico');
+    expect(el.textContent).not.toContain('ASSIGNED');
+  });
+
   it('envía el cuerpo real con replacementEvaluatorProfile = perfil del saliente y cierra con éxito', () => {
     setup(ana);
     component.form.setValue({

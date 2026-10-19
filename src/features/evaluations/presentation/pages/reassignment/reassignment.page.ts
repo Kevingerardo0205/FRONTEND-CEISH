@@ -116,6 +116,11 @@ export class ReassignmentPage implements OnInit {
         this.auditHistory.set(history.value);
       } else {
         this.auditHistory.set([]);
+      }
+
+      // La advertencia del historial solo tiene sentido si las asignaciones sí cargaron;
+      // si fallaron, el error principal ya informa al usuario.
+      if (assignments.ok && !history.ok) {
         this.historyWarning.set(
           'No se pudo cargar el historial de reasignaciones: ' +
             extractApiErrorMessage(history.error, 'error desconocido.')

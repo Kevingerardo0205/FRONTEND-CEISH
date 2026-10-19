@@ -3,7 +3,11 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { ActiveAssignment } from '@domain/entities/peer-evaluation.entity';
-import { activeAssignmentStatusLabel, formatDeadlineDate } from '../../utils/active-assignment-view.util';
+import {
+  activeAssignmentStatusLabel,
+  formatDeadlineDate,
+  peerEvaluatorProfileLabel
+} from '../../utils/active-assignment-view.util';
 
 @Component({
   selector: 'app-tarjeta-evaluador',
@@ -19,7 +23,7 @@ export class TarjetaEvaluadorComponent {
   @Output() onReassign = new EventEmitter<ActiveAssignment>();
 
   get profileLabel(): string {
-    return this.assignment.evaluatorProfile ?? 'Sin perfil';
+    return peerEvaluatorProfileLabel(this.assignment.evaluatorProfile);
   }
 
   get profileCssClass(): string {

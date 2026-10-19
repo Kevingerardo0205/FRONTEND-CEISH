@@ -18,6 +18,7 @@ import {
   mapDashboardCandidates,
   normalizeProfile,
 } from '../../utils/reassignment-candidates.util';
+import { activeAssignmentStatusLabel, peerEvaluatorProfileLabel } from '../../utils/active-assignment-view.util';
 
 export const REASSIGN_SUCCESS_MESSAGE = 'Evaluador reasignado correctamente. El cambio quedó registrado en el historial de reasignaciones.';
 
@@ -62,6 +63,15 @@ export class ModalReasignacionComponent implements OnInit {
   ];
 
   readonly outgoingProfile = computed(() => normalizeProfile(this.data.outgoingAssignment.evaluatorProfile));
+
+  readonly outgoingProfileLabel = computed(() => {
+    const profile = this.outgoingProfile();
+    return profile === null ? 'Sin perfil reconocido' : peerEvaluatorProfileLabel(profile);
+  });
+
+  get outgoingStatusLabel(): string {
+    return activeAssignmentStatusLabel(this.data.outgoingAssignment.status);
+  }
 
   readonly filteredCandidates = computed(() =>
     filterEligibleCandidates(this.allCandidates(), this.data.outgoingAssignment, this.data.activeEvaluatorIds)

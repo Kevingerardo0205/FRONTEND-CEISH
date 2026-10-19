@@ -4,7 +4,8 @@ import {
   activeAssignmentStatusLabel,
   canReassign,
   formatDeadlineDate,
-  parseCalendarDate
+  parseCalendarDate,
+  peerEvaluatorProfileLabel
 } from './active-assignment-view.util';
 
 describe('active-assignment-view.util', () => {
@@ -37,6 +38,15 @@ describe('active-assignment-view.util', () => {
     expect(activeAssignmentStatusLabel('SUGGESTED')).toBe('Sugerido');
     expect(activeAssignmentStatusLabel('ASSIGNED')).toBe('Asignado');
     expect(activeAssignmentStatusLabel('COMPLETED')).toBe('Completado');
+  });
+
+  it('etiquetas de perfil legibles; null → "Sin perfil"; código desconocido se muestra tal cual', () => {
+    expect(peerEvaluatorProfileLabel('JURIDICO')).toBe('Jurídico');
+    expect(peerEvaluatorProfileLabel('SOCIEDAD_CIVIL')).toBe('Sociedad Civil');
+    expect(peerEvaluatorProfileLabel('METODOLOGICO')).toBe('Metodológico');
+    expect(peerEvaluatorProfileLabel('SALUD')).toBe('Salud');
+    expect(peerEvaluatorProfileLabel(null)).toBe('Sin perfil');
+    expect(peerEvaluatorProfileLabel('OTRO')).toBe('OTRO');
   });
 
   it('canReassign solo para SUGGESTED y ASSIGNED (TSK-002-N15, decisión pendiente)', () => {

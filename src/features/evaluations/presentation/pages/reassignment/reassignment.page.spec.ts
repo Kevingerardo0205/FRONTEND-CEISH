@@ -116,6 +116,17 @@ describe('ReassignmentPage', () => {
     expect(el.querySelectorAll('app-tarjeta-evaluador').length).toBe(0);
   });
 
+  it('protocolo 99999 con ambos 404: solo el error de asignaciones, sin la advertencia del historial', () => {
+    const el = setup('99999');
+    httpMock.expectOne(ACTIVE_URL(99999)).flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    httpMock.expectOne(HISTORY_URL(99999)).flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+
+    expect(el.querySelectorAll('.alert-danger').length).toBe(1);
+    expect(el.querySelector('.alert-warning')).toBeNull();
+    expect(component.historyWarning()).toBeNull();
+  });
+
   it('abre el modal con la asignación saliente y los evaluatorId activos; al confirmar muestra éxito y recarga', () => {
     setup('119');
     httpMock.expectOne(ACTIVE_URL(119)).flush(ACTIVE_ASSIGNMENTS_119_BODY);

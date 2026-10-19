@@ -29,7 +29,7 @@ describe('TarjetaEvaluadorComponent (RF-12.1, RF-12.2, RF-12.3)', () => {
   it('muestra nombre, perfil y estado en español de la asignación real', () => {
     const el = render(realAssignment);
     expect(el.textContent).toContain('Ana Karina Albuja Landi');
-    expect(el.querySelector('.badge-profile')?.textContent?.trim()).toBe('METODOLOGICO');
+    expect(el.querySelector('.badge-profile')?.textContent?.trim()).toBe('Metodológico');
     expect(el.querySelector('.badge-status')?.textContent?.trim()).toBe('Asignado');
   });
 
@@ -47,6 +47,15 @@ describe('TarjetaEvaluadorComponent (RF-12.1, RF-12.2, RF-12.3)', () => {
   it('etiquetas de estado SUGGESTED y COMPLETED', () => {
     expect(render({ ...realAssignment, status: 'SUGGESTED' }).querySelector('.badge-status')?.textContent?.trim()).toBe('Sugerido');
     expect(render({ ...realAssignment, status: 'COMPLETED' }).querySelector('.badge-status')?.textContent?.trim()).toBe('Completado');
+  });
+
+  it('etiquetas de perfil legibles para los 4 códigos del backend', () => {
+    const label = (evaluatorProfile: ActiveAssignment['evaluatorProfile']) =>
+      render({ ...realAssignment, evaluatorProfile }).querySelector('.badge-profile')?.textContent?.trim();
+    expect(label('JURIDICO')).toBe('Jurídico');
+    expect(label('SOCIEDAD_CIVIL')).toBe('Sociedad Civil');
+    expect(label('METODOLOGICO')).toBe('Metodológico');
+    expect(label('SALUD')).toBe('Salud');
   });
 
   it('perfil null → "Sin perfil"', () => {
