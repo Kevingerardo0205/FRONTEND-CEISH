@@ -9,7 +9,7 @@ export abstract class IAiAssistantRepositoryPort {
   abstract chat(
     message: string,
     protocolId?: number,
-    history?: ChatHistoryItem[]
+    history?: ChatHistoryItem[],
   ): Observable<{ response: string }>;
 
   abstract getAllowedRoles(): Observable<{ allowedRoles: string[] }>;

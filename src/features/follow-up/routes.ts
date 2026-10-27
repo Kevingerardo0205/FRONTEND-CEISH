@@ -10,18 +10,18 @@ export const FOLLOW_UP_ROUTES: Routes = [
       {
         path: 'adverse-events',
         component: AdverseEventsListPage,
-        canActivate: [AuthGuard]
+        canActivate: [AuthGuard],
       },
       {
         path: 'adverse-events/new',
         component: AdverseEventFormPage,
-        canActivate: [AuthGuard]
+        canActivate: [AuthGuard],
       },
       {
         path: '',
         redirectTo: 'adverse-events',
-        pathMatch: 'full'
-      }
-    ]
-  }
+        pathMatch: 'full',
+      },
+    ],
+  },
 ];

@@ -72,7 +72,6 @@ interface RawLoginPayload {
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPort {
-  
   constructor(apiClient: ApiClientService) {
     super(apiClient);
   }
@@ -98,47 +97,58 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       if (typeof firstRole === 'string') {
         roleCode = firstRole;
       } else {
-        roleCode = firstRole.code || firstRole.codigo || firstRole.nombre || firstRole.name || 'INVESTIGADOR';
+        roleCode =
+          firstRole.code ||
+          firstRole.codigo ||
+          firstRole.nombre ||
+          firstRole.name ||
+          'INVESTIGADOR';
       }
     }
 
-    const userRoles: UserRoleItem[] = Array.isArray(rolesArray) ? rolesArray.map((r) => {
-      if (typeof r === 'string') {
-        return {
-          code: r.toUpperCase(),
-          name: r
-        };
-      }
-      const code = (r.code || r.codigo || r.nombre || r.name || '').toUpperCase();
-      const isExpired = r.isExpired !== undefined 
-        ? r.isExpired 
-        : Boolean(r.validUntil && new Date(r.validUntil).getTime() < Date.now());
-      return {
-        id: r.id,
-        code,
-        name: r.name || r.nombre || code,
-        validFrom: r.validFrom || null,
-        validUntil: r.validUntil || null,
-        reason: r.reason || null,
-        isExpired
-      };
-    }) : [];
+    const userRoles: UserRoleItem[] = Array.isArray(rolesArray)
+      ? rolesArray.map((r) => {
+          if (typeof r === 'string') {
+            return {
+              code: r.toUpperCase(),
+              name: r,
+            };
+          }
+          const code = (r.code || r.codigo || r.nombre || r.name || '').toUpperCase();
+          const isExpired =
+            r.isExpired !== undefined
+              ? r.isExpired
+              : Boolean(r.validUntil && new Date(r.validUntil).getTime() < Date.now());
+          return {
+            id: r.id,
+            code,
+            name: r.name || r.nombre || code,
+            validFrom: r.validFrom || null,
+            validUntil: r.validUntil || null,
+            reason: r.reason || null,
+            isExpired,
+          };
+        })
+      : [];
 
-    const rolesList: string[] = userRoles.map(r => r.code).filter(Boolean);
+    const rolesList: string[] = userRoles.map((r) => r.code).filter(Boolean);
 
     const rawPermissions = data.permissions || [];
-    
+
     const normalizedFullPermissions = rawPermissions.map((p: string | RawPermission) => {
       if (typeof p === 'object') {
         return {
           ...p,
           code: p.code || p.codigo || '',
-          module: (p.module || p.modulo) ? {
-            code: (p.module?.code) || (p.modulo?.codigo) || '',
-            icon: (p.module?.icon) || (p.modulo?.icono) || '',
-            name: (p.module?.name) || (p.modulo?.nombre) || '',
-            order: 0
-          } : undefined
+          module:
+            p.module || p.modulo
+              ? {
+                  code: p.module?.code || p.modulo?.codigo || '',
+                  icon: p.module?.icon || p.modulo?.icono || '',
+                  name: p.module?.name || p.modulo?.nombre || '',
+                  order: 0,
+                }
+              : undefined,
         };
       }
       return { code: p, module: undefined };
@@ -154,8 +164,14 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       rol: roleCode.toUpperCase(),
       roles: rolesList.length > 0 ? rolesList : [roleCode.toUpperCase()],
       userRoles,
-      activo: data.isActive !== undefined ? data.isActive : (data.activo !== undefined ? data.activo : true),
-      emailVerificado: data.isEmailVerified !== undefined ? data.isEmailVerified : (data.email_verificado || false),
+      activo:
+        data.isActive !== undefined
+          ? data.isActive
+          : data.activo !== undefined
+            ? data.activo
+            : true,
+      emailVerificado:
+        data.isEmailVerified !== undefined ? data.isEmailVerified : data.email_verificado || false,
       permissions: permissionCodes,
       fullPermissions: fullPermissions,
       perfil: data.investigatorProfile?.position || data.perfil || 'Docente Investigador',
@@ -163,31 +179,31 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       nationalId: data.nationalId || '',
       institucion: data.investigatorProfile?.institution || '',
       registroSenescyt: data.investigatorProfile?.senescytRegistration || '',
-      nacionalidad: data.investigatorProfile?.nationality || ''
+      nacionalidad: data.investigatorProfile?.nationality || '',
     };
   }
 
   login(credentials: LoginCredentials): Observable<AuthResponse> {
     const loginPayload = {
       email: credentials.email,
-      password: credentials.password
+      password: credentials.password,
     };
 
     return this.post<unknown>(ENDPOINTS.AUTH.LOGIN, loginPayload).pipe(
       map((response: unknown) => {
         const envelope = response as { data?: RawLoginPayload };
         const payload = envelope.data ?? (response as RawLoginPayload);
-        
+
         const permissions = payload.permissions || (payload.user && payload.user.permissions) || [];
-        
+
         return {
           accessToken: payload.access_token || payload.accessToken || payload.token || '',
           refreshToken: payload.refresh_token || payload.refreshToken || '',
           user: payload.user ? this.mapBackendUser({ ...payload.user, permissions }) : undefined,
-          permissions: permissions
+          permissions: permissions,
         } as AuthResponse;
       }),
-      switchMap(authData => {
+      switchMap((authData) => {
         if (!authData.accessToken) {
           return throwError(() => new Error('No se recibió un token válido.'));
         }
@@ -201,11 +217,11 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
               const userData = envelope.data ?? (profileRes as RawBackendUser);
               return { ...authData, user: this.mapBackendUser(userData) } as AuthResponse;
             }),
-            catchError(() => of(authData))
+            catchError(() => of(authData)),
           );
         }
         return of(authData);
-      })
+      }),
     );
   }
 
@@ -216,9 +232,9 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
         const payload = envelope.data ?? (response as RawLoginPayload);
         return {
           accessToken: payload.access_token || payload.accessToken || payload.token || '',
-          refreshToken: payload.refresh_token || payload.refreshToken || ''
+          refreshToken: payload.refresh_token || payload.refreshToken || '',
         };
-      })
+      }),
     );
   }
 
@@ -227,20 +243,22 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       map((res: unknown) => {
         const envelope = res as { data?: unknown };
         const users = envelope.data ?? res;
-        return Array.isArray(users) ? (users as RawBackendUser[]).map((u) => this.mapBackendUser(u)) : [];
-      })
+        return Array.isArray(users)
+          ? (users as RawBackendUser[]).map((u) => this.mapBackendUser(u))
+          : [];
+      }),
     );
   }
-  
-  getUserById(_id: string): Observable<User> { 
+
+  getUserById(_id: string): Observable<User> {
     return this.get<unknown>(ENDPOINTS.AUTH.PROFILE).pipe(
       map((res: unknown) => {
         const envelope = res as { data?: RawBackendUser };
         return this.mapBackendUser(envelope.data ?? (res as RawBackendUser));
-      })
-    ); 
+      }),
+    );
   }
-  
+
   forgotPassword(email: string): Observable<MessageResponse> {
     return this.post<MessageResponse>(ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
   }
@@ -249,13 +267,15 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
     return this.post<MessageResponse>(ENDPOINTS.AUTH.RESET_PASSWORD, { email, code, password });
   }
 
-  checkEmailExists(_email: string): Observable<boolean> { return of(false); }
+  checkEmailExists(_email: string): Observable<boolean> {
+    return of(false);
+  }
   createUser(userDto: UserDTO): Observable<User> {
     return this.post<unknown>(ENDPOINTS.AUTH.REGISTER, userDto).pipe(
       map((res: unknown) => {
         const envelope = res as { data?: RawBackendUser };
         return this.mapBackendUser(envelope.data ?? (res as RawBackendUser));
-      })
+      }),
     );
   }
   updateUser(id: string, userDto: Partial<User>): Observable<User> {
@@ -273,9 +293,13 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       map((res: unknown) => {
         const envelope = res as { data?: RawBackendUser };
         return this.mapBackendUser(envelope.data ?? (res as RawBackendUser));
-      })
+      }),
     );
   }
-  deleteUser(_id: string): Observable<void> { return of(undefined); }
-  logAudit(_action: string, _detail: string): Observable<void> { return of(undefined); }
+  deleteUser(_id: string): Observable<void> {
+    return of(undefined);
+  }
+  logAudit(_action: string, _detail: string): Observable<void> {
+    return of(undefined);
+  }
 }

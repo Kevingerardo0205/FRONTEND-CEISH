@@ -35,7 +35,7 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
-    MatExpansionModule
+    MatExpansionModule,
   ],
   template: `
     <div class="audit-container">
@@ -54,7 +54,12 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
           <div class="filter-grid">
             <mat-form-field appearance="outline">
               <mat-label>Búsqueda rápida</mat-label>
-              <input matInput placeholder="ID, Usuario, IP..." [(ngModel)]="filters.search" (keyup.enter)="loadLogs()">
+              <input
+                matInput
+                placeholder="ID, Usuario, IP..."
+                [(ngModel)]="filters.search"
+                (keyup.enter)="loadLogs()"
+              />
               <mat-icon matSuffix>search</mat-icon>
             </mat-form-field>
 
@@ -81,8 +86,13 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
             <mat-form-field appearance="outline">
               <mat-label>Rango de Fechas</mat-label>
               <mat-date-range-input [rangePicker]="picker">
-                <input matStartDate placeholder="Inicio" [(ngModel)]="filters.startDate">
-                <input matEndDate placeholder="Fin" [(ngModel)]="filters.endDate" (dateChange)="loadLogs()">
+                <input matStartDate placeholder="Inicio" [(ngModel)]="filters.startDate" />
+                <input
+                  matEndDate
+                  placeholder="Fin"
+                  [(ngModel)]="filters.endDate"
+                  (dateChange)="loadLogs()"
+                />
               </mat-date-range-input>
               <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
               <mat-date-range-picker #picker></mat-date-range-picker>
@@ -97,7 +107,9 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
             <!-- Fecha -->
             <ng-container matColumnDef="timestamp">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha/Hora</th>
-              <td mat-cell *matCellDef="let log">{{ log.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+              <td mat-cell *matCellDef="let log">
+                {{ log.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}
+              </td>
             </ng-container>
 
             <!-- Usuario -->
@@ -141,14 +153,19 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let log">
-                <button mat-icon-button [matTooltip]="'Ver cambios'" *ngIf="log.changes" (click)="toggleChanges(log)">
+                <button
+                  mat-icon-button
+                  [matTooltip]="'Ver cambios'"
+                  *ngIf="log.changes"
+                  (click)="toggleChanges(log)"
+                >
                   <mat-icon>difference</mat-icon>
                 </button>
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
           </table>
 
           <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons></mat-paginator>
@@ -178,52 +195,144 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
       </div>
     </div>
   `,
-  styles: [`
-    .audit-container { padding: 2rem; background: #f8f9fa; min-height: 100vh; position: relative; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-    .header-content h1 { margin: 0; color: #003366; font-size: 2rem; font-weight: 700; }
-    .subtitle { color: #6c757d; margin: 0.5rem 0 0; }
+  styles: [
+    `
+      .audit-container {
+        padding: 2rem;
+        background: #f8f9fa;
+        min-height: 100vh;
+        position: relative;
+      }
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      .header-content h1 {
+        margin: 0;
+        color: #003366;
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      .subtitle {
+        color: #6c757d;
+        margin: 0.5rem 0 0;
+      }
 
-    .filter-card { border-radius: 12px; margin-bottom: 1.5rem; }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+      .filter-card {
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+      }
+      .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+      }
 
-    .table-card { border-radius: 12px; overflow: hidden; }
-    .table-container { overflow-x: auto; }
-    table { width: 100%; }
+      .table-card {
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .table-container {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+      }
 
-    .user-cell { display: flex; flex-direction: column; }
-    .role-badge { font-size: 0.75rem; color: #666; font-weight: 500; }
+      .user-cell {
+        display: flex;
+        flex-direction: column;
+      }
+      .role-badge {
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: 500;
+      }
 
-    .action-badge {
-      padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;
-      &.CREATE { background: #e3f2fd; color: #1976d2; }
-      &.UPDATE { background: #fff3e0; color: #f57c00; }
-      &.DELETE { background: #ffebee; color: #d32f2f; }
-      &.APPROVE { background: #e8f5e9; color: #388e3c; }
-      &.REJECT { background: #fbe9e7; color: #d84315; }
-    }
+      .action-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        &.CREATE {
+          background: #e3f2fd;
+          color: #1976d2;
+        }
+        &.UPDATE {
+          background: #fff3e0;
+          color: #f57c00;
+        }
+        &.DELETE {
+          background: #ffebee;
+          color: #d32f2f;
+        }
+        &.APPROVE {
+          background: #e8f5e9;
+          color: #388e3c;
+        }
+        &.REJECT {
+          background: #fbe9e7;
+          color: #d84315;
+        }
+      }
 
-    .changes-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); z-index: 1000;
-      display: flex; justify-content: center; align-items: center;
-    }
-    .changes-card { width: 80%; max-width: 900px; max-height: 80vh; overflow-y: auto; }
-    .diff-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
-    .diff-box { background: #f1f3f4; padding: 1rem; border-radius: 8px; pre { font-size: 0.8rem; overflow-x: auto; } }
-  `]
+      .changes-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .changes-card {
+        width: 80%;
+        max-width: 900px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+      .diff-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+      .diff-box {
+        background: #f1f3f4;
+        padding: 1rem;
+        border-radius: 8px;
+        pre {
+          font-size: 0.8rem;
+          overflow-x: auto;
+        }
+      }
+    `,
+  ],
 })
 export class AuditLogsPage implements OnInit {
   private readonly auditUseCase = inject(AuditUseCase);
 
   logs: AuditLog[] = [];
-  displayedColumns = ['timestamp', 'userName', 'action', 'entity', 'recordId', 'ipAddress', 'actions'];
+  displayedColumns = [
+    'timestamp',
+    'userName',
+    'action',
+    'entity',
+    'recordId',
+    'ipAddress',
+    'actions',
+  ];
   filters: AuditFilters = {
     search: '',
     action: [],
     entity: [],
     startDate: null,
-    endDate: null
+    endDate: null,
   };
 
   selectedLog: any = null;
@@ -233,7 +342,7 @@ export class AuditLogsPage implements OnInit {
   }
 
   loadLogs() {
-    this.auditUseCase.getLogs(this.filters).subscribe((logs: AuditLog[]) => this.logs = logs);
+    this.auditUseCase.getLogs(this.filters).subscribe((logs: AuditLog[]) => (this.logs = logs));
   }
 
   toggleChanges(log: AuditLog) {
@@ -242,22 +351,22 @@ export class AuditLogsPage implements OnInit {
 
   exportToCSV() {
     const headers = ['Fecha', 'Usuario', 'Rol', 'Acción', 'Entidad', 'Registro', 'IP'];
-    const data = this.logs.map(log => [
+    const data = this.logs.map((log) => [
       log.timestamp.toISOString(),
       log.userName,
       log.userRole,
       log.action,
       log.entity,
       log.recordId,
-      log.ipAddress
+      log.ipAddress,
     ]);
 
-    const csvContent = [headers, ...data].map(e => e.join(",")).join("\n");
+    const csvContent = [headers, ...data].map((e) => e.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `audit_logs_${new Date().getTime()}.csv`);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `audit_logs_${new Date().getTime()}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

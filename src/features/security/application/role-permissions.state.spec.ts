@@ -1,17 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
-  SecurityRole, 
-  CreateRoleDTO, 
+import {
+  SecurityModule,
+  SecurityPermission,
+  SecurityRole,
+  CreateRoleDTO,
   UpdateRoleDTO,
   RoleComplianceStatus,
-  RolePresetsMap
+  RolePresetsMap,
 } from '@domain/entities/security.entity';
-import { 
-  GetSecurityCatalogUseCase, 
-  GetRolePermissionsUseCase, 
+import {
+  GetSecurityCatalogUseCase,
+  GetRolePermissionsUseCase,
   UpdateRolePermissionsUseCase,
   CreateRoleUseCase,
   UpdateRoleUseCase,
@@ -19,7 +19,7 @@ import {
   GetRolePresetsUseCase,
   GetRoleComplianceUseCase,
   ResetRolePresetUseCase,
-  SecurityCatalog
+  SecurityCatalog,
 } from './security.use-cases';
 import { RolePermissionsState } from './role-permissions.state';
 
@@ -37,24 +37,24 @@ describe('RolePermissionsState', () => {
 
   const mockModules: SecurityModule[] = [
     { id: 1, code: 'RECEPCION', name: 'Recepción', icon: 'folder', order: 1, isActive: true },
-    { id: 2, code: 'EVALUACION', name: 'Evaluaciones', icon: 'gavel', order: 2, isActive: true }
+    { id: 2, code: 'EVALUACION', name: 'Evaluaciones', icon: 'gavel', order: 2, isActive: true },
   ];
 
   const mockPermissions: SecurityPermission[] = [
     { id: 10, code: 'RECEPCION_NUEVO', name: 'Recepción Nueva', moduleId: 1 },
     { id: 11, code: 'RECEPCION_VALIDAR', name: 'Validar Documentos', moduleId: 1 },
-    { id: 20, code: 'EVALUACION_RIESGO', name: 'Nivel de Riesgo', moduleId: 2 }
+    { id: 20, code: 'EVALUACION_RIESGO', name: 'Nivel de Riesgo', moduleId: 2 },
   ];
 
   const mockRoles: SecurityRole[] = [
     { id: 1, code: 'ADMIN', name: 'Administrador', isActive: true, permissions: [] },
-    { id: 2, code: 'SECRETARIA', name: 'Secretaría', isActive: true, permissions: [] }
+    { id: 2, code: 'SECRETARIA', name: 'Secretaría', isActive: true, permissions: [] },
   ];
 
   const mockCatalog: SecurityCatalog = {
     modules: mockModules,
     allPermissions: mockPermissions,
-    roles: mockRoles
+    roles: mockRoles,
   };
 
   const mockCompliance: RoleComplianceStatus = {
@@ -65,19 +65,34 @@ describe('RolePermissionsState', () => {
     missingPermissions: [],
     extraPermissions: [],
     currentPermissionCount: 1,
-    expectedPermissionCount: 1
+    expectedPermissionCount: 1,
   };
 
   beforeEach(() => {
-    mockGetCatalog = jasmine.createSpyObj<GetSecurityCatalogUseCase>('GetSecurityCatalogUseCase', ['execute']);
-    mockGetRolePermissions = jasmine.createSpyObj<GetRolePermissionsUseCase>('GetRolePermissionsUseCase', ['execute']);
-    mockUpdateRolePermissions = jasmine.createSpyObj<UpdateRolePermissionsUseCase>('UpdateRolePermissionsUseCase', ['execute']);
+    mockGetCatalog = jasmine.createSpyObj<GetSecurityCatalogUseCase>('GetSecurityCatalogUseCase', [
+      'execute',
+    ]);
+    mockGetRolePermissions = jasmine.createSpyObj<GetRolePermissionsUseCase>(
+      'GetRolePermissionsUseCase',
+      ['execute'],
+    );
+    mockUpdateRolePermissions = jasmine.createSpyObj<UpdateRolePermissionsUseCase>(
+      'UpdateRolePermissionsUseCase',
+      ['execute'],
+    );
     mockCreateRole = jasmine.createSpyObj<CreateRoleUseCase>('CreateRoleUseCase', ['execute']);
     mockUpdateRole = jasmine.createSpyObj<UpdateRoleUseCase>('UpdateRoleUseCase', ['execute']);
     mockDeleteRole = jasmine.createSpyObj<DeleteRoleUseCase>('DeleteRoleUseCase', ['execute']);
-    mockGetRolePresets = jasmine.createSpyObj<GetRolePresetsUseCase>('GetRolePresetsUseCase', ['execute']);
-    mockGetRoleCompliance = jasmine.createSpyObj<GetRoleComplianceUseCase>('GetRoleComplianceUseCase', ['execute']);
-    mockResetRolePreset = jasmine.createSpyObj<ResetRolePresetUseCase>('ResetRolePresetUseCase', ['execute']);
+    mockGetRolePresets = jasmine.createSpyObj<GetRolePresetsUseCase>('GetRolePresetsUseCase', [
+      'execute',
+    ]);
+    mockGetRoleCompliance = jasmine.createSpyObj<GetRoleComplianceUseCase>(
+      'GetRoleComplianceUseCase',
+      ['execute'],
+    );
+    mockResetRolePreset = jasmine.createSpyObj<ResetRolePresetUseCase>('ResetRolePresetUseCase', [
+      'execute',
+    ]);
 
     mockGetRoleCompliance.execute.and.returnValue(of(mockCompliance));
 
@@ -92,8 +107,8 @@ describe('RolePermissionsState', () => {
         { provide: DeleteRoleUseCase, useValue: mockDeleteRole },
         { provide: GetRolePresetsUseCase, useValue: mockGetRolePresets },
         { provide: GetRoleComplianceUseCase, useValue: mockGetRoleCompliance },
-        { provide: ResetRolePresetUseCase, useValue: mockResetRolePreset }
-      ]
+        { provide: ResetRolePresetUseCase, useValue: mockResetRolePreset },
+      ],
     });
 
     state = TestBed.inject(RolePermissionsState);
@@ -179,7 +194,7 @@ describe('RolePermissionsState', () => {
   describe('Compliance y Presets', () => {
     it('debe cargar presets oficiales en la señal presets', (done) => {
       const presetsMap: RolePresetsMap = {
-        SECRETARIA: ['RECEPCION_NUEVO', 'RECEPCION_VALIDAR']
+        SECRETARIA: ['RECEPCION_NUEVO', 'RECEPCION_VALIDAR'],
       };
       mockGetRolePresets.execute.and.returnValue(of(presetsMap));
 
@@ -198,7 +213,7 @@ describe('RolePermissionsState', () => {
         code: 'SECRETARIA',
         name: 'Secretaría',
         isActive: true,
-        permissions: [mockPermissions[0], mockPermissions[1]]
+        permissions: [mockPermissions[0], mockPermissions[1]],
       };
       mockResetRolePreset.execute.and.returnValue(of(restoredRole));
 
@@ -266,7 +281,7 @@ describe('RolePermissionsState', () => {
 
       state.createRole(newDTO).subscribe((res) => {
         expect(res).toEqual(created);
-        expect(state.roles().some(r => r.id === 10)).toBeTrue();
+        expect(state.roles().some((r) => r.id === 10)).toBeTrue();
         done();
       });
     });
@@ -279,7 +294,7 @@ describe('RolePermissionsState', () => {
 
       state.updateRole(5, updateDTO).subscribe((res) => {
         expect(res).toEqual(updated);
-        expect(state.roles().find(r => r.id === 5)?.name).toBe('Actualizado');
+        expect(state.roles().find((r) => r.id === 5)?.name).toBe('Actualizado');
         done();
       });
     });

@@ -22,8 +22,11 @@ export interface IncompleteValidationData {
       </div>
 
       <div class="dialog-content">
-        <p>No se puede finalizar la revisión. Se han detectado los siguientes documentos faltantes o rechazados:</p>
-        
+        <p>
+          No se puede finalizar la revisión. Se han detectado los siguientes documentos faltantes o
+          rechazados:
+        </p>
+
         <mat-list class="missing-list">
           <mat-list-item *ngFor="let doc of data.missingDocuments">
             <mat-icon matListItemIcon class="item-icon">close</mat-icon>
@@ -35,7 +38,7 @@ export interface IncompleteValidationData {
           <mat-icon>event_available</mat-icon>
           <div>
             <span class="label">Plazo máximo para correcciones:</span>
-            <span class="date">{{ data.deadline | date:'longDate' }}</span>
+            <span class="date">{{ data.deadline | date: 'longDate' }}</span>
           </div>
         </div>
 
@@ -50,34 +53,77 @@ export interface IncompleteValidationData {
       </div>
     </div>
   `,
-  styles: [`
-    .incomplete-dialog { padding: 1rem; }
-    .dialog-header { 
-      display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
-      .warn-icon { color: #f59e0b; font-size: 32px; width: 32px; height: 32px; }
-      h2 { margin: 0; font-weight: 800; color: #1e293b; }
-    }
-    .missing-list {
-      background: #f8fafc; border-radius: 12px; margin: 1rem 0;
-      .item-icon { color: #ef4444; }
-    }
-    .deadline-box {
-      display: flex; align-items: center; gap: 0.75rem; padding: 1rem;
-      background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; color: #991b1b;
-      .label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
-      .date { font-weight: 800; font-size: 1.1rem; }
-    }
-    .alert-info {
-      background: #eff6ff; color: #1e40af; padding: 1rem; border-radius: 8px;
-      display: flex; align-items: center; gap: 0.5rem;
-    }
-    .dialog-actions { display: flex; justify-content: flex-end; margin-top: 1.5rem; }
-  `]
+  styles: [
+    `
+      .incomplete-dialog {
+        padding: 1rem;
+      }
+      .dialog-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        .warn-icon {
+          color: #f59e0b;
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+        }
+        h2 {
+          margin: 0;
+          font-weight: 800;
+          color: #1e293b;
+        }
+      }
+      .missing-list {
+        background: #f8fafc;
+        border-radius: 12px;
+        margin: 1rem 0;
+        .item-icon {
+          color: #ef4444;
+        }
+      }
+      .deadline-box {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        color: #991b1b;
+        .label {
+          display: block;
+          font-size: 0.8rem;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+        .date {
+          font-weight: 800;
+          font-size: 1.1rem;
+        }
+      }
+      .alert-info {
+        background: #eff6ff;
+        color: #1e40af;
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+      }
+    `,
+  ],
 })
 export class IncompleteValidationDialog {
   constructor(
     public dialogRef: MatDialogRef<IncompleteValidationDialog>,
-    @Inject(MAT_DIALOG_DATA) public data: IncompleteValidationData
+    @Inject(MAT_DIALOG_DATA) public data: IncompleteValidationData,
   ) {}
 
   onClose(): void {

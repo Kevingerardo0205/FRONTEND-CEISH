@@ -9,15 +9,12 @@ export enum EvaluationVerdict {
   CON_OBSERVACIONES = 'CON_OBSERVACIONES',
   APROBADO_CON_OBSERVACIONES = 'APROBADO_CON_OBSERVACIONES',
   RECHAZADO = 'RECHAZADO',
-  PENDIENTE_SUBSANACION = 'PENDIENTE_SUBSANACION'
+  PENDIENTE_SUBSANACION = 'PENDIENTE_SUBSANACION',
 }
 
 /** Valores exactos que acepta el campo `result` del SubmitEvaluationDto del backend PET */
 export type PetGlobalResult =
-  | 'APROBADO'
-  | 'APROBADO_CON_OBSERVACIONES'
-  | 'RECHAZADO'
-  | 'PENDIENTE_SUBSANACION';
+  'APROBADO' | 'APROBADO_CON_OBSERVACIONES' | 'RECHAZADO' | 'PENDIENTE_SUBSANACION';
 
 /** Resultado por seccion en Revision Expedita (Anexo 9) */
 export type PetSectionResult = 'APROBADO' | 'NO_APROBADO' | 'CON_OBSERVACIONES';
@@ -150,7 +147,7 @@ export interface Annex10PetDto {
 /** DTO de Anexo 11 (Ensayos Clinicos) — campos exigidos por el backend */
 export interface Annex11PetDto {
   resultado: PetPlenoResult;
-  fechaEvaluacion: string;         // Siempre requerido — formato ISO: YYYY-MM-DD
+  fechaEvaluacion: string; // Siempre requerido — formato ISO: YYYY-MM-DD
 }
 
 /**
@@ -158,12 +155,12 @@ export interface Annex11PetDto {
  * Ruta: POST /api/evaluations/submit
  */
 export interface SubmitEvaluationDto {
-  assignmentId: number;            // ID numerico de la asignacion
-  result: number;                  // Dictamen global obligatorio (1=APROBADO, 2=APROBADO_CON_OBSERVACIONES, 3=RECHAZADO)
-  observations?: string;           // Justificacion general del evaluador
-  reportPath?: string;             // Ruta en R2/S3 — Obligatoria solo si isDraft === false
-  isDraft?: boolean;               // Borrador (opcional)
-  annex9?: Annex9PetDto;           // Solo si reviewType === 'EXPEDITA'
-  annex10?: Annex10PetDto;         // Solo si reviewType === 'PLENO'
-  annex11?: Annex11PetDto;         // Solo si reviewType === 'ENSAYO_CLINICO'
+  assignmentId: number; // ID numerico de la asignacion
+  result: number; // Dictamen global obligatorio (1=APROBADO, 2=APROBADO_CON_OBSERVACIONES, 3=RECHAZADO)
+  observations?: string; // Justificacion general del evaluador
+  reportPath?: string; // Ruta en R2/S3 — Obligatoria solo si isDraft === false
+  isDraft?: boolean; // Borrador (opcional)
+  annex9?: Annex9PetDto; // Solo si reviewType === 'EXPEDITA'
+  annex10?: Annex10PetDto; // Solo si reviewType === 'PLENO'
+  annex11?: Annex11PetDto; // Solo si reviewType === 'ENSAYO_CLINICO'
 }

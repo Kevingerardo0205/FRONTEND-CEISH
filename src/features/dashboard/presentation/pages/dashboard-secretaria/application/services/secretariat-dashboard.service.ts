@@ -35,10 +35,11 @@ export class SecretariatDashboardService {
     let list = this.protocolsSignal();
 
     if (query) {
-      list = list.filter(p => 
-        (p.code && p.code.toLowerCase().includes(query)) ||
-        p.title.toLowerCase().includes(query) ||
-        (p.principalInvestigator && p.principalInvestigator.toLowerCase().includes(query))
+      list = list.filter(
+        (p) =>
+          (p.code && p.code.toLowerCase().includes(query)) ||
+          p.title.toLowerCase().includes(query) ||
+          (p.principalInvestigator && p.principalInvestigator.toLowerCase().includes(query)),
       );
     }
 
@@ -51,21 +52,36 @@ export class SecretariatDashboardService {
     const now = new Date();
 
     return {
-      pendingReception: all.filter(p => {
+      pendingReception: all.filter((p) => {
         const core = resolveEstado(p.status);
-        return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
+        return (
+          core &&
+          ((core.categoria === 'RECEPCION' &&
+            ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) ||
+            core.code === 'EN_CONTROL_DOCUMENTAL')
+        );
       }).length,
-      observed: all.filter(p => {
+      observed: all.filter((p) => {
         const core = resolveEstado(p.status);
-        return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION', 'DISCREPANCIA_RIESGO'].includes(core.code);
+        return (
+          core &&
+          [
+            'INCOMPLETO',
+            'REQUIERE_SUBSANACION_DOC',
+            'REQUIERE_SUBSANACION_VERSION',
+            'DISCREPANCIA_RIESGO',
+          ].includes(core.code)
+        );
       }).length,
-      overdue: all.filter(p => p.deadline && new Date(p.deadline) < now).length,
-      slaRisk: all.filter(p => {
+      overdue: all.filter((p) => p.deadline && new Date(p.deadline) < now).length,
+      slaRisk: all.filter((p) => {
         if (!p.deadline) return false;
-        const diffDays = Math.ceil((new Date(p.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.ceil(
+          (new Date(p.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
         return diffDays >= 0 && diffDays <= 3;
       }).length,
-      responseAverageDays: 2.3
+      responseAverageDays: 2.3,
     };
   });
 
@@ -75,17 +91,30 @@ export class SecretariatDashboardService {
     let filteredList = all;
 
     if (filter === 'SUBMITTED') {
-      filteredList = all.filter(p => {
+      filteredList = all.filter((p) => {
         const core = resolveEstado(p.status);
-        return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
+        return (
+          core &&
+          ((core.categoria === 'RECEPCION' &&
+            ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) ||
+            core.code === 'EN_CONTROL_DOCUMENTAL')
+        );
       });
     } else if (filter === 'EN_REVISION_DOCUMENTAL') {
-      filteredList = all.filter(p => {
+      filteredList = all.filter((p) => {
         const core = resolveEstado(p.status);
-        return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION', 'DISCREPANCIA_RIESGO'].includes(core.code);
+        return (
+          core &&
+          [
+            'INCOMPLETO',
+            'REQUIERE_SUBSANACION_DOC',
+            'REQUIERE_SUBSANACION_VERSION',
+            'DISCREPANCIA_RIESGO',
+          ].includes(core.code)
+        );
       });
     } else if (filter === 'VALIDATED') {
-      filteredList = all.filter(p => {
+      filteredList = all.filter((p) => {
         const core = resolveEstado(p.status);
         return core && ['COMPLETO', 'APROBADO', 'RECHAZADO'].includes(core.code);
       });
@@ -97,16 +126,16 @@ export class SecretariatDashboardService {
   public loadDashboardData() {
     this.loadingSignal.set(true);
     return this.protocolRepo.getReceptionProtocols().pipe(
-      tap(data => {
+      tap((data) => {
         const list = Array.isArray(data) ? data : [];
         this.allProtocolsSignal.set(list);
         this.loadFilteredData();
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('[SecretariatDashboardService] Error cargando todos los protocolos:', err);
         return of([]);
       }),
-      finalize(() => this.loadingSignal.set(false))
+      finalize(() => this.loadingSignal.set(false)),
     );
   }
 

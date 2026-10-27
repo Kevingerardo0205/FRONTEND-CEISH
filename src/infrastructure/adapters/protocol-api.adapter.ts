@@ -1,7 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { IProtocolRepositoryPort, ChecklistItem, ProtocolDocumentHistoryEntry, RiskLevel } from '@domain/ports/IProtocolRepositoryPort';
+import {
+  IProtocolRepositoryPort,
+  ChecklistItem,
+  ProtocolDocumentHistoryEntry,
+  RiskLevel,
+} from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity, ValidationDetailResponse } from '@domain/entities/protocol.entity';
 import { ProtocolType } from '@domain/enums/protocol-type.enum';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
@@ -129,61 +134,69 @@ interface DocumentHistoryItem extends ProtocolDocumentHistoryEntry {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   private apiClient = inject(ApiClientService);
 
   getAll(): Observable<ProtocolEntity[]> {
     return this.apiClient.get<EnvelopeWithArray>(ENDPOINTS.PROTOCOLS.BASE).pipe(
-      map(res => this.extractAndMapList(res)),
-      catchError(err => {
+      map((res) => this.extractAndMapList(res)),
+      catchError((err) => {
         console.warn('[ProtocolApiAdapter] Error en getAll:', err);
         return of([]);
-      })
+      }),
     );
   }
 
   getReceptionProtocols(status?: string): Observable<ProtocolEntity[]> {
-    const url = status ? `${ENDPOINTS.PROTOCOLS.RECEPTION.LIST}?status=${status}` : ENDPOINTS.PROTOCOLS.RECEPTION.LIST;
+    const url = status
+      ? `${ENDPOINTS.PROTOCOLS.RECEPTION.LIST}?status=${status}`
+      : ENDPOINTS.PROTOCOLS.RECEPTION.LIST;
     return this.apiClient.get<EnvelopeWithArray>(url).pipe(
-      map(res => this.extractAndMapList(res)),
-      catchError(err => {
+      map((res) => this.extractAndMapList(res)),
+      catchError((err) => {
         console.error('[ProtocolApiAdapter] Error cargando lista de recepción:', err);
         return of([]);
-      })
+      }),
     );
   }
 
   getProtocolsByStatus(status: string): Observable<ProtocolEntity[]> {
     return this.getReceptionProtocols().pipe(
-      map(list => list.filter(p => p.status === status))
+      map((list) => list.filter((p) => p.status === status)),
     );
   }
 
   save(protocol: Partial<ProtocolEntity>): Observable<ProtocolEntity> {
     if (protocol.id) {
-      return this.apiClient.put<EnvelopeWithData<RawProtocolData>>(`${ENDPOINTS.PROTOCOLS.BASE}/${protocol.id}`, protocol).pipe(
-        map(data => this.mapToEntity(data))
-      );
+      return this.apiClient
+        .put<EnvelopeWithData<RawProtocolData>>(
+          `${ENDPOINTS.PROTOCOLS.BASE}/${protocol.id}`,
+          protocol,
+        )
+        .pipe(map((data) => this.mapToEntity(data)));
     }
-    return this.apiClient.post<EnvelopeWithData<RawProtocolData>>(ENDPOINTS.PROTOCOLS.BASE, protocol).pipe(
-      map(data => this.mapToEntity(data))
-    );
+    return this.apiClient
+      .post<EnvelopeWithData<RawProtocolData>>(ENDPOINTS.PROTOCOLS.BASE, protocol)
+      .pipe(map((data) => this.mapToEntity(data)));
   }
 
   getById(id: string): Observable<ProtocolEntity> {
-    return this.apiClient.get<EnvelopeWithData<RawProtocolData>>(`${ENDPOINTS.PROTOCOLS.BASE}/${id}`).pipe(
-      map(data => this.mapToEntity(data))
-    );
+    return this.apiClient
+      .get<EnvelopeWithData<RawProtocolData>>(`${ENDPOINTS.PROTOCOLS.BASE}/${id}`)
+      .pipe(map((data) => this.mapToEntity(data)));
   }
 
   uploadDocuments(protocolId: string, files: File[]): Observable<ProtocolEntity> {
     const formData = new FormData();
-    files.forEach(file => formData.append('file', file));
-    return this.apiClient.post<EnvelopeWithData<RawProtocolData>>(ENDPOINTS.PROTOCOLS.RECEPTION.BULK_UPLOAD(protocolId), formData).pipe(
-      map(data => this.mapToEntity(data))
-    );
+    files.forEach((file) => formData.append('file', file));
+    return this.apiClient
+      .post<EnvelopeWithData<RawProtocolData>>(
+        ENDPOINTS.PROTOCOLS.RECEPTION.BULK_UPLOAD(protocolId),
+        formData,
+      )
+      .pipe(map((data) => this.mapToEntity(data)));
   }
 
   getRequirementsByType(type: ProtocolType): Observable<string[]> {
@@ -196,16 +209,18 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
 
   getDocumentHistory(id: string): Observable<DocumentHistoryItem[]> {
     const mapDocs = (arr: RawDocumentFromApi[]): DocumentHistoryItem[] => {
-      return arr.map(doc => {
-        const viewUrl = doc.path && doc.path.startsWith('http')
-          ? doc.path
-          : `/api/reception/document/${doc.id}/view`;
-        const reqName = doc.requirement?.requirementName
-          || doc.requirementName
-          || doc.tipoDocumento?.nombre
-          || doc.typeName
-          || doc.type
-          || 'Documento de recepción';
+      return arr.map((doc) => {
+        const viewUrl =
+          doc.path && doc.path.startsWith('http')
+            ? doc.path
+            : `/api/reception/document/${doc.id}/view`;
+        const reqName =
+          doc.requirement?.requirementName ||
+          doc.requirementName ||
+          doc.tipoDocumento?.nombre ||
+          doc.typeName ||
+          doc.type ||
+          'Documento de recepción';
         return {
           id: Number(doc.id) || 0,
           name: doc.fileName || doc.name || 'Documento sin nombre',
@@ -216,23 +231,31 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
           path: doc.path,
           version: doc.versionNumber || doc.version || doc.reception?.version?.versionNumber || 1,
           fileName: doc.fileName || doc.name || 'Documento sin nombre',
-          uploadedAt: doc.uploadedAt || doc.uploaded_at || ''
+          uploadedAt: doc.uploadedAt || doc.uploaded_at || '',
         };
       });
     };
 
     return this.apiClient.get<EnvelopeWithArray>(`/documents/protocol/${id}`).pipe(
-      map(res => mapDocs(this.extractAnyArray(res) as RawDocumentFromApi[])),
-      catchError(err => {
-        console.warn('[ProtocolApiAdapter] Error en getDocumentHistory (endpoint general). Intentando endpoint de recepción...', err);
-        return this.apiClient.get<EnvelopeWithArray>(ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(id)).pipe(
-          map(res => mapDocs(this.extractAnyArray(res) as RawDocumentFromApi[])),
-          catchError(err2 => {
-            console.warn('[ProtocolApiAdapter] Error en getDocumentHistory (ambos endpoints):', err2);
-            return of([]);
-          })
+      map((res) => mapDocs(this.extractAnyArray(res) as RawDocumentFromApi[])),
+      catchError((err) => {
+        console.warn(
+          '[ProtocolApiAdapter] Error en getDocumentHistory (endpoint general). Intentando endpoint de recepción...',
+          err,
         );
-      })
+        return this.apiClient
+          .get<EnvelopeWithArray>(ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(id))
+          .pipe(
+            map((res) => mapDocs(this.extractAnyArray(res) as RawDocumentFromApi[])),
+            catchError((err2) => {
+              console.warn(
+                '[ProtocolApiAdapter] Error en getDocumentHistory (ambos endpoints):',
+                err2,
+              );
+              return of([]);
+            }),
+          );
+      }),
     );
   }
 
@@ -241,7 +264,11 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
   }
 
   getCertificate(id: string): Observable<Blob> {
-    return this.apiClient.post(ENDPOINTS.PROTOCOLS.RECEPTION.CERTIFICATE(id), {}, { responseType: 'blob' });
+    return this.apiClient.post(
+      ENDPOINTS.PROTOCOLS.RECEPTION.CERTIFICATE(id),
+      {},
+      { responseType: 'blob' },
+    );
   }
 
   finalizeValidation(protocolId: string): Observable<{ message?: string }> {
@@ -252,28 +279,43 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
     return this.apiClient.post(ENDPOINTS.PROTOCOLS.ACCEPT_TIMELINE(id), {});
   }
 
-  updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<{ message?: string }> {
-    return this.apiClient.patch(ENDPOINTS.PROTOCOLS.RECEPTION.REQUIREMENT_STATUS(protocolId, reqId), {
-      status
-    });
+  updateRequirementStatus(
+    protocolId: string,
+    reqId: string,
+    status: string,
+  ): Observable<{ message?: string }> {
+    return this.apiClient.patch(
+      ENDPOINTS.PROTOCOLS.RECEPTION.REQUIREMENT_STATUS(protocolId, reqId),
+      {
+        status,
+      },
+    );
   }
 
-  verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<{ message?: string }> {
+  verifyProtocol(
+    protocolId: string,
+    isComplete: boolean,
+    missingItemsList: string,
+  ): Observable<{ message?: string }> {
     return this.apiClient.patch(ENDPOINTS.PROTOCOLS.RECEPTION.VERIFY(protocolId), {
       isComplete,
-      missingItemsList
+      missingItemsList,
     });
   }
 
   getValidationDetail(id: string): Observable<ValidationDetailResponse> {
-    return this.apiClient.get<EnvelopeWithData<ValidationDetailResponse>>(ENDPOINTS.PROTOCOLS.RECEPTION.VALIDATION_DETAIL(id)).pipe(
-      map(res => (res.data || res) as ValidationDetailResponse)
-    );
+    return this.apiClient
+      .get<EnvelopeWithData<ValidationDetailResponse>>(
+        ENDPOINTS.PROTOCOLS.RECEPTION.VALIDATION_DETAIL(id),
+      )
+      .pipe(map((res) => (res.data || res) as ValidationDetailResponse));
   }
 
   private extractAndMapList(res: EnvelopeWithArray): ProtocolEntity[] {
     const rawList = this.extractAnyArray(res);
-    return rawList.map(item => this.mapToEntity(item as EnvelopeWithData<RawProtocolData> | RawProtocolData | null));
+    return rawList.map((item) =>
+      this.mapToEntity(item as EnvelopeWithData<RawProtocolData> | RawProtocolData | null),
+    );
   }
 
   private extractAnyArray(res: EnvelopeWithArray): unknown[] {
@@ -287,25 +329,37 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
     return [];
   }
 
-  private mapToEntity(data: EnvelopeWithData<RawProtocolData> | RawProtocolData | null): ProtocolEntity {
+  private mapToEntity(
+    data: EnvelopeWithData<RawProtocolData> | RawProtocolData | null,
+  ): ProtocolEntity {
     if (!data || typeof data !== 'object') return {} as ProtocolEntity;
-    const raw: RawProtocolData = ('data' in data && data.data !== null && data.data !== undefined && typeof data.data === 'object' && !Array.isArray(data.data))
-      ? data.data as RawProtocolData
-      : data as RawProtocolData;
+    const raw: RawProtocolData =
+      'data' in data &&
+      data.data !== null &&
+      data.data !== undefined &&
+      typeof data.data === 'object' &&
+      !Array.isArray(data.data)
+        ? (data.data as RawProtocolData)
+        : (data as RawProtocolData);
 
     const nestedProtocol = raw.protocol ?? null;
 
     const protocolId = raw.protocolId ?? nestedProtocol?.id ?? raw.id;
 
-    let statusLabel: string | RawStatusObj = (raw.receptionStatus || raw.status || raw.estado || nestedProtocol?.status || 'DESCONOCIDO') as string | RawStatusObj;
+    let statusLabel: string | RawStatusObj = (raw.receptionStatus ||
+      raw.status ||
+      raw.estado ||
+      nestedProtocol?.status ||
+      'DESCONOCIDO') as string | RawStatusObj;
     if (typeof statusLabel === 'object' && statusLabel !== null) {
       statusLabel = String(statusLabel.name || statusLabel.label || 'DESCONOCIDO');
     }
 
     let pi = String(raw.principalInvestigator || nestedProtocol?.principalInvestigator || '');
-    const investigatorsList = (raw.investigators || nestedProtocol?.investigators || null) as InvestigatorFromApi[] | null;
+    const investigatorsList = (raw.investigators || nestedProtocol?.investigators || null) as
+      InvestigatorFromApi[] | null;
     if (!pi && investigatorsList && Array.isArray(investigatorsList)) {
-      const principal = investigatorsList.find(i => i.role === 'PRINCIPAL');
+      const principal = investigatorsList.find((i) => i.role === 'PRINCIPAL');
       if (principal) pi = String(principal.fullName || principal.nombre || '');
     }
 
@@ -313,81 +367,119 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
 
     return {
       id: String(protocolId ?? ''),
-      title: String(raw.title || raw.titulo || nestedProtocol?.title || nestedProtocol?.titulo || 'Sin título'),
+      title: String(
+        raw.title || raw.titulo || nestedProtocol?.title || nestedProtocol?.titulo || 'Sin título',
+      ),
       investigatorId: String(raw.investigatorId || nestedProtocol?.investigatorId || ''),
       principalInvestigator: pi,
-      type: String(raw.studyType?.code || raw.type || nestedProtocol?.studyType?.code || nestedProtocol?.type || '') as ProtocolType,
-      studyTypeCode: String(raw.studyType?.code || raw.studyTypeCode || nestedProtocol?.studyType?.code || nestedProtocol?.studyTypeCode || ''),
-      studyType: (raw.studyType || nestedProtocol?.studyType || null) as ProtocolEntity['studyType'],
+      type: String(
+        raw.studyType?.code ||
+          raw.type ||
+          nestedProtocol?.studyType?.code ||
+          nestedProtocol?.type ||
+          '',
+      ) as ProtocolType,
+      studyTypeCode: String(
+        raw.studyType?.code ||
+          raw.studyTypeCode ||
+          nestedProtocol?.studyType?.code ||
+          nestedProtocol?.studyTypeCode ||
+          '',
+      ),
+      studyType: (raw.studyType ||
+        nestedProtocol?.studyType ||
+        null) as ProtocolEntity['studyType'],
       status: String(statusLabel).toUpperCase() as ProtocolStatus,
       statusId: statusIdVal ? Number(statusIdVal) : undefined,
       submissionDate: raw.receptionDate
         ? new Date(raw.receptionDate)
-        : (raw.submissionDate
+        : raw.submissionDate
           ? new Date(raw.submissionDate)
-          : (nestedProtocol?.receptionDate
+          : nestedProtocol?.receptionDate
             ? new Date(nestedProtocol.receptionDate)
-            : (nestedProtocol?.submissionDate
+            : nestedProtocol?.submissionDate
               ? new Date(nestedProtocol.submissionDate)
-              : new Date()))),
-      code: String(raw.ceishCode || raw.code || nestedProtocol?.ceishCode || nestedProtocol?.code || ''),
+              : new Date(),
+      code: String(
+        raw.ceishCode || raw.code || nestedProtocol?.ceishCode || nestedProtocol?.code || '',
+      ),
       documents: (raw.documents || nestedProtocol?.documents || []) as ProtocolEntity['documents'],
       version: (raw.version || nestedProtocol?.version || 1) as ProtocolEntity['version'],
-      riskLevel: (raw.riskLevel || nestedProtocol?.riskLevel || null) as ProtocolEntity['riskLevel'],
+      riskLevel: (raw.riskLevel ||
+        nestedProtocol?.riskLevel ||
+        null) as ProtocolEntity['riskLevel'],
       riskLevelId: (raw.riskLevelId || nestedProtocol?.riskLevelId) as number | undefined,
-      geographicCoverage: (raw.geographicCoverage || nestedProtocol?.geographicCoverage) as string | undefined,
-      studyDurationMonths: (raw.studyDurationMonths || nestedProtocol?.studyDurationMonths) as number | undefined,
+      geographicCoverage: (raw.geographicCoverage || nestedProtocol?.geographicCoverage) as
+        string | undefined,
+      studyDurationMonths: (raw.studyDurationMonths || nestedProtocol?.studyDurationMonths) as
+        number | undefined,
       lugarEjecucion: (raw.lugarEjecucion || nestedProtocol?.lugarEjecucion) as string | undefined,
-      fechaInicioEstimada: (raw.fechaInicioEstimada || nestedProtocol?.fechaInicioEstimada) as string | undefined,
-      fechaFinEstimada: (raw.fechaFinEstimada || nestedProtocol?.fechaFinEstimada) as string | undefined,
+      fechaInicioEstimada: (raw.fechaInicioEstimada || nestedProtocol?.fechaInicioEstimada) as
+        string | undefined,
+      fechaFinEstimada: (raw.fechaFinEstimada || nestedProtocol?.fechaFinEstimada) as
+        string | undefined,
       sponsorRuc: (raw.sponsorRuc || nestedProtocol?.sponsorRuc) as string | undefined,
       sponsorPhone: (raw.sponsorPhone || nestedProtocol?.sponsorPhone) as string | undefined,
       sponsorAddress: (raw.sponsorAddress || nestedProtocol?.sponsorAddress) as string | undefined,
       sponsorWeb: (raw.sponsorWeb || nestedProtocol?.sponsorWeb) as string | undefined,
-      sponsorExecutingAgency: (raw.sponsorExecutingAgency || raw.sponsorExecutingOrgan || raw.executingOrgan || nestedProtocol?.sponsorExecutingAgency) as string | undefined,
-      financingAmount: (raw.financingAmount || raw.amount || nestedProtocol?.financingAmount) as number | undefined,
-      isTimelineTermsAccepted: Boolean(raw.isTimelineTermsAccepted ?? nestedProtocol?.isTimelineTermsAccepted ?? false),
-      timelineTermsAcceptedAt: (raw.timelineTermsAcceptedAt ?? nestedProtocol?.timelineTermsAcceptedAt ?? null) as string | null,
-      timelineTermsAcceptedIp: (raw.timelineTermsAcceptedIp ?? nestedProtocol?.timelineTermsAcceptedIp ?? null) as string | null,
-      versions: ((raw.versions || nestedProtocol?.versions || []) as RawVersionFromApi[]).map(v => {
-        const parsedObs = ResolutionMapper.parseConsolidatedObservations(
-          v.observaciones || v.observations || v.majorObservations || ''
-        );
-        return {
-          id: v.id,
-          versionNumber: v.versionNumber || v.numeroVersion || v.version || 1,
-          status: v.status || v.estado || '',
-          statusId: v.statusId || v.estadoId || undefined,
-          resolutionType: v.resolutionType || v.tipoResolucion || undefined,
-          majorObservations: parsedObs.majorObservations,
-          minorObservations: parsedObs.minorObservations,
-          correctionProcedure: parsedObs.correctionProcedure,
-          createdAt: v.createdAt ? new Date(v.createdAt) : undefined
-        };
-      })
+      sponsorExecutingAgency: (raw.sponsorExecutingAgency ||
+        raw.sponsorExecutingOrgan ||
+        raw.executingOrgan ||
+        nestedProtocol?.sponsorExecutingAgency) as string | undefined,
+      financingAmount: (raw.financingAmount || raw.amount || nestedProtocol?.financingAmount) as
+        number | undefined,
+      isTimelineTermsAccepted: Boolean(
+        raw.isTimelineTermsAccepted ?? nestedProtocol?.isTimelineTermsAccepted ?? false,
+      ),
+      timelineTermsAcceptedAt: (raw.timelineTermsAcceptedAt ??
+        nestedProtocol?.timelineTermsAcceptedAt ??
+        null) as string | null,
+      timelineTermsAcceptedIp: (raw.timelineTermsAcceptedIp ??
+        nestedProtocol?.timelineTermsAcceptedIp ??
+        null) as string | null,
+      versions: ((raw.versions || nestedProtocol?.versions || []) as RawVersionFromApi[]).map(
+        (v) => {
+          const parsedObs = ResolutionMapper.parseConsolidatedObservations(
+            v.observaciones || v.observations || v.majorObservations || '',
+          );
+          return {
+            id: v.id,
+            versionNumber: v.versionNumber || v.numeroVersion || v.version || 1,
+            status: v.status || v.estado || '',
+            statusId: v.statusId || v.estadoId || undefined,
+            resolutionType: v.resolutionType || v.tipoResolucion || undefined,
+            majorObservations: parsedObs.majorObservations,
+            minorObservations: parsedObs.minorObservations,
+            correctionProcedure: parsedObs.correctionProcedure,
+            createdAt: v.createdAt ? new Date(v.createdAt) : undefined,
+          };
+        },
+      ),
     };
   }
 
   getRiskLevels(): Observable<RiskLevel[]> {
     return this.apiClient.get<EnvelopeWithData<RiskLevel[]>>(ENDPOINTS.PROTOCOLS.RISK_LEVELS).pipe(
-      map(res => {
+      map((res) => {
         const raw = res.data || res;
         return Array.isArray(raw) ? raw : [];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('[ProtocolApiAdapter] Error cargando catálogo de riesgos:', err);
         return of([]);
-      })
+      }),
     );
   }
 
   getProtocolsByStatusId(statusId: number): Observable<ProtocolEntity[]> {
-    return this.apiClient.get<EnvelopeWithArray>(`${ENDPOINTS.PROTOCOLS.BASE}?statusId=${statusId}`).pipe(
-      map(res => this.extractAndMapList(res)),
-      catchError(err => {
-        console.error('[ProtocolApiAdapter] Error loading protocols by statusId:', err);
-        return of([]);
-      })
-    );
+    return this.apiClient
+      .get<EnvelopeWithArray>(`${ENDPOINTS.PROTOCOLS.BASE}?statusId=${statusId}`)
+      .pipe(
+        map((res) => this.extractAndMapList(res)),
+        catchError((err) => {
+          console.error('[ProtocolApiAdapter] Error loading protocols by statusId:', err);
+          return of([]);
+        }),
+      );
   }
 }

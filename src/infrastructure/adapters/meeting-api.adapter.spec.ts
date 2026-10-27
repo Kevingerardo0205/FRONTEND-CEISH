@@ -218,16 +218,14 @@ describe('MeetingApiAdapter', () => {
       })
       .subscribe({ error: (e) => (error = e) });
 
-    httpMock
-      .expectOne('/api/evaluations/meetings')
-      .flush(
-        {
-          statusCode: 400,
-          message: 'VERSIONES_DUPLICADAS: la versión 87 está repetida',
-          error: 'Bad Request',
-        },
-        { status: 400, statusText: 'Bad Request' },
-      );
+    httpMock.expectOne('/api/evaluations/meetings').flush(
+      {
+        statusCode: 400,
+        message: 'VERSIONES_DUPLICADAS: la versión 87 está repetida',
+        error: 'Bad Request',
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
 
     expect(error instanceof MeetingApiError).toBeTrue();
     expect((error as MeetingApiError).code).toBe('VERSIONES_DUPLICADAS');
@@ -243,16 +241,14 @@ describe('MeetingApiAdapter', () => {
       .create({ sessionType: 'ORDINARIA', meetingDate: 'no-es-fecha' })
       .subscribe({ error: (e) => (error = e) });
 
-    httpMock
-      .expectOne('/api/evaluations/meetings')
-      .flush(
-        {
-          statusCode: 400,
-          message: ['meetingDate must be a valid ISO 8601 date string'],
-          error: 'Bad Request',
-        },
-        { status: 400, statusText: 'Bad Request' },
-      );
+    httpMock.expectOne('/api/evaluations/meetings').flush(
+      {
+        statusCode: 400,
+        message: ['meetingDate must be a valid ISO 8601 date string'],
+        error: 'Bad Request',
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
 
     expect(error?.code).toBe('VALIDACION');
     expect(error?.message).toBe('meetingDate must be a valid ISO 8601 date string');

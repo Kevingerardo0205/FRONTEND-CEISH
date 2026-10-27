@@ -19,22 +19,21 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
   selector: 'app-protocol-reception-new',
   standalone: true,
   imports: [
-    CommonModule, 
-    MatTableModule, 
-    MatButtonModule, 
-    MatIconModule, 
-    MatTooltipModule, 
+    CommonModule,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
     MatFormFieldModule,
     MatInputModule,
     RouterModule,
     FormsModule,
     StatCardComponent,
     ProtocolStatusLabelPipe,
-    ProtocolStatusClassPipe
+    ProtocolStatusClassPipe,
   ],
   template: `
     <div class="dashboard-admin-container animate-fade-in">
-      
       <header class="main-header">
         <div class="header-info">
           <div class="breadcrumb-chip">CEISH / Recepción / Nueva</div>
@@ -45,10 +44,30 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
 
       <!-- KPI Section (Same as User Management) -->
       <section class="kpi-grid mb-5">
-        <app-stat-card label="Por Recibir" [value]="protocols().length" icon="inbox" color="#003366"></app-stat-card>
-        <app-stat-card label="En Revisión" value="-" icon="fact_check" color="#f59e0b"></app-stat-card>
-        <app-stat-card label="Ingresados Hoy" value="0" icon="task_alt" color="#10b981"></app-stat-card>
-        <app-stat-card label="Tiempo Promedio" value="2h" icon="speed" color="#6366f1"></app-stat-card>
+        <app-stat-card
+          label="Por Recibir"
+          [value]="protocols().length"
+          icon="inbox"
+          color="#003366"
+        ></app-stat-card>
+        <app-stat-card
+          label="En Revisión"
+          value="-"
+          icon="fact_check"
+          color="#f59e0b"
+        ></app-stat-card>
+        <app-stat-card
+          label="Ingresados Hoy"
+          value="0"
+          icon="task_alt"
+          color="#10b981"
+        ></app-stat-card>
+        <app-stat-card
+          label="Tiempo Promedio"
+          value="2h"
+          icon="speed"
+          color="#6366f1"
+        ></app-stat-card>
       </section>
 
       <!-- Management Section -->
@@ -61,47 +80,49 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
             <div class="spacer"></div>
             <div class="search-mini">
               <mat-icon>search</mat-icon>
-              <input 
-                type="text" 
-                placeholder="Buscar por código o título..." 
-                [(ngModel)]="searchQuery" 
-                (keyup)="onSearch()">
+              <input
+                type="text"
+                placeholder="Buscar por código o título..."
+                [(ngModel)]="searchQuery"
+                (keyup)="onSearch()"
+              />
             </div>
           </div>
-          
+
           <div class="table-responsive">
             <table mat-table [dataSource]="filteredProtocols()" class="modern-table">
-              
               <ng-container matColumnDef="codigo">
-                <th mat-header-cell *matHeaderCellDef> CÓDIGO TÉCNICO </th>
-                <td mat-cell *matCellDef="let p"> 
+                <th mat-header-cell *matHeaderCellDef>CÓDIGO TÉCNICO</th>
+                <td mat-cell *matCellDef="let p">
                   <span class="technical-code-badge">{{ p.code || 'PENDIENTE' }}</span>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="fecha">
-                <th mat-header-cell *matHeaderCellDef> ENVÍO </th>
-                <td mat-cell *matCellDef="let p"> 
+                <th mat-header-cell *matHeaderCellDef>ENVÍO</th>
+                <td mat-cell *matCellDef="let p">
                   <div class="date-cell">
-                    <span class="date-val">{{ p.submissionDate | date:'dd/MM/yyyy' }}</span>
+                    <span class="date-val">{{ p.submissionDate | date: 'dd/MM/yyyy' }}</span>
                     <span class="time-val">Hace poco</span>
                   </div>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="titulo">
-                <th mat-header-cell *matHeaderCellDef> INFORMACIÓN DEL PROYECTO </th>
-                <td mat-cell *matCellDef="let p"> 
+                <th mat-header-cell *matHeaderCellDef>INFORMACIÓN DEL PROYECTO</th>
+                <td mat-cell *matCellDef="let p">
                   <div class="project-cell">
                     <span class="main-title">{{ p.title }}</span>
-                    <span class="investigator-info">{{ p.investigator || 'Investigador Principal' }}</span>
+                    <span class="investigator-info">{{
+                      p.investigator || 'Investigador Principal'
+                    }}</span>
                   </div>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="estado">
-                <th mat-header-cell *matHeaderCellDef> ESTADO </th>
-                <td mat-cell *matCellDef="let p"> 
+                <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+                <td mat-cell *matCellDef="let p">
                   <span class="status-badge" [ngClass]="p.status | protocolStatusClass">
                     {{ p.status | protocolStatusLabel }}
                   </span>
@@ -109,9 +130,14 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
               </ng-container>
 
               <ng-container matColumnDef="acciones">
-                <th mat-header-cell *matHeaderCellDef class="text-end"> GESTIÓN </th>
+                <th mat-header-cell *matHeaderCellDef class="text-end">GESTIÓN</th>
                 <td mat-cell *matCellDef="let p" class="text-end">
-                  <button mat-flat-button color="primary" class="review-btn" [routerLink]="['/dashboard/protocols/validation/detail', p.id]">
+                  <button
+                    mat-flat-button
+                    color="primary"
+                    class="review-btn"
+                    [routerLink]="['/dashboard/protocols/validation/detail', p.id]"
+                  >
                     <mat-icon>verified</mat-icon>
                     Iniciar Validación
                   </button>
@@ -119,7 +145,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
             </table>
 
             <div *ngIf="filteredProtocols().length === 0" class="empty-state">
@@ -131,13 +157,13 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
       </div>
     </div>
   `,
-  styleUrls: ['./protocol-reception-new.page.scss']
+  styleUrls: ['./protocol-reception-new.page.scss'],
 })
 export class ProtocolReceptionNewPage implements OnInit {
   private loadReceptionProtocols = inject(LoadReceptionProtocolsUseCase);
 
   displayedColumns = ['codigo', 'fecha', 'titulo', 'estado', 'acciones'];
-  
+
   protocols = signal<ProtocolEntity[]>([]);
   filteredProtocols = signal<ProtocolEntity[]>([]);
   searchQuery = '';
@@ -156,7 +182,7 @@ export class ProtocolReceptionNewPage implements OnInit {
         console.error('[ProtocolReceptionNewPage] Error:', err);
         this.protocols.set([]);
         this.filteredProtocols.set([]);
-      }
+      },
     });
   }
 
@@ -167,9 +193,8 @@ export class ProtocolReceptionNewPage implements OnInit {
       return;
     }
 
-    const filtered = this.protocols().filter(p => 
-      p.code?.toLowerCase().includes(query) || 
-      p.title.toLowerCase().includes(query)
+    const filtered = this.protocols().filter(
+      (p) => p.code?.toLowerCase().includes(query) || p.title.toLowerCase().includes(query),
     );
     this.filteredProtocols.set(filtered);
   }

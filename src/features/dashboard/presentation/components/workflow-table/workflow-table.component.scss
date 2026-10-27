@@ -17,7 +17,7 @@
     align-items: center;
     gap: 8px;
     color: #003366;
-    
+
     mat-icon {
       font-size: 24px;
       width: 24px;
@@ -60,7 +60,7 @@
     &.active {
       background: white;
       color: #2563eb;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
     }
   }
 }
@@ -107,7 +107,7 @@ td {
   padding: 4px 8px;
   border-radius: 6px;
   letter-spacing: 0.3px;
-  border: 1px solid rgba(0,0,0,0.02);
+  border: 1px solid rgba(0, 0, 0, 0.02);
 }
 
 .project-cell {
@@ -153,16 +153,20 @@ td {
   display: inline-block;
 
   &.pending {
-    background: #fffbeb; color: #b45309;
+    background: #fffbeb;
+    color: #b45309;
   }
   &.review {
-    background: #eff6ff; color: #1d4ed8;
+    background: #eff6ff;
+    color: #1d4ed8;
   }
   &.approved {
-    background: #ecfdf5; color: #065f46;
+    background: #ecfdf5;
+    color: #065f46;
   }
   &.rejected {
-    background: #fee2e2; color: #991b1b;
+    background: #fee2e2;
+    color: #991b1b;
   }
 }
 
@@ -235,9 +239,18 @@ td {
 }
 
 @keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.15); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .premium-paginator {
@@ -245,7 +258,10 @@ td {
   border-top: 1px solid #f1f5f9;
   background: transparent;
   color: #64748b;
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    sans-serif;
   font-size: 0.8rem;
   font-weight: 600;
 }

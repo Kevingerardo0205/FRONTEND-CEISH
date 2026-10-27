@@ -11,7 +11,10 @@ export function resolveEstado(code: string | undefined): EstadoCore | null {
 }
 
 /** Resolver específico para agrupaciones de categorías de estados */
-export function isEstadoCategoria(code: string | undefined, categoria: 'RECEPCION' | 'PROTOCOLO'): boolean {
+export function isEstadoCategoria(
+  code: string | undefined,
+  categoria: 'RECEPCION' | 'PROTOCOLO',
+): boolean {
   const core = resolveEstado(code);
   return core ? core.categoria === categoria : false;
 }

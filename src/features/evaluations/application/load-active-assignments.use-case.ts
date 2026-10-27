@@ -4,7 +4,7 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 import { ActiveAssignmentsResult } from '@domain/entities/peer-evaluation.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LoadActiveAssignmentsUseCase {
   private readonly evalRepo = inject(IEvaluationRepositoryPort);
@@ -14,8 +14,8 @@ export class LoadActiveAssignmentsUseCase {
       return throwError(
         () =>
           new Error(
-            'El ID del protocolo debe ser un número entero positivo para consultar las asignaciones activas.'
-          )
+            'El ID del protocolo debe ser un número entero positivo para consultar las asignaciones activas.',
+          ),
       );
     }
 

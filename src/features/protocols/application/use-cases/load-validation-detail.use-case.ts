@@ -9,17 +9,20 @@ export class LoadValidationDetailUseCase {
 
   execute(protocolId: string): Observable<ValidationDetailResponse> {
     return this.repo.getValidationDetail(protocolId).pipe(
-      map(data => ({
+      map((data) => ({
         ...data,
-        checklist: (data.checklist || []).map(item => {
+        checklist: (data.checklist || []).map((item) => {
           if (item.attachedDocument) {
-            if (item.attachedDocument.pageCount === null || item.attachedDocument.pageCount === undefined) {
+            if (
+              item.attachedDocument.pageCount === null ||
+              item.attachedDocument.pageCount === undefined
+            ) {
               item.attachedDocument.pageCount = item.attachedDocument.originalPageCount || 1;
             }
           }
           return item;
-        })
-      }))
+        }),
+      })),
     );
   }
 }

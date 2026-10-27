@@ -11,7 +11,7 @@ interface ResolutionApiResponse {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ResolutionApiAdapter extends IResolutionRepositoryPort {
   private apiClient = inject(ApiClientService);
@@ -21,8 +21,8 @@ export class ResolutionApiAdapter extends IResolutionRepositoryPort {
   }
 
   getResolutionByProtocolId(protocolId: string): Observable<ResolutionEntity | null> {
-    return this.apiClient.get<ResolutionApiResponse>(`${ENDPOINTS.RESOLUTIONS.BASE}/protocol/${protocolId}`).pipe(
-      map(res => res.data || (res as unknown as ResolutionEntity))
-    );
+    return this.apiClient
+      .get<ResolutionApiResponse>(`${ENDPOINTS.RESOLUTIONS.BASE}/protocol/${protocolId}`)
+      .pipe(map((res) => res.data || (res as unknown as ResolutionEntity)));
   }
 }

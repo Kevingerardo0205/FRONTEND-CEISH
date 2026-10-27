@@ -1,4 +1,11 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  ChangeDetectionStrategy,
+  signal,
+  computed,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,12 +32,16 @@ import { ActivatedRoute } from '@angular/router';
     WorkflowTableComponent,
     PeerRiskPendingTableComponent,
     DeadlinesRadarComponent,
-    AuditFeedComponent
+    AuditFeedComponent,
   ],
   template: `
     <div class="ops-center animate-fade-in">
       <!-- Loading bar -->
-      <mat-progress-bar *ngIf="isLoading()" mode="indeterminate" class="global-progress"></mat-progress-bar>
+      <mat-progress-bar
+        *ngIf="isLoading()"
+        mode="indeterminate"
+        class="global-progress"
+      ></mat-progress-bar>
 
       <!-- 1. Header Dinámico -->
       <header class="ops-header">
@@ -41,11 +52,12 @@ import { ActivatedRoute } from '@angular/router';
         </div>
         <div class="search-bar">
           <mat-icon>search</mat-icon>
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Buscar por código, título, investigador..."
             [value]="searchQuery()"
-            (input)="onSearchInput($event)">
+            (input)="onSearchInput($event)"
+          />
         </div>
       </header>
 
@@ -57,37 +69,41 @@ import { ActivatedRoute } from '@angular/router';
         <main class="ops-main-col">
           <!-- View Switcher -->
           <div class="view-selector">
-            <button 
-              class="selector-btn" 
-              [class.active]="activeTab() === 'WORKFLOW'" 
-              (click)="activeTab.set('WORKFLOW')">
+            <button
+              class="selector-btn"
+              [class.active]="activeTab() === 'WORKFLOW'"
+              (click)="activeTab.set('WORKFLOW')"
+            >
               <mat-icon>assignment</mat-icon>
               Trámites Activos
             </button>
-            <button 
-              class="selector-btn" 
-              [class.active]="activeTab() === 'PEERS'" 
-              (click)="activeTab.set('PEERS')">
+            <button
+              class="selector-btn"
+              [class.active]="activeTab() === 'PEERS'"
+              (click)="activeTab.set('PEERS')"
+            >
               <mat-icon>supervised_user_circle</mat-icon>
               Estratificación de Riesgo
             </button>
           </div>
 
           <!-- Bandeja Workflow (Corazón del Sistema) -->
-          <app-workflow-table 
+          <app-workflow-table
             *ngIf="activeTab() === 'WORKFLOW'"
             [protocols]="filteredProtocols()"
-            (filterChanged)="onStatusFilterChanged($event)">
+            (filterChanged)="onStatusFilterChanged($event)"
+          >
           </app-workflow-table>
 
           <!-- Bandeja de Estratificación de Riesgo por Pares -->
           <app-peer-risk-pending-table
             *ngIf="activeTab() === 'PEERS'"
             [protocols]="peerPendingProtocols()"
-            (assignmentCompleted)="refreshData()">
+            (assignmentCompleted)="refreshData()"
+          >
           </app-peer-risk-pending-table>
         </main>
-        
+
         <aside class="ops-side-col">
           <!-- Radar de Urgencias y Auditoría -->
           <app-deadlines-radar [protocols]="protocols()"></app-deadlines-radar>
@@ -96,7 +112,7 @@ import { ActivatedRoute } from '@angular/router';
       </div>
     </div>
   `,
-  styleUrls: ['./dashboard-secretaria.page.scss']
+  styleUrls: ['./dashboard-secretaria.page.scss'],
 })
 export class DashboardSecretariaPage implements OnInit {
   private stateService = inject(SecretariatDashboardService);
@@ -117,33 +133,41 @@ export class DashboardSecretariaPage implements OnInit {
   // Mapeador reactivo resiliente que soporta formatos anidados o planos devueltos por el endpoint /pending-peer-assignment
   peerPendingProtocols = computed<PendingPeerAssignmentProtocol[]>(() => {
     const list = this.peerPendingProtocolsSignal();
-    return list.map(p => {
+    return list.map((p) => {
       const id = Number(p.id) || 0;
       const ceishCode = p.ceishCode || p.code || '';
       const title = p.title || p.titulo || 'Sin título';
       const receptionStatus = p.receptionStatus || p.status || p.estado || '';
       const isRiskLevelDesignated = p.isRiskLevelDesignated ?? false;
-      const createdAt = p.createdAt || p.submissionDate || p.receptionDate || new Date().toISOString();
-      
-      const studyType = p.studyType ? {
-        id: Number(p.studyType.id) || 0,
-        codigo: p.studyType.codigo || p.studyType.code || '',
-        nombre: p.studyType.nombre || p.studyType.name || 'General'
-      } : {
-        id: 0,
-        codigo: p.studyTypeCode || '',
-        nombre: p.type || 'General'
-      };
+      const createdAt =
+        p.createdAt || p.submissionDate || p.receptionDate || new Date().toISOString();
 
-      const principalInvestigatorRecord = p.principalInvestigatorRecord ? {
-        id: Number(p.principalInvestigatorRecord.id) || 0,
-        fullName: p.principalInvestigatorRecord.fullName || p.principalInvestigatorRecord.nombre || 'Investigador Principal',
-        email: p.principalInvestigatorRecord.email || ''
-      } : {
-        id: 0,
-        fullName: p.principalInvestigator || 'Investigador Principal',
-        email: ''
-      };
+      const studyType = p.studyType
+        ? {
+            id: Number(p.studyType.id) || 0,
+            codigo: p.studyType.codigo || p.studyType.code || '',
+            nombre: p.studyType.nombre || p.studyType.name || 'General',
+          }
+        : {
+            id: 0,
+            codigo: p.studyTypeCode || '',
+            nombre: p.type || 'General',
+          };
+
+      const principalInvestigatorRecord = p.principalInvestigatorRecord
+        ? {
+            id: Number(p.principalInvestigatorRecord.id) || 0,
+            fullName:
+              p.principalInvestigatorRecord.fullName ||
+              p.principalInvestigatorRecord.nombre ||
+              'Investigador Principal',
+            email: p.principalInvestigatorRecord.email || '',
+          }
+        : {
+            id: 0,
+            fullName: p.principalInvestigator || 'Investigador Principal',
+            email: '',
+          };
 
       return {
         id,
@@ -153,13 +177,13 @@ export class DashboardSecretariaPage implements OnInit {
         isRiskLevelDesignated,
         createdAt,
         studyType,
-        principalInvestigatorRecord
+        principalInvestigatorRecord,
       };
     });
   });
 
   ngOnInit() {
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       if (params['tab'] === 'peers') {
         this.activeTab.set('PEERS');
       }
@@ -174,8 +198,11 @@ export class DashboardSecretariaPage implements OnInit {
         this.peerPendingProtocolsSignal.set(Array.isArray(list) ? list : []);
       },
       error: (err) => {
-        console.error('[Secretaría] Error al obtener protocolos listos para evaluadores desde el endpoint del backend:', err);
-      }
+        console.error(
+          '[Secretaría] Error al obtener protocolos listos para evaluadores desde el endpoint del backend:',
+          err,
+        );
+      },
     });
   }
 

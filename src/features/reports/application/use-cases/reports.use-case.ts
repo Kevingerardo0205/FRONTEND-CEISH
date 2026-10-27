@@ -1,17 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { IReportRepositoryPort } from '../../domain/ports/report-repository.port';
-import { 
-  SummaryStats, 
-  ProtocolStats, 
-  StatusStats, 
-  EvaluationTimeStats, 
+import {
+  SummaryStats,
+  ProtocolStats,
+  StatusStats,
+  EvaluationTimeStats,
   WorkloadStats,
-  MSPReportData 
+  MSPReportData,
 } from '../../domain/entities/report.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ReportsUseCase {
   private readonly reportRepo = inject(IReportRepositoryPort);
@@ -36,7 +36,11 @@ export class ReportsUseCase {
     return this.reportRepo.getWorkloadByEvaluator(startDate, endDate);
   }
 
-  getMSPReport(period: 'monthly' | 'annual', year: number, month?: number): Observable<MSPReportData> {
+  getMSPReport(
+    period: 'monthly' | 'annual',
+    year: number,
+    month?: number,
+  ): Observable<MSPReportData> {
     return this.reportRepo.getMSPReport(period, year, month);
   }
 }

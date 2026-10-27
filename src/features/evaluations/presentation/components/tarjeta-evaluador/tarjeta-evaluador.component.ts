@@ -6,7 +6,7 @@ import { ActiveAssignment } from '@domain/entities/peer-evaluation.entity';
 import {
   activeAssignmentStatusLabel,
   formatDeadlineDate,
-  peerEvaluatorProfileLabel
+  peerEvaluatorProfileLabel,
 } from '../../utils/active-assignment-view.util';
 
 @Component({
@@ -14,7 +14,7 @@ import {
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule],
   templateUrl: './tarjeta-evaluador.component.html',
-  styleUrls: ['./tarjeta-evaluador.component.scss']
+  styleUrls: ['./tarjeta-evaluador.component.scss'],
 })
 export class TarjetaEvaluadorComponent {
   @Input({ required: true }) assignment!: ActiveAssignment;

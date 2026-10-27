@@ -21,12 +21,18 @@
     </div>
     <div class="submission-meta" *ngIf="assignment.submittedAt">
       <span class="submitted-label">Enviado el:</span>
-      <span class="submitted-value">{{ assignment.submittedAt | date:'medium' }}</span>
+      <span class="submitted-value">{{ assignment.submittedAt | date: 'medium' }}</span>
     </div>
   </div>
 
   <div class="card-footer" *ngIf="showReassignAction">
-    <button mat-stroked-button color="warn" type="button" class="btn-reassign" (click)="handleReassign()">
+    <button
+      mat-stroked-button
+      color="warn"
+      type="button"
+      class="btn-reassign"
+      (click)="handleReassign()"
+    >
       <mat-icon>swap_horiz</mat-icon>
       Reasignar Evaluador
     </button>

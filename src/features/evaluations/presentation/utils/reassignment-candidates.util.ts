@@ -34,7 +34,9 @@ export function normalizeProfile(name: unknown): PeerEvaluatorProfile | null {
     .trim()
     .toUpperCase()
     .replace(/[\s-]+/g, '_');
-  return (PEER_EVALUATOR_PROFILES as readonly string[]).includes(norm) ? (norm as PeerEvaluatorProfile) : null;
+  return (PEER_EVALUATOR_PROFILES as readonly string[]).includes(norm)
+    ? (norm as PeerEvaluatorProfile)
+    : null;
 }
 
 /** Mapea data.evaluators del dashboard; descarta entradas sin id numérico. */
@@ -44,15 +46,17 @@ export function mapDashboardCandidates(evaluators: unknown): EvaluatorCandidate[
     const e = raw as Partial<DashboardEvaluatorDto> | null;
     if (!e || typeof e.id !== 'number') return [];
     const profiles = (Array.isArray(e.profiles) ? e.profiles : [])
-      .map(p => normalizeProfile(p?.name))
+      .map((p) => normalizeProfile(p?.name))
       .filter((p): p is PeerEvaluatorProfile => p !== null);
-    return [{
-      id: e.id,
-      fullName: typeof e.fullName === 'string' ? e.fullName : `Evaluador ${e.id}`,
-      email: typeof e.email === 'string' ? e.email : '',
-      profiles: [...new Set(profiles)],
-      currentLoad: typeof e.currentLoad === 'number' ? e.currentLoad : 0,
-    }];
+    return [
+      {
+        id: e.id,
+        fullName: typeof e.fullName === 'string' ? e.fullName : `Evaluador ${e.id}`,
+        email: typeof e.email === 'string' ? e.email : '',
+        profiles: [...new Set(profiles)],
+        currentLoad: typeof e.currentLoad === 'number' ? e.currentLoad : 0,
+      },
+    ];
   });
 }
 
@@ -64,13 +68,14 @@ export function mapDashboardCandidates(evaluators: unknown): EvaluatorCandidate[
 export function filterEligibleCandidates(
   candidates: EvaluatorCandidate[],
   outgoing: Pick<ActiveAssignment, 'evaluatorId' | 'evaluatorProfile'>,
-  activeEvaluatorIds: number[]
+  activeEvaluatorIds: number[],
 ): EvaluatorCandidate[] {
   const profile = normalizeProfile(outgoing.evaluatorProfile);
   if (profile === null) return [];
-  return candidates.filter(c =>
-    c.id !== outgoing.evaluatorId &&
-    !activeEvaluatorIds.includes(c.id) &&
-    c.profiles.includes(profile)
+  return candidates.filter(
+    (c) =>
+      c.id !== outgoing.evaluatorId &&
+      !activeEvaluatorIds.includes(c.id) &&
+      c.profiles.includes(profile),
   );
 }

@@ -3,23 +3,24 @@ import { Observable, throwError } from 'rxjs';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import {
   ReassignPeerEvaluatorPayload,
-  ReassignPeerEvaluatorResponse
+  ReassignPeerEvaluatorResponse,
 } from '@domain/entities/peer-evaluation.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ReassignPeerEvaluatorUseCase {
   private readonly evalRepo = inject(IEvaluationRepositoryPort);
 
   execute(payload: ReassignPeerEvaluatorPayload): Observable<ReassignPeerEvaluatorResponse> {
-    const validReasons: Array<'VENCIMIENTO' | 'CONFLICTO_INTERES'> = ['VENCIMIENTO', 'CONFLICTO_INTERES'];
+    const validReasons: Array<'VENCIMIENTO' | 'CONFLICTO_INTERES'> = [
+      'VENCIMIENTO',
+      'CONFLICTO_INTERES',
+    ];
     if (!payload.reason || !validReasons.includes(payload.reason)) {
       return throwError(
         () =>
-          new Error(
-            'Motivo de reasignación inválido. Debe ser VENCIMIENTO o CONFLICTO_INTERES.'
-          )
+          new Error('Motivo de reasignación inválido. Debe ser VENCIMIENTO o CONFLICTO_INTERES.'),
       );
     }
 
@@ -28,8 +29,8 @@ export class ReassignPeerEvaluatorUseCase {
       return throwError(
         () =>
           new Error(
-            'La justificación o descripción del motivo de reasignación es requerida (mínimo 10 caracteres).'
-          )
+            'La justificación o descripción del motivo de reasignación es requerida (mínimo 10 caracteres).',
+          ),
       );
     }
 

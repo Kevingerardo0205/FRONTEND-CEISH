@@ -6,7 +6,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AmendmentRequestPage } from './amendment-request.page';
 import { LoadApprovedProtocolsUseCase } from '../../../application/load-approved-protocols.use-case';
 import { CreateAmendmentUseCase } from '../../../application/create-amendment.use-case';
-import { AmendmentType, AmendmentSeverity, AmendmentStatus } from '../../../domain/entities/amendment.entity';
+import {
+  AmendmentType,
+  AmendmentSeverity,
+  AmendmentStatus,
+} from '../../../domain/entities/amendment.entity';
 
 import { provideRouter } from '@angular/router';
 
@@ -24,28 +28,31 @@ describe('AmendmentRequestPage', () => {
       code: 'CEISH-2026-001',
       title: 'Estudio de Nutrición',
       investigatorName: 'Dr. Marco Ramos',
-      currentVersion: 1
-    }
+      currentVersion: 1,
+    },
   ];
 
   beforeEach(async () => {
-    mockLoadProtocolsUseCase = jasmine.createSpyObj<LoadApprovedProtocolsUseCase>('LoadApprovedProtocolsUseCase', ['execute']);
-    mockCreateAmendmentUseCase = jasmine.createSpyObj<CreateAmendmentUseCase>('CreateAmendmentUseCase', ['execute']);
+    mockLoadProtocolsUseCase = jasmine.createSpyObj<LoadApprovedProtocolsUseCase>(
+      'LoadApprovedProtocolsUseCase',
+      ['execute'],
+    );
+    mockCreateAmendmentUseCase = jasmine.createSpyObj<CreateAmendmentUseCase>(
+      'CreateAmendmentUseCase',
+      ['execute'],
+    );
     mockSnackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
 
     mockLoadProtocolsUseCase.execute.and.returnValue(of(mockProtocols));
 
     await TestBed.configureTestingModule({
-      imports: [
-        AmendmentRequestPage,
-        NoopAnimationsModule
-      ],
+      imports: [AmendmentRequestPage, NoopAnimationsModule],
       providers: [
         provideRouter([]),
         { provide: LoadApprovedProtocolsUseCase, useValue: mockLoadProtocolsUseCase },
         { provide: CreateAmendmentUseCase, useValue: mockCreateAmendmentUseCase },
-        { provide: MatSnackBar, useValue: mockSnackBar }
-      ]
+        { provide: MatSnackBar, useValue: mockSnackBar },
+      ],
     }).compileComponents();
 
     router = TestBed.inject(Router);
@@ -63,28 +70,30 @@ describe('AmendmentRequestPage', () => {
   });
 
   it('should validate form and submit amendment successfully', () => {
-    mockCreateAmendmentUseCase.execute.and.returnValue(of({
-      id: 'enm-new',
-      protocolId: '1',
-      protocolCode: 'CEISH-2026-001',
-      protocolTitle: 'Estudio de Nutrición',
-      investigatorName: 'Investigador',
-      type: AmendmentType.METHODOLOGY,
-      severity: AmendmentSeverity.SUBSTANTIAL,
-      status: AmendmentStatus.SUBMITTED,
-      justification: 'Justificación detallada de los cambios metodológicos en el protocolo.',
-      ethicalImpactDescription: 'Riesgo evaluado y controlado.',
-      documents: [],
-      submittedAt: new Date().toISOString(),
-      versionNumber: 2
-    }));
+    mockCreateAmendmentUseCase.execute.and.returnValue(
+      of({
+        id: 'enm-new',
+        protocolId: '1',
+        protocolCode: 'CEISH-2026-001',
+        protocolTitle: 'Estudio de Nutrición',
+        investigatorName: 'Investigador',
+        type: AmendmentType.METHODOLOGY,
+        severity: AmendmentSeverity.SUBSTANTIAL,
+        status: AmendmentStatus.SUBMITTED,
+        justification: 'Justificación detallada de los cambios metodológicos en el protocolo.',
+        ethicalImpactDescription: 'Riesgo evaluado y controlado.',
+        documents: [],
+        submittedAt: new Date().toISOString(),
+        versionNumber: 2,
+      }),
+    );
 
     component.form.patchValue({
       protocolId: '1',
       type: AmendmentType.METHODOLOGY,
       severity: AmendmentSeverity.SUBSTANTIAL,
       justification: 'Justificación detallada de los cambios metodológicos en el protocolo.',
-      ethicalImpactDescription: 'Riesgo evaluado y controlado.'
+      ethicalImpactDescription: 'Riesgo evaluado y controlado.',
     });
 
     expect(component.form.valid).toBeTrue();

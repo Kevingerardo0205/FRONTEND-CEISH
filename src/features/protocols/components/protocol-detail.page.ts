@@ -19,7 +19,7 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
     MatTabsModule,
     MatDividerModule,
     MatChipsModule,
-    ProtocolCodePipe
+    ProtocolCodePipe,
   ],
   template: `
     <div class="page-container" *ngIf="protocol()">
@@ -49,7 +49,7 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
               </div>
               <div class="info-item">
                 <label>Fecha de Envío</label>
-                <p>{{ protocol()?.submissionDate | date:'mediumDate' }}</p>
+                <p>{{ protocol()?.submissionDate | date: 'mediumDate' }}</p>
               </div>
               <div class="info-item full-width">
                 <label>Descripción / Resumen</label>
@@ -58,7 +58,7 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
             </div>
           </div>
         </mat-tab>
-        
+
         <mat-tab label="Documentación">
           <div class="tab-content">
             <div class="doc-list">
@@ -81,39 +81,96 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
       </mat-tab-group>
     </div>
   `,
-  styles: [`
-    .page-container { padding: 2rem; max-width: 1000px; margin: 0 auto; }
-    .page-header { margin-bottom: 2rem; }
-    .title-row { display: flex; align-items: flex-start; gap: 1rem; }
-    .title-area {
-      h1 { margin: 0; font-size: 1.5rem; color: #003366; line-height: 1.2; }
-      .badges { margin-top: 0.75rem; display: flex; gap: 0.5rem; }
-    }
-    .detail-tabs { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-    .tab-content { padding: 2rem; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .info-item {
-      label { display: block; font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; }
-      p { margin: 0; color: #1e293b; font-weight: 500; }
-    }
-    .full-width { grid-column: span 2; }
-    .doc-list { display: flex; flex-direction: column; gap: 0.75rem; }
-    .doc-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      background: #f8fafc;
-      border-radius: 12px;
-      .doc-name { flex: 1; font-weight: 500; }
-    }
-    .status-chip { background: #dcfce7 !important; color: #166534 !important; }
-    .type-chip { background: #e0f2f1 !important; color: #00796b !important; }
-  `]
+  styles: [
+    `
+      .page-container {
+        padding: 2rem;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      .page-header {
+        margin-bottom: 2rem;
+      }
+      .title-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      .title-area {
+        h1 {
+          margin: 0;
+          font-size: 1.5rem;
+          color: #003366;
+          line-height: 1.2;
+        }
+        .badges {
+          margin-top: 0.75rem;
+          display: flex;
+          gap: 0.5rem;
+        }
+      }
+      .detail-tabs {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      }
+      .tab-content {
+        padding: 2rem;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+      }
+      .info-item {
+        label {
+          display: block;
+          font-size: 0.75rem;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          margin-bottom: 0.25rem;
+        }
+        p {
+          margin: 0;
+          color: #1e293b;
+          font-weight: 500;
+        }
+      }
+      .full-width {
+        grid-column: span 2;
+      }
+      .doc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .doc-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 12px;
+        .doc-name {
+          flex: 1;
+          font-weight: 500;
+        }
+      }
+      .status-chip {
+        background: #dcfce7 !important;
+        color: #166534 !important;
+      }
+      .type-chip {
+        background: #e0f2f1 !important;
+        color: #00796b !important;
+      }
+    `,
+  ],
 })
 export class ProtocolDetailPage implements OnInit {
   private route = inject(ActivatedRoute);
-  
+
   protocol = signal<any>(null);
 
   ngOnInit() {
@@ -131,12 +188,13 @@ export class ProtocolDetailPage implements OnInit {
       type: 'IO',
       status: 'SUBMITTED',
       submissionDate: new Date(),
-      description: 'Este estudio busca analizar las secuelas psicológicas en el personal docente post-pandemia.',
+      description:
+        'Este estudio busca analizar las secuelas psicológicas en el personal docente post-pandemia.',
       documents: [
         { name: 'Protocolo_Final.pdf' },
         { name: 'Consentimiento_Informado.pdf' },
-        { name: 'Hoja_Vida_Investigador.pdf' }
-      ]
+        { name: 'Hoja_Vida_Investigador.pdf' },
+      ],
     });
   }
 }

@@ -5,12 +5,12 @@ export enum AmendmentType {
   SCHEDULE = 'SCHEDULE',
   BUDGET = 'BUDGET',
   SAMPLE_SIZE = 'SAMPLE_SIZE',
-  OTHER = 'OTHER'
+  OTHER = 'OTHER',
 }
 
 export enum AmendmentSeverity {
   SUBSTANTIAL = 'SUBSTANTIAL', // Modificación sustancial que altera riesgo/beneficio
-  NON_SUBSTANTIAL = 'NON_SUBSTANTIAL' // Modificación menor administrativa
+  NON_SUBSTANTIAL = 'NON_SUBSTANTIAL', // Modificación menor administrativa
 }
 
 export enum AmendmentStatus {
@@ -19,7 +19,7 @@ export enum AmendmentStatus {
   UNDER_REVIEW = 'UNDER_REVIEW',
   APPROVED = 'APPROVED',
   OBSERVED = 'OBSERVED',
-  REJECTED = 'REJECTED'
+  REJECTED = 'REJECTED',
 }
 
 export interface AmendmentDocument {

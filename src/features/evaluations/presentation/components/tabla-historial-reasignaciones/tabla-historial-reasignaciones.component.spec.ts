@@ -19,13 +19,13 @@ describe('TablaHistorialReasignacionesComponent (RF-12.3)', () => {
       reasonDescription: 'Parentesco con el investigador principal.',
       executedByUserId: 1,
       executedByUserName: 'Administrador CEISH',
-      executedAt: '2026-09-28T15:30:00.000Z'
-    }
+      executedAt: '2026-09-28T15:30:00.000Z',
+    },
   ];
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TablaHistorialReasignacionesComponent]
+      imports: [TablaHistorialReasignacionesComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TablaHistorialReasignacionesComponent);

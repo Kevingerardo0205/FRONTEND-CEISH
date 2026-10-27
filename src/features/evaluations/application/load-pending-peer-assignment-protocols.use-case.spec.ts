@@ -8,26 +8,32 @@ describe('LoadPendingPeerAssignmentProtocolsUseCase', () => {
   let repoSpy: jasmine.SpyObj<IEvaluationRepositoryPort>;
 
   beforeEach(() => {
-    const rSpy = jasmine.createSpyObj('IEvaluationRepositoryPort', ['getPendingPeerAssignmentProtocols']);
+    const rSpy = jasmine.createSpyObj('IEvaluationRepositoryPort', [
+      'getPendingPeerAssignmentProtocols',
+    ]);
     TestBed.configureTestingModule({
       providers: [
         LoadPendingPeerAssignmentProtocolsUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: rSpy }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: rSpy },
+      ],
     });
     useCase = TestBed.inject(LoadPendingPeerAssignmentProtocolsUseCase);
-    repoSpy = TestBed.inject(IEvaluationRepositoryPort) as jasmine.SpyObj<IEvaluationRepositoryPort>;
+    repoSpy = TestBed.inject(
+      IEvaluationRepositoryPort,
+    ) as jasmine.SpyObj<IEvaluationRepositoryPort>;
   });
 
   it('debe retornar protocolos pendientes de asignación de pares', (done) => {
-    repoSpy.getPendingPeerAssignmentProtocols.and.returnValue(of([{ id: 1, title: 'Proto' } as any]));
+    repoSpy.getPendingPeerAssignmentProtocols.and.returnValue(
+      of([{ id: 1, title: 'Proto' } as any]),
+    );
     useCase.execute().subscribe({
       next: (result) => {
         expect(result.length).toBe(1);
         expect(repoSpy.getPendingPeerAssignmentProtocols).toHaveBeenCalled();
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

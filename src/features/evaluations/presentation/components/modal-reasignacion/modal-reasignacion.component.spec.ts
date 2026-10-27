@@ -4,11 +4,19 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { ModalReasignacionComponent, ModalReasignacionData, REASSIGN_SUCCESS_MESSAGE } from './modal-reasignacion.component';
+import {
+  ModalReasignacionComponent,
+  ModalReasignacionData,
+  REASSIGN_SUCCESS_MESSAGE,
+} from './modal-reasignacion.component';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { ActiveAssignment } from '@domain/entities/peer-evaluation.entity';
 import { EvaluationApiAdapter } from '@infrastructure/adapters/evaluation-api.adapter';
-import { ACTIVE_ASSIGNMENTS_119_BODY, DASHBOARD_BODY, ERROR_400_BODY } from '../../../testing/reassignment.fixtures';
+import {
+  ACTIVE_ASSIGNMENTS_119_BODY,
+  DASHBOARD_BODY,
+  ERROR_400_BODY,
+} from '../../../testing/reassignment.fixtures';
 
 describe('ModalReasignacionComponent (RF-12.3)', () => {
   let fixture: ComponentFixture<ModalReasignacionComponent>;
@@ -23,7 +31,7 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
   function setup(outgoing: ActiveAssignment): void {
     const data: ModalReasignacionData = {
       outgoingAssignment: outgoing,
-      activeEvaluatorIds: assignments.map(a => a.evaluatorId)
+      activeEvaluatorIds: assignments.map((a) => a.evaluatorId),
     };
     dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['close']);
     snackSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
@@ -36,8 +44,8 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
         { provide: IEvaluationRepositoryPort, useClass: EvaluationApiAdapter },
         { provide: MatDialogRef, useValue: dialogRefSpy },
         { provide: MAT_DIALOG_DATA, useValue: data },
-        { provide: MatSnackBar, useValue: snackSpy }
-      ]
+        { provide: MatSnackBar, useValue: snackSpy },
+      ],
     });
 
     fixture = TestBed.createComponent(ModalReasignacionComponent);
@@ -52,16 +60,20 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
 
   it('para Ana (METODOLOGICO) solo ofrece a Patricio (38): excluye a la saliente, a 40 ya asignada y a los sin perfil', () => {
     setup(ana);
-    expect(component.filteredCandidates().map(c => c.id)).toEqual([38]);
+    expect(component.filteredCandidates().map((c) => c.id)).toEqual([38]);
     expect(component.unrecognizedProfileCount()).toBe(5);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('5 evaluador(es) del catálogo no tienen un perfil reconocido');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      '5 evaluador(es) del catálogo no tienen un perfil reconocido',
+    );
   });
 
   it('insignias del saliente en español: estado "Asignado" y perfil "Metodológico" (no los códigos crudos)', () => {
     setup(ana);
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.outgoing-card .badge-status')?.textContent?.trim()).toBe('Asignado');
-    expect(el.querySelector('.outgoing-card .badge-role')?.textContent?.trim()).toBe('Metodológico');
+    expect(el.querySelector('.outgoing-card .badge-role')?.textContent?.trim()).toBe(
+      'Metodológico',
+    );
     expect(el.querySelector('mat-label')?.textContent).toContain('Mismo Perfil: Metodológico');
     expect(el.textContent).not.toContain('ASSIGNED');
   });
@@ -71,7 +83,7 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
     component.form.setValue({
       newEvaluatorId: 38,
       reason: 'VENCIMIENTO',
-      reasonDescription: '  Plazo reglamentario vencido sin entrega.  '
+      reasonDescription: '  Plazo reglamentario vencido sin entrega.  ',
     });
 
     component.onConfirm();
@@ -83,11 +95,19 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
       replacementEvaluatorId: 38,
       replacementEvaluatorProfile: 'METODOLOGICO',
       reason: 'VENCIMIENTO',
-      reasonDescription: 'Plazo reglamentario vencido sin entrega.'
+      reasonDescription: 'Plazo reglamentario vencido sin entrega.',
     });
-    req.flush({ data: { outgoingAssignment: {}, newAssignment: {}, auditHistory: {} }, statusCode: 201, message: 'Success' });
+    req.flush({
+      data: { outgoingAssignment: {}, newAssignment: {}, auditHistory: {} },
+      statusCode: 201,
+      message: 'Success',
+    });
 
-    expect(snackSpy.open).toHaveBeenCalledWith(REASSIGN_SUCCESS_MESSAGE, 'Cerrar', jasmine.any(Object));
+    expect(snackSpy.open).toHaveBeenCalledWith(
+      REASSIGN_SUCCESS_MESSAGE,
+      'Cerrar',
+      jasmine.any(Object),
+    );
     expect(dialogRefSpy.close).toHaveBeenCalledWith(true);
   });
 
@@ -96,9 +116,15 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
 
     expect(component.filteredCandidates()).toEqual([]);
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.outgoing-profile-error')?.textContent).toContain('no tiene un perfil reconocido');
+    expect(el.querySelector('.outgoing-profile-error')?.textContent).toContain(
+      'no tiene un perfil reconocido',
+    );
 
-    component.form.setValue({ newEvaluatorId: 38, reason: 'VENCIMIENTO', reasonDescription: 'Plazo reglamentario vencido.' });
+    component.form.setValue({
+      newEvaluatorId: 38,
+      reason: 'VENCIMIENTO',
+      reasonDescription: 'Plazo reglamentario vencido.',
+    });
     component.onConfirm();
     httpMock.expectNone('/api/evaluations/reassign');
     expect(dialogRefSpy.close).not.toHaveBeenCalled();
@@ -106,22 +132,33 @@ describe('ModalReasignacionComponent (RF-12.3)', () => {
 
   it('error del backend al reasignar: muestra el mensaje real en el modal y no cierra', () => {
     setup(ana);
-    component.form.setValue({ newEvaluatorId: 38, reason: 'VENCIMIENTO', reasonDescription: 'Plazo reglamentario vencido.' });
+    component.form.setValue({
+      newEvaluatorId: 38,
+      reason: 'VENCIMIENTO',
+      reasonDescription: 'Plazo reglamentario vencido.',
+    });
     component.onConfirm();
 
-    httpMock.expectOne('/api/evaluations/reassign').flush(ERROR_400_BODY, { status: 400, statusText: 'Bad Request' });
+    httpMock
+      .expectOne('/api/evaluations/reassign')
+      .flush(ERROR_400_BODY, { status: 400, statusText: 'Bad Request' });
     fixture.detectChanges();
 
     // Sin ErrorInterceptor en este TestBed: el helper lee body.error.message del HttpErrorResponse crudo.
     expect(component.submitError()).toBe('Validation failed (numeric string is expected)');
-    expect((fixture.nativeElement as HTMLElement).querySelector('.submit-error')?.textContent)
-      .toContain('Validation failed (numeric string is expected)');
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.submit-error')?.textContent,
+    ).toContain('Validation failed (numeric string is expected)');
     expect(dialogRefSpy.close).not.toHaveBeenCalled();
   });
 
   it('mantiene la validación de interfaz de 10 caracteres en la justificación', () => {
     setup(ana);
-    component.form.patchValue({ newEvaluatorId: 38, reason: 'VENCIMIENTO', reasonDescription: 'Corto' });
+    component.form.patchValue({
+      newEvaluatorId: 38,
+      reason: 'VENCIMIENTO',
+      reasonDescription: 'Corto',
+    });
     expect(component.form.get('reasonDescription')?.hasError('minlength')).toBeTrue();
   });
 

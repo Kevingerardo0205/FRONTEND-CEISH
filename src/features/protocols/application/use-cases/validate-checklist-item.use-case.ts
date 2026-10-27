@@ -1,13 +1,20 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { IDocumentRepositoryPort, DocumentValidationResult } from '@domain/ports/IDocumentRepositoryPort';
+import {
+  IDocumentRepositoryPort,
+  DocumentValidationResult,
+} from '@domain/ports/IDocumentRepositoryPort';
 import { ValidationChecklistItem } from '@domain/entities/protocol.entity';
 
 @Injectable({ providedIn: 'root' })
 export class ValidateChecklistItemUseCase {
   private docRepo = inject(IDocumentRepositoryPort);
 
-  execute(item: ValidationChecklistItem, actionType: number, observations: string): Observable<DocumentValidationResult> {
+  execute(
+    item: ValidationChecklistItem,
+    actionType: number,
+    observations: string,
+  ): Observable<DocumentValidationResult> {
     if (!item.attachedDocument) {
       return throwError(() => new Error('No hay documento adjunto para validar'));
     }
@@ -25,6 +32,11 @@ export class ValidateChecklistItemUseCase {
       return throwError(() => new Error('El motivo de rechazo requiere mínimo 5 caracteres'));
     }
 
-    return this.docRepo.validateDocument(item.attachedDocument.id.toString(), actionType, observations || '', pages);
+    return this.docRepo.validateDocument(
+      item.attachedDocument.id.toString(),
+      actionType,
+      observations || '',
+      pages,
+    );
   }
 }

@@ -17,41 +17,41 @@ const routes: Routes = [
     children: [
       {
         path: 'investigator',
-        component: InvestigatorHomePage
+        component: InvestigatorHomePage,
       },
       {
         path: 'admin/users',
         component: UserManagementPage,
         canActivate: [RoleGuard],
-        data: { roles: ['ADMIN'] }
+        data: { roles: ['ADMIN'] },
       },
       {
         path: 'protocols/new',
-        component: ProtocolFormComponent
-      }, 
+        component: ProtocolFormComponent,
+      },
       {
         path: 'protocols/validate',
         component: ProtocolValidationListPage,
         canActivate: [RoleGuard],
-        data: { roles: ['ADMIN', 'SECRETARIA'] }
+        data: { roles: ['ADMIN', 'SECRETARIA'] },
       },
       {
         path: 'protocols/validate/:id',
         component: ProtocolValidationDetailPage,
         canActivate: [RoleGuard],
-        data: { roles: ['ADMIN', 'SECRETARIA'] }
+        data: { roles: ['ADMIN', 'SECRETARIA'] },
       },
       {
         path: '',
         redirectTo: 'investigator',
-        pathMatch: 'full'
-      }
-    ]
-  }
+        pathMatch: 'full',
+      },
+    ],
+  },
 ];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class DashboardRoutingModule { }
+export class DashboardRoutingModule {}

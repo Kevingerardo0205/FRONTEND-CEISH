@@ -1,5 +1,3 @@
-
-
 export interface PendingPeerAssignmentProtocol {
   id: number;
   ceishCode: string;
@@ -57,35 +55,44 @@ export interface RiskLevelInfo {
 }
 
 export const PET_RISK_LEVELS: RiskLevelInfo[] = [
-  { 
-    id: 4, 
-    name: 'Sin Riesgo', 
-    description: 'No realiza ninguna intervención biológica, psicológica o social. Datos anonimizados, fuentes abiertas.' 
+  {
+    id: 4,
+    name: 'Sin Riesgo',
+    description:
+      'No realiza ninguna intervención biológica, psicológica o social. Datos anonimizados, fuentes abiertas.',
   },
-  { 
-    id: 5, 
-    name: 'Riesgo Mínimo', 
-    description: 'Riesgos equivalentes a la vida diaria o práctica médica de rutina (ej: revisión de historias clínicas anonimizadas).' 
+  {
+    id: 5,
+    name: 'Riesgo Mínimo',
+    description:
+      'Riesgos equivalentes a la vida diaria o práctica médica de rutina (ej: revisión de historias clínicas anonimizadas).',
   },
-  { 
-    id: 6, 
-    name: 'Riesgo Moderado', 
-    description: 'Exposición a mediciones o intervenciones controladas de bajo impacto.' 
+  {
+    id: 6,
+    name: 'Riesgo Moderado',
+    description: 'Exposición a mediciones o intervenciones controladas de bajo impacto.',
   },
-  { 
-    id: 7, 
-    name: 'Riesgo Mayor', 
-    description: 'Probabilidades significativas de daño físico, psicológico o social prolongado. Uso de datos personales sensibles (PII).' 
+  {
+    id: 7,
+    name: 'Riesgo Mayor',
+    description:
+      'Probabilidades significativas de daño físico, psicológico o social prolongado. Uso de datos personales sensibles (PII).',
   },
-  { 
-    id: 8, 
-    name: 'Ensayo Clínico', 
-    description: 'Pruebas de medicamentos, vacunas, o dispositivos con intervención clínica directa.' 
-  }
+  {
+    id: 8,
+    name: 'Ensayo Clínico',
+    description:
+      'Pruebas de medicamentos, vacunas, o dispositivos con intervención clínica directa.',
+  },
 ];
 
 /** Perfiles estrictos que acepta el backend en la reasignación (RF-12.3). */
-export const PEER_EVALUATOR_PROFILES = ['JURIDICO', 'SOCIEDAD_CIVIL', 'METODOLOGICO', 'SALUD'] as const;
+export const PEER_EVALUATOR_PROFILES = [
+  'JURIDICO',
+  'SOCIEDAD_CIVIL',
+  'METODOLOGICO',
+  'SALUD',
+] as const;
 export type PeerEvaluatorProfile = (typeof PEER_EVALUATOR_PROFILES)[number];
 
 export type ActiveAssignmentStatus = 'SUGGESTED' | 'ASSIGNED' | 'COMPLETED';
@@ -148,4 +155,3 @@ export interface AssignmentHistoryEntry {
   executedByUserName?: string;
   executedAt: string;
 }
-

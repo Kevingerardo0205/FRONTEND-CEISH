@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-export const GENERIC_API_ERROR_MESSAGE = 'Ocurrió un error inesperado al comunicarse con el servidor. Intente nuevamente.';
+export const GENERIC_API_ERROR_MESSAGE =
+  'Ocurrió un error inesperado al comunicarse con el servidor. Intente nuevamente.';
 
 /**
  * Mensaje legible de un error de API.
@@ -9,7 +10,10 @@ export const GENERIC_API_ERROR_MESSAGE = 'Ocurrió un error inesperado al comuni
  * - HttpErrorResponse crudo (sin interceptor): lee body.error.message y luego body.message,
  *   en ambos casos string o arreglo (unido con "; ").
  */
-export function extractApiErrorMessage(err: unknown, fallback: string = GENERIC_API_ERROR_MESSAGE): string {
+export function extractApiErrorMessage(
+  err: unknown,
+  fallback: string = GENERIC_API_ERROR_MESSAGE,
+): string {
   if (err instanceof HttpErrorResponse) {
     const body = err.error as { message?: unknown; error?: { message?: unknown } } | null;
     return readMessage(body?.error?.message) ?? readMessage(body?.message) ?? fallback;

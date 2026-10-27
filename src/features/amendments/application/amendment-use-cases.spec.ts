@@ -5,7 +5,12 @@ import { LoadAmendmentsUseCase } from './load-amendments.use-case';
 import { CreateAmendmentUseCase } from './create-amendment.use-case';
 import { ReviewAmendmentUseCase } from './review-amendment.use-case';
 import { IAmendmentRepositoryPort } from '../domain/ports/amendment-repository.port';
-import { AmendmentStatus, AmendmentType, AmendmentSeverity, AmendmentItem } from '../domain/entities/amendment.entity';
+import {
+  AmendmentStatus,
+  AmendmentType,
+  AmendmentSeverity,
+  AmendmentItem,
+} from '../domain/entities/amendment.entity';
 
 describe('Amendment Use Cases', () => {
   let mockRepository: jasmine.SpyObj<IAmendmentRepositoryPort>;
@@ -23,7 +28,7 @@ describe('Amendment Use Cases', () => {
     ethicalImpactDescription: 'Riesgo evaluado',
     documents: [],
     submittedAt: new Date().toISOString(),
-    versionNumber: 2
+    versionNumber: 2,
   };
 
   beforeEach(() => {
@@ -33,7 +38,7 @@ describe('Amendment Use Cases', () => {
       'getAmendmentsByProtocolId',
       'getAmendmentById',
       'createAmendment',
-      'reviewAmendment'
+      'reviewAmendment',
     ]);
 
     TestBed.configureTestingModule({
@@ -42,20 +47,24 @@ describe('Amendment Use Cases', () => {
         LoadAmendmentsUseCase,
         CreateAmendmentUseCase,
         ReviewAmendmentUseCase,
-        { provide: IAmendmentRepositoryPort, useValue: mockRepository }
-      ]
+        { provide: IAmendmentRepositoryPort, useValue: mockRepository },
+      ],
     });
   });
 
   it('LoadApprovedProtocolsUseCase should delegate to repository', (done) => {
     const useCase = TestBed.inject(LoadApprovedProtocolsUseCase);
-    mockRepository.getApprovedProtocols.and.returnValue(of([{
-      id: '1',
-      code: 'CEISH-001',
-      title: 'Test',
-      investigatorName: 'Dr. X',
-      currentVersion: 1
-    }]));
+    mockRepository.getApprovedProtocols.and.returnValue(
+      of([
+        {
+          id: '1',
+          code: 'CEISH-001',
+          title: 'Test',
+          investigatorName: 'Dr. X',
+          currentVersion: 1,
+        },
+      ]),
+    );
 
     useCase.execute().subscribe((res) => {
       expect(res.length).toBe(1);
@@ -85,35 +94,43 @@ describe('Amendment Use Cases', () => {
     const useCase = TestBed.inject(CreateAmendmentUseCase);
     mockRepository.createAmendment.and.returnValue(of(sampleAmendment));
 
-    useCase.execute({
-      protocolId: '1',
-      protocolCode: 'CEISH-2026-001',
-      protocolTitle: 'Estudio Clínico',
-      type: AmendmentType.METHODOLOGY,
-      severity: AmendmentSeverity.SUBSTANTIAL,
-      justification: 'Justificación válida',
-      ethicalImpactDescription: 'Impacto analizado',
-      documents: []
-    }).subscribe((res) => {
-      expect(res.id).toBe('enm-test');
-      expect(mockRepository.createAmendment).toHaveBeenCalled();
-      done();
-    });
+    useCase
+      .execute({
+        protocolId: '1',
+        protocolCode: 'CEISH-2026-001',
+        protocolTitle: 'Estudio Clínico',
+        type: AmendmentType.METHODOLOGY,
+        severity: AmendmentSeverity.SUBSTANTIAL,
+        justification: 'Justificación válida',
+        ethicalImpactDescription: 'Impacto analizado',
+        documents: [],
+      })
+      .subscribe((res) => {
+        expect(res.id).toBe('enm-test');
+        expect(mockRepository.createAmendment).toHaveBeenCalled();
+        done();
+      });
   });
 
   it('ReviewAmendmentUseCase should review and update amendment', (done) => {
     const useCase = TestBed.inject(ReviewAmendmentUseCase);
-    const reviewed = { ...sampleAmendment, status: AmendmentStatus.APPROVED, reviewNotes: 'Aprobado sin objeciones' };
+    const reviewed = {
+      ...sampleAmendment,
+      status: AmendmentStatus.APPROVED,
+      reviewNotes: 'Aprobado sin objeciones',
+    };
     mockRepository.reviewAmendment.and.returnValue(of(reviewed));
 
-    useCase.execute({
-      amendmentId: 'enm-test',
-      status: AmendmentStatus.APPROVED,
-      reviewNotes: 'Aprobado sin objeciones'
-    }).subscribe((res) => {
-      expect(res.status).toBe(AmendmentStatus.APPROVED);
-      expect(mockRepository.reviewAmendment).toHaveBeenCalled();
-      done();
-    });
+    useCase
+      .execute({
+        amendmentId: 'enm-test',
+        status: AmendmentStatus.APPROVED,
+        reviewNotes: 'Aprobado sin objeciones',
+      })
+      .subscribe((res) => {
+        expect(res.status).toBe(AmendmentStatus.APPROVED);
+        expect(mockRepository.reviewAmendment).toHaveBeenCalled();
+        done();
+      });
   });
 });

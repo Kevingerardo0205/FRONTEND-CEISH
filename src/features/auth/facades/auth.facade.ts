@@ -4,7 +4,12 @@ import { Observable, throwError, tap, catchError } from 'rxjs';
 import { User, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
-import { MODULE_UI_MAP, PERMISSION_UI_MAP, toSentenceCase, MenuUIItem } from '@shared/constants/menu-ui.config';
+import {
+  MODULE_UI_MAP,
+  PERMISSION_UI_MAP,
+  toSentenceCase,
+  MenuUIItem,
+} from '@shared/constants/menu-ui.config';
 import { Permission, Module } from '@domain/entities/user.entity';
 
 interface SubMenuItem {
@@ -15,12 +20,12 @@ interface SubMenuItem {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthFacade {
   private tokenService = inject(TokenStoreAdapter);
   private authRepository = inject(IAuthRepositoryPort);
-  
+
   private currentUserSignal = signal<User | null>(null);
   public currentUser = this.currentUserSignal.asReadonly();
 
@@ -35,17 +40,22 @@ export class AuthFacade {
 
       const perms = user.fullPermissions || [];
       if (perms.length === 0) {
-        console.warn('[AuthFacade] El usuario no tiene permisos detallados (fullPermissions vacíos).');
+        console.warn(
+          '[AuthFacade] El usuario no tiene permisos detallados (fullPermissions vacíos).',
+        );
         return [];
       }
 
-      const modulesMap = new Map<string, { 
-        code: string;
-        label: string; 
-        icon: string; 
-        order: number;
-        subItems: SubMenuItem[] 
-      }>();
+      const modulesMap = new Map<
+        string,
+        {
+          code: string;
+          label: string;
+          icon: string;
+          order: number;
+          subItems: SubMenuItem[];
+        }
+      >();
 
       const addMenuItem = (item: MenuUIItem, code: string, mod: Module | undefined) => {
         const modCode = mod?.code || 'MOD_DASHBOARD';
@@ -57,37 +67,37 @@ export class AuthFacade {
             label: modUI?.label || toSentenceCase(mod?.name || modCode),
             icon: modUI?.icon || mod?.icon || 'folder',
             order: mod?.order || 1,
-            subItems: []
+            subItems: [],
           });
         }
 
         const path = item.path || '/dashboard/home';
         const subItems = modulesMap.get(modCode)!.subItems;
 
-        if (!subItems.some(sub => sub.path === path)) {
+        if (!subItems.some((sub) => sub.path === path)) {
           subItems.push({
             code: code,
             label: item.label,
             icon: item.icon || 'chevron_right',
-            path: path
+            path: path,
           });
         }
       };
 
-      perms.forEach(p => {
+      perms.forEach((p) => {
         const mod = p.module;
         const permUI = PERMISSION_UI_MAP[p.code];
-        
+
         if (!permUI && !mod) return;
 
         if (permUI) {
           const items = Array.isArray(permUI) ? permUI : [permUI];
-          items.forEach(item => addMenuItem(item, p.code, mod));
+          items.forEach((item) => addMenuItem(item, p.code, mod));
         } else {
           const defaultItem: MenuUIItem = {
             label: toSentenceCase(p.code),
             icon: 'chevron_right',
-            path: '/dashboard/home'
+            path: '/dashboard/home',
           };
           addMenuItem(defaultItem, p.code, mod);
         }
@@ -95,7 +105,6 @@ export class AuthFacade {
 
       const finalMenu = Array.from(modulesMap.values()).sort((a, b) => a.order - b.order);
       return finalMenu;
-      
     } catch (err) {
       console.error('[AuthFacade] Error crítico al generar configuración del menú:', err);
       return [];
@@ -114,7 +123,9 @@ export class AuthFacade {
     const attempts = this.attemptsSignal()[credentials.email] || 0;
 
     if (attempts >= this.MAX_ATTEMPTS) {
-      return throwError(() => new Error('Cuenta bloqueada por seguridad. Contacte al administrador.'));
+      return throwError(
+        () => new Error('Cuenta bloqueada por seguridad. Contacte al administrador.'),
+      );
     }
 
     return this.authRepository.login(credentials).pipe(
@@ -129,7 +140,7 @@ export class AuthFacade {
           return throwError(() => new Error('Tercer intento fallido. Cuenta bloqueada.'));
         }
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -137,7 +148,7 @@ export class AuthFacade {
     const current = this.attemptsSignal();
     this.attemptsSignal.set({
       ...current,
-      [email]: (current[email] || 0) + 1
+      [email]: (current[email] || 0) + 1,
     });
   }
 
@@ -192,9 +203,11 @@ export class AuthFacade {
             console.warn('[AuthFacade] Sesión inválida/expirada. Cerrando sesión.');
             this.logout();
           } else {
-            console.warn('[AuthFacade] Error no crítico de red/servidor. Conservando sesión local.');
+            console.warn(
+              '[AuthFacade] Error no crítico de red/servidor. Conservando sesión local.',
+            );
           }
-        }
+        },
       });
     }
   }
@@ -211,13 +224,11 @@ export class AuthFacade {
     if (!user) return [];
 
     if (user.userRoles && user.userRoles.length > 0) {
-      return user.userRoles
-        .filter(ur => !ur.isExpired)
-        .map(ur => ur.code.toUpperCase());
+      return user.userRoles.filter((ur) => !ur.isExpired).map((ur) => ur.code.toUpperCase());
     }
 
     const rawRoles = user.roles && user.roles.length > 0 ? user.roles : [user.rol];
-    return rawRoles.map(r => r.toUpperCase());
+    return rawRoles.map((r) => r.toUpperCase());
   }
 
   /**
@@ -235,7 +246,7 @@ export class AuthFacade {
   hasAnyRole(roleCodes: string[]): boolean {
     if (!roleCodes || roleCodes.length === 0) return false;
     const activeRoles = this.getActiveRoles();
-    return roleCodes.some(r => activeRoles.includes(r.toUpperCase()));
+    return roleCodes.some((r) => activeRoles.includes(r.toUpperCase()));
   }
 
   /**
@@ -255,7 +266,7 @@ export class AuthFacade {
    */
   hasAnyPermission(permCodes: string[]): boolean {
     if (!permCodes || permCodes.length === 0) return false;
-    return permCodes.some(p => this.hasPermission(p));
+    return permCodes.some((p) => this.hasPermission(p));
   }
 
   /**
@@ -263,7 +274,7 @@ export class AuthFacade {
    */
   hasAllPermissions(permCodes: string[]): boolean {
     if (!permCodes || permCodes.length === 0) return false;
-    return permCodes.every(p => this.hasPermission(p));
+    return permCodes.every((p) => this.hasPermission(p));
   }
 
   refreshSession(): Observable<User> {
@@ -271,7 +282,7 @@ export class AuthFacade {
       tap((user) => {
         this.currentUserSignal.set(user);
         localStorage.setItem('user', JSON.stringify(user));
-      })
+      }),
     );
   }
 
@@ -286,8 +297,7 @@ export class AuthFacade {
         if (tokens.refreshToken) {
           this.tokenService.saveRefreshToken(tokens.refreshToken);
         }
-      })
+      }),
     );
   }
 }
-

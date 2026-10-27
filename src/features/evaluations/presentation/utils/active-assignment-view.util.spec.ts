@@ -5,7 +5,7 @@ import {
   canReassign,
   formatDeadlineDate,
   parseCalendarDate,
-  peerEvaluatorProfileLabel
+  peerEvaluatorProfileLabel,
 } from './active-assignment-view.util';
 
 describe('active-assignment-view.util', () => {

@@ -15,19 +15,29 @@ export class LoadValidationQueuesUseCase {
 
   execute(): Observable<ValidationQueues> {
     return this.repo.getReceptionProtocols().pipe(
-      map(res => {
+      map((res) => {
         const protocols = Array.isArray(res) ? res : [];
         return {
-          pending: protocols.filter(p => {
+          pending: protocols.filter((p) => {
             const core = resolveEstado(p.status);
-            return core && ((core.categoria === 'RECEPCION' && ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) || core.code === 'EN_CONTROL_DOCUMENTAL');
+            return (
+              core &&
+              ((core.categoria === 'RECEPCION' &&
+                ['INICIADO', 'EN_REVISION_SECRETARIA'].includes(core.code)) ||
+                core.code === 'EN_CONTROL_DOCUMENTAL')
+            );
           }),
-          observed: protocols.filter(p => {
+          observed: protocols.filter((p) => {
             const core = resolveEstado(p.status);
-            return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION'].includes(core.code);
-          })
+            return (
+              core &&
+              ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC', 'REQUIERE_SUBSANACION_VERSION'].includes(
+                core.code,
+              )
+            );
+          }),
         };
-      })
+      }),
     );
   }
 }

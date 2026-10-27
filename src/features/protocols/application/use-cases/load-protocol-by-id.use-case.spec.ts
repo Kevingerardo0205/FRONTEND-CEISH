@@ -9,8 +9,13 @@ describe('LoadProtocolByIdUseCase', () => {
   let mockRepo: jasmine.SpyObj<IProtocolRepositoryPort>;
 
   const mockProtocol: ProtocolEntity = {
-    id: '42', title: 'Test Protocol', investigatorId: 'u1', type: 'OBSERVACIONAL' as any,
-    status: 'EN_REVISION_SECRETARIA' as any, documents: [], version: 1
+    id: '42',
+    title: 'Test Protocol',
+    investigatorId: 'u1',
+    type: 'OBSERVACIONAL' as any,
+    status: 'EN_REVISION_SECRETARIA' as any,
+    documents: [],
+    version: 1,
   };
 
   beforeEach(() => {
@@ -20,8 +25,8 @@ describe('LoadProtocolByIdUseCase', () => {
     TestBed.configureTestingModule({
       providers: [
         LoadProtocolByIdUseCase,
-        { provide: IProtocolRepositoryPort, useValue: mockRepo }
-      ]
+        { provide: IProtocolRepositoryPort, useValue: mockRepo },
+      ],
     });
 
     useCase = TestBed.inject(LoadProtocolByIdUseCase);
@@ -32,7 +37,7 @@ describe('LoadProtocolByIdUseCase', () => {
   });
 
   it('should call getById with the correct id', (done) => {
-    useCase.execute('42').subscribe(result => {
+    useCase.execute('42').subscribe((result) => {
       expect(mockRepo.getById).toHaveBeenCalledWith('42');
       expect(result.id).toBe('42');
       expect(result.title).toBe('Test Protocol');

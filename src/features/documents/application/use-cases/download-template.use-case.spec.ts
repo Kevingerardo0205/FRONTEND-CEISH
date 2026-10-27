@@ -10,10 +10,7 @@ describe('DownloadTemplateUseCase', () => {
   beforeEach(() => {
     const rSpy = jasmine.createSpyObj('IDocumentRepositoryPort', ['downloadTemplate']);
     TestBed.configureTestingModule({
-      providers: [
-        DownloadTemplateUseCase,
-        { provide: IDocumentRepositoryPort, useValue: rSpy }
-      ]
+      providers: [DownloadTemplateUseCase, { provide: IDocumentRepositoryPort, useValue: rSpy }],
     });
     useCase = TestBed.inject(DownloadTemplateUseCase);
     repoSpy = TestBed.inject(IDocumentRepositoryPort) as jasmine.SpyObj<IDocumentRepositoryPort>;
@@ -27,7 +24,7 @@ describe('DownloadTemplateUseCase', () => {
         expect(repoSpy.downloadTemplate).toHaveBeenCalledWith('INFORME');
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

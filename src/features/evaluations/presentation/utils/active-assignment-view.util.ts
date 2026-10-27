@@ -1,7 +1,7 @@
 import {
   ActiveAssignment,
   ActiveAssignmentStatus,
-  PeerEvaluatorProfile
+  PeerEvaluatorProfile,
 } from '@domain/entities/peer-evaluation.entity';
 
 export const PENDING_DEADLINE_LABEL = 'Pendiente de convocatoria';
@@ -39,7 +39,8 @@ export function parseCalendarDate(value: string): Date | null {
   if (!match) return null;
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
   const date = new Date(year, month - 1, day);
-  const isSameDay = date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+  const isSameDay =
+    date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
   return isSameDay ? date : null;
 }
 

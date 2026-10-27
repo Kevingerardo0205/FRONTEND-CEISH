@@ -19,15 +19,21 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
     userRoles: [
       { id: 1, code: 'INVESTIGADOR', name: 'Investigador', isExpired: false },
       { id: 2, code: 'EVALUADOR', name: 'Evaluador Par', isExpired: false },
-      { id: 3, code: 'SECRETARIA', name: 'Secretaria Suplente', isExpired: true } // Expirado
+      { id: 3, code: 'SECRETARIA', name: 'Secretaria Suplente', isExpired: true }, // Expirado
     ],
     activo: true,
     emailVerificado: true,
-    permissions: ['RECEPCION_NUEVO', 'EVALUACION_EXPEDITA', 'DASHBOARD_RESUMEN']
+    permissions: ['RECEPCION_NUEVO', 'EVALUACION_EXPEDITA', 'DASHBOARD_RESUMEN'],
   };
 
   beforeEach(() => {
-    mockTokenStore = jasmine.createSpyObj('TokenStoreAdapter', ['getToken', 'getRefreshToken', 'saveToken', 'saveRefreshToken', 'removeTokens']);
+    mockTokenStore = jasmine.createSpyObj('TokenStoreAdapter', [
+      'getToken',
+      'getRefreshToken',
+      'saveToken',
+      'saveRefreshToken',
+      'removeTokens',
+    ]);
     mockAuthRepo = jasmine.createSpyObj('IAuthRepositoryPort', ['getUserById', 'refreshToken']);
 
     mockTokenStore.getToken.and.returnValue('mock-jwt-token');
@@ -37,8 +43,8 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
       providers: [
         AuthFacade,
         { provide: TokenStoreAdapter, useValue: mockTokenStore },
-        { provide: IAuthRepositoryPort, useValue: mockAuthRepo }
-      ]
+        { provide: IAuthRepositoryPort, useValue: mockAuthRepo },
+      ],
     });
 
     facade = TestBed.inject(AuthFacade);
@@ -92,7 +98,7 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
     it('debe otorgar todos los permisos si el usuario tiene ADMIN_ALL', () => {
       const adminUser: User = {
         ...mockMultiRoleUser,
-        permissions: ['ADMIN_ALL']
+        permissions: ['ADMIN_ALL'],
       };
       facade.setUser(adminUser);
 

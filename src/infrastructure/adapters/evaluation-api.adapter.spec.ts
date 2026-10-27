@@ -5,7 +5,7 @@ import { EvaluationApiAdapter } from './evaluation-api.adapter';
 import {
   ActiveAssignmentsResult,
   AssignmentHistoryEntry,
-  ReassignPeerEvaluatorPayload
+  ReassignPeerEvaluatorPayload,
 } from 'src/domain/entities/peer-evaluation.entity';
 import { ACTIVE_ASSIGNMENTS_119_BODY } from '@features/evaluations/testing/reassignment.fixtures';
 
@@ -15,7 +15,7 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()]
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     adapter = TestBed.inject(EvaluationApiAdapter);
     httpMock = TestBed.inject(HttpTestingController);
@@ -26,7 +26,7 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
   describe('getActiveAssignments', () => {
     it('hace GET /api/evaluations/protocol/119/active-assignments y devuelve data del fixture real', () => {
       let result: ActiveAssignmentsResult | undefined;
-      adapter.getActiveAssignments(119).subscribe(r => (result = r));
+      adapter.getActiveAssignments(119).subscribe((r) => (result = r));
 
       const req = httpMock.expectOne('/api/evaluations/protocol/119/active-assignments');
       expect(req.request.method).toBe('GET');
@@ -45,14 +45,16 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
         isAssignedForAnnex10: false,
         assignedAt: '2026-06-03T05:19:06.698Z',
         deadlineDate: '2026-06-23',
-        submittedAt: null
+        submittedAt: null,
       });
     });
 
     it('lanza un error claro si data no trae el arreglo assignments (no devuelve vacío)', () => {
       let error: Error | undefined;
       let next = false;
-      adapter.getActiveAssignments(119).subscribe({ next: () => (next = true), error: e => (error = e) });
+      adapter
+        .getActiveAssignments(119)
+        .subscribe({ next: () => (next = true), error: (e) => (error = e) });
 
       httpMock
         .expectOne('/api/evaluations/protocol/119/active-assignments')
@@ -69,7 +71,7 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
       replacementEvaluatorId: 38,
       replacementEvaluatorProfile: 'METODOLOGICO',
       reason: 'VENCIMIENTO',
-      reasonDescription: 'Plazo reglamentario vencido sin entrega de la evaluación.'
+      reasonDescription: 'Plazo reglamentario vencido sin entrega de la evaluación.',
     };
 
     it('envía a POST /api/evaluations/reassign exactamente el cuerpo real del backend', () => {
@@ -82,7 +84,7 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
         replacementEvaluatorId: 38,
         replacementEvaluatorProfile: 'METODOLOGICO',
         reason: 'VENCIMIENTO',
-        reasonDescription: 'Plazo reglamentario vencido sin entrega de la evaluación.'
+        reasonDescription: 'Plazo reglamentario vencido sin entrega de la evaluación.',
       });
       expect(Object.keys(req.request.body)).not.toContain('protocolId');
       expect(Object.keys(req.request.body)).not.toContain('outgoingAssignmentId');
@@ -91,11 +93,17 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
 
     it('devuelve data opaca {outgoingAssignment, newAssignment, auditHistory} sin interpretarla', () => {
       // Solo las llaves son conocidas; su contenido interno no está verificado.
-      const data = { outgoingAssignment: { id: 6 }, newAssignment: { id: 11 }, auditHistory: { id: 1 } };
+      const data = {
+        outgoingAssignment: { id: 6 },
+        newAssignment: { id: 11 },
+        auditHistory: { id: 1 },
+      };
       let result: unknown;
-      adapter.reassignPeerEvaluator(payload).subscribe(r => (result = r));
+      adapter.reassignPeerEvaluator(payload).subscribe((r) => (result = r));
 
-      httpMock.expectOne('/api/evaluations/reassign').flush({ data, statusCode: 201, message: 'Success' });
+      httpMock
+        .expectOne('/api/evaluations/reassign')
+        .flush({ data, statusCode: 201, message: 'Success' });
 
       expect(result).toEqual(data);
     });
@@ -115,10 +123,10 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
         reasonDescription: 'Plazo reglamentario vencido.',
         executedByUserId: 10,
         executedByUserName: 'Secretaria CEISH',
-        executedAt: '2026-09-28T19:00:00.000Z'
+        executedAt: '2026-09-28T19:00:00.000Z',
       };
       let history: AssignmentHistoryEntry[] = [];
-      adapter.getAssignmentHistory(119).subscribe(h => (history = h));
+      adapter.getAssignmentHistory(119).subscribe((h) => (history = h));
 
       const req = httpMock.expectOne('/api/evaluations/protocol/119/reassignment-history');
       expect(req.request.method).toBe('GET');

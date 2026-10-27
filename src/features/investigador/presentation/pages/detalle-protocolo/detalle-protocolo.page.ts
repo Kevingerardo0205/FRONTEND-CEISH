@@ -29,17 +29,28 @@ interface ProtocoloHistorialEvento {
   selector: 'app-detalle-protocolo',
   standalone: true,
   imports: [
-    CommonModule, RouterModule, MatCardModule, MatButtonModule, 
-    MatIconModule, MatTabsModule, MatDividerModule, MatProgressBarModule,
-    MatTooltipModule, MatProgressSpinnerModule
+    CommonModule,
+    RouterModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTabsModule,
+    MatDividerModule,
+    MatProgressBarModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule,
   ],
   template: `
     <div class="container py-5 animate-fade-in" *ngIf="protocolo">
       <!-- Breadcrumbs -->
       <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a routerLink="/investigador/mis-protocolos">Mis Protocolos</a></li>
-          <li class="breadcrumb-item active">{{ protocolo.codigoCeish || 'Trámite #' + protocolo.id }}</li>
+          <li class="breadcrumb-item">
+            <a routerLink="/investigador/mis-protocolos">Mis Protocolos</a>
+          </li>
+          <li class="breadcrumb-item active">
+            {{ protocolo.codigoCeish || 'Trámite #' + protocolo.id }}
+          </li>
         </ol>
       </nav>
 
@@ -56,7 +67,7 @@ interface ProtocoloHistorialEvento {
               Investigador: <span class="fw-medium">{{ protocolo.investigadorPrincipal }}</span>
               <span class="mx-2">|</span>
               <mat-icon style="font-size: 16px; vertical-align: middle;">calendar_today</mat-icon>
-              Registrado: {{ protocolo.fechaCreacion | date:'longDate' }}
+              Registrado: {{ protocolo.fechaCreacion | date: 'longDate' }}
             </p>
           </div>
           <div class="col-md-4 text-md-end">
@@ -96,12 +107,15 @@ interface ProtocoloHistorialEvento {
                     </div>
                     <div class="col-md-6 mb-3">
                       <label>Patrocinador</label>
-                      <div class="fw-medium text-dark">{{ protocolo.institucionPatrocinadora }}</div>
+                      <div class="fw-medium text-dark">
+                        {{ protocolo.institucionPatrocinadora }}
+                      </div>
                     </div>
                     <div class="col-md-6 mb-3">
                       <label>Cronograma</label>
                       <div class="fw-medium text-dark">
-                        {{ protocolo.fechaInicioEstimada | date:'MMM yyyy' }} - {{ protocolo.fechaFinEstimada | date:'MMM yyyy' }}
+                        {{ protocolo.fechaInicioEstimada | date: 'MMM yyyy' }} -
+                        {{ protocolo.fechaFinEstimada | date: 'MMM yyyy' }}
                       </div>
                     </div>
                   </div>
@@ -115,7 +129,10 @@ interface ProtocoloHistorialEvento {
               </ng-template>
               <div class="p-4">
                 <div class="list-group list-group-flush">
-                  <div *ngFor="let doc of documentos" class="list-group-item d-flex justify-content-between align-items-center py-3 border-bottom">
+                  <div
+                    *ngFor="let doc of documentos"
+                    class="list-group-item d-flex justify-content-between align-items-center py-3 border-bottom"
+                  >
                     <div class="d-flex align-items-center">
                       <div class="file-icon me-3">
                         <mat-icon color="primary">insert_drive_file</mat-icon>
@@ -125,7 +142,11 @@ interface ProtocoloHistorialEvento {
                         <div class="small text-muted">{{ doc.tipo }} • {{ doc.size }}</div>
                       </div>
                     </div>
-                    <button mat-icon-button color="primary" [matTooltip]="'Descargar ' + doc.nombre">
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      [matTooltip]="'Descargar ' + doc.nombre"
+                    >
                       <mat-icon>download</mat-icon>
                     </button>
                   </div>
@@ -144,7 +165,7 @@ interface ProtocoloHistorialEvento {
                     <div class="timeline-content">
                       <div class="d-flex justify-content-between">
                         <h6 class="fw-bold mb-0 text-dark">{{ event.titulo }}</h6>
-                        <span class="small text-muted">{{ event.fecha | date:'short' }}</span>
+                        <span class="small text-muted">{{ event.fecha | date: 'short' }}</span>
                       </div>
                       <p class="small text-muted mb-0">{{ event.descripcion }}</p>
                     </div>
@@ -165,30 +186,57 @@ interface ProtocoloHistorialEvento {
             </div>
             <div class="p-3">
               <div class="d-grid gap-2">
-                <button mat-flat-button class="btn-espoch" 
-                        *ngIf="protocolo.estado === EstadoProtocolo.REQUIERE_CORRECCION || protocolo.estado === EstadoProtocolo.BORRADOR"
-                        [routerLink]="['/investigador/protocolo', protocolo.id, 'editar']">
+                <button
+                  mat-flat-button
+                  class="btn-espoch"
+                  *ngIf="
+                    protocolo.estado === EstadoProtocolo.REQUIERE_CORRECCION ||
+                    protocolo.estado === EstadoProtocolo.BORRADOR
+                  "
+                  [routerLink]="['/investigador/protocolo', protocolo.id, 'editar']"
+                >
                   <mat-icon class="me-2">edit_note</mat-icon> Completar / Editar Datos
                 </button>
-                <button mat-flat-button class="btn-espoch" 
-                        *ngIf="protocolo.estado !== EstadoProtocolo.REQUIERE_CORRECCION && protocolo.estado !== EstadoProtocolo.BORRADOR"
-                        [disabled]="true">
+                <button
+                  mat-flat-button
+                  class="btn-espoch"
+                  *ngIf="
+                    protocolo.estado !== EstadoProtocolo.REQUIERE_CORRECCION &&
+                    protocolo.estado !== EstadoProtocolo.BORRADOR
+                  "
+                  [disabled]="true"
+                >
                   <mat-icon class="me-2">edit_note</mat-icon> Atender Observaciones
                 </button>
-                <button mat-stroked-button color="primary" [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
-                        [routerLink]="['/investigador/enmienda', protocolo.id]">
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
+                  [routerLink]="['/investigador/enmienda', protocolo.id]"
+                >
                   <mat-icon class="me-2">edit_document</mat-icon> Solicitar Enmienda
                 </button>
-                <button mat-stroked-button color="warn" [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
-                        [routerLink]="['/investigador/evento-adverso', protocolo.id]">
+                <button
+                  mat-stroked-button
+                  color="warn"
+                  [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
+                  [routerLink]="['/investigador/evento-adverso', protocolo.id]"
+                >
                   <mat-icon class="me-2">warning</mat-icon> Reportar Evento Grave
                 </button>
-                <button mat-stroked-button color="accent" [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
-                        [routerLink]="['/investigador/renovacion', protocolo.id]">
+                <button
+                  mat-stroked-button
+                  color="accent"
+                  [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
+                  [routerLink]="['/investigador/renovacion', protocolo.id]"
+                >
                   <mat-icon class="me-2">update</mat-icon> Renovar Aprobación
                 </button>
               </div>
-              <div *ngIf="protocolo.estado === EstadoProtocolo.EN_REVISION_SECRETARIA" class="alert alert-warning mt-3 mb-0 small">
+              <div
+                *ngIf="protocolo.estado === EstadoProtocolo.EN_REVISION_SECRETARIA"
+                class="alert alert-warning mt-3 mb-0 small"
+              >
                 <mat-icon style="font-size: 16px; vertical-align: middle;">lock</mat-icon>
                 La carga de archivos está bloqueada mientras Secretaría revisa su protocolo.
               </div>
@@ -196,7 +244,10 @@ interface ProtocoloHistorialEvento {
           </mat-card>
 
           <!-- Seguimiento Automático (HU-007) -->
-          <mat-card class="border-0 shadow-soft rounded-4 p-4" *ngIf="protocolo.estado === EstadoProtocolo.APROBADO_DEFINITIVO">
+          <mat-card
+            class="border-0 shadow-soft rounded-4 p-4"
+            *ngIf="protocolo.estado === EstadoProtocolo.APROBADO_DEFINITIVO"
+          >
             <h5 class="fw-bold mb-3 d-flex align-items-center">
               <mat-icon class="me-2 text-primary">notifications_active</mat-icon>
               Próximos Hitos
@@ -228,64 +279,137 @@ interface ProtocoloHistorialEvento {
       <p class="text-muted">Cargando detalles del protocolo...</p>
     </div>
   `,
-  styles: [`
-    .header-banner { background: white; }
-    .status-chip.large { padding: 10px 20px; font-size: 0.9rem; border-radius: 12px; }
-    
-    label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; display: block; margin-bottom: 4px; }
-    
-    .custom-tabs { 
-      ::ng-deep .mat-mdc-tab-body-wrapper { padding: 0; }
-      ::ng-deep .mat-mdc-tab-header { border-bottom: 1px solid #e2e8f0; }
-    }
+  styles: [
+    `
+      .header-banner {
+        background: white;
+      }
+      .status-chip.large {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        border-radius: 12px;
+      }
 
-    .timeline { padding: 10px 0; }
-    .timeline-item { position: relative; padding-left: 30px; margin-bottom: 25px; }
-    .timeline-marker { 
-      position: absolute; left: 0; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #cbd5e1;
-      &.success { background: #22c55e; }
-      &.info { background: #3b82f6; }
-      &.warning { background: #f59e0b; }
-    }
-    .timeline-item:not(:last-child)::after {
-      content: ''; position: absolute; left: 5px; top: 12px; width: 2px; height: calc(100% + 13px); background: #e2e8f0;
-    }
+      label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #94a3b8;
+        display: block;
+        margin-bottom: 4px;
+      }
 
-    .milestone-item { border-left: 3px solid #e2e8f0; padding-left: 1rem; margin-bottom: 1.5rem; }
-    .milestone-item.pending { border-left-color: #3b82f6; }
-    .milestone-item.future { border-left-color: #94a3b8; opacity: 0.7; }
-    .m-date { font-size: 0.75rem; font-weight: bold; color: #3b82f6; }
-    .m-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
-    .m-status { font-size: 0.75rem; color: #64748b; }
-  `]
+      .custom-tabs {
+        ::ng-deep .mat-mdc-tab-body-wrapper {
+          padding: 0;
+        }
+        ::ng-deep .mat-mdc-tab-header {
+          border-bottom: 1px solid #e2e8f0;
+        }
+      }
+
+      .timeline {
+        padding: 10px 0;
+      }
+      .timeline-item {
+        position: relative;
+        padding-left: 30px;
+        margin-bottom: 25px;
+      }
+      .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        &.success {
+          background: #22c55e;
+        }
+        &.info {
+          background: #3b82f6;
+        }
+        &.warning {
+          background: #f59e0b;
+        }
+      }
+      .timeline-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 12px;
+        width: 2px;
+        height: calc(100% + 13px);
+        background: #e2e8f0;
+      }
+
+      .milestone-item {
+        border-left: 3px solid #e2e8f0;
+        padding-left: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      .milestone-item.pending {
+        border-left-color: #3b82f6;
+      }
+      .milestone-item.future {
+        border-left-color: #94a3b8;
+        opacity: 0.7;
+      }
+      .m-date {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #3b82f6;
+      }
+      .m-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #1e293b;
+      }
+      .m-status {
+        font-size: 0.75rem;
+        color: #64748b;
+      }
+    `,
+  ],
 })
 export class DetalleProtocoloPage implements OnInit {
   private route = inject(ActivatedRoute);
   private protocoloService = inject(ProtocoloService);
-  
+
   EstadoProtocolo = EstadoProtocolo;
   protocolo: ProtocoloDetalle | null = null;
   documentos: ProtocoloDocumentoItem[] = [
     { nombre: 'Anexo 1 - Solicitud.pdf', tipo: 'Anexo 1', size: '1.2 MB' },
     { nombre: 'Protocolo Tecnico v1.pdf', tipo: 'Técnico', size: '4.5 MB' },
-    { nombre: 'CV Investigador.pdf', tipo: 'Soporte', size: '800 KB' }
+    { nombre: 'CV Investigador.pdf', tipo: 'Soporte', size: '800 KB' },
   ];
 
   historial: ProtocoloHistorialEvento[] = [
-    { titulo: 'Protocolo Registrado', descripcion: 'Envío inicial del investigador.', fecha: new Date(), tipo: 'success' },
-    { titulo: 'En Revisión Documental', descripcion: 'Secretaría técnica validando anexos.', fecha: new Date(), tipo: 'info' }
+    {
+      titulo: 'Protocolo Registrado',
+      descripcion: 'Envío inicial del investigador.',
+      fecha: new Date(),
+      tipo: 'success',
+    },
+    {
+      titulo: 'En Revisión Documental',
+      descripcion: 'Secretaría técnica validando anexos.',
+      fecha: new Date(),
+      tipo: 'info',
+    },
   ];
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.protocoloService.obtenerProtocolo(id).subscribe(data => {
+      this.protocoloService.obtenerProtocolo(id).subscribe((data) => {
         this.protocolo = data;
         this.historial.unshift({
           titulo: 'Estado Actual: ' + this.formatStatus(data.estado),
           descripcion: 'Última actualización por el sistema.',
           fecha: new Date(),
-          tipo: 'info'
+          tipo: 'info',
         });
       });
     }
@@ -298,23 +422,29 @@ export class DetalleProtocoloPage implements OnInit {
 
   getStatusClass(estado: string): string {
     switch (estado) {
-      case EstadoProtocolo.APROBADO_DEFINITIVO: return 'approved';
-      case EstadoProtocolo.EN_REVISION_DOCUMENTAL: 
+      case EstadoProtocolo.APROBADO_DEFINITIVO:
+        return 'approved';
+      case EstadoProtocolo.EN_REVISION_DOCUMENTAL:
       case EstadoProtocolo.EN_REVISION_SECRETARIA:
         return 'review';
-      case EstadoProtocolo.REQUIERE_CORRECCION: return 'correction';
-      default: return 'pending';
+      case EstadoProtocolo.REQUIERE_CORRECCION:
+        return 'correction';
+      default:
+        return 'pending';
     }
   }
 
   getStatusIcon(estado: string): string {
     switch (estado) {
-      case EstadoProtocolo.APROBADO_DEFINITIVO: return 'verified';
+      case EstadoProtocolo.APROBADO_DEFINITIVO:
+        return 'verified';
       case EstadoProtocolo.EN_REVISION_DOCUMENTAL:
       case EstadoProtocolo.EN_REVISION_SECRETARIA:
         return 'search';
-      case EstadoProtocolo.REQUIERE_CORRECCION: return 'edit_note';
-      default: return 'schedule';
+      case EstadoProtocolo.REQUIERE_CORRECCION:
+        return 'edit_note';
+      default:
+        return 'schedule';
     }
   }
 }

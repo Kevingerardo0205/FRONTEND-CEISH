@@ -8,17 +8,22 @@ describe('DownloadEvaluationDocumentUseCase', () => {
   let repoSpy: jasmine.SpyObj<IEvaluationRepositoryPort>;
 
   beforeEach(() => {
-    const rSpy = jasmine.createSpyObj('IEvaluationRepositoryPort', ['getDocumentDownloadUrl', 'getDocxDownloadUrl']);
+    const rSpy = jasmine.createSpyObj('IEvaluationRepositoryPort', [
+      'getDocumentDownloadUrl',
+      'getDocxDownloadUrl',
+    ]);
 
     TestBed.configureTestingModule({
       providers: [
         DownloadEvaluationDocumentUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: rSpy }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: rSpy },
+      ],
     });
 
     useCase = TestBed.inject(DownloadEvaluationDocumentUseCase);
-    repoSpy = TestBed.inject(IEvaluationRepositoryPort) as jasmine.SpyObj<IEvaluationRepositoryPort>;
+    repoSpy = TestBed.inject(
+      IEvaluationRepositoryPort,
+    ) as jasmine.SpyObj<IEvaluationRepositoryPort>;
   });
 
   it('debe descargar PDF de evaluación', (done) => {
@@ -30,7 +35,7 @@ describe('DownloadEvaluationDocumentUseCase', () => {
         expect(repoSpy.getDocumentDownloadUrl).toHaveBeenCalledWith('eval-1');
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 
@@ -43,7 +48,7 @@ describe('DownloadEvaluationDocumentUseCase', () => {
         expect(repoSpy.getDocxDownloadUrl).toHaveBeenCalledWith('eval-1');
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

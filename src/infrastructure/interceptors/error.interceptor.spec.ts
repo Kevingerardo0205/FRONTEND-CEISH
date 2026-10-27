@@ -8,7 +8,11 @@ import { Router } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { of } from 'rxjs';
 import { SessionExpiredDialogComponent } from '@shared/components/session-expired-dialog/session-expired-dialog.component';
-import { ERROR_400_ARRAY_BODY, ERROR_400_BODY, ERROR_404_BODY } from '@features/evaluations/testing/reassignment.fixtures';
+import {
+  ERROR_400_ARRAY_BODY,
+  ERROR_400_BODY,
+  ERROR_404_BODY,
+} from '@features/evaluations/testing/reassignment.fixtures';
 
 describe('ErrorInterceptor', () => {
   let httpMock: HttpTestingController;
@@ -23,7 +27,7 @@ describe('ErrorInterceptor', () => {
     mockDialog = jasmine.createSpyObj('MatDialog', ['open', 'closeAll']);
     Object.defineProperty(mockDialog, 'openDialogs', { get: () => [] });
     mockDialog.open.and.returnValue({
-      afterClosed: () => of(true)
+      afterClosed: () => of(true),
     } as any);
 
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
@@ -36,13 +40,13 @@ describe('ErrorInterceptor', () => {
         {
           provide: HTTP_INTERCEPTORS,
           useClass: ErrorInterceptor,
-          multi: true
+          multi: true,
         },
         { provide: MatSnackBar, useValue: mockSnackBar },
         { provide: MatDialog, useValue: mockDialog },
         { provide: Router, useValue: mockRouter },
-        { provide: AuthFacade, useValue: mockAuthFacade }
-      ]
+        { provide: AuthFacade, useValue: mockAuthFacade },
+      ],
     });
 
     httpMock = TestBed.inject(HttpTestingController);
@@ -59,7 +63,7 @@ describe('ErrorInterceptor', () => {
       error: (error) => {
         expect(error).toBeTruthy();
         done();
-      }
+      },
     });
 
     const req1 = httpMock.expectOne('/api/protocols');
@@ -82,7 +86,7 @@ describe('ErrorInterceptor', () => {
       error: (error) => {
         expect(error).toBeTruthy();
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/protocols');
@@ -96,10 +100,10 @@ describe('ErrorInterceptor', () => {
         expect(mockSnackBar.open).toHaveBeenCalledWith(
           'El servidor del CEISH está experimentando problemas. Por favor, inténtelo de nuevo más tarde.',
           'Cerrar',
-          { duration: 5000 }
+          { duration: 5000 },
         );
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/protocols');
@@ -113,7 +117,7 @@ describe('ErrorInterceptor', () => {
         expect(error.type).toBe('CONCURRENCY_ERROR');
         expect(error.status).toBe(409);
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/protocols');
@@ -121,20 +125,34 @@ describe('ErrorInterceptor', () => {
   });
 
   describe('mensaje anidado en body.error.message (cuerpos reales del backend)', () => {
-    function expectMessage(body: object, status: number, statusText: string, expected: string, done: DoneFn): void {
+    function expectMessage(
+      body: object,
+      status: number,
+      statusText: string,
+      expected: string,
+      done: DoneFn,
+    ): void {
       httpClient.get('/api/evaluations/protocol/0/active-assignments').subscribe({
         next: () => fail('No debería tener éxito'),
         error: (error) => {
           expect(error instanceof Error).toBeTrue();
           expect(error.message).toBe(expected);
           done();
-        }
+        },
       });
-      httpMock.expectOne('/api/evaluations/protocol/0/active-assignments').flush(body, { status, statusText });
+      httpMock
+        .expectOne('/api/evaluations/protocol/0/active-assignments')
+        .flush(body, { status, statusText });
     }
 
     it('400 real: "Validation failed (numeric string is expected)"', (done) => {
-      expectMessage(ERROR_400_BODY, 400, 'Bad Request', 'Validation failed (numeric string is expected)', done);
+      expectMessage(
+        ERROR_400_BODY,
+        400,
+        'Bad Request',
+        'Validation failed (numeric string is expected)',
+        done,
+      );
     });
 
     it('404 real: "El protocolo con ID 0 no existe."', (done) => {
@@ -143,9 +161,11 @@ describe('ErrorInterceptor', () => {
 
     it('400 con message como arreglo: une los mensajes con "; "', (done) => {
       expectMessage(
-        ERROR_400_ARRAY_BODY, 400, 'Bad Request',
+        ERROR_400_ARRAY_BODY,
+        400,
+        'Bad Request',
         'replacementEvaluatorId must be a number; reason must be one of the following values',
-        done
+        done,
       );
     });
 
@@ -159,13 +179,16 @@ describe('ErrorInterceptor', () => {
       next: () => fail('No debería tener éxito'),
       error: (error) => {
         expect(mockAuthFacade.logout).toHaveBeenCalled();
-        expect(mockDialog.open).toHaveBeenCalledWith(SessionExpiredDialogComponent, jasmine.objectContaining({
-          disableClose: true,
-          width: '460px'
-        }));
+        expect(mockDialog.open).toHaveBeenCalledWith(
+          SessionExpiredDialogComponent,
+          jasmine.objectContaining({
+            disableClose: true,
+            width: '460px',
+          }),
+        );
         expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login']);
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/auth/refresh');

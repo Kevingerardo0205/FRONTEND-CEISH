@@ -13,7 +13,7 @@ import { TarjetaEvaluadorComponent } from '../../components/tarjeta-evaluador/ta
 import {
   ModalReasignacionComponent,
   ModalReasignacionData,
-  REASSIGN_SUCCESS_MESSAGE
+  REASSIGN_SUCCESS_MESSAGE,
 } from '../../components/modal-reasignacion/modal-reasignacion.component';
 import { TablaHistorialReasignacionesComponent } from '../../components/tabla-historial-reasignaciones/tabla-historial-reasignaciones.component';
 import { LoadAssignmentHistoryUseCase } from '../../../application/load-assignment-history.use-case';
@@ -21,7 +21,7 @@ import { LoadActiveAssignmentsUseCase } from '../../../application/load-active-a
 import {
   ActiveAssignment,
   ActiveAssignmentsResult,
-  AssignmentHistoryEntry
+  AssignmentHistoryEntry,
 } from '@domain/entities/peer-evaluation.entity';
 import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { canReassign } from '../../utils/active-assignment-view.util';
@@ -31,7 +31,7 @@ type LoadOutcome<T> = { ok: true; value: T } | { ok: false; error: unknown };
 function settle<T>(source$: Observable<T>): Observable<LoadOutcome<T>> {
   return source$.pipe(
     map((value): LoadOutcome<T> => ({ ok: true, value })),
-    catchError((error: unknown) => of<LoadOutcome<T>>({ ok: false, error }))
+    catchError((error: unknown) => of<LoadOutcome<T>>({ ok: false, error })),
   );
 }
 
@@ -53,10 +53,10 @@ export function parseProtocolId(raw: string | null): number | null {
     MatProgressBarModule,
     MatSnackBarModule,
     TarjetaEvaluadorComponent,
-    TablaHistorialReasignacionesComponent
+    TablaHistorialReasignacionesComponent,
   ],
   templateUrl: './reassignment.page.html',
-  styleUrls: ['./reassignment.page.scss']
+  styleUrls: ['./reassignment.page.scss'],
 })
 export class ReassignmentPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -79,11 +79,12 @@ export class ReassignmentPage implements OnInit {
   readonly canReassign = canReassign;
 
   ngOnInit(): void {
-    const raw = this.route.snapshot.paramMap.get('protocolId') ?? this.route.snapshot.paramMap.get('id');
+    const raw =
+      this.route.snapshot.paramMap.get('protocolId') ?? this.route.snapshot.paramMap.get('id');
     const id = parseProtocolId(raw);
     if (id === null) {
       this.errorMessage.set(
-        `El identificador de protocolo "${raw ?? ''}" no es válido: debe ser un número entero positivo.`
+        `El identificador de protocolo "${raw ?? ''}" no es válido: debe ser un número entero positivo.`,
       );
       return;
     }
@@ -101,14 +102,17 @@ export class ReassignmentPage implements OnInit {
 
     forkJoin({
       assignments: settle(this.loadActiveAssignmentsUseCase.execute(id)),
-      history: settle(this.loadHistoryUseCase.execute(id))
+      history: settle(this.loadHistoryUseCase.execute(id)),
     }).subscribe(({ assignments, history }) => {
       if (assignments.ok) {
         this.protocolInfo.set(assignments.value);
       } else {
         this.protocolInfo.set(null);
         this.errorMessage.set(
-          extractApiErrorMessage(assignments.error, 'No se pudieron cargar las asignaciones activas del protocolo.')
+          extractApiErrorMessage(
+            assignments.error,
+            'No se pudieron cargar las asignaciones activas del protocolo.',
+          ),
         );
       }
 
@@ -123,7 +127,7 @@ export class ReassignmentPage implements OnInit {
       if (assignments.ok && !history.ok) {
         this.historyWarning.set(
           'No se pudo cargar el historial de reasignaciones: ' +
-            extractApiErrorMessage(history.error, 'error desconocido.')
+            extractApiErrorMessage(history.error, 'error desconocido.'),
         );
       }
 
@@ -134,14 +138,14 @@ export class ReassignmentPage implements OnInit {
   openReassignModal(assignment: ActiveAssignment): void {
     const modalData: ModalReasignacionData = {
       outgoingAssignment: assignment,
-      activeEvaluatorIds: this.activeAssignments().map(a => a.evaluatorId)
+      activeEvaluatorIds: this.activeAssignments().map((a) => a.evaluatorId),
     };
 
     const dialogRef = this.dialog.open(ModalReasignacionComponent, {
       width: '640px',
       maxWidth: '95vw',
       data: modalData,
-      disableClose: true
+      disableClose: true,
     });
 
     dialogRef.afterClosed().subscribe((reassigned: boolean | null) => {
@@ -149,7 +153,7 @@ export class ReassignmentPage implements OnInit {
         this.successMessage.set(REASSIGN_SUCCESS_MESSAGE);
         this.snack.open(REASSIGN_SUCCESS_MESSAGE, 'Cerrar', {
           duration: 4000,
-          panelClass: ['snackbar-success']
+          panelClass: ['snackbar-success'],
         });
         this.loadData();
       }

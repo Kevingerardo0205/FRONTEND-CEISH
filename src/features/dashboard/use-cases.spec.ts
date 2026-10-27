@@ -10,7 +10,7 @@ import {
   GetRolesUseCase,
   UpdateUserRolesUseCase,
   ExtendTemporaryRoleUseCase,
-  SuspendTemporaryRoleUseCase
+  SuspendTemporaryRoleUseCase,
 } from './use-cases';
 
 describe('Dashboard User Admin Use Cases', () => {
@@ -25,7 +25,7 @@ describe('Dashboard User Admin Use Cases', () => {
       rol: 'SECRETARIA',
       roles: ['SECRETARIA', 'EVALUADOR'],
       perfil: 'Secretaria Ejecutiva',
-      activo: true
+      activo: true,
     },
     {
       id: '2',
@@ -35,13 +35,13 @@ describe('Dashboard User Admin Use Cases', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR'],
       perfil: 'Docente Investigador',
-      activo: true
-    }
+      activo: true,
+    },
   ];
 
   const mockRoles: Role[] = [
     { id: 1, name: 'ADMIN_TI', description: 'Administrador TI' },
-    { id: 2, name: 'SECRETARIA', description: 'Secretaría' }
+    { id: 2, name: 'SECRETARIA', description: 'Secretaría' },
   ];
 
   beforeEach(() => {
@@ -53,7 +53,7 @@ describe('Dashboard User Admin Use Cases', () => {
       'getRoles',
       'updateRoles',
       'extendTemporaryRole',
-      'suspendTemporaryRole'
+      'suspendTemporaryRole',
     ]);
 
     TestBed.configureTestingModule({
@@ -66,8 +66,8 @@ describe('Dashboard User Admin Use Cases', () => {
         GetRolesUseCase,
         UpdateUserRolesUseCase,
         ExtendTemporaryRoleUseCase,
-        SuspendTemporaryRoleUseCase
-      ]
+        SuspendTemporaryRoleUseCase,
+      ],
     });
   });
 
@@ -93,7 +93,7 @@ describe('Dashboard User Admin Use Cases', () => {
         rol: 'ADMIN_TI',
         roles: ['ADMIN_TI'],
         perfil: 'Administrador de Sistemas',
-        activo: true
+        activo: true,
       };
       mockRepository.create.and.returnValue(of({ ...newUser, id: '10' }));
       const useCase = TestBed.inject(RegisterUserAdminUseCase);
@@ -110,7 +110,7 @@ describe('Dashboard User Admin Use Cases', () => {
     it('debe actualizar los datos del usuario incluyendo multi-roles', (done) => {
       const updateData: Partial<UserAdmin> = {
         nombre: 'Dra. María López M.',
-        roles: ['SECRETARIA', 'PRESIDENTE']
+        roles: ['SECRETARIA', 'PRESIDENTE'],
       };
       mockRepository.update.and.returnValue(of({ ...mockUsers[0], ...updateData }));
       const useCase = TestBed.inject(UpdateUserAdminUseCase);
@@ -159,8 +159,8 @@ describe('Dashboard User Admin Use Cases', () => {
           roleCode: 'SECRETARIA',
           validFrom: '2026-09-01T00:00:00.000Z',
           validUntil: '2026-09-15T23:59:59.000Z',
-          reason: 'Subrogación por vacaciones'
-        }
+          reason: 'Subrogación por vacaciones',
+        },
       ];
 
       useCase.execute('1', rolesPayload).subscribe(() => {
@@ -176,7 +176,12 @@ describe('Dashboard User Admin Use Cases', () => {
       const useCase = TestBed.inject(ExtendTemporaryRoleUseCase);
 
       useCase.execute('43', 'SECRETARIA', '2026-10-15', 'Prórroga aprobada').subscribe(() => {
-        expect(mockRepository.extendTemporaryRole).toHaveBeenCalledWith('43', 'SECRETARIA', '2026-10-15', 'Prórroga aprobada');
+        expect(mockRepository.extendTemporaryRole).toHaveBeenCalledWith(
+          '43',
+          'SECRETARIA',
+          '2026-10-15',
+          'Prórroga aprobada',
+        );
         done();
       });
     });
@@ -188,7 +193,11 @@ describe('Dashboard User Admin Use Cases', () => {
       const useCase = TestBed.inject(SuspendTemporaryRoleUseCase);
 
       useCase.execute('43', 'SECRETARIA', 'Retorno titular').subscribe(() => {
-        expect(mockRepository.suspendTemporaryRole).toHaveBeenCalledWith('43', 'SECRETARIA', 'Retorno titular');
+        expect(mockRepository.suspendTemporaryRole).toHaveBeenCalledWith(
+          '43',
+          'SECRETARIA',
+          'Retorno titular',
+        );
         done();
       });
     });
