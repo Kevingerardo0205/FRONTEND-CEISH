@@ -1,0 +1,14 @@
+<div class="filter-bar" role="search">
+  <label class="visually-hidden" [for]="searchId">{{ searchLabel() }}</label>
+  <input
+    type="search"
+    class="filter-bar__search"
+    [id]="searchId"
+    [placeholder]="placeholder()"
+    [value]="state().search"
+    (input)="onSearchInput($event)"
+  />
+  <div class="filter-bar__filters">
+    <ng-content />
+  </div>
+</div>
