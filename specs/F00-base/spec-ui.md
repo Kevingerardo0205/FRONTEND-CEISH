@@ -29,6 +29,11 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 
 **Varios roles a la vez:** cuando la persona tiene más de un rol, el avatar muestra un **selector de rol activo**. El menú y las rutas corresponden al rol elegido. → *Propuesta; confirmar.*
 
+**Selector de rol activo:**
+- Solo aparece si la persona tiene más de un rol.
+- Al cambiar de rol, se recarga el menú y se navega al inicio de ese rol.
+- El rol inicial sigue la regla de `plan.md` §2 (application — rol activo): el último elegido si sigue siendo válido; si no, el de mayor prioridad (SECRETARIA > PRESIDENTE > EVALUADOR > INVESTIGADOR).
+
 ## 3. Tokens de diseño
 
 | Token | Valor | Uso |
@@ -110,8 +115,10 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 5. `UndoToast`: al pulsar Deshacer se llama a la acción inversa y el aviso desaparece.
 6. `DataTable` muestra los estados vacío, cargando y error sin romper el diseño.
 7. Ningún archivo de `presentation` importa `HttpClient` ni un adapter (lo comprueba una regla de lint o una prueba de arquitectura).
+8. Selector de rol: un usuario con un solo rol no ve el selector. Un usuario con SECRETARIA y EVALUADOR, sin elección guardada, entra como SECRETARIA; si antes eligió EVALUADOR, entra como EVALUADOR. Al cambiar a SECRETARIA ve el menú de Secretaría y queda en `/pendientes`.
 
 ## 10. Pendientes
 
 - Selector de rol activo para usuarios con varios roles: **confirmar**.
+- **ADMIN_TI y PRESIDENTA:** ¿ADMIN_TI sigue existiendo o lo absorbe SECRETARIA? ¿PRESIDENTA es alias de PRESIDENTE? Ver spec-001 v3.4.1, HU-001 (roles fijos). Mientras no se confirme, un usuario que solo tenga esos roles no tiene rol activo.
 - Menús de Presidencia, Evaluador e Investigador: se definen en sus secciones.

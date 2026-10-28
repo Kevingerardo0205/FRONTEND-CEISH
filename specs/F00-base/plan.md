@@ -27,13 +27,34 @@ src/
 | Archivo | Contenido |
 |---|---|
 | `src/domain/value-objects/stage.vo.ts` | Las 6 etapas: Recepción, Asignación, Evaluación (incluye riesgo), Resolución, Seguimiento, Renovación |
-| `src/domain/value-objects/role.vo.ts` | Roles fijos: `SECRETARIA`, `PRESIDENTE`, `EVALUADOR`, `INVESTIGADOR` |
-| `src/domain/entities/menu-item.entity.ts` | `{ id, label, route, roles: Role[], badge?: 'pendientes' }` |
+| `src/domain/value-objects/role.vo.ts` | 4 roles fijos: `SECRETARIA`, `PRESIDENTE`, `EVALUADOR`, `INVESTIGADOR`. Sin `ADMIN_TI` ni `PRESIDENTA` (pendiente HU-001) |
+| `src/domain/entities/menu-item.entity.ts` | `{ id, label, route, roles: RoleCode[], badge?: 'pendientes' }` |
+| `src/domain/ports/menu-config.port.ts` | Port de la configuración del menú (clase abstracta) |
+| `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles$`). Clase abstracta para no importar `@angular` en domain |
 | `src/features/shell/application/` | `get-menu-for-role.use-case.ts`, `active-role.facade.ts` |
-| `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas); `PendingCountPort` con adapter mock + adapter HTTP |
-| `src/features/shell/presentation/app-shell/` | `AppShell` (menú lateral + barra superior + selector de rol) |
-| `src/shared/ui/` | `stage-bar`, `page-header`, `button-group`, `tabs`, `filter-bar`, `data-table`, `status-chip`, `undo-toast`, `dialog`, `inline-panel`, `states` |
+| `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session-roles.adapter.ts` (`AuthSessionRolesAdapter`, implementa `SessionRolesPort` con `AuthFacade`) |
+| `src/shared/ui/` | `stage-bar`, `page-header`, `button-group`, `tabs`, `filter-bar`, `data-table`, `status-chip`, `states` |
 | `src/styles/_tokens.scss` | Variables CSS de la §3 de spec-ui |
+
+Pendientes de crear: `undo-toast`, `dialog` e `inline-panel` en `src/shared/ui/` (T11); `PendingCountPort` con adapter mock + adapter HTTP (T12); `src/features/shell/presentation/app-shell/` (T13).
+
+### application — rol activo
+
+- Rol por defecto: el último guardado en localStorage (lectura y escritura dentro de try/catch), si sigue siendo válido para el usuario.
+- Si no, el de mayor prioridad: `SECRETARIA` > `PRESIDENTE` > `EVALUADOR` > `INVESTIGADOR`.
+- Los códigos que el VO no reconoce (`ADMIN_TI`, `PRESIDENTA`…) se ignoran sin lanzar error.
+
+### presentation — notas de los componentes
+
+- `FilterBar` recuerda los filtros por `viewKey` en memoria y no emite `changed` al cambiar de vista: la pantalla lee `state()`. Los filtros se pierden al recargar.
+- `StatusTone` vive en `shared/ui/status-chip`, porque es de presentación y no de dominio.
+- `DataTable` muestra los estados con esta prioridad: cargando > error > vacío > datos.
+- `PageHeader` usa el input `heading` y no `title`.
+
+### Excepciones conocidas a las reglas de capas
+
+- `AuthSessionRolesAdapter` importa `AuthFacade` de `features/auth` (regla 5 del README). Está aislado en infrastructure y se corrige cuando `AuthFacade` pase a `core`.
+- T15 debe permitir solo esta excepción.
 
 ## 3. Cambios clave
 
@@ -72,7 +93,7 @@ Se quita del menú y de las rutas en F00. El código se borra en F08.
 | presentation | 70 % de los flujos críticos | `StageBar`, `AppShell`, `UndoToast`, `DataTable` (vacío, cargando, error) |
 | arquitectura | — | Prueba o regla de capas: `presentation/**` sin `HttpClient` ni `infrastructure/**`; `domain/**` sin `@angular/*` |
 
-Línea base: **447 pruebas**.
+Línea base: **541 pruebas**.
 
 ## 7. Calidad
 
@@ -81,6 +102,7 @@ Línea base: **447 pruebas**.
 ## 8. Pendientes
 
 - **ADMIN_TI y PRESIDENTA** aparecen en los guards además de los 4 roles. ¿ADMIN_TI sigue existiendo o lo absorbe SECRETARIA? ¿PRESIDENTA es alias de PRESIDENTE? Confirmar y llevarlo a HU-001 del backend.
-- **Selector de rol activo** para quien tiene varios roles.
+- **Consecuencia:** un usuario que solo tenga `ADMIN_TI` o `PRESIDENTA` no tiene rol activo. Esto bloquea T07 y T13.
+- **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Propuesta por confirmar.
 
 **Decisión tomada:** el armazón va en `features/shell`.
