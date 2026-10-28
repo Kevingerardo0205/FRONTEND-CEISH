@@ -111,6 +111,10 @@ Línea base: **579 pruebas**.
 - **ADMIN, ADMIN_TI y PRESIDENTA** aparecen en los guards además de los 4 roles. ¿ADMIN y ADMIN_TI siguen existiendo o los absorbe SECRETARIA? ¿PRESIDENTA es alias de PRESIDENTE? Hoy, por ejemplo, `audit/logs` y `notifications/templates` son solo para `ADMIN`. Confirmar y llevarlo a HU-001 del backend.
 - **Consecuencia:** un usuario que solo tenga `ADMIN`, `ADMIN_TI` o `PRESIDENTA` no tiene rol activo. Esto bloquea T07 y T13.
 - **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Propuesta por confirmar.
+- **Para F01: revisar contra el canvas** (decisiones de texto y color, no de negocio; en `EstadoUIMap` de `shared/utils/protocol-ui.util.ts`):
+  - `ARCHIVADO_VENCIMIENTO` usa `'pending'` (ámbar); ¿debería ser gris?
+  - `DISCREPANCIA_RIESGO` usa `'rejected'` (rojo).
+  - El texto de `COMPLETO` es "Validado / Pendiente Firma".
 
 **Decisión tomada:** el armazón va en `features/shell`.
 
@@ -135,8 +139,8 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 | `Dialog` | 13 diálogos propios con `MatDialog` (`assign-peers-modal`, `modal-reasignacion`, `extend/suspend-role-dialog`, `otp-verification`…) | (a) | Son formularios, no confirmaciones. Se revisan al reemplazar cada pantalla |
 | `UndoToast` | `infrastructure/services/notification.service.ts` (`notify()`) | (b) | Ya reemplazado por dentro en T11 (`notify()` → `UndoToastService`) |
 | `UndoToast` | `MatSnackBar` directo: 39 archivos, 167 llamadas a `snackBar.open(` | (b) | Se retira al reemplazar cada pantalla (F01–F08); las que sobrevivan, T14c (propuesta) |
-| `StatusChip` | `shared/utils/protocol-ui.util.ts` (`ProtocolUI.label/class`, `EstadoUIMap`) + pipes `protocolStatusLabel` / `protocolStatusClass` | **(c)** | `StatusChip` debe tomar el texto de `ProtocolUI.label` y el tono de `ProtocolUI.class` (pending→ámbar, review→azul, approved→verde, rejected→rojo) en vez de un mapeo nuevo. Corrección en prompt aparte (T14b, propuesta) |
-| `StatusChip` | `.status-badge` global en `src/styles/styles.scss` (hex sueltos) y clases locales `.status-chip`, `.badge-status` | (b) | Retirar `.status-badge` cuando no tenga usos (T14b, propuesta) |
+| `StatusChip` | `shared/utils/protocol-ui.util.ts` (`ProtocolUI.label/class`, `EstadoUIMap`) + pipes `protocolStatusLabel` / `protocolStatusClass` | (a) | Corregido el 28/10: la auditoría anterior lo clasificó como (c), pero el Paso 0 de T14b confirmó que `StatusChip` solo recibe `label` y `tone` y que ningún código de producción mapea estados. **Regla de uso (T14b):** texto: `value: (r) => ProtocolUI.label(r.estado)`; tono: `protocolStatusTone(ProtocolUI.class(r.estado))`, con pending→ámbar, review→azul, approved→verde, rejected→rojo y cualquier otro valor→gris. La función se crea en F01, en la primera tarea que tenga una columna de estado real, con sus pruebas y mutaciones. No se escribe ningún mapeo estado→texto ni estado→tono fuera de `ProtocolUI` |
+| `StatusChip` | `.status-badge` global en `src/styles/styles.scss` (hex sueltos) y clases locales `.status-chip`, `.badge-status` | (b) | Se retiran sección por sección, al reemplazar cada pantalla (§10) |
 | `StageBar` | `protocols/presentation/pages/protocol-workspace/protocol-workspace.component.ts` (`progress-scaffold`, 4 pasos con `isStepActive`/`isStepCompleted`) | (b) | Reemplazar en el espacio del protocolo (F02, propuesta) cuando el backend exponga `etapa` |
 | `StageBar` | Timelines de historial: `detalle-protocolo.page.ts`, `audit/protocol-trail.page.ts`; `mat-stepper` en formularios (`register`, `nuevo-protocolo`, `protocol-form`, `adverse-event-form`) | (a) | Propósito distinto (historial y asistentes de formulario) |
 | `DataTable` | `mat-table` en 14 archivos (`workflow-table`, `peer-risk-pending-table`, `protocols/components/protocol-list.page.ts`, `protocol-reception-new`, `evaluation-list`, `user-table`…) y `<table>` en 19 | (b) | Cada lista se reemplaza en su sección (F01–F08). `DataTable` no tiene orden ni paginación; 2 archivos usan `mat-paginator` |
@@ -167,7 +171,7 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 | `dashboard/presentation/dashboard-routing.module.ts` sin referencias | Código muerto (las rutas vivas están en `dashboard/routes.ts`) | **T14 (propuesta: agregarlo a T14)** | PR F00 |
 | `ConfirmDialogComponent` (`NotificationService.confirm()`) y `Dialog` | La firma de `confirm()` se mantiene para no romper pantallas | **T14d (propuesta):** retirar `ConfirmDialogComponent` cuando `confirm()` no tenga llamadas | PR de la última sección que lo use |
 | `MatSnackBar` directo (167 llamadas) y `UndoToast` | Las pantallas viejas lo usan directo | Cada sección F01–F08; **T14c (propuesta)** para las que no se reemplazan (auth, perfil…) | PR de cada sección |
-| `ProtocolUI` + `.status-badge` y `StatusChip` | `StatusChip` no reutiliza `ProtocolUI` (clase (c)) | **T14b (propuesta):** tono derivado de `ProtocolUI.class`, y retirar `.status-badge` sin usos | PR F00 o F01 |
+| `.status-badge` (y `.badge-status`, `.status-tag`, `.status-chip` locales) y `StatusChip` | Las pantallas viejas pintan el estado con sus propias clases (vía pipes de `ProtocolUI`) | Cada sección F01–F08, al reemplazar sus pantallas; `.status-badge` se borra cuando no tenga usos. La regla de uso de `StatusChip` con `ProtocolUI` está en §9 (T14b) | PR de cada sección |
 | `progress-scaffold` de `protocol-workspace` y `StageBar` | El backend no expone `etapa` (RF-EST.2) | **F02 (propuesta)** | PR F02 |
 | `SecretariatDashboardService.metrics` y `PendingCountPort` | El KPI está oculto (T01b) pero el servicio sigue calculando | F01 (Mis pendientes) | PR F01 |
 | Listas con `mat-table`, buscadores y encabezados propios, y `DataTable`, `FilterBar`, `PageHeader` | Las pantallas se reemplazan una sección a la vez | Cada sección F01–F08 (README §3 regla 5) | PR de cada sección |
