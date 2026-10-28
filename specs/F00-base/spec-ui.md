@@ -10,7 +10,7 @@
 Todo lo que comparten las pantallas del rediseño:
 - tokens de diseño;
 - el armazón de la aplicación (menú lateral y barra superior);
-- la barra de 7 etapas;
+- la barra de 6 etapas;
 - los componentes compartidos;
 - las rutas y los guards por rol.
 
@@ -58,7 +58,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 
 | Componente | Qué hace | Reglas |
 |---|---|---|
-| `StageBar` | Barra de 7 etapas: Recepción → Asignación → Evaluación → Riesgo → Resolución → Seguimiento → Renovación | Recibe la etapa actual tal como la devuelve el backend (RF-EST.2). Marca ✓ las anteriores. **No calcula la etapa.** |
+| `StageBar` | Barra de 6 etapas: Recepción → Asignación → Evaluación (incluye riesgo) → Resolución → Seguimiento → Renovación | Recibe la etapa actual tal como la devuelve el backend (RF-EST.2). Marca ✓ las anteriores. **No calcula la etapa.** |
 | `PageHeader` | Título, subtítulo y **una sola acción principal** con su texto de ayuda | La acción se deshabilita mostrando el motivo (por ejemplo, "Falta revisar 1 documento"). |
 | `ButtonGroup` | Fila de botones rellenos para cambiar de vista dentro de un módulo (etapas, secciones de Configuración, reportes) | Sin contadores. Un solo botón activo. |
 | `Tabs` | Pestañas subrayadas | **Solo dentro del espacio de un protocolo.** |
@@ -84,7 +84,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 |---|---|---|
 | `/pendientes` | Mis pendientes (inicio de la Secretaría) | F01 |
 | `/protocolos` · `/protocolos?etapa=…` | Protocolos con botones por etapa | F01 |
-| `/protocolos/:id/{recepcion\|evaluadores\|riesgo\|resolucion\|seguimiento\|renovacion\|recorrido}` | Espacio del protocolo | F02–F07 |
+| `/protocolos/:id/{recepcion\|evaluacion\|resolucion\|seguimiento\|renovacion\|recorrido}` | Espacio del protocolo. En `evaluacion` van dos vistas: "Evaluadores y dictámenes" y "Riesgo" | F02–F07 |
 | `/convocatorias` · `/convocatorias/:id/sesion` | Convocatorias y sesión del pleno | F04 |
 | `/reportes` | Reportes | F08 |
 | `/configuracion/plazos` · `/configuracion/usuarios` | Configuración | F08 |
@@ -104,7 +104,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 ## 9. Criterios de aceptación
 
 1. Con rol SECRETARIA, el menú muestra exactamente 5 entradas en el orden indicado, y la ruta activa queda resaltada.
-2. `StageBar` con `etapa = EVALUACION` muestra Recepción y Asignación con ✓, Evaluación como actual y el resto pendiente.
+2. `StageBar` con `etapa = EVALUACION` muestra Recepción y Asignación con ✓, Evaluación como actual (con sus indicadores de riesgo y dictámenes) y el resto pendiente.
 3. Un usuario con 2 roles ve el selector de rol activo; al cambiar de rol cambian el menú y la ruta de inicio.
 4. Una ruta de Secretaría abierta con el rol INVESTIGADOR redirige a su inicio y muestra un aviso.
 5. `UndoToast`: al pulsar Deshacer se llama a la acción inversa y el aviso desaparece.

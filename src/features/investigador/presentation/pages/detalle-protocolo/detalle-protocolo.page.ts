@@ -208,14 +208,7 @@ interface ProtocoloHistorialEvento {
                 >
                   <mat-icon class="me-2">edit_note</mat-icon> Atender Observaciones
                 </button>
-                <button
-                  mat-stroked-button
-                  color="primary"
-                  [disabled]="protocolo.estado !== EstadoProtocolo.APROBADO_DEFINITIVO"
-                  [routerLink]="['/investigador/enmienda', protocolo.id]"
-                >
-                  <mat-icon class="me-2">edit_document</mat-icon> Solicitar Enmienda
-                </button>
+                <!-- "Solicitar Enmienda" retirado en F00: enmiendas fuera de alcance -->
                 <button
                   mat-stroked-button
                   color="warn"
