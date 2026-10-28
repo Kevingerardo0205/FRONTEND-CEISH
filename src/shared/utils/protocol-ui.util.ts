@@ -21,7 +21,7 @@ export const EstadoUIMap: Record<EstadoCatalogKey, EstadoUIMetadata> = {
   RECHAZADO: { label: 'Rechazado', cssClass: 'rejected' },
   REQUIERE_SUBSANACION_VERSION: { label: 'Subsanación Científica', cssClass: 'rejected' },
   REQUIERE_SUBSANACION_DOC: { label: 'Subsanación Documental', cssClass: 'rejected' },
-  EN_CONTROL_DOCUMENTAL: { label: 'Control Documental', cssClass: 'review' }
+  EN_CONTROL_DOCUMENTAL: { label: 'Control Documental', cssClass: 'review' },
 };
 
 export const ProtocolUI = {
@@ -34,5 +34,5 @@ export const ProtocolUI = {
     const core = resolveEstado(status);
     if (!core) return 'pending';
     return EstadoUIMap[core.code as EstadoCatalogKey]?.cssClass || 'pending';
-  }
+  },
 };

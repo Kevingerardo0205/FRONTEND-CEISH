@@ -17,8 +17,8 @@ describe('SessionExpiredDialogComponent', () => {
       imports: [SessionExpiredDialogComponent],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: Router, useValue: mockRouter }
-      ]
+        { provide: Router, useValue: mockRouter },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SessionExpiredDialogComponent);

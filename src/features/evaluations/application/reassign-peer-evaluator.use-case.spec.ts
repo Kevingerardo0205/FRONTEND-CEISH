@@ -4,7 +4,7 @@ import { ReassignPeerEvaluatorUseCase } from './reassign-peer-evaluator.use-case
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import {
   ReassignPeerEvaluatorPayload,
-  ReassignPeerEvaluatorResponse
+  ReassignPeerEvaluatorResponse,
 } from '@domain/entities/peer-evaluation.entity';
 
 describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
@@ -14,7 +14,7 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
   const mockResponse: ReassignPeerEvaluatorResponse = {
     outgoingAssignment: {},
     newAssignment: {},
-    auditHistory: {}
+    auditHistory: {},
   };
 
   const basePayload: ReassignPeerEvaluatorPayload = {
@@ -22,7 +22,7 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
     replacementEvaluatorId: 38,
     replacementEvaluatorProfile: 'METODOLOGICO',
     reason: 'CONFLICTO_INTERES',
-    reasonDescription: 'Conflicto de interés declarado y validado.'
+    reasonDescription: 'Conflicto de interés declarado y validado.',
   };
 
   beforeEach(() => {
@@ -31,8 +31,8 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
     TestBed.configureTestingModule({
       providers: [
         ReassignPeerEvaluatorUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: evalRepoSpy }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: evalRepoSpy },
+      ],
     });
 
     useCase = TestBed.inject(ReassignPeerEvaluatorUseCase);
@@ -51,7 +51,7 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
         expect(result).toEqual(mockResponse);
         done();
       },
-      error: done.fail
+      error: done.fail,
     });
   });
 
@@ -59,7 +59,7 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
     const payload: ReassignPeerEvaluatorPayload = {
       ...basePayload,
       reason: 'VENCIMIENTO',
-      reasonDescription: 'Plazo reglamentario de 10 días hábiles vencido.'
+      reasonDescription: 'Plazo reglamentario de 10 días hábiles vencido.',
     };
 
     evalRepoSpy.reassignPeerEvaluator.and.returnValue(of(mockResponse));
@@ -70,7 +70,7 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
         expect(result).toEqual(mockResponse);
         done();
       },
-      error: done.fail
+      error: done.fail,
     });
   });
 
@@ -83,7 +83,7 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
         expect(err.message).toContain('Motivo de reasignación inválido');
         expect(evalRepoSpy.reassignPeerEvaluator).not.toHaveBeenCalled();
         done();
-      }
+      },
     });
   });
 
@@ -96,7 +96,7 @@ describe('ReassignPeerEvaluatorUseCase (RF-12.3)', () => {
         expect(err.message).toContain('mínimo 10 caracteres');
         expect(evalRepoSpy.reassignPeerEvaluator).not.toHaveBeenCalled();
         done();
-      }
+      },
     });
   });
 });

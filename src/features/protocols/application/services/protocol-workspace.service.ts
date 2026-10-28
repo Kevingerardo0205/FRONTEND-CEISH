@@ -39,18 +39,19 @@ export class ProtocolWorkspaceService {
         error: (err) => {
           console.error('[ProtocolWorkspaceService] Error loading protocol:', err);
           this.errorSignal.set('No se pudo cargar la información del protocolo.');
-        }
+        },
       }),
-      finalize(() => this.loadingSignal.set(false))
+      finalize(() => this.loadingSignal.set(false)),
     );
   }
 
   private loadEvaluations(protocolId: string) {
-    this.evaluationRepo.getByProtocolId(protocolId).pipe(
-      catchError(() => of([]))
-    ).subscribe(list => {
-      this.evaluationsSignal.set(list || []);
-    });
+    this.evaluationRepo
+      .getByProtocolId(protocolId)
+      .pipe(catchError(() => of([])))
+      .subscribe((list) => {
+        this.evaluationsSignal.set(list || []);
+      });
   }
 
   public updateProtocol(data: Partial<ProtocolEntity>) {

@@ -14,14 +14,12 @@ describe('TimelineAcceptanceModalComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [TimelineAcceptanceModalComponent],
-      providers: [
-        { provide: IProtocolRepositoryPort, useValue: mockProtocolRepo }
-      ]
+      providers: [{ provide: IProtocolRepositoryPort, useValue: mockProtocolRepo }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TimelineAcceptanceModalComponent);
     component = fixture.componentInstance;
-    
+
     fixture.componentRef.setInput('protocolId', 123);
     fixture.componentRef.setInput('ceishCode', 'CEISH-2026-001');
     fixture.componentRef.setInput('isOpen', true);
@@ -41,7 +39,7 @@ describe('TimelineAcceptanceModalComponent', () => {
 
   it('debe enviar la aceptación y emitir el output al confirmar', () => {
     let emitted = false;
-    component.accepted.subscribe(() => emitted = true);
+    component.accepted.subscribe(() => (emitted = true));
 
     component.toggleCheckbox();
     component.onConfirm();
@@ -52,7 +50,9 @@ describe('TimelineAcceptanceModalComponent', () => {
   });
 
   it('debe manejar errores al confirmar', () => {
-    mockProtocolRepo.acceptTimeline.and.returnValue(throwError(() => new Error('Error al procesar')));
+    mockProtocolRepo.acceptTimeline.and.returnValue(
+      throwError(() => new Error('Error al procesar')),
+    );
     spyOn(console, 'error');
     spyOn(window, 'alert');
 

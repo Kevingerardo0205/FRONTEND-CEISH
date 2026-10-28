@@ -12,10 +12,7 @@ describe('UserAdminApiAdapter', () => {
     mockApiClient = jasmine.createSpyObj('ApiClientService', ['get', 'post', 'patch', 'delete']);
 
     TestBed.configureTestingModule({
-      providers: [
-        UserAdminApiAdapter,
-        { provide: ApiClientService, useValue: mockApiClient }
-      ]
+      providers: [UserAdminApiAdapter, { provide: ApiClientService, useValue: mockApiClient }],
     });
 
     adapter = TestBed.inject(UserAdminApiAdapter);
@@ -33,23 +30,40 @@ describe('UserAdminApiAdapter', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR', 'SECRETARIA'],
       userRoles: [
-        { code: 'INVESTIGADOR', name: 'Investigador', validUntil: null, reason: null, isExpired: false },
-        { code: 'SECRETARIA', name: 'Secretaría', validUntil: '2026-09-30', reason: 'Subrogación', isExpired: false }
+        {
+          code: 'INVESTIGADOR',
+          name: 'Investigador',
+          validUntil: null,
+          reason: null,
+          isExpired: false,
+        },
+        {
+          code: 'SECRETARIA',
+          name: 'Secretaría',
+          validUntil: '2026-09-30',
+          reason: 'Subrogación',
+          isExpired: false,
+        },
       ],
       perfil: 'Docente',
-      activo: true
+      activo: true,
     };
 
-    mockApiClient.post.and.returnValue(of({
-      data: {
-        id: '10',
-        fullName: newUser.nombre,
-        email: newUser.email,
-        nationalId: newUser.cedula,
-        roles: ['INVESTIGADOR', { code: 'SECRETARIA', validUntil: '2026-09-30', reason: 'Subrogación' }],
-        isActive: true
-      }
-    }));
+    mockApiClient.post.and.returnValue(
+      of({
+        data: {
+          id: '10',
+          fullName: newUser.nombre,
+          email: newUser.email,
+          nationalId: newUser.cedula,
+          roles: [
+            'INVESTIGADOR',
+            { code: 'SECRETARIA', validUntil: '2026-09-30', reason: 'Subrogación' },
+          ],
+          isActive: true,
+        },
+      }),
+    );
 
     adapter.create(newUser).subscribe((created) => {
       expect(mockApiClient.post).toHaveBeenCalledWith(
@@ -63,10 +77,10 @@ describe('UserAdminApiAdapter', () => {
               roleCode: 'SECRETARIA',
               validFrom: null,
               validUntil: '2026-09-30',
-              reason: 'Subrogación'
-            }
-          ]
-        })
+              reason: 'Subrogación',
+            },
+          ],
+        }),
       );
       expect(created.id).toBe('10');
       done();
@@ -77,19 +91,33 @@ describe('UserAdminApiAdapter', () => {
     const userToUpdate: Partial<UserAdmin> = {
       nombre: 'Dr. Carlos Mendoza',
       userRoles: [
-        { code: 'INVESTIGADOR', name: 'Investigador', validUntil: null, reason: null, isExpired: false },
-        { code: 'EVALUADOR', name: 'Evaluador', validUntil: '2026-12-31', reason: 'Comisión 2026', isExpired: false }
-      ]
+        {
+          code: 'INVESTIGADOR',
+          name: 'Investigador',
+          validUntil: null,
+          reason: null,
+          isExpired: false,
+        },
+        {
+          code: 'EVALUADOR',
+          name: 'Evaluador',
+          validUntil: '2026-12-31',
+          reason: 'Comisión 2026',
+          isExpired: false,
+        },
+      ],
     };
 
-    mockApiClient.patch.and.returnValue(of({
-      data: {
-        id: '5',
-        fullName: 'Dr. Carlos Mendoza',
-        roles: ['INVESTIGADOR', { code: 'EVALUADOR', validUntil: '2026-12-31' }],
-        isActive: true
-      }
-    }));
+    mockApiClient.patch.and.returnValue(
+      of({
+        data: {
+          id: '5',
+          fullName: 'Dr. Carlos Mendoza',
+          roles: ['INVESTIGADOR', { code: 'EVALUADOR', validUntil: '2026-12-31' }],
+          isActive: true,
+        },
+      }),
+    );
 
     adapter.update('5', userToUpdate).subscribe((updated) => {
       expect(mockApiClient.patch).toHaveBeenCalledWith(
@@ -102,10 +130,10 @@ describe('UserAdminApiAdapter', () => {
               roleCode: 'EVALUADOR',
               validFrom: null,
               validUntil: '2026-12-31',
-              reason: 'Comisión 2026'
-            }
-          ]
-        })
+              reason: 'Comisión 2026',
+            },
+          ],
+        }),
       );
       expect(updated.id).toBe('5');
       done();
@@ -115,16 +143,18 @@ describe('UserAdminApiAdapter', () => {
   it('debe ejecutar extendTemporaryRole() llamando al endpoint PATCH específico', (done) => {
     mockApiClient.patch.and.returnValue(of(undefined));
 
-    adapter.extendTemporaryRole('43', 'SECRETARIA', '2026-10-15', 'Prórroga licencia').subscribe(() => {
-      expect(mockApiClient.patch).toHaveBeenCalledWith(
-        jasmine.stringMatching(/\/auth\/users\/43\/roles\/SECRETARIA\/extend/),
-        {
-          validUntil: '2026-10-15',
-          reason: 'Prórroga licencia'
-        }
-      );
-      done();
-    });
+    adapter
+      .extendTemporaryRole('43', 'SECRETARIA', '2026-10-15', 'Prórroga licencia')
+      .subscribe(() => {
+        expect(mockApiClient.patch).toHaveBeenCalledWith(
+          jasmine.stringMatching(/\/auth\/users\/43\/roles\/SECRETARIA\/extend/),
+          {
+            validUntil: '2026-10-15',
+            reason: 'Prórroga licencia',
+          },
+        );
+        done();
+      });
   });
 
   it('debe ejecutar suspendTemporaryRole() llamando al endpoint POST específico', (done) => {
@@ -134,8 +164,8 @@ describe('UserAdminApiAdapter', () => {
       expect(mockApiClient.post).toHaveBeenCalledWith(
         jasmine.stringMatching(/\/auth\/users\/43\/roles\/SECRETARIA\/suspend/),
         {
-          reason: 'Retorno titular'
-        }
+          reason: 'Retorno titular',
+        },
       );
       done();
     });

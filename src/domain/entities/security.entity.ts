@@ -75,5 +75,3 @@ export interface PermissionDiff {
   removed: number[];
   total: number;
 }
-
-

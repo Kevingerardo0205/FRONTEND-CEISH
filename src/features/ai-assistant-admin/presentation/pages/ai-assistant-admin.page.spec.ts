@@ -14,29 +14,27 @@ describe('AiAssistantAdminPage', () => {
   let sharedService: AiAssistantSharedService;
 
   beforeEach(async () => {
-    mockAdminRepo = jasmine.createSpyObj<IAiAssistantAdminRepositoryPort>('IAiAssistantAdminRepositoryPort', [
-      'getConfig',
-      'uploadPet',
-      'updateRoles'
-    ]);
+    mockAdminRepo = jasmine.createSpyObj<IAiAssistantAdminRepositoryPort>(
+      'IAiAssistantAdminRepositoryPort',
+      ['getConfig', 'uploadPet', 'updateRoles'],
+    );
     mockSnackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
 
-    mockAdminRepo.getConfig.and.returnValue(of({
-      petFileName: 'Reglamento_PET_2026.pdf',
-      allowedRoles: ['ADMIN_TI', 'PRESIDENTE'],
-      updatedAt: new Date('2026-08-15T10:00:00Z')
-    }));
+    mockAdminRepo.getConfig.and.returnValue(
+      of({
+        petFileName: 'Reglamento_PET_2026.pdf',
+        allowedRoles: ['ADMIN_TI', 'PRESIDENTE'],
+        updatedAt: new Date('2026-08-15T10:00:00Z'),
+      }),
+    );
 
     await TestBed.configureTestingModule({
-      imports: [
-        AiAssistantAdminPage,
-        NoopAnimationsModule
-      ],
+      imports: [AiAssistantAdminPage, NoopAnimationsModule],
       providers: [
         { provide: IAiAssistantAdminRepositoryPort, useValue: mockAdminRepo },
         { provide: MatSnackBar, useValue: mockSnackBar },
-        AiAssistantSharedService
-      ]
+        AiAssistantSharedService,
+      ],
     }).compileComponents();
 
     sharedService = TestBed.inject(AiAssistantSharedService);
@@ -66,11 +64,13 @@ describe('AiAssistantAdminPage', () => {
 
   it('should upload valid PDF file successfully', () => {
     const dummyFile = new File(['dummy pdf content'], 'Nuevo_PET.pdf', { type: 'application/pdf' });
-    mockAdminRepo.uploadPet.and.returnValue(of({
-      message: 'PET actualizado',
-      petFileName: 'Nuevo_PET.pdf',
-      characterCount: 15400
-    }));
+    mockAdminRepo.uploadPet.and.returnValue(
+      of({
+        message: 'PET actualizado',
+        petFileName: 'Nuevo_PET.pdf',
+        characterCount: 15400,
+      }),
+    );
 
     component.selectedFile.set(dummyFile);
     component.uploadPdf();
@@ -82,15 +82,21 @@ describe('AiAssistantAdminPage', () => {
   });
 
   it('should save roles configuration successfully', () => {
-    mockAdminRepo.updateRoles.and.returnValue(of({
-      message: 'Roles actualizados',
-      allowedRoles: ['ADMIN_TI', 'PRESIDENTE', 'SECRETARIA']
-    }));
+    mockAdminRepo.updateRoles.and.returnValue(
+      of({
+        message: 'Roles actualizados',
+        allowedRoles: ['ADMIN_TI', 'PRESIDENTE', 'SECRETARIA'],
+      }),
+    );
 
     component.selectedRoles.set(['ADMIN_TI', 'PRESIDENTE', 'SECRETARIA']);
     component.saveRolesConfig();
 
-    expect(mockAdminRepo.updateRoles).toHaveBeenCalledWith(['ADMIN_TI', 'PRESIDENTE', 'SECRETARIA']);
+    expect(mockAdminRepo.updateRoles).toHaveBeenCalledWith([
+      'ADMIN_TI',
+      'PRESIDENTE',
+      'SECRETARIA',
+    ]);
     expect(sharedService.clearChat).toHaveBeenCalled();
     expect(mockSnackBar.open).toHaveBeenCalled();
   });

@@ -4,7 +4,7 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 import { AssignmentHistoryEntry } from '@domain/entities/peer-evaluation.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LoadAssignmentHistoryUseCase {
   private readonly evalRepo = inject(IEvaluationRepositoryPort);
@@ -14,8 +14,8 @@ export class LoadAssignmentHistoryUseCase {
       return throwError(
         () =>
           new Error(
-            'El ID del protocolo es requerido para consultar el historial de reasignaciones (entero positivo).'
-          )
+            'El ID del protocolo es requerido para consultar el historial de reasignaciones (entero positivo).',
+          ),
       );
     }
 

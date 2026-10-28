@@ -12,9 +12,7 @@ describe('AssignmentPage', () => {
 
     await TestBed.configureTestingModule({
       imports: [AssignmentPage],
-      providers: [
-        { provide: Router, useValue: routerSpy }
-      ]
+      providers: [{ provide: Router, useValue: routerSpy }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AssignmentPage);

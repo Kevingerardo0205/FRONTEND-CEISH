@@ -19,12 +19,13 @@
   <main class="register-main-content">
     <div class="content-header animate-fade-in">
       <h1 class="page-title">Nuevo Protocolo</h1>
-      <p class="page-subtitle">Complete la información básica y cargue la documentación requerida por el CEISH.</p>
+      <p class="page-subtitle">
+        Complete la información básica y cargue la documentación requerida por el CEISH.
+      </p>
     </div>
 
     <mat-card class="register-stepper-card shadow-soft animate-fade-in">
       <mat-stepper [linear]="true" #stepper class="custom-stepper">
-        
         <!-- PASO 1: INFORMACIÓN GENERAL -->
         <mat-step [stepControl]="generalForm">
           <ng-template matStepLabel>Información General</ng-template>
@@ -32,12 +33,25 @@
             <form [formGroup]="generalForm" class="row g-4">
               <!-- Título -->
               <div class="col-12">
-                <label class="field-label">Título de la investigación (Población, Lugar y Período) *</label>
+                <label class="field-label"
+                  >Título de la investigación (Población, Lugar y Período) *</label
+                >
                 <mat-form-field appearance="outline">
-                  <textarea matInput formControlName="titulo" rows="3" placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."></textarea>
-                  <mat-hint align="end">{{generalForm.get('titulo')?.value?.length || 0}}/200</mat-hint>
-                  <mat-error *ngIf="generalForm.get('titulo')?.hasError('required')">El título es requerido</mat-error>
-                  <mat-error *ngIf="generalForm.get('titulo')?.hasError('minlength')">El título debe tener al menos 20 caracteres</mat-error>
+                  <textarea
+                    matInput
+                    formControlName="titulo"
+                    rows="3"
+                    placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
+                  ></textarea>
+                  <mat-hint align="end"
+                    >{{ generalForm.get('titulo')?.value?.length || 0 }}/200</mat-hint
+                  >
+                  <mat-error *ngIf="generalForm.get('titulo')?.hasError('required')"
+                    >El título es requerido</mat-error
+                  >
+                  <mat-error *ngIf="generalForm.get('titulo')?.hasError('minlength')"
+                    >El título debe tener al menos 20 caracteres</mat-error
+                  >
                 </mat-form-field>
               </div>
 
@@ -50,29 +64,43 @@
                       {{ t.nombre || t.name || t.description || t }}
                     </mat-option>
                   </mat-select>
-                  <mat-error *ngIf="generalForm.get('tipoEstudio')?.hasError('required')">El tipo de estudio es obligatorio</mat-error>
+                  <mat-error *ngIf="generalForm.get('tipoEstudio')?.hasError('required')"
+                    >El tipo de estudio es obligatorio</mat-error
+                  >
                 </mat-form-field>
               </div>
 
               <!-- Flags de Características del Estudio -->
               <div class="col-12 mt-3">
                 <div class="flags-box p-4 border rounded-3 bg-light">
-                  <h4 class="fw-bold small text-uppercase mb-3 text-primary">Características del Estudio</h4>
+                  <h4 class="fw-bold small text-uppercase mb-3 text-primary">
+                    Características del Estudio
+                  </h4>
                   <div class="row g-3">
                     <div class="col-12 col-md-6">
-                      <mat-checkbox formControlName="isIndigenousPopulation" color="primary">¿Involucra pueblos o nacionalidades indígenas?</mat-checkbox>
+                      <mat-checkbox formControlName="isIndigenousPopulation" color="primary"
+                        >¿Involucra pueblos o nacionalidades indígenas?</mat-checkbox
+                      >
                     </div>
                     <div class="col-12 col-md-6">
-                      <mat-checkbox formControlName="usesBiologicalSamples" color="primary">¿Utiliza muestras biológicas humanas?</mat-checkbox>
+                      <mat-checkbox formControlName="usesBiologicalSamples" color="primary"
+                        >¿Utiliza muestras biológicas humanas?</mat-checkbox
+                      >
                     </div>
                     <div class="col-12 col-md-6">
-                      <mat-checkbox formControlName="isVulnerablePopulation" color="primary">¿Involucra población vulnerable?</mat-checkbox>
+                      <mat-checkbox formControlName="isVulnerablePopulation" color="primary"
+                        >¿Involucra población vulnerable?</mat-checkbox
+                      >
                     </div>
                     <div class="col-12 col-md-6">
-                      <mat-checkbox formControlName="isMulticentric" color="primary">¿Es un estudio multicéntrico?</mat-checkbox>
+                      <mat-checkbox formControlName="isMulticentric" color="primary"
+                        >¿Es un estudio multicéntrico?</mat-checkbox
+                      >
                     </div>
                     <div class="col-12 col-md-6">
-                      <mat-checkbox formControlName="isExternal" color="primary">¿Participan instituciones externas?</mat-checkbox>
+                      <mat-checkbox formControlName="isExternal" color="primary"
+                        >¿Participan instituciones externas?</mat-checkbox
+                      >
                     </div>
                   </div>
                 </div>
@@ -82,9 +110,17 @@
               <div class="col-12 mt-4">
                 <div class="legal-box p-4 rounded bg-white border shadow-sm text-start">
                   <mat-checkbox formControlName="isAffidavitAccepted" color="primary">
-                    <span class="small fw-bold text-uppercase text-amber">DECLARO BAJO JURAMENTO QUE LA INVESTIGACIÓN NO HA INICIADO SU FASE DE CAMPO Y LA INFORMACIÓN ES VERAZ. *</span>
+                    <span class="small fw-bold text-uppercase text-amber"
+                      >DECLARO BAJO JURAMENTO QUE LA INVESTIGACIÓN NO HA INICIADO SU FASE DE CAMPO Y
+                      LA INFORMACIÓN ES VERAZ. *</span
+                    >
                   </mat-checkbox>
-                  <mat-error *ngIf="generalForm.get('isAffidavitAccepted')?.touched && generalForm.get('isAffidavitAccepted')?.hasError('required')">
+                  <mat-error
+                    *ngIf="
+                      generalForm.get('isAffidavitAccepted')?.touched &&
+                      generalForm.get('isAffidavitAccepted')?.hasError('required')
+                    "
+                  >
                     Debe aceptar la declaración jurada para continuar.
                   </mat-error>
                 </div>
@@ -92,9 +128,22 @@
             </form>
 
             <div class="step-actions mt-5 d-flex justify-content-end">
-              <button mat-flat-button color="accent" (click)="guardarInicial()" class="next-btn px-4" [disabled]="isLoading || generalForm.invalid" style="height: 54px; font-weight: 700;">
-                <span *ngIf="!isLoading">REGISTRAR Y CONTINUAR <mat-icon>arrow_forward</mat-icon></span>
-                <mat-progress-spinner *ngIf="isLoading" diameter="24" mode="indeterminate"></mat-progress-spinner>
+              <button
+                mat-flat-button
+                color="accent"
+                (click)="guardarInicial()"
+                class="next-btn px-4"
+                [disabled]="isLoading || generalForm.invalid"
+                style="height: 54px; font-weight: 700"
+              >
+                <span *ngIf="!isLoading"
+                  >REGISTRAR Y CONTINUAR <mat-icon>arrow_forward</mat-icon></span
+                >
+                <mat-progress-spinner
+                  *ngIf="isLoading"
+                  diameter="24"
+                  mode="indeterminate"
+                ></mat-progress-spinner>
               </button>
             </div>
           </div>
@@ -105,44 +154,106 @@
           <ng-template matStepLabel>Subir Documentos</ng-template>
           <div class="step-content">
             <div class="section-info mb-4 d-flex align-items-center gap-3">
-              <mat-icon class="section-icon text-primary" style="font-size: 36px; width: 36px; height: 36px;">cloud_upload</mat-icon>
+              <mat-icon
+                class="section-icon text-primary"
+                style="font-size: 36px; width: 36px; height: 36px"
+                >cloud_upload</mat-icon
+              >
               <div>
                 <h3 class="fw-bold mb-0">Carga de Documentos Técnicos</h3>
-                <p class="text-muted small mb-0">Por favor suba los archivos PDF correspondientes a cada requisito generado por el CEISH.</p>
+                <p class="text-muted small mb-0">
+                  Por favor suba los archivos PDF correspondientes a cada requisito generado por el
+                  CEISH.
+                </p>
               </div>
             </div>
 
             <!-- Upload Normal -->
             <div class="requirements-list mt-4" *ngIf="documentosRequeridos.length > 0">
-              <div *ngFor="let doc of documentosRequeridos" class="doc-card p-3 mb-3 border rounded bg-white shadow-soft animate-fade-in">
+              <div
+                *ngFor="let doc of documentosRequeridos"
+                class="doc-card p-3 mb-3 border rounded bg-white shadow-soft animate-fade-in"
+              >
                 <div class="row align-items-center">
                   <div class="col-auto">
                     <div class="doc-icon-box" [ngClass]="doc.color">
-                      <mat-icon>{{doc.icon}}</mat-icon>
+                      <mat-icon>{{ doc.icon }}</mat-icon>
                     </div>
                   </div>
                   <div class="col">
                     <div class="doc-main-info">
-                      <span class="fw-bold d-block text-dark">{{doc.nombre}}</span>
-                      <span class="small text-muted">{{doc.code}}</span>
+                      <span class="fw-bold d-block text-dark">{{ doc.nombre }}</span>
+                      <span class="small text-muted">{{ doc.code }}</span>
                       <div class="mt-1" *ngIf="doc.alert">
-                        <span class="badge bg-light text-primary border"><mat-icon style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;">info</mat-icon> {{doc.alert}}</span>
+                        <span class="badge bg-light text-primary border"
+                          ><mat-icon
+                            style="
+                              font-size: 14px;
+                              width: 14px;
+                              height: 14px;
+                              vertical-align: middle;
+                            "
+                            >info</mat-icon
+                          >
+                          {{ doc.alert }}</span
+                        >
                       </div>
-                      <div class="mt-2 text-danger small fw-bold" *ngIf="doc.status === 'OBSERVADO'">
-                        <mat-icon style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle;">warning</mat-icon> OBSERVACIÓN: {{doc.observations}}
+                      <div
+                        class="mt-2 text-danger small fw-bold"
+                        *ngIf="doc.status === 'OBSERVADO'"
+                      >
+                        <mat-icon
+                          style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle"
+                          >warning</mat-icon
+                        >
+                        OBSERVACIÓN: {{ doc.observations }}
                       </div>
                     </div>
                   </div>
                   <div class="col-auto">
                     <div class="doc-actions d-flex align-items-center gap-3">
-                      <input type="file" #docIn hidden (change)="onDocumentSelected($event, doc.code)" accept="application/pdf">
-                      
+                      <input
+                        type="file"
+                        #docIn
+                        hidden
+                        (change)="onDocumentSelected($event, doc.code)"
+                        accept="application/pdf"
+                      />
+
                       <!-- Indicador de Estado Dinámico -->
                       <div [ngSwitch]="documentUploadStatus[doc.code]">
-                        <button *ngSwitchCase="'pendiente'" mat-flat-button color="primary" (click)="docIn.click()"><mat-icon>upload</mat-icon> SUBIR</button>
-                        <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled><mat-progress-spinner diameter="18" mode="indeterminate" class="d-inline-block me-2"></mat-progress-spinner> CARGANDO</button>
-                        <button *ngSwitchCase="'exito'" mat-flat-button class="bg-success text-white" (click)="docIn.click()"><mat-icon>check_circle</mat-icon> PRESENTADO</button>
-                        <button *ngSwitchCase="'error'" mat-flat-button color="warn" (click)="docIn.click()"><mat-icon>error</mat-icon> REINTENTAR</button>
+                        <button
+                          *ngSwitchCase="'pendiente'"
+                          mat-flat-button
+                          color="primary"
+                          (click)="docIn.click()"
+                        >
+                          <mat-icon>upload</mat-icon> SUBIR
+                        </button>
+                        <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled>
+                          <mat-progress-spinner
+                            diameter="18"
+                            mode="indeterminate"
+                            class="d-inline-block me-2"
+                          ></mat-progress-spinner>
+                          CARGANDO
+                        </button>
+                        <button
+                          *ngSwitchCase="'exito'"
+                          mat-flat-button
+                          class="bg-success text-white"
+                          (click)="docIn.click()"
+                        >
+                          <mat-icon>check_circle</mat-icon> PRESENTADO
+                        </button>
+                        <button
+                          *ngSwitchCase="'error'"
+                          mat-flat-button
+                          color="warn"
+                          (click)="docIn.click()"
+                        >
+                          <mat-icon>error</mat-icon> REINTENTAR
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -151,44 +262,85 @@
             </div>
 
             <!-- Fallback Upload Resiliente (Bulk) -->
-            <div class="no-requirements p-4 border rounded bg-light mt-4 text-center animate-fade-in" *ngIf="documentosRequeridos.length === 0 && !isLoading && protocolId">
-              <mat-icon color="accent" style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px;">cloud_upload</mat-icon>
+            <div
+              class="no-requirements p-4 border rounded bg-light mt-4 text-center animate-fade-in"
+              *ngIf="documentosRequeridos.length === 0 && !isLoading && protocolId"
+            >
+              <mat-icon
+                color="accent"
+                style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px"
+                >cloud_upload</mat-icon
+              >
               <h4>Carga de Documentos (Modo Contingencia)</h4>
               <p class="text-muted small mb-4">
-                El sistema no pudo generar la lista específica de requisitos para su tipo de estudio. 
-                Sin embargo, puede cargar todos sus documentos (PDF) a continuación para que sean revisados por el CEISH.
+                El sistema no pudo generar la lista específica de requisitos para su tipo de
+                estudio. Sin embargo, puede cargar todos sus documentos (PDF) a continuación para
+                que sean revisados por el CEISH.
               </p>
-              
-              <button mat-flat-button color="primary" (click)="bulkIn.click()" [disabled]="isLoading">
+
+              <button
+                mat-flat-button
+                color="primary"
+                (click)="bulkIn.click()"
+                [disabled]="isLoading"
+              >
                 <mat-icon>upload_file</mat-icon> SELECCIONAR ARCHIVOS (PDF)
               </button>
-              <input type="file" #bulkIn hidden multiple (change)="onBulkUpload($event)" accept="application/pdf">
+              <input
+                type="file"
+                #bulkIn
+                hidden
+                multiple
+                (change)="onBulkUpload($event)"
+                accept="application/pdf"
+              />
 
-              <div class="mt-4 text-start" *ngIf="archivosCargados && (archivosCargados | keyvalue).length > 0">
+              <div
+                class="mt-4 text-start"
+                *ngIf="archivosCargados && (archivosCargados | keyvalue).length > 0"
+              >
                 <h5 class="fw-bold">Archivos Cargados Exitosamente:</h5>
                 <ul class="list-group">
-                  <li class="list-group-item text-success" *ngFor="let file of (archivosCargados | keyvalue)">
-                    <mat-icon style="vertical-align: middle; font-size: 18px; width: 18px; height: 18px;">check_circle</mat-icon> {{ file.value }}
+                  <li
+                    class="list-group-item text-success"
+                    *ngFor="let file of archivosCargados | keyvalue"
+                  >
+                    <mat-icon
+                      style="vertical-align: middle; font-size: 18px; width: 18px; height: 18px"
+                      >check_circle</mat-icon
+                    >
+                    {{ file.value }}
                   </li>
                 </ul>
               </div>
             </div>
 
             <div class="step-actions mt-5 d-flex gap-3 justify-content-end">
-              <button mat-flat-button color="primary" class="submit-btn flex-grow-1" 
-                      [disabled]="isLoading || !protocolId" (click)="onEnviarFinal()">
+              <button
+                mat-flat-button
+                color="primary"
+                class="submit-btn flex-grow-1"
+                [disabled]="isLoading || !protocolId"
+                (click)="onEnviarFinal()"
+              >
                 <span *ngIf="!isLoading">FIRMAR Y ENVIAR AL CEISH <mat-icon>send</mat-icon></span>
-                <mat-progress-spinner *ngIf="isLoading" diameter="24" mode="indeterminate" class="mx-auto"></mat-progress-spinner>
+                <mat-progress-spinner
+                  *ngIf="isLoading"
+                  diameter="24"
+                  mode="indeterminate"
+                  class="mx-auto"
+                ></mat-progress-spinner>
               </button>
             </div>
           </div>
         </mat-step>
-
       </mat-stepper>
     </mat-card>
 
     <footer class="register-footer mt-5 text-center py-4">
-      <p class="text-muted small m-0">&copy; 2026 Escuela Superior Politécnica de Chimborazo. Todos los derechos reservados.</p>
+      <p class="text-muted small m-0">
+        &copy; 2026 Escuela Superior Politécnica de Chimborazo. Todos los derechos reservados.
+      </p>
     </footer>
   </main>
 </div>

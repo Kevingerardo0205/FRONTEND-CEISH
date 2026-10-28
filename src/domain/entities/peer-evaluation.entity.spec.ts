@@ -4,7 +4,7 @@ import {
   AssignmentHistoryEntry,
   PendingPeerAssignmentProtocol,
   PeerAssignmentEntity,
-  PEER_EVALUATOR_PROFILES
+  PEER_EVALUATOR_PROFILES,
 } from './peer-evaluation.entity';
 
 describe('PeerEvaluation Canonical Entities', () => {
@@ -14,7 +14,7 @@ describe('PeerEvaluation Canonical Entities', () => {
       replacementEvaluatorId: 302,
       replacementEvaluatorProfile: 'METODOLOGICO',
       reason: 'CONFLICTO_INTERES',
-      reasonDescription: 'El evaluador manifiesta conflicto de interés institucional.'
+      reasonDescription: 'El evaluador manifiesta conflicto de interés institucional.',
     };
 
     expect(payload.outgoingAssignmentId).toBe(501);
@@ -27,14 +27,19 @@ describe('PeerEvaluation Canonical Entities', () => {
     const response: ReassignPeerEvaluatorResponse = {
       outgoingAssignment: {},
       newAssignment: {},
-      auditHistory: {}
+      auditHistory: {},
     };
 
     expect(Object.keys(response)).toEqual(['outgoingAssignment', 'newAssignment', 'auditHistory']);
   });
 
   it('should list exactly the 4 strict backend profiles', () => {
-    expect([...PEER_EVALUATOR_PROFILES]).toEqual(['JURIDICO', 'SOCIEDAD_CIVIL', 'METODOLOGICO', 'SALUD']);
+    expect([...PEER_EVALUATOR_PROFILES]).toEqual([
+      'JURIDICO',
+      'SOCIEDAD_CIVIL',
+      'METODOLOGICO',
+      'SALUD',
+    ]);
   });
 
   it('should instantiate AssignmentHistoryEntry with complete audit trail and numeric IDs', () => {
@@ -50,7 +55,7 @@ describe('PeerEvaluation Canonical Entities', () => {
       reasonDescription: 'El evaluador manifiesta conflicto de interés institucional.',
       executedByUserId: 10,
       executedByUserName: 'Secretaria CEISH',
-      executedAt: '2026-09-28T19:00:00.000Z'
+      executedAt: '2026-09-28T19:00:00.000Z',
     };
 
     expect(historyEntry.id).toBe(801);
@@ -73,13 +78,13 @@ describe('PeerEvaluation Canonical Entities', () => {
       studyType: {
         id: 1,
         codigo: 'OBS',
-        nombre: 'Observacional'
+        nombre: 'Observacional',
       },
       principalInvestigatorRecord: {
         id: 10,
         fullName: 'Dr. Investigador Principal',
-        email: 'investigador@espoch.edu.ec'
-      }
+        email: 'investigador@espoch.edu.ec',
+      },
     };
 
     expect(protocol.id).toBe(42);
@@ -102,12 +107,12 @@ describe('PeerEvaluation Canonical Entities', () => {
         ceishCode: 'CEISH-ESPOCH-EI-001-2026',
         title: 'Estudio de Bioequivalencia y Bioética',
         studyType: {
-          nombre: 'Observacional'
+          nombre: 'Observacional',
         },
         principalInvestigatorRecord: {
-          fullName: 'Dr. Investigador Principal'
-        }
-      }
+          fullName: 'Dr. Investigador Principal',
+        },
+      },
     };
 
     expect(assignment.id).toBe(501);
@@ -117,4 +122,3 @@ describe('PeerEvaluation Canonical Entities', () => {
     expect(assignment.protocol.ceishCode).toBe('CEISH-ESPOCH-EI-001-2026');
   });
 });
-

@@ -21,8 +21,8 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
         VerificadoGuard,
         { provide: AuthFacade, useValue: mockAuthFacade },
         { provide: Router, useValue: mockRouter },
-        { provide: MatSnackBar, useValue: mockSnackBar }
-      ]
+        { provide: MatSnackBar, useValue: mockSnackBar },
+      ],
     });
 
     guard = TestBed.inject(VerificadoGuard);
@@ -45,7 +45,7 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
       rol: 'SECRETARIA',
       roles: ['SECRETARIA'],
       activo: true,
-      emailVerificado: false // No verificado
+      emailVerificado: false, // No verificado
     });
     mockAuthFacade.hasAnyRole.and.returnValue(true);
 
@@ -62,14 +62,20 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR', 'ADMIN_TI'],
       activo: true,
-      emailVerificado: false
+      emailVerificado: false,
     });
     mockAuthFacade.hasAnyRole.and.returnValue(true);
 
     const result = guard.canActivate();
 
     expect(result).toBeTrue();
-    expect(mockAuthFacade.hasAnyRole).toHaveBeenCalledWith(['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'ADMIN_TI']);
+    expect(mockAuthFacade.hasAnyRole).toHaveBeenCalledWith([
+      'ADMIN',
+      'SECRETARIA',
+      'PRESIDENTA',
+      'PRESIDENTE',
+      'ADMIN_TI',
+    ]);
   });
 
   it('debe permitir acceso a investigadores si su email está verificado', () => {
@@ -79,7 +85,7 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR'],
       activo: true,
-      emailVerificado: true // Verificado
+      emailVerificado: true, // Verificado
     });
     mockAuthFacade.hasAnyRole.and.returnValue(false);
 
@@ -95,7 +101,7 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR'],
       activo: true,
-      emailVerificado: false // No verificado
+      emailVerificado: false, // No verificado
     });
     mockAuthFacade.hasAnyRole.and.returnValue(false);
     mockSnackBar.open.and.returnValue({ onAction: () => of(undefined) } as any);
@@ -106,7 +112,7 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       jasmine.stringMatching(/Debe verificar su correo/),
       jasmine.any(String),
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
     expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
     expect(result).toBe('/dashboard' as any);

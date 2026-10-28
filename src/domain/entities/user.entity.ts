@@ -1,4 +1,5 @@
-export type UserRole = 'ADMIN' | 'SECRETARIA' | 'EVALUADOR' | 'INVESTIGADOR' | 'PRESIDENTE' | 'PRESIDENTA' | 'ADMIN_TI';
+export type UserRole =
+  'ADMIN' | 'SECRETARIA' | 'EVALUADOR' | 'INVESTIGADOR' | 'PRESIDENTE' | 'PRESIDENTA' | 'ADMIN_TI';
 
 export interface Module {
   code: string;
@@ -18,7 +19,7 @@ export interface User {
   id?: string;
   nombre: string;
   email: string;
-  rol: string; 
+  rol: string;
   roles?: string[]; // Soporte para múltiples roles
   userRoles?: UserRoleItem[]; // Roles detallados con suplencias
   perfil?: string;

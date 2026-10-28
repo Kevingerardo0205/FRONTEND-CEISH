@@ -8,7 +8,7 @@ import { AssignmentHistoryEntry } from '@domain/entities/peer-evaluation.entity'
   standalone: true,
   imports: [CommonModule, MatIconModule],
   templateUrl: './tabla-historial-reasignaciones.component.html',
-  styleUrls: ['./tabla-historial-reasignaciones.component.scss']
+  styleUrls: ['./tabla-historial-reasignaciones.component.scss'],
 })
 export class TablaHistorialReasignacionesComponent {
   @Input() historyRecords: AssignmentHistoryEntry[] | any[] = [];

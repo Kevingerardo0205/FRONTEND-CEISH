@@ -17,10 +17,10 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
     MatListModule,
     MatIconModule,
     MatButtonModule,
-    MatExpansionModule
+    MatExpansionModule,
   ],
   templateUrl: './sidebar.component.html',
-  styleUrls: ['./sidebar.component.scss']
+  styleUrls: ['./sidebar.component.scss'],
 })
 export class SidebarComponent {
   public readonly authFacade = inject(AuthFacade);
@@ -36,7 +36,7 @@ export class SidebarComponent {
     try {
       const currentUrl = this.router.url;
       const menu = this.authFacade.menuConfig();
-      
+
       for (const group of menu) {
         // Resiliencia: Verificar que subItems exista y sea un array
         const subItems = group.subItems || [];

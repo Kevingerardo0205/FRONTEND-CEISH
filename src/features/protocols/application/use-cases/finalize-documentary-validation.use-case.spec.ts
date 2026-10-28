@@ -19,8 +19,8 @@ describe('FinalizeDocumentaryValidationUseCase', () => {
       providers: [
         FinalizeDocumentaryValidationUseCase,
         { provide: IProtocolRepositoryPort, useValue: mockRepo },
-        { provide: ValidateDocumentaryUseCase, useValue: mockValidateDoc }
-      ]
+        { provide: ValidateDocumentaryUseCase, useValue: mockValidateDoc },
+      ],
     });
 
     useCase = TestBed.inject(FinalizeDocumentaryValidationUseCase);
@@ -37,7 +37,7 @@ describe('FinalizeDocumentaryValidationUseCase', () => {
         expect(mockValidateDoc.execute).toHaveBeenCalledWith('123');
         expect(res.ceishCode).toBe('CEISH-001');
         done();
-      }
+      },
     });
   });
 
@@ -49,7 +49,7 @@ describe('FinalizeDocumentaryValidationUseCase', () => {
         expect(err.message).toBe('verify failed');
         expect(mockValidateDoc.execute).not.toHaveBeenCalled();
         done();
-      }
+      },
     });
   });
 
@@ -58,7 +58,7 @@ describe('FinalizeDocumentaryValidationUseCase', () => {
       next: () => {
         expect(mockRepo.verifyProtocol).toHaveBeenCalledWith('456', false, 'Faltan docs');
         done();
-      }
+      },
     });
   });
 });

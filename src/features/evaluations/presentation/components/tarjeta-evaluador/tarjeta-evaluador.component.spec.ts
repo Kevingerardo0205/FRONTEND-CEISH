@@ -19,7 +19,7 @@ describe('TarjetaEvaluadorComponent (RF-12.1, RF-12.2, RF-12.3)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TarjetaEvaluadorComponent]
+      imports: [TarjetaEvaluadorComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TarjetaEvaluadorComponent);
@@ -41,17 +41,29 @@ describe('TarjetaEvaluadorComponent (RF-12.1, RF-12.2, RF-12.3)', () => {
   it('deadline null → muestra la fila con "Pendiente de convocatoria"', () => {
     const el = render({ ...realAssignment, deadlineDate: null });
     expect(el.querySelector('.assignment-meta')).toBeTruthy();
-    expect(el.querySelector('.deadline-value')?.textContent?.trim()).toBe('Pendiente de convocatoria');
+    expect(el.querySelector('.deadline-value')?.textContent?.trim()).toBe(
+      'Pendiente de convocatoria',
+    );
   });
 
   it('etiquetas de estado SUGGESTED y COMPLETED', () => {
-    expect(render({ ...realAssignment, status: 'SUGGESTED' }).querySelector('.badge-status')?.textContent?.trim()).toBe('Sugerido');
-    expect(render({ ...realAssignment, status: 'COMPLETED' }).querySelector('.badge-status')?.textContent?.trim()).toBe('Completado');
+    expect(
+      render({ ...realAssignment, status: 'SUGGESTED' })
+        .querySelector('.badge-status')
+        ?.textContent?.trim(),
+    ).toBe('Sugerido');
+    expect(
+      render({ ...realAssignment, status: 'COMPLETED' })
+        .querySelector('.badge-status')
+        ?.textContent?.trim(),
+    ).toBe('Completado');
   });
 
   it('etiquetas de perfil legibles para los 4 códigos del backend', () => {
     const label = (evaluatorProfile: ActiveAssignment['evaluatorProfile']) =>
-      render({ ...realAssignment, evaluatorProfile }).querySelector('.badge-profile')?.textContent?.trim();
+      render({ ...realAssignment, evaluatorProfile })
+        .querySelector('.badge-profile')
+        ?.textContent?.trim();
     expect(label('JURIDICO')).toBe('Jurídico');
     expect(label('SOCIEDAD_CIVIL')).toBe('Sociedad Civil');
     expect(label('METODOLOGICO')).toBe('Metodológico');
@@ -65,7 +77,9 @@ describe('TarjetaEvaluadorComponent (RF-12.1, RF-12.2, RF-12.3)', () => {
 
   it('muestra la insignia de Anexo 10 solo cuando isAssignedForAnnex10 es true', () => {
     expect(render(realAssignment).querySelector('.badge-annex10')).toBeFalsy();
-    expect(render({ ...realAssignment, isAssignedForAnnex10: true }).querySelector('.badge-annex10')).toBeTruthy();
+    expect(
+      render({ ...realAssignment, isAssignedForAnnex10: true }).querySelector('.badge-annex10'),
+    ).toBeTruthy();
   });
 
   it('emite la asignación al pulsar "Reasignar" y oculta el botón si showReassignAction es false', () => {

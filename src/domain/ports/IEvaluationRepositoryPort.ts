@@ -8,11 +8,10 @@ import {
   ReassignPeerEvaluatorPayload,
   ReassignPeerEvaluatorResponse,
   AssignmentHistoryEntry,
-  ActiveAssignmentsResult
+  ActiveAssignmentsResult,
 } from '../entities/peer-evaluation.entity';
 
 export interface EvaluatorsDashboardResponse {
-
   evaluators: EvaluatorsDashboardEntry[];
   totalEvaluators?: number;
 }
@@ -66,10 +65,15 @@ export interface ObservationEntry {
 export abstract class IEvaluationRepositoryPort {
   abstract getEvaluatorsDashboard(profileId?: string): Observable<EvaluatorsDashboardResponse>;
   abstract getMyAssignments(): Observable<EvaluationAssignment[]>;
-  abstract submitEvaluation(payload: SubmitEvaluationPayload): Observable<{ message?: string; assignmentId?: number }>;
+  abstract submitEvaluation(
+    payload: SubmitEvaluationPayload,
+  ): Observable<{ message?: string; assignmentId?: number }>;
   abstract getProfiles(): Observable<EvaluationProfile[]>;
   abstract createProfile(profile: CreateEvaluationProfilePayload): Observable<EvaluationProfile>;
-  abstract updateProfile(id: number, profile: Partial<CreateEvaluationProfilePayload>): Observable<EvaluationProfile>;
+  abstract updateProfile(
+    id: number,
+    profile: Partial<CreateEvaluationProfilePayload>,
+  ): Observable<EvaluationProfile>;
   abstract deleteProfile(id: number): Observable<void>;
   abstract consolidateEvaluation(protocolId: string): Observable<ConsolidatedEvaluationResponse>;
   abstract getChecklistDetails(evaluationId: string): Observable<ChecklistDetailItem[]>;
@@ -78,16 +82,23 @@ export abstract class IEvaluationRepositoryPort {
   abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;
   abstract getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]>;
   abstract getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]>;
-  abstract assignPeerEvaluators(protocolId: string, evaluatorIds: number[]): Observable<AssignEvaluatorsResponse>;
+  abstract assignPeerEvaluators(
+    protocolId: string,
+    evaluatorIds: number[],
+  ): Observable<AssignEvaluatorsResponse>;
   abstract getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]>;
-  abstract submitPeerRiskProposed(assignmentId: string, payload: { riskLevelId: number; observations: string; reportPath: string }): Observable<void>;
+  abstract submitPeerRiskProposed(
+    assignmentId: string,
+    payload: { riskLevelId: number; observations: string; reportPath: string },
+  ): Observable<void>;
   abstract getActiveEvaluators(): Observable<ActiveEvaluator[]>;
   abstract getProtocolObservations(protocolId: string): Observable<ObservationEntry[]>;
-  abstract reassignPeerEvaluator(payload: ReassignPeerEvaluatorPayload): Observable<ReassignPeerEvaluatorResponse>;
+  abstract reassignPeerEvaluator(
+    payload: ReassignPeerEvaluatorPayload,
+  ): Observable<ReassignPeerEvaluatorResponse>;
   abstract getAssignmentHistory(protocolId: number): Observable<AssignmentHistoryEntry[]>;
   abstract getActiveAssignments(protocolId: number): Observable<ActiveAssignmentsResult>;
 }
-
 
 export interface ActiveEvaluator {
   id: number;

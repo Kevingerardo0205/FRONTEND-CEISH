@@ -3,10 +3,13 @@ import { CanActivate, ActivatedRouteSnapshot, Router, UrlTree } from '@angular/r
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RoleGuard implements CanActivate {
-  constructor(private AuthFacade: AuthFacade, private router: Router) {}
+  constructor(
+    private AuthFacade: AuthFacade,
+    private router: Router,
+  ) {}
 
   canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
     const rawRoles = route.data['roles'];
@@ -22,7 +25,9 @@ export class RoleGuard implements CanActivate {
     }
 
     const activeRoles = this.AuthFacade.getActiveRoles();
-    console.warn(`[RoleGuard] Acceso denegado: Usuario ${user.email} con roles [${activeRoles.join(', ')}] intentó acceder a ruta para [${requiredRoles.join(', ')}]`);
+    console.warn(
+      `[RoleGuard] Acceso denegado: Usuario ${user.email} con roles [${activeRoles.join(', ')}] intentó acceder a ruta para [${requiredRoles.join(', ')}]`,
+    );
     return this.router.createUrlTree(['/dashboard']);
   }
 }

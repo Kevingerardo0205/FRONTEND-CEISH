@@ -16,8 +16,8 @@ describe('LoadActiveAssignmentsUseCase (RF-12.3)', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: IEvaluationRepositoryPort, useClass: EvaluationApiAdapter }
-      ]
+        { provide: IEvaluationRepositoryPort, useClass: EvaluationApiAdapter },
+      ],
     });
     useCase = TestBed.inject(LoadActiveAssignmentsUseCase);
     httpMock = TestBed.inject(HttpTestingController);
@@ -27,18 +27,20 @@ describe('LoadActiveAssignmentsUseCase (RF-12.3)', () => {
 
   it('carga las asignaciones activas del protocolo 119 a través del adaptador real', () => {
     let result: ActiveAssignmentsResult | undefined;
-    useCase.execute(119).subscribe(r => (result = r));
+    useCase.execute(119).subscribe((r) => (result = r));
 
-    httpMock.expectOne('/api/evaluations/protocol/119/active-assignments').flush(ACTIVE_ASSIGNMENTS_119_BODY);
+    httpMock
+      .expectOne('/api/evaluations/protocol/119/active-assignments')
+      .flush(ACTIVE_ASSIGNMENTS_119_BODY);
 
     expect(result?.ceishCode).toBe('CEISH-ESPOCH-EI-007-2026');
-    expect(result?.assignments.map(a => a.evaluatorId)).toEqual([39, 40, 41, 42, 43]);
+    expect(result?.assignments.map((a) => a.evaluatorId)).toEqual([39, 40, 41, 42, 43]);
   });
 
   for (const invalid of [0, -1, 1.5, Number.NaN]) {
     it(`rechaza el id ${invalid} sin hacer ninguna petición HTTP`, () => {
       let error: Error | undefined;
-      useCase.execute(invalid).subscribe({ error: e => (error = e) });
+      useCase.execute(invalid).subscribe({ error: (e) => (error = e) });
 
       httpMock.expectNone(() => true);
       expect(error?.message).toContain('entero positivo');

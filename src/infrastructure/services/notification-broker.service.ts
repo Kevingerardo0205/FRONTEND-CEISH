@@ -8,7 +8,7 @@ export interface BroadcastMessage<T = unknown> {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NotificationBrokerService {
   private _bus = new Subject<BroadcastMessage>();
@@ -19,8 +19,8 @@ export class NotificationBrokerService {
 
   on<T>(type: string): Observable<T> {
     return this._bus.asObservable().pipe(
-      filter(m => m.type === type),
-      map(m => m.payload as T)
+      filter((m) => m.type === type),
+      map((m) => m.payload as T),
     );
   }
 }

@@ -51,10 +51,22 @@
     background: #e0e7ff;
     color: #3730a3;
 
-    &.badge-juridico { background: #e0e7ff; color: #3730a3; }
-    &.badge-sociedad_civil { background: #fce7f3; color: #9d174d; }
-    &.badge-metodologico { background: #fef3c7; color: #92400e; }
-    &.badge-salud { background: #dcfce7; color: #166534; }
+    &.badge-juridico {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    &.badge-sociedad_civil {
+      background: #fce7f3;
+      color: #9d174d;
+    }
+    &.badge-metodologico {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    &.badge-salud {
+      background: #dcfce7;
+      color: #166534;
+    }
   }
 
   .badge-status {

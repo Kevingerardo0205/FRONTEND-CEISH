@@ -9,13 +9,13 @@ export const RENEWAL_ROUTES: Routes = [
       {
         path: 'request',
         component: RenewalRequestPage,
-        canActivate: [AuthGuard]
+        canActivate: [AuthGuard],
       },
       {
         path: '',
         redirectTo: 'request',
-        pathMatch: 'full'
-      }
-    ]
-  }
+        pathMatch: 'full',
+      },
+    ],
+  },
 ];

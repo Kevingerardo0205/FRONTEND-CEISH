@@ -1,11 +1,23 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  signal,
+  computed,
+  ElementRef,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { Subscription, filter } from 'rxjs';
-import { IAiAssistantRepositoryPort, ChatHistoryItem } from '@domain/ports/IAiAssistantRepositoryPort';
+import {
+  IAiAssistantRepositoryPort,
+  ChatHistoryItem,
+} from '@domain/ports/IAiAssistantRepositoryPort';
 import { AiAssistantSharedService } from './ai-assistant-shared.service';
 
 @Component({
@@ -13,7 +25,7 @@ import { AiAssistantSharedService } from './ai-assistant-shared.service';
   standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, MatButtonModule],
   templateUrl: './ai-assistant.component.html',
-  styleUrls: ['./ai-assistant.component.scss']
+  styleUrls: ['./ai-assistant.component.scss'],
 })
 export class AiAssistantComponent implements OnInit, OnDestroy {
   private readonly aiAssistantRepository = inject(IAiAssistantRepositoryPort);
@@ -26,10 +38,12 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
   isOpen = signal<boolean>(false);
   isLoading = signal<boolean>(false);
   userMessage = signal<string>('');
-  
+
   // Conversación
-  messages = signal<Array<{ sender: 'user' | 'assistant'; content: string; parsedContent: string }>>([]);
-  
+  messages = signal<
+    Array<{ sender: 'user' | 'assistant'; content: string; parsedContent: string }>
+  >([]);
+
   // Protocol ID activo (detectado de la URL)
   activeProtocolId = signal<number | undefined>(undefined);
 
@@ -41,28 +55,48 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
     const hasProtocol = this.activeProtocolId() !== undefined;
     if (hasProtocol) {
       return [
-        { label: '¿Qué documentos faltan en este protocolo?', query: '¿Qué documentos faltan subir o están pendientes en este protocolo?' },
-        { label: 'Verificar requisitos del PET', query: '¿Cuáles son los requisitos obligatorios generales según la normativa PET?' },
-        { label: 'Historial de versiones del protocolo', query: '¿Cuál es el historial de versiones y estado actual de este protocolo?' }
+        {
+          label: '¿Qué documentos faltan en este protocolo?',
+          query: '¿Qué documentos faltan subir o están pendientes en este protocolo?',
+        },
+        {
+          label: 'Verificar requisitos del PET',
+          query: '¿Cuáles son los requisitos obligatorios generales según la normativa PET?',
+        },
+        {
+          label: 'Historial de versiones del protocolo',
+          query: '¿Cuál es el historial de versiones y estado actual de este protocolo?',
+        },
       ];
     } else {
       return [
-        { label: '¿Qué es el reglamento PET?', query: '¿Qué es el reglamento PET y cuál es su objetivo?' },
-        { label: 'Requisitos para Ensayos Clínicos', query: '¿Cuáles son los requisitos específicos para la evaluación de Ensayos Clínicos (EC)?' },
-        { label: 'Procedimiento para evaluación de protocolos', query: '¿Cuál es el procedimiento paso a paso para la evaluación de protocolos de investigación?' }
+        {
+          label: '¿Qué es el reglamento PET?',
+          query: '¿Qué es el reglamento PET y cuál es su objetivo?',
+        },
+        {
+          label: 'Requisitos para Ensayos Clínicos',
+          query:
+            '¿Cuáles son los requisitos específicos para la evaluación de Ensayos Clínicos (EC)?',
+        },
+        {
+          label: 'Procedimiento para evaluación de protocolos',
+          query:
+            '¿Cuál es el procedimiento paso a paso para la evaluación de protocolos de investigación?',
+        },
       ];
     }
   });
 
   ngOnInit() {
     this.detectProtocolIdFromUrl();
-    
+
     // Escuchar cambios de ruta para actualizar el protocolId dinámicamente
-    this.routerSubscription = this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe(() => {
-      this.detectProtocolIdFromUrl();
-    });
+    this.routerSubscription = this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.detectProtocolIdFromUrl();
+      });
 
     // Suscribirse a eventos externos de limpieza de chat (ej: cuando el administrador cambia el PDF)
     this.clearChatSubscription = this.sharedService.clearChat$.subscribe(() => {
@@ -71,7 +105,7 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
 
     // Mensaje de bienvenida inicial
     this.addAssistantMessage(
-      '¡Hola! Soy tu **Asistente de IA de CEISH-ESPOCH**. Estoy aquí para ayudarte a consultar el reglamento PET, verificar las versiones de tus protocolos o revisar el checklist de documentos. ¿En qué puedo ayudarte hoy?'
+      '¡Hola! Soy tu **Asistente de IA de CEISH-ESPOCH**. Estoy aquí para ayudarte a consultar el reglamento PET, verificar las versiones de tus protocolos o revisar el checklist de documentos. ¿En qué puedo ayudarte hoy?',
     );
   }
 
@@ -87,13 +121,12 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
   resetChat() {
     this.messages.set([]);
     this.addAssistantMessage(
-      '¡Hola! Soy tu **Asistente de IA de CEISH-ESPOCH**. Estoy aquí para ayudarte a consultar el reglamento PET, verificar las versiones de tus protocolos o revisar el checklist de documentos. ¿En qué puedo ayudarte hoy?'
+      '¡Hola! Soy tu **Asistente de IA de CEISH-ESPOCH**. Estoy aquí para ayudarte a consultar el reglamento PET, verificar las versiones de tus protocolos o revisar el checklist de documentos. ¿En qué puedo ayudarte hoy?',
     );
   }
 
-
   toggleOpen() {
-    this.isOpen.update(open => !open);
+    this.isOpen.update((open) => !open);
     if (this.isOpen()) {
       this.scrollToBottom();
     }
@@ -108,7 +141,6 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
       if (this.activeProtocolId() !== id) {
         this.activeProtocolId.set(id);
         // Opcional: Reiniciar chat o añadir mensaje de cambio de contexto
-
       }
     } else {
       this.activeProtocolId.set(undefined);
@@ -120,11 +152,11 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
     if (!query || this.isLoading()) return;
 
     // Agregar mensaje del usuario a la pantalla
-    this.messages.update(list => [
+    this.messages.update((list) => [
       ...list,
-      { sender: 'user', content: query, parsedContent: query }
+      { sender: 'user', content: query, parsedContent: query },
     ]);
-    
+
     if (!text) {
       this.userMessage.set('');
     }
@@ -135,16 +167,12 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
     // Preparar el historial en el formato que espera el Backend
     const historyPayload: ChatHistoryItem[] = this.messages()
       .slice(0, -1) // Excluir el último mensaje que acabamos de agregar
-      .map(msg => ({
+      .map((msg) => ({
         role: msg.sender === 'assistant' ? 'model' : 'user',
-        content: msg.content
+        content: msg.content,
       }));
 
-    this.aiAssistantRepository.chat(
-      query,
-      this.activeProtocolId(),
-      historyPayload
-    ).subscribe({
+    this.aiAssistantRepository.chat(query, this.activeProtocolId(), historyPayload).subscribe({
       next: (res) => {
         this.addAssistantMessage(res.response);
         this.isLoading.set(false);
@@ -153,7 +181,8 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
       error: (err) => {
         let errorMsg = 'Lo siento, ocurrió un problema al conectar con el servidor de IA.';
         if (err.status === 502 || err.status === 429) {
-          errorMsg = 'Límite de solicitudes de IA excedido (429) o servicio temporalmente no disponible (502). Por favor, intenta de nuevo en unos momentos.';
+          errorMsg =
+            'Límite de solicitudes de IA excedido (429) o servicio temporalmente no disponible (502). Por favor, intenta de nuevo en unos momentos.';
         } else if (err.error?.message) {
           errorMsg = err.error.message;
         } else if (err.message) {
@@ -162,15 +191,15 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
         this.addAssistantMessage(`⚠️ *${errorMsg}*`);
         this.isLoading.set(false);
         this.scrollToBottom();
-      }
+      },
     });
   }
 
   private addAssistantMessage(text: string) {
     const parsed = this.parseMarkdown(text);
-    this.messages.update(list => [
+    this.messages.update((list) => [
       ...list,
-      { sender: 'assistant', content: text, parsedContent: parsed }
+      { sender: 'assistant', content: text, parsedContent: parsed },
     ]);
   }
 
@@ -181,7 +210,9 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
           const element = this.chatMessagesContainer.nativeElement;
           element.scrollTop = element.scrollHeight;
         }
-      } catch { /* scroll failure ignored */ }
+      } catch {
+        /* scroll failure ignored */
+      }
     }, 100);
   }
 
@@ -190,12 +221,9 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
    */
   private parseMarkdown(text: string): string {
     if (!text) return '';
-    
+
     // Escapar HTML básico para prevenir XSS
-    let html = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     // Convertir cabeceras ### y ##
     html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
@@ -216,7 +244,7 @@ export class AiAssistantComponent implements OnInit, OnDestroy {
 
     // Listas desordenadas (- item)
     html = html.replace(/^\s*-\s+(.*?)$/gm, '<li>$1</li>');
-    
+
     // Reemplazar saltos de línea por <br/>
     html = html.replace(/\n/g, '<br/>');
 

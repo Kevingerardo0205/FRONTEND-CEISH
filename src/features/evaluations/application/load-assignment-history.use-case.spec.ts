@@ -21,8 +21,8 @@ describe('LoadAssignmentHistoryUseCase (RF-12.3)', () => {
       reasonDescription: 'Conflicto de interés declarado por relación académica.',
       executedByUserId: 1,
       executedByUserName: 'Administrador CEISH',
-      executedAt: '2026-09-28T10:00:00.000Z'
-    }
+      executedAt: '2026-09-28T10:00:00.000Z',
+    },
   ];
 
   beforeEach(() => {
@@ -31,8 +31,8 @@ describe('LoadAssignmentHistoryUseCase (RF-12.3)', () => {
     TestBed.configureTestingModule({
       providers: [
         LoadAssignmentHistoryUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: evalRepoSpy }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: evalRepoSpy },
+      ],
     });
 
     useCase = TestBed.inject(LoadAssignmentHistoryUseCase);
@@ -52,7 +52,7 @@ describe('LoadAssignmentHistoryUseCase (RF-12.3)', () => {
         expect(result.length).toBe(1);
         done();
       },
-      error: done.fail
+      error: done.fail,
     });
   });
 
@@ -63,7 +63,7 @@ describe('LoadAssignmentHistoryUseCase (RF-12.3)', () => {
         expect(err.message).toContain('El ID del protocolo es requerido');
         expect(evalRepoSpy.getAssignmentHistory).not.toHaveBeenCalled();
         done();
-      }
+      },
     });
   });
 
@@ -74,7 +74,7 @@ describe('LoadAssignmentHistoryUseCase (RF-12.3)', () => {
         expect(err.message).toContain('El ID del protocolo es requerido');
         expect(evalRepoSpy.getAssignmentHistory).not.toHaveBeenCalled();
         done();
-      }
+      },
     });
   });
 });

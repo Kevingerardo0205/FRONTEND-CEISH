@@ -9,7 +9,7 @@ describe('RoleFormDialogComponent', () => {
   let mockDialogRef: jasmine.SpyObj<MatDialogRef<RoleFormDialogComponent>>;
 
   const mockDialogData: RoleDialogData = {
-    mode: 'create'
+    mode: 'create',
   };
 
   beforeEach(async () => {
@@ -19,8 +19,8 @@ describe('RoleFormDialogComponent', () => {
       imports: [RoleFormDialogComponent, NoopAnimationsModule],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: MAT_DIALOG_DATA, useValue: mockDialogData }
-      ]
+        { provide: MAT_DIALOG_DATA, useValue: mockDialogData },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RoleFormDialogComponent);
@@ -44,7 +44,7 @@ describe('RoleFormDialogComponent', () => {
     component.roleForm.patchValue({
       code: 'AUDITOR_EXTERNO',
       name: 'Auditor Externo',
-      description: 'Responsable de auditoría externa'
+      description: 'Responsable de auditoría externa',
     });
 
     expect(component.roleForm.valid).toBeTrue();
@@ -53,7 +53,7 @@ describe('RoleFormDialogComponent', () => {
     expect(mockDialogRef.close).toHaveBeenCalledWith({
       code: 'AUDITOR_EXTERNO',
       name: 'Auditor Externo',
-      description: 'Responsable de auditoría externa'
+      description: 'Responsable de auditoría externa',
     });
   });
 

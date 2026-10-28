@@ -10,87 +10,96 @@ export const DASHBOARD_ROUTES: Routes = [
     children: [
       {
         path: 'home',
-        loadComponent: () => import('./presentation/pages/dashboard-home.page').then(m => m.DashboardHomePage)
+        loadComponent: () =>
+          import('./presentation/pages/dashboard-home.page').then((m) => m.DashboardHomePage),
       },
       {
         path: 'profile',
-        loadComponent: () => import('./presentation/pages/profile/profile.page').then(m => m.ProfilePage)
+        loadComponent: () =>
+          import('./presentation/pages/profile/profile.page').then((m) => m.ProfilePage),
       },
       {
         path: 'admin/users',
-        loadComponent: () => import('./presentation/pages/user-management.page').then(m => m.UserManagementPage),
+        loadComponent: () =>
+          import('./presentation/pages/user-management.page').then((m) => m.UserManagementPage),
         canActivate: [AuthGuard],
-        data: { permissions: ['USUARIOS_VER'] }
+        data: { permissions: ['USUARIOS_VER'] },
       },
       {
         path: 'admin/security',
-        loadChildren: () => import('@features/security/routes').then(m => m.SECURITY_ROUTES),
+        loadChildren: () => import('@features/security/routes').then((m) => m.SECURITY_ROUTES),
         canActivate: [AuthGuard],
-        data: { permissions: ['PERMISOS_GESTIONAR'] }
+        data: { permissions: ['PERMISOS_GESTIONAR'] },
       },
       {
         path: 'admin/ai-assistant',
-        loadChildren: () => import('@features/ai-assistant-admin/routes').then(m => m.AI_ASSISTANT_ADMIN_ROUTES),
-         canActivate: [AuthGuard],
-        data: { permissions: ['CONFIG_PLANTILLAS'] }
+        loadChildren: () =>
+          import('@features/ai-assistant-admin/routes').then((m) => m.AI_ASSISTANT_ADMIN_ROUTES),
+        canActivate: [AuthGuard],
+        data: { permissions: ['CONFIG_PLANTILLAS'] },
       },
       {
         path: 'admin/templates',
-        loadComponent: () => import('./presentation/pages/template-management/template-management.page').then(m => m.TemplateManagementPage),
+        loadComponent: () =>
+          import('./presentation/pages/template-management/template-management.page').then(
+            (m) => m.TemplateManagementPage,
+          ),
         canActivate: [AuthGuard],
-        data: { permissions: ['CONFIG_PLANTILLAS'] }
+        data: { permissions: ['CONFIG_PLANTILLAS'] },
       },
       {
         path: 'protocols',
-        loadChildren: () => import('@features/protocols/routes').then(m => m.PROTOCOL_ROUTES)
+        loadChildren: () => import('@features/protocols/routes').then((m) => m.PROTOCOL_ROUTES),
       },
       {
         path: 'evaluations',
-        loadChildren: () => import('@features/evaluations/routes').then(m => m.EVALUATION_ROUTES)
+        loadChildren: () => import('@features/evaluations/routes').then((m) => m.EVALUATION_ROUTES),
       },
       {
         path: 'evaluacion-etica',
-        loadChildren: () => import('@features/evaluations/routes').then(m => m.EVALUATION_ROUTES)
+        loadChildren: () => import('@features/evaluations/routes').then((m) => m.EVALUATION_ROUTES),
       },
       {
         path: 'follow-up',
-        loadChildren: () => import('@features/follow-up/routes').then(m => m.FOLLOW_UP_ROUTES)
+        loadChildren: () => import('@features/follow-up/routes').then((m) => m.FOLLOW_UP_ROUTES),
       },
       {
         path: 'resolutions',
-        loadChildren: () => import('@features/resolutions/routes').then(m => m.RESOLUTION_ROUTES)
+        loadChildren: () => import('@features/resolutions/routes').then((m) => m.RESOLUTION_ROUTES),
       },
       {
         path: 'amendments',
-        loadChildren: () => import('@features/amendments/routes').then(m => m.AMENDMENT_ROUTES)
+        loadChildren: () => import('@features/amendments/routes').then((m) => m.AMENDMENT_ROUTES),
       },
       {
         path: 'renewals',
-        loadChildren: () => import('@features/renewals/routes').then(m => m.RENEWAL_ROUTES)
+        loadChildren: () => import('@features/renewals/routes').then((m) => m.RENEWAL_ROUTES),
       },
       {
         path: 'reports',
-        loadChildren: () => import('@features/reports/routes').then(m => m.REPORTS_ROUTES)
+        loadChildren: () => import('@features/reports/routes').then((m) => m.REPORTS_ROUTES),
       },
       {
         path: 'investigador',
-        loadChildren: () => import('@features/investigador/investigador.routes').then(m => m.INVESTIGADOR_ROUTES)
+        loadChildren: () =>
+          import('@features/investigador/investigador.routes').then((m) => m.INVESTIGADOR_ROUTES),
       },
       {
         path: 'audit',
-        loadChildren: () => import('@features/audit/routes').then(m => m.AUDIT_ROUTES),
+        loadChildren: () => import('@features/audit/routes').then((m) => m.AUDIT_ROUTES),
         canActivate: [AuthGuard],
-        data: { permissions: ['ADMIN_ALL'] }
+        data: { permissions: ['ADMIN_ALL'] },
       },
       {
         path: 'notifications',
-        loadChildren: () => import('@features/notifications/routes').then(m => m.NOTIFICATION_ROUTES)
+        loadChildren: () =>
+          import('@features/notifications/routes').then((m) => m.NOTIFICATION_ROUTES),
       },
       {
         path: '',
         redirectTo: 'home',
-        pathMatch: 'full'
-      }
-    ]
-  }
+        pathMatch: 'full',
+      },
+    ],
+  },
 ];

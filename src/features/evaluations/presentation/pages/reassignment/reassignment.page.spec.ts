@@ -10,8 +10,14 @@ import { of } from 'rxjs';
 import { ReassignmentPage, parseProtocolId } from './reassignment.page';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { EvaluationApiAdapter } from '@infrastructure/adapters/evaluation-api.adapter';
-import { ModalReasignacionComponent, REASSIGN_SUCCESS_MESSAGE } from '../../components/modal-reasignacion/modal-reasignacion.component';
-import { ACTIVE_ASSIGNMENTS_119_BODY, ERROR_404_BODY } from '../../../testing/reassignment.fixtures';
+import {
+  ModalReasignacionComponent,
+  REASSIGN_SUCCESS_MESSAGE,
+} from '../../components/modal-reasignacion/modal-reasignacion.component';
+import {
+  ACTIVE_ASSIGNMENTS_119_BODY,
+  ERROR_404_BODY,
+} from '../../../testing/reassignment.fixtures';
 
 const ACTIVE_URL = (id: number) => `/api/evaluations/protocol/${id}/active-assignments`;
 const HISTORY_URL = (id: number) => `/api/evaluations/protocol/${id}/reassignment-history`;
@@ -35,11 +41,15 @@ describe('ReassignmentPage', () => {
         { provide: IEvaluationRepositoryPort, useClass: EvaluationApiAdapter },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: { get: (key: string) => (key === 'protocolId' ? routeId : null) } } }
+          useValue: {
+            snapshot: {
+              paramMap: { get: (key: string) => (key === 'protocolId' ? routeId : null) },
+            },
+          },
         },
         { provide: MatDialog, useValue: dialogSpy },
-        { provide: MatSnackBar, useValue: snackSpy }
-      ]
+        { provide: MatSnackBar, useValue: snackSpy },
+      ],
     });
     // MatSnackBarModule en los imports de la página provee su propio MatSnackBar y ocultaría el espía.
     TestBed.overrideComponent(ReassignmentPage, { remove: { imports: [MatSnackBarModule] } });
@@ -63,7 +73,9 @@ describe('ReassignmentPage', () => {
     flushHistoryOk(119);
     fixture.detectChanges();
 
-    expect(el.querySelector('.protocol-badge')?.textContent?.trim()).toBe('CEISH-ESPOCH-EI-007-2026');
+    expect(el.querySelector('.protocol-badge')?.textContent?.trim()).toBe(
+      'CEISH-ESPOCH-EI-007-2026',
+    );
     expect(el.querySelector('.status-badge')?.textContent?.trim()).toBe('Versión 1');
     expect(el.querySelectorAll('app-tarjeta-evaluador').length).toBe(5);
     // Todas están en ASSIGNED: la acción de reasignar se muestra en las 5.
@@ -89,37 +101,50 @@ describe('ReassignmentPage', () => {
 
       httpMock.expectNone(() => true);
       expect(component.protocolId()).toBeNull();
-      expect(el.querySelector('.alert-danger')?.textContent).toContain('debe ser un número entero positivo');
+      expect(el.querySelector('.alert-danger')?.textContent).toContain(
+        'debe ser un número entero positivo',
+      );
     });
   }
 
   it('si falla el historial muestra advertencia visible y conserva las asignaciones', () => {
     const el = setup('119');
     httpMock.expectOne(ACTIVE_URL(119)).flush(ACTIVE_ASSIGNMENTS_119_BODY);
-    httpMock.expectOne(HISTORY_URL(119)).flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    httpMock
+      .expectOne(HISTORY_URL(119))
+      .flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
 
     expect(el.querySelectorAll('app-tarjeta-evaluador').length).toBe(5);
-    expect(el.querySelector('.alert-warning')?.textContent)
-      .toContain('No se pudo cargar el historial de reasignaciones: El protocolo con ID 0 no existe.');
+    expect(el.querySelector('.alert-warning')?.textContent).toContain(
+      'No se pudo cargar el historial de reasignaciones: El protocolo con ID 0 no existe.',
+    );
     expect(component.errorMessage()).toBeNull();
   });
 
   it('si fallan las asignaciones muestra el mensaje real del backend', () => {
     // Cuerpo 404 textual de la captura (menciona el ID 0 aunque aquí se consulta el 999).
     const el = setup('999');
-    httpMock.expectOne(ACTIVE_URL(999)).flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    httpMock
+      .expectOne(ACTIVE_URL(999))
+      .flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
     flushHistoryOk(999);
     fixture.detectChanges();
 
-    expect(el.querySelector('.alert-danger .alert-text')?.textContent?.trim()).toBe('El protocolo con ID 0 no existe.');
+    expect(el.querySelector('.alert-danger .alert-text')?.textContent?.trim()).toBe(
+      'El protocolo con ID 0 no existe.',
+    );
     expect(el.querySelectorAll('app-tarjeta-evaluador').length).toBe(0);
   });
 
   it('protocolo 99999 con ambos 404: solo el error de asignaciones, sin la advertencia del historial', () => {
     const el = setup('99999');
-    httpMock.expectOne(ACTIVE_URL(99999)).flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
-    httpMock.expectOne(HISTORY_URL(99999)).flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    httpMock
+      .expectOne(ACTIVE_URL(99999))
+      .flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    httpMock
+      .expectOne(HISTORY_URL(99999))
+      .flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
 
     expect(el.querySelectorAll('.alert-danger').length).toBe(1);
@@ -132,18 +157,28 @@ describe('ReassignmentPage', () => {
     httpMock.expectOne(ACTIVE_URL(119)).flush(ACTIVE_ASSIGNMENTS_119_BODY);
     flushHistoryOk(119);
 
-    const dialogRef = jasmine.createSpyObj<MatDialogRef<ModalReasignacionComponent>>('MatDialogRef', ['afterClosed']);
+    const dialogRef = jasmine.createSpyObj<MatDialogRef<ModalReasignacionComponent>>(
+      'MatDialogRef',
+      ['afterClosed'],
+    );
     dialogRef.afterClosed.and.returnValue(of(true));
     dialogSpy.open.and.returnValue(dialogRef);
 
     const ana = component.activeAssignments()[0];
     component.openReassignModal(ana);
 
-    expect(dialogSpy.open).toHaveBeenCalledWith(ModalReasignacionComponent, jasmine.objectContaining({
-      data: { outgoingAssignment: ana, activeEvaluatorIds: [39, 40, 41, 42, 43] }
-    }));
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ModalReasignacionComponent,
+      jasmine.objectContaining({
+        data: { outgoingAssignment: ana, activeEvaluatorIds: [39, 40, 41, 42, 43] },
+      }),
+    );
     expect(component.successMessage()).toBe(REASSIGN_SUCCESS_MESSAGE);
-    expect(snackSpy.open).toHaveBeenCalledWith(REASSIGN_SUCCESS_MESSAGE, 'Cerrar', jasmine.any(Object));
+    expect(snackSpy.open).toHaveBeenCalledWith(
+      REASSIGN_SUCCESS_MESSAGE,
+      'Cerrar',
+      jasmine.any(Object),
+    );
 
     // Recarga: vuelve a pedir asignaciones e historial.
     httpMock.expectOne(ACTIVE_URL(119)).flush(ACTIVE_ASSIGNMENTS_119_BODY);

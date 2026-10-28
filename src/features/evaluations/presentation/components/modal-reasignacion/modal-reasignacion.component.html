@@ -13,7 +13,10 @@
     <!-- Sección Evaluador Saliente (Inmutable) -->
     <div class="outgoing-card">
       <div class="card-header-small">
-        <span class="badge-role" [ngClass]="'badge-' + (outgoingProfile() ?? 'sin-perfil').toLowerCase()">
+        <span
+          class="badge-role"
+          [ngClass]="'badge-' + (outgoingProfile() ?? 'sin-perfil').toLowerCase()"
+        >
           {{ outgoingProfileLabel() }}
         </span>
         <span class="badge-status">{{ outgoingStatusLabel }}</span>
@@ -24,15 +27,18 @@
       </div>
       <div class="note-annex10" *ngIf="data.outgoingAssignment.isAssignedForAnnex10">
         <mat-icon>security</mat-icon>
-        <span>Este evaluador fue asignado para <strong>Anexo 10 (Estratificación de Riesgo)</strong>. La responsabilidad se transferirá al sustituto.</span>
+        <span
+          >Este evaluador fue asignado para <strong>Anexo 10 (Estratificación de Riesgo)</strong>.
+          La responsabilidad se transferirá al sustituto.</span
+        >
       </div>
     </div>
 
     <div *ngIf="outgoingProfile() === null" class="no-candidates-alert outgoing-profile-error">
       <mat-icon>error</mat-icon>
       <span>
-        El evaluador saliente no tiene un perfil reconocido (Jurídico, Sociedad Civil, Metodológico o Salud).
-        No es posible proponer un sustituto del mismo perfil.
+        El evaluador saliente no tiene un perfil reconocido (Jurídico, Sociedad Civil, Metodológico
+        o Salud). No es posible proponer un sustituto del mismo perfil.
       </span>
     </div>
 
@@ -45,12 +51,19 @@
     <form [formGroup]="form" class="reassign-form">
       <!-- Selección de sustituto del mismo perfil -->
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Nuevo Evaluador Sustituto (Mismo Perfil: {{ outgoingProfileLabel() }})</mat-label>
-        <mat-select formControlName="newEvaluatorId" placeholder="Seleccione un candidato disponible">
+        <mat-label
+          >Nuevo Evaluador Sustituto (Mismo Perfil: {{ outgoingProfileLabel() }})</mat-label
+        >
+        <mat-select
+          formControlName="newEvaluatorId"
+          placeholder="Seleccione un candidato disponible"
+        >
           <mat-option *ngFor="let candidate of filteredCandidates()" [value]="candidate.id">
             <div class="eval-option">
               <span class="eval-name">{{ candidate.fullName }}</span>
-              <span class="eval-email">{{ candidate.email }} · Carga actual: {{ candidate.currentLoad }}</span>
+              <span class="eval-email"
+                >{{ candidate.email }} · Carga actual: {{ candidate.currentLoad }}</span
+              >
             </div>
           </mat-option>
         </mat-select>
@@ -59,14 +72,23 @@
         </mat-error>
       </mat-form-field>
 
-      <div *ngIf="outgoingProfile() !== null && filteredCandidates().length === 0" class="no-candidates-alert">
+      <div
+        *ngIf="outgoingProfile() !== null && filteredCandidates().length === 0"
+        class="no-candidates-alert"
+      >
         <mat-icon>warning</mat-icon>
-        <span>No hay evaluadores disponibles con el perfil {{ outgoingProfileLabel() }} que no estén ya asignados a este protocolo.</span>
+        <span
+          >No hay evaluadores disponibles con el perfil {{ outgoingProfileLabel() }} que no estén ya
+          asignados a este protocolo.</span
+        >
       </div>
 
       <div *ngIf="unrecognizedProfileCount() > 0" class="candidates-note">
         <mat-icon>info</mat-icon>
-        <span>{{ unrecognizedProfileCount() }} evaluador(es) del catálogo no tienen un perfil reconocido y no se muestran como candidatos.</span>
+        <span
+          >{{ unrecognizedProfileCount() }} evaluador(es) del catálogo no tienen un perfil
+          reconocido y no se muestran como candidatos.</span
+        >
       </div>
 
       <!-- Motivo de reasignación -->
@@ -110,13 +132,16 @@
   </div>
 
   <div mat-dialog-actions class="modal-actions">
-    <button mat-stroked-button (click)="onCancel()" [disabled]="isSubmitting()">
-      Cancelar
-    </button>
+    <button mat-stroked-button (click)="onCancel()" [disabled]="isSubmitting()">Cancelar</button>
     <button
       mat-flat-button
       color="warn"
-      [disabled]="form.invalid || outgoingProfile() === null || filteredCandidates().length === 0 || isSubmitting()"
+      [disabled]="
+        form.invalid ||
+        outgoingProfile() === null ||
+        filteredCandidates().length === 0 ||
+        isSubmitting()
+      "
       (click)="onConfirm()"
     >
       <mat-icon>{{ isSubmitting() ? 'hourglass_empty' : 'swap_horiz' }}</mat-icon>

@@ -61,6 +61,6 @@ export const appConfig: ApplicationConfig = {
     { provide: IAmendmentRepositoryPort, useClass: AmendmentApiAdapter },
     { provide: IAuditRepositoryPort, useClass: AuditRepositoryAdapter },
     { provide: IReportRepositoryPort, useClass: ReportRepositoryAdapter },
-    { provide: IMeetingRepositoryPort, useClass: MeetingApiAdapter }
-  ]
+    { provide: IMeetingRepositoryPort, useClass: MeetingApiAdapter },
+  ],
 };

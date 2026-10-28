@@ -14,7 +14,15 @@ describe('ValidateChecklistItemUseCase', () => {
     name: 'Anexo 1',
     status: 'PRESENTADO',
     observations: null,
-    attachedDocument: { id: 10, fileName: 'doc.pdf', path: '/doc', isValidated: false, uploadedAt: '2025-01-01', originalPageCount: 5, pageCount: 5 }
+    attachedDocument: {
+      id: 10,
+      fileName: 'doc.pdf',
+      path: '/doc',
+      isValidated: false,
+      uploadedAt: '2025-01-01',
+      originalPageCount: 5,
+      pageCount: 5,
+    },
   };
 
   beforeEach(() => {
@@ -24,8 +32,8 @@ describe('ValidateChecklistItemUseCase', () => {
     TestBed.configureTestingModule({
       providers: [
         ValidateChecklistItemUseCase,
-        { provide: IDocumentRepositoryPort, useValue: mockDocRepo }
-      ]
+        { provide: IDocumentRepositoryPort, useValue: mockDocRepo },
+      ],
     });
 
     useCase = TestBed.inject(ValidateChecklistItemUseCase);
@@ -40,7 +48,7 @@ describe('ValidateChecklistItemUseCase', () => {
       next: () => {
         expect(mockDocRepo.validateDocument).toHaveBeenCalledWith('10', 1, '', 5);
         done();
-      }
+      },
     });
   });
 
@@ -48,9 +56,14 @@ describe('ValidateChecklistItemUseCase', () => {
     const item = { ...baseItem, observations: 'Obs text' };
     useCase.execute(item, 2, 'Motivo de rechazo aceptable').subscribe({
       next: () => {
-        expect(mockDocRepo.validateDocument).toHaveBeenCalledWith('10', 2, 'Motivo de rechazo aceptable', 5);
+        expect(mockDocRepo.validateDocument).toHaveBeenCalledWith(
+          '10',
+          2,
+          'Motivo de rechazo aceptable',
+          5,
+        );
         done();
-      }
+      },
     });
   });
 
@@ -60,20 +73,20 @@ describe('ValidateChecklistItemUseCase', () => {
       error: (err) => {
         expect(err.message).toBe('No hay documento adjunto para validar');
         done();
-      }
+      },
     });
   });
 
   it('should throw error when pageCount is 0', (done) => {
     const item: ValidationChecklistItem = {
       ...baseItem,
-      attachedDocument: { ...baseItem.attachedDocument!, pageCount: 0 }
+      attachedDocument: { ...baseItem.attachedDocument!, pageCount: 0 },
     };
     useCase.execute(item, 1, '').subscribe({
       error: (err) => {
         expect(err.message).toContain('número de páginas');
         done();
-      }
+      },
     });
   });
 
@@ -82,7 +95,7 @@ describe('ValidateChecklistItemUseCase', () => {
       error: (err) => {
         expect(err.message).toContain('mínimo 5 caracteres');
         done();
-      }
+      },
     });
   });
 
@@ -91,33 +104,37 @@ describe('ValidateChecklistItemUseCase', () => {
       next: () => {
         expect(mockDocRepo.validateDocument).toHaveBeenCalled();
         done();
-      }
+      },
     });
   });
 
   it('should use originalPageCount when pageCount is null', (done) => {
     const item: ValidationChecklistItem = {
       ...baseItem,
-      attachedDocument: { ...baseItem.attachedDocument!, pageCount: null, originalPageCount: 8 }
+      attachedDocument: { ...baseItem.attachedDocument!, pageCount: null, originalPageCount: 8 },
     };
     useCase.execute(item, 1, '').subscribe({
       next: () => {
         expect(mockDocRepo.validateDocument).toHaveBeenCalledWith('10', 1, '', 8);
         done();
-      }
+      },
     });
   });
 
   it('should default to 1 when both pageCount and originalPageCount are null', (done) => {
     const item: ValidationChecklistItem = {
       ...baseItem,
-      attachedDocument: { ...baseItem.attachedDocument!, pageCount: null, originalPageCount: undefined }
+      attachedDocument: {
+        ...baseItem.attachedDocument!,
+        pageCount: null,
+        originalPageCount: undefined,
+      },
     };
     useCase.execute(item, 1, '').subscribe({
       next: () => {
         expect(mockDocRepo.validateDocument).toHaveBeenCalledWith('10', 1, '', 1);
         done();
-      }
+      },
     });
   });
 });
