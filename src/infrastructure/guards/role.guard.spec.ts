@@ -9,15 +9,19 @@ describe('RoleGuard (Multi-Role Support)', () => {
   let mockRouter: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    mockAuthFacade = jasmine.createSpyObj('AuthFacade', ['currentUser', 'hasAnyRole', 'getActiveRoles']);
+    mockAuthFacade = jasmine.createSpyObj('AuthFacade', [
+      'currentUser',
+      'hasAnyRole',
+      'getActiveRoles',
+    ]);
     mockRouter = jasmine.createSpyObj('Router', ['createUrlTree']);
 
     TestBed.configureTestingModule({
       providers: [
         RoleGuard,
         { provide: AuthFacade, useValue: mockAuthFacade },
-        { provide: Router, useValue: mockRouter }
-      ]
+        { provide: Router, useValue: mockRouter },
+      ],
     });
 
     guard = TestBed.inject(RoleGuard);
@@ -42,7 +46,7 @@ describe('RoleGuard (Multi-Role Support)', () => {
       rol: 'ADMIN',
       roles: ['ADMIN'],
       activo: true,
-      emailVerificado: true
+      emailVerificado: true,
     });
     mockAuthFacade.hasAnyRole.and.returnValue(true);
 
@@ -61,7 +65,7 @@ describe('RoleGuard (Multi-Role Support)', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR', 'EVALUADOR'],
       activo: true,
-      emailVerificado: true
+      emailVerificado: true,
     });
     // hasAnyRole debe retornar true porque 'EVALUADOR' está en sus roles
     mockAuthFacade.hasAnyRole.and.callFake((roles: string[]) => roles.includes('EVALUADOR'));
@@ -79,7 +83,7 @@ describe('RoleGuard (Multi-Role Support)', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR'],
       activo: true,
-      emailVerificado: true
+      emailVerificado: true,
     });
     mockAuthFacade.hasAnyRole.and.returnValue(false);
     mockAuthFacade.getActiveRoles.and.returnValue(['INVESTIGADOR']);

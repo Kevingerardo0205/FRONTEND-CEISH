@@ -23,18 +23,22 @@ export class GenerateAndSubmitResolutionUseCase {
 
   execute(payload: ResolutionPayload): Observable<ResolutionEntity> {
     const s3Key = `protocols/${payload.protocolId}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-    const fileToUpload = payload.file || new File(
-      [new Blob(['Acta de Resolución'], { type: 'application/pdf' })],
-      'Carta_Resolucion_Consolidada.pdf',
-      { type: 'application/pdf' }
-    );
+    const fileToUpload =
+      payload.file ||
+      new File(
+        [new Blob(['Acta de Resolución'], { type: 'application/pdf' })],
+        'Carta_Resolucion_Consolidada.pdf',
+        { type: 'application/pdf' },
+      );
 
     return this.s3Storage.getUploadUrl(s3Key, 'application/pdf').pipe(
-      switchMap(urlRes => this.s3Storage.uploadFileToS3(urlRes.uploadUrl, fileToUpload).pipe(
-        filter(upRes => upRes.success),
-        map(() => urlRes.key)
-      )),
-      switchMap(uploadedKey => {
+      switchMap((urlRes) =>
+        this.s3Storage.uploadFileToS3(urlRes.uploadUrl, fileToUpload).pipe(
+          filter((upRes) => upRes.success),
+          map(() => urlRes.key),
+        ),
+      ),
+      switchMap((uploadedKey) => {
         const typeId = Number(payload.resolutionTypeId);
         return this.createResolution.execute({
           protocolId: payload.protocolId,
@@ -45,9 +49,9 @@ export class GenerateAndSubmitResolutionUseCase {
           majorObservations: payload.majorObservations,
           minorObservations: payload.minorObservations,
           correctionProcedure: payload.correctionProcedure,
-          letterFilePath: uploadedKey
+          letterFilePath: uploadedKey,
         });
-      })
+      }),
     );
   }
 }

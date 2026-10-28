@@ -60,8 +60,12 @@
           background: #f1f5f9;
           transform: translateY(-1px);
         }
-        
-        mat-icon { font-size: 22px; width: 22px; height: 22px; }
+
+        mat-icon {
+          font-size: 22px;
+          width: 22px;
+          height: 22px;
+        }
       }
 
       .header-breadcrumb {
@@ -114,8 +118,21 @@
           width: 340px;
         }
 
-        mat-icon { font-size: 20px; width: 20px; height: 20px; color: #94a3b8; margin-right: 0.75rem; }
-        input { border: none; background: transparent; outline: none; font-size: 0.9rem; font-weight: 500; width: 100%; }
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          color: #94a3b8;
+          margin-right: 0.75rem;
+        }
+        input {
+          border: none;
+          background: transparent;
+          outline: none;
+          font-size: 0.9rem;
+          font-weight: 500;
+          width: 100%;
+        }
       }
 
       .notification-btn {
@@ -123,11 +140,27 @@
         width: 42px;
         height: 42px;
         border-radius: 12px;
-        &:hover { color: vars.$color-primary; background-color: #f8fafc; }
-        .notification-badge { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; background-color: #ef4444; border: 2px solid white; border-radius: 50%; }
+        &:hover {
+          color: vars.$color-primary;
+          background-color: #f8fafc;
+        }
+        .notification-badge {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          width: 8px;
+          height: 8px;
+          background-color: #ef4444;
+          border: 2px solid white;
+          border-radius: 50%;
+        }
       }
 
-      .toolbar-divider { height: 32px; margin: 0 0.5rem; border-color: #f1f5f9; }
+      .toolbar-divider {
+        height: 32px;
+        margin: 0 0.5rem;
+        border-color: #f1f5f9;
+      }
     }
 
     .user-profile-button {
@@ -147,27 +180,27 @@
 
       .user-avatar-container {
         position: relative;
-        .user-avatar { 
-          width: 40px; 
-          height: 40px; 
-          background: vars.$color-primary; 
-          color: white; 
-          border-radius: 12px; 
-          font-weight: 800; 
-          display: flex; 
-          align-items: center; 
+        .user-avatar {
+          width: 40px;
+          height: 40px;
+          background: vars.$color-primary;
+          color: white;
+          border-radius: 12px;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
           justify-content: center;
           box-shadow: 0 4px 10px rgba(vars.$color-primary, 0.2);
         }
-        .status-indicator { 
-          position: absolute; 
-          bottom: -1px; 
-          right: -1px; 
-          width: 11px; 
-          height: 11px; 
-          background: #10b981; 
-          border: 2px solid white; 
-          border-radius: 50%; 
+        .status-indicator {
+          position: absolute;
+          bottom: -1px;
+          right: -1px;
+          width: 11px;
+          height: 11px;
+          background: #10b981;
+          border: 2px solid white;
+          border-radius: 50%;
         }
       }
 
@@ -202,7 +235,9 @@
   border: 1px solid rgba(0, 0, 0, 0.04) !important;
   overflow: hidden !important;
 
-  .mat-mdc-menu-content { padding: 0 !important; }
+  .mat-mdc-menu-content {
+    padding: 0 !important;
+  }
 
   .menu-header {
     padding: 1.5rem;
@@ -213,27 +248,115 @@
       align-items: center;
       gap: 1rem;
       margin-bottom: 1rem;
-      .menu-avatar { width: 48px; height: 48px; background: white; color: vars.$color-primary; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; border: 1px solid #e2e8f0; }
+      .menu-avatar {
+        width: 48px;
+        height: 48px;
+        background: white;
+        color: vars.$color-primary;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.1rem;
+        border: 1px solid #e2e8f0;
+      }
       .menu-text {
-        display: flex; flex-direction: column; overflow: hidden;
-        .menu-user-name { font-size: 1rem; font-weight: 800; color: #1e293b; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .menu-user-email { font-size: 0.8rem; color: #64748b; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        .menu-user-name {
+          font-size: 1rem;
+          font-weight: 800;
+          color: #1e293b;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+        .menu-user-email {
+          font-size: 0.8rem;
+          color: #64748b;
+          font-weight: 500;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
       }
     }
-    .role-badge { display: inline-block; padding: 0.3rem 0.8rem; background: rgba(77, 182, 172, 0.12); color: #00796b; border-radius: 8px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+    .role-badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      background: rgba(77, 182, 172, 0.12);
+      color: #00796b;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
   }
 
-  .menu-items-group, .menu-footer { padding: 0.6rem; }
-  .custom-menu-item {
-    height: 48px !important; border-radius: 12px !important; margin-bottom: 2px; padding: 0 1rem !important;
-    &:hover { background-color: #f1f5f9 !important; }
-    .menu-item-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem; background: #f8fafc; transition: all 0.2s ease; mat-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; } }
-    span { font-size: 0.9rem; font-weight: 600; color: #334155; }
-    &:hover .menu-item-icon { background: white; transform: scale(1.05); }
+  .menu-items-group,
+  .menu-footer {
+    padding: 0.6rem;
   }
-  .logout-menu-item { @extend .custom-menu-item; &:hover { background-color: #fff1f2 !important; span { color: #e11d48 !important; } .logout-icon mat-icon { color: #e11d48 !important; } } }
+  .custom-menu-item {
+    height: 48px !important;
+    border-radius: 12px !important;
+    margin-bottom: 2px;
+    padding: 0 1rem !important;
+    &:hover {
+      background-color: #f1f5f9 !important;
+    }
+    .menu-item-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.75rem;
+      background: #f8fafc;
+      transition: all 0.2s ease;
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #64748b;
+      }
+    }
+    span {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    &:hover .menu-item-icon {
+      background: white;
+      transform: scale(1.05);
+    }
+  }
+  .logout-menu-item {
+    @extend .custom-menu-item;
+    &:hover {
+      background-color: #fff1f2 !important;
+      span {
+        color: #e11d48 !important;
+      }
+      .logout-icon mat-icon {
+        color: #e11d48 !important;
+      }
+    }
+  }
 }
 
 @media (max-width: 1024px) {
-  .dashboard-toolbar { padding: 0 1rem !important; height: 64px !important; .toolbar-title { font-size: 1rem !important; } .toolbar-date { display: none; } }
+  .dashboard-toolbar {
+    padding: 0 1rem !important;
+    height: 64px !important;
+    .toolbar-title {
+      font-size: 1rem !important;
+    }
+    .toolbar-date {
+      display: none;
+    }
+  }
 }

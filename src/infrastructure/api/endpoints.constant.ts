@@ -26,10 +26,11 @@ export const ENDPOINTS = {
       CERTIFICATE: (id: string) => `/reception/protocol/${id}/certificate`,
       VALIDATE_DOC: (id: string) => `/reception/document/${id}/validate`,
       DOCUMENTS_HISTORY: (id: string) => `/reception/protocol/${id}/documents`,
-      REQUIREMENT_STATUS: (protocolId: string, reqId: string) => `/reception/protocol/${protocolId}/requirement/${reqId}`,
+      REQUIREMENT_STATUS: (protocolId: string, reqId: string) =>
+        `/reception/protocol/${protocolId}/requirement/${reqId}`,
       VERIFY: (protocolId: string) => `/reception/protocol/${protocolId}/verify`,
       VALIDATION_DETAIL: (id: string) => `/reception/protocol/${id}/validation-detail`,
-    }
+    },
   },
   DOCUMENTS: {
     BASE: '/documents',
@@ -51,10 +52,14 @@ export const ENDPOINTS = {
     PEER_ASSIGNMENTS: {
       PENDING_ASSIGNMENT: '/evaluations/protocols/pending-peer-assignment',
       ASSIGN_PEERS: (id: string) => `/evaluations/protocols/${id}/assign-peer-evaluators`,
+      REASSIGN: '/evaluations/reassign',
+      HISTORY: (protocolId: string) => `/evaluations/protocol/${protocolId}/reassignment-history`,
+      ACTIVE_ASSIGNMENTS: (protocolId: number) =>
+        `/evaluations/protocol/${protocolId}/active-assignments`,
       MY_PENDING: '/evaluations/peer-assignments/my-pending',
       SUBMIT_RISK: (id: string) => `/evaluations/peer-assignments/${id}/submit-risk`,
-      ACTIVE_EVALUATORS: '/evaluations/evaluators/active'
-    }
+      ACTIVE_EVALUATORS: '/evaluations/evaluators/active',
+    },
   },
   USERS: {
     BASE: '/auth/users',
@@ -78,10 +83,11 @@ export const ENDPOINTS = {
     CONFIG: '/admin/ai-assistant/config',
     UPLOAD_PET: '/admin/ai-assistant/upload-pet',
     ROLES: '/admin/ai-assistant/roles',
-  // TAREA 7: Rutas de almacenamiento en Cloudflare R2/S3 centralizadas
-  STORAGE: {
-    UPLOAD_URL: '/storage/upload-url',   // POST — obtiene URL prefirmada para subir (PUT)
-    DOWNLOAD_URL: '/storage/download-url', // POST — obtiene URL prefirmada para descargar (GET)
+    // TAREA 7: Rutas de almacenamiento en Cloudflare R2/S3 centralizadas
+    STORAGE: {
+      UPLOAD_URL: '/storage/upload-url', // POST — obtiene URL prefirmada para subir (PUT)
+      DOWNLOAD_URL: '/storage/download-url', // POST — obtiene URL prefirmada para descargar (GET)
+    },
+    HEALTH: '/',
   },
-  HEALTH: '/'
-}}
+};

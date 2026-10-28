@@ -2,7 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { AmendmentReviewDialogComponent } from './amendment-review-dialog.component';
-import { AmendmentStatus, AmendmentType, AmendmentSeverity } from '../../domain/entities/amendment.entity';
+import {
+  AmendmentStatus,
+  AmendmentType,
+  AmendmentSeverity,
+} from '../../domain/entities/amendment.entity';
 
 describe('AmendmentReviewDialogComponent', () => {
   let component: AmendmentReviewDialogComponent;
@@ -23,22 +27,22 @@ describe('AmendmentReviewDialogComponent', () => {
       ethicalImpactDescription: 'Seguimiento intensivo',
       documents: [],
       submittedAt: new Date().toISOString(),
-      versionNumber: 2
-    }
+      versionNumber: 2,
+    },
   };
 
   beforeEach(async () => {
-    mockDialogRef = jasmine.createSpyObj<MatDialogRef<AmendmentReviewDialogComponent>>('MatDialogRef', ['close']);
+    mockDialogRef = jasmine.createSpyObj<MatDialogRef<AmendmentReviewDialogComponent>>(
+      'MatDialogRef',
+      ['close'],
+    );
 
     await TestBed.configureTestingModule({
-      imports: [
-        AmendmentReviewDialogComponent,
-        NoopAnimationsModule
-      ],
+      imports: [AmendmentReviewDialogComponent, NoopAnimationsModule],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: MAT_DIALOG_DATA, useValue: mockData }
-      ]
+        { provide: MAT_DIALOG_DATA, useValue: mockData },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AmendmentReviewDialogComponent);
@@ -54,7 +58,7 @@ describe('AmendmentReviewDialogComponent', () => {
   it('should close dialog with payload when valid form is submitted', () => {
     component.reviewForm.patchValue({
       status: AmendmentStatus.APPROVED,
-      reviewNotes: 'Dictamen favorable con base en la justificación metodológica.'
+      reviewNotes: 'Dictamen favorable con base en la justificación metodológica.',
     });
 
     expect(component.reviewForm.valid).toBeTrue();
@@ -63,7 +67,7 @@ describe('AmendmentReviewDialogComponent', () => {
     expect(mockDialogRef.close).toHaveBeenCalledWith({
       amendmentId: 'enm-100',
       status: AmendmentStatus.APPROVED,
-      reviewNotes: 'Dictamen favorable con base en la justificación metodológica.'
+      reviewNotes: 'Dictamen favorable con base en la justificación metodológica.',
     });
   });
 });

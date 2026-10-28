@@ -23,9 +23,9 @@ describe('AuditLogsPage', () => {
       ipAddress: '192.168.1.1',
       changes: {
         before: { active: true },
-        after: { active: false }
-      }
-    }
+        after: { active: false },
+      },
+    },
   ];
 
   beforeEach(async () => {
@@ -33,13 +33,8 @@ describe('AuditLogsPage', () => {
     mockAuditUseCase.getLogs.and.returnValue(of(mockLogs));
 
     await TestBed.configureTestingModule({
-      imports: [
-        AuditLogsPage,
-        NoopAnimationsModule
-      ],
-      providers: [
-        { provide: AuditUseCase, useValue: mockAuditUseCase }
-      ]
+      imports: [AuditLogsPage, NoopAnimationsModule],
+      providers: [{ provide: AuditUseCase, useValue: mockAuditUseCase }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AuditLogsPage);

@@ -10,7 +10,7 @@ export enum EstadoProtocolo {
   NO_APROBADO = 'NO_APROBADO',
   ARCHIVADO = 'ARCHIVADO',
   VENCIDO = 'VENCIDO',
-  COMPLETO = 'COMPLETO'
+  COMPLETO = 'COMPLETO',
 }
 
 export enum RequirementStatus {
@@ -19,7 +19,7 @@ export enum RequirementStatus {
   OBSERVADO = 'OBSERVADO',
   APROBADO = 'APROBADO',
   VALIDADO = 'VALIDADO',
-  NO_APLICA = 'NO_APLICA'
+  NO_APLICA = 'NO_APLICA',
 }
 
 export interface ChecklistRequirement {
@@ -54,18 +54,18 @@ export interface InstitucionParticipante {
  */
 export interface CrearProtocoloDto {
   title: string;
-  principalInvestigatorId: number; 
+  principalInvestigatorId: number;
   studyTypeId: number;
   riskLevelId: number;
   geographicCoverage: string;
   studyDurationMonths: number;
-  
+
   // Interruptores Legales (Mandatorios para Sprint 3)
   usesBiologicalSamples: boolean;
   isVulnerablePopulation: boolean;
   isIndigenousPopulation: boolean;
   isMulticentric: boolean;
-  
+
   hasExternalInstitutions: boolean;
   sponsorRuc: string;
   sponsorPhone: string;
@@ -74,7 +74,7 @@ export interface CrearProtocoloDto {
   sponsorExecutingAgency: string;
   financingAmount: number;
   isAffidavitAccepted: boolean;
-  
+
   investigators: InvestigadorEquipo[];
   institutions: InstitucionParticipante[];
   lugarEjecucion?: string;

@@ -1,0 +1,73 @@
+<div class="reassignment-page-container">
+  <!-- Cabecera del Protocolo -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="badge-row" *ngIf="protocolInfo() as info">
+        <span class="protocol-badge">{{ info.ceishCode }}</span>
+        <span class="status-badge">Versión {{ info.versionNumber }}</span>
+      </div>
+      <h1 class="page-title">Gestión y Sustitución de Evaluadores Pares</h1>
+      <p class="page-subtitle">
+        Sustituya evaluadores asignados ante causales de <strong>Vencimiento de Plazo</strong> (10
+        días) o <strong>Conflicto de Interés</strong>. Todas las acciones se registran de forma
+        inmutable en la bitácora de auditoría.
+      </p>
+    </div>
+  </header>
+
+  <!-- Indicador de Carga -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+
+  <!-- Alertas de Notificación -->
+  <div class="alert alert-success" *ngIf="successMessage() as msg" role="alert">
+    <mat-icon class="alert-icon">check_circle</mat-icon>
+    <div class="alert-text">{{ msg }}</div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="errorMessage() as errMsg" role="alert">
+    <mat-icon class="alert-icon">error</mat-icon>
+    <div class="alert-text">{{ errMsg }}</div>
+  </div>
+
+  <div class="alert alert-warning" *ngIf="historyWarning() as warnMsg" role="status">
+    <mat-icon class="alert-icon">warning</mat-icon>
+    <div class="alert-text">{{ warnMsg }}</div>
+  </div>
+
+  <!-- Evaluadores Activos (la cantidad la define el backend) -->
+  <section class="active-evaluators-section" *ngIf="protocolInfo()">
+    <div class="section-header">
+      <div class="title-with-icon">
+        <mat-icon color="primary">people</mat-icon>
+        <h2 class="section-title">Comité Evaluador Asignado</h2>
+      </div>
+      <span class="section-helper">{{ activeAssignments().length }} asignación(es) activa(s)</span>
+    </div>
+
+    <div class="evaluators-grid" *ngIf="hasActiveAssignments(); else noAssignments">
+      <app-tarjeta-evaluador
+        *ngFor="let asg of activeAssignments()"
+        [assignment]="asg"
+        [showReassignAction]="canReassign(asg)"
+        (reassignClick)="openReassignModal($event)"
+        (onReassign)="openReassignModal($event)"
+      ></app-tarjeta-evaluador>
+    </div>
+
+    <ng-template #noAssignments>
+      <div class="empty-evaluators-card">
+        <mat-icon class="empty-icon">person_off</mat-icon>
+        <p>No se encontraron evaluadores asignados para este protocolo.</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- Historial de Auditoría Inmutable (RF-12.3) -->
+  <section class="audit-section" *ngIf="protocolInfo()">
+    <app-tabla-historial-reasignaciones
+      [historyRecords]="auditHistory()"
+    ></app-tabla-historial-reasignaciones>
+  </section>
+</div>

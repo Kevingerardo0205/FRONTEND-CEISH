@@ -2,16 +2,18 @@ import { Injectable } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable } from 'rxjs';
-import { ConfirmDialogComponent, ConfirmDialogData } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NotificationService {
-
   constructor(
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
   ) {}
 
   /**
@@ -22,7 +24,7 @@ export class NotificationService {
       width: '450px',
       data: data,
       disableClose: true,
-      panelClass: 'custom-dialog-container'
+      panelClass: 'custom-dialog-container',
     });
 
     return dialogRef.afterClosed();
@@ -36,7 +38,7 @@ export class NotificationService {
       duration: 4000,
       horizontalPosition: 'right',
       verticalPosition: 'bottom',
-      panelClass: type === 'success' ? ['success-snackbar'] : ['error-snackbar']
+      panelClass: type === 'success' ? ['success-snackbar'] : ['error-snackbar'],
     });
   }
 }

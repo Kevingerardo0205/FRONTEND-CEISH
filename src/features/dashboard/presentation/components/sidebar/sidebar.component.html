@@ -10,15 +10,15 @@
   </div>
 
   <div class="nav-section-title">MENÚ PRINCIPAL</div>
-  
+
   <div class="menu-container">
     <mat-accordion [multi]="false" class="sidebar-accordion">
       @for (group of authFacade.menuConfig(); track group.code) {
-        <mat-expansion-panel 
+        <mat-expansion-panel
           [expanded]="activeModule() === group.code"
           class="module-panel"
-          hideToggle="false">
-          
+          hideToggle="false"
+        >
           <mat-expansion-panel-header class="module-header">
             <mat-panel-title>
               <mat-icon class="module-icon">{{ group.icon }}</mat-icon>
@@ -28,11 +28,13 @@
 
           <mat-nav-list class="sub-menu-list">
             @for (sub of group.subItems; track sub.path) {
-              <a mat-list-item 
-                 [routerLink]="sub.path" 
-                 routerLinkActive="active-link" 
-                 (click)="onNavClick()"
-                 class="menu-item">
+              <a
+                mat-list-item
+                [routerLink]="sub.path"
+                routerLinkActive="active-link"
+                (click)="onNavClick()"
+                class="menu-item"
+              >
                 <mat-icon matListItemIcon class="item-icon">{{ sub.icon }}</mat-icon>
                 <span matListItemTitle class="item-label">{{ sub.label }}</span>
               </a>

@@ -10,13 +10,18 @@ export class LoadReceptionProtocolsUseCase {
 
   execute(): Observable<ProtocolEntity[]> {
     return this.repo.getReceptionProtocols().pipe(
-      map(data => {
+      map((data) => {
         const list = Array.isArray(data) ? data : [];
-        return list.filter(p => {
+        return list.filter((p) => {
           const core = resolveEstado(p.status);
-          return core && core.categoria === 'RECEPCION' && core.code !== 'COMPLETO' && core.code !== 'ARCHIVADO_VENCIMIENTO';
+          return (
+            core &&
+            core.categoria === 'RECEPCION' &&
+            core.code !== 'COMPLETO' &&
+            core.code !== 'ARCHIVADO_VENCIMIENTO'
+          );
         });
-      })
+      }),
     );
   }
 }

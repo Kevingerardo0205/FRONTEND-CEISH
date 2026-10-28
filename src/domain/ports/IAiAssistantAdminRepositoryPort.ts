@@ -8,12 +8,12 @@ export interface AiAssistantConfigSummary {
 
 export abstract class IAiAssistantAdminRepositoryPort {
   abstract getConfig(): Observable<AiAssistantConfigSummary>;
-  
+
   abstract uploadPet(
-    file: File
+    file: File,
   ): Observable<{ message: string; petFileName: string; characterCount: number }>;
-  
+
   abstract updateRoles(
-    allowedRoles: string[]
+    allowedRoles: string[],
   ): Observable<{ message: string; allowedRoles: string[] }>;
 }

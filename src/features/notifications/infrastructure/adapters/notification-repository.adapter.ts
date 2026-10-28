@@ -5,7 +5,7 @@ import { Notification, EmailTemplate } from '../../domain/entities/notification.
 import { ApiClientService } from '@infrastructure/api/api-client.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NotificationRepositoryAdapter implements INotificationRepositoryPort {
   private readonly apiClient = inject(ApiClientService);
@@ -21,7 +21,7 @@ export class NotificationRepositoryAdapter implements INotificationRepositoryPor
         category: 'VALIDATION',
         isRead: false,
         createdAt: new Date(),
-        link: '/dashboard/protocols/detail/PRT-2024-001'
+        link: '/dashboard/protocols/detail/PRT-2024-001',
       },
       {
         id: 'n2',
@@ -32,8 +32,8 @@ export class NotificationRepositoryAdapter implements INotificationRepositoryPor
         category: 'ASSIGNMENT',
         isRead: true,
         createdAt: new Date(Date.now() - 86400000),
-        link: '/dashboard/evaluations/form/PRT-2024-002'
-      }
+        link: '/dashboard/evaluations/form/PRT-2024-002',
+      },
     ]);
   }
 
@@ -54,7 +54,7 @@ export class NotificationRepositoryAdapter implements INotificationRepositoryPor
         body: 'Estimado/a {{nombre_investigador}},\n\nHemos recibido su protocolo titulado "{{titulo_estudio}}"...',
         category: 'RECEPCIÓN',
         lastModified: new Date(),
-        variables: ['nombre_investigador', 'codigo_protocolo', 'titulo_estudio']
+        variables: ['nombre_investigador', 'codigo_protocolo', 'titulo_estudio'],
       },
       {
         id: 't2',
@@ -63,8 +63,13 @@ export class NotificationRepositoryAdapter implements INotificationRepositoryPor
         body: 'Estimado/a {{nombre_investigador}},\n\nNos complace informarle que su protocolo ha sido APROBADO...',
         category: 'RESOLUCIÓN',
         lastModified: new Date(),
-        variables: ['nombre_investigador', 'codigo_protocolo', 'titulo_estudio', 'fecha_vencimiento']
-      }
+        variables: [
+          'nombre_investigador',
+          'codigo_protocolo',
+          'titulo_estudio',
+          'fecha_vencimiento',
+        ],
+      },
     ]);
   }
 

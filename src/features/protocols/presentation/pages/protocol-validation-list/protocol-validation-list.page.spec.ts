@@ -26,10 +26,10 @@ describe('ProtocolValidationListPage', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { params: {} }
-          }
-        }
-      ]
+            snapshot: { params: {} },
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProtocolValidationListPage);
@@ -43,9 +43,30 @@ describe('ProtocolValidationListPage', () => {
 
   it('debe clasificar los protocolos correctamente según su estado', () => {
     const mockProtocols = [
-      { id: '1', title: 'Protocolo 1', status: 'INICIADO', submissionDate: '2026-08-25T00:00:00Z', code: 'P1', version: 1 },
-      { id: '2', title: 'Protocolo 2', status: 'EN_CONTROL_DOCUMENTAL', submissionDate: '2026-08-25T00:00:00Z', code: 'P2', version: 2 },
-      { id: '3', title: 'Protocolo 3', status: 'INCOMPLETO', submissionDate: '2026-08-25T00:00:00Z', code: 'P3', version: 1 }
+      {
+        id: '1',
+        title: 'Protocolo 1',
+        status: 'INICIADO',
+        submissionDate: '2026-08-25T00:00:00Z',
+        code: 'P1',
+        version: 1,
+      },
+      {
+        id: '2',
+        title: 'Protocolo 2',
+        status: 'EN_CONTROL_DOCUMENTAL',
+        submissionDate: '2026-08-25T00:00:00Z',
+        code: 'P2',
+        version: 2,
+      },
+      {
+        id: '3',
+        title: 'Protocolo 3',
+        status: 'INCOMPLETO',
+        submissionDate: '2026-08-25T00:00:00Z',
+        code: 'P3',
+        version: 1,
+      },
     ];
 
     mockProtocolRepo.getReceptionProtocols.and.returnValue(of(mockProtocols as any));

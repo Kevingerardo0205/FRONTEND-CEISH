@@ -21,51 +21,66 @@ describe('EmitConsolidatedResolutionUseCase', () => {
         EmitConsolidatedResolutionUseCase,
         { provide: IResolutionRepositoryPort, useValue: rSpy },
         { provide: S3StorageService, useValue: sSpy },
-        { provide: NotificationBrokerService, useValue: nSpy }
-      ]
+        { provide: NotificationBrokerService, useValue: nSpy },
+      ],
     });
 
     useCase = TestBed.inject(EmitConsolidatedResolutionUseCase);
-    resolutionSpy = TestBed.inject(IResolutionRepositoryPort) as jasmine.SpyObj<IResolutionRepositoryPort>;
+    resolutionSpy = TestBed.inject(
+      IResolutionRepositoryPort,
+    ) as jasmine.SpyObj<IResolutionRepositoryPort>;
     s3Spy = TestBed.inject(S3StorageService) as jasmine.SpyObj<S3StorageService>;
-    notificationSpy = TestBed.inject(NotificationBrokerService) as jasmine.SpyObj<NotificationBrokerService>;
+    notificationSpy = TestBed.inject(
+      NotificationBrokerService,
+    ) as jasmine.SpyObj<NotificationBrokerService>;
   });
 
   it('debe subir archivo y emitir resolución con notificación', (done) => {
-    s3Spy.getUploadUrl.and.returnValue(of({ uploadUrl: 'https://s3/upload', key: 'protocols/1/resolutions/file.pdf' }));
+    s3Spy.getUploadUrl.and.returnValue(
+      of({ uploadUrl: 'https://s3/upload', key: 'protocols/1/resolutions/file.pdf' }),
+    );
     s3Spy.uploadFileToS3.and.returnValue(of({ progress: 100, success: true }));
-    resolutionSpy.submitResolution.and.returnValue(of({
-      id: 1,
-      protocolId: '1',
-      versionId: '1',
-      resolutionTypeId: 1,
-      resolutionType: 'APPROVAL',
-      validityYears: 2
-    }));
+    resolutionSpy.submitResolution.and.returnValue(
+      of({
+        id: 1,
+        protocolId: '1',
+        versionId: '1',
+        resolutionTypeId: 1,
+        resolutionType: 'APPROVAL',
+        validityYears: 2,
+      }),
+    );
     notificationSpy.publish.and.stub();
 
     const testFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
-    useCase.execute({
-      protocolId: 1,
-      validityYears: 2,
-      followUpPeriodDays: 90,
-      observations: 'Test observations',
-      file: testFile
-    }).subscribe({
-      next: (res) => {
-        expect(s3Spy.getUploadUrl).toHaveBeenCalled();
-        expect(s3Spy.uploadFileToS3).toHaveBeenCalled();
-        expect(resolutionSpy.submitResolution).toHaveBeenCalledWith(jasmine.objectContaining({
-          protocolId: 1,
-          validityYears: 2,
-          followUpPeriodDays: 90,
-          observations: 'Test observations'
-        }));
-        expect(notificationSpy.publish).toHaveBeenCalledWith('PROTOCOL_STATUS_UPDATED', jasmine.any(Object));
-        done();
-      },
-      error: fail
-    });
+    useCase
+      .execute({
+        protocolId: 1,
+        validityYears: 2,
+        followUpPeriodDays: 90,
+        observations: 'Test observations',
+        file: testFile,
+      })
+      .subscribe({
+        next: (res) => {
+          expect(s3Spy.getUploadUrl).toHaveBeenCalled();
+          expect(s3Spy.uploadFileToS3).toHaveBeenCalled();
+          expect(resolutionSpy.submitResolution).toHaveBeenCalledWith(
+            jasmine.objectContaining({
+              protocolId: 1,
+              validityYears: 2,
+              followUpPeriodDays: 90,
+              observations: 'Test observations',
+            }),
+          );
+          expect(notificationSpy.publish).toHaveBeenCalledWith(
+            'PROTOCOL_STATUS_UPDATED',
+            jasmine.any(Object),
+          );
+          done();
+        },
+        error: fail,
+      });
   });
 });

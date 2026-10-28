@@ -13,7 +13,7 @@ describe('SuspendRoleDialogComponent', () => {
     userName: 'Jaime David Camacho',
     roleCode: 'SECRETARIA',
     roleName: 'Secretaria Ejecutiva',
-    validUntil: '2026-09-18T23:59:59.000Z'
+    validUntil: '2026-09-18T23:59:59.000Z',
   };
 
   beforeEach(async () => {
@@ -23,8 +23,8 @@ describe('SuspendRoleDialogComponent', () => {
       imports: [SuspendRoleDialogComponent, NoopAnimationsModule],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: MAT_DIALOG_DATA, useValue: mockData }
-      ]
+        { provide: MAT_DIALOG_DATA, useValue: mockData },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SuspendRoleDialogComponent);
@@ -39,18 +39,20 @@ describe('SuspendRoleDialogComponent', () => {
 
   it('debe permitir sugerir motivos con setReason y habilitar formulario', () => {
     component.setReason('Retorno anticipado de la Secretaria titular a sus funciones');
-    expect(component.form.get('reason')?.value).toBe('Retorno anticipado de la Secretaria titular a sus funciones');
+    expect(component.form.get('reason')?.value).toBe(
+      'Retorno anticipado de la Secretaria titular a sus funciones',
+    );
     expect(component.form.valid).toBeTrue();
   });
 
   it('debe cerrar el diálogo retornando el motivo de suspensión al enviar', () => {
     component.form.patchValue({
-      reason: 'Retorno anticipado titular'
+      reason: 'Retorno anticipado titular',
     });
 
     component.onSubmit();
     expect(mockDialogRef.close).toHaveBeenCalledWith({
-      reason: 'Retorno anticipado titular'
+      reason: 'Retorno anticipado titular',
     });
   });
 

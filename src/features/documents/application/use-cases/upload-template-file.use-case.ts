@@ -11,12 +11,19 @@ export class UploadTemplateFileUseCase {
 
   execute(code: string, file: File): Observable<any> {
     const s3Key = `templates/${code.toLowerCase()}_template.docx`;
-    return this.s3Storage.getUploadUrl(s3Key, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document').pipe(
-      switchMap(urlRes => this.s3Storage.uploadFileToS3(urlRes.uploadUrl, file).pipe(
-        filter(upRes => upRes.success),
-        map(() => urlRes.key)
-      )),
-      switchMap(uploadedKey => this.docRepo.associateTemplateFile(code, uploadedKey))
-    );
+    return this.s3Storage
+      .getUploadUrl(
+        s3Key,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      )
+      .pipe(
+        switchMap((urlRes) =>
+          this.s3Storage.uploadFileToS3(urlRes.uploadUrl, file).pipe(
+            filter((upRes) => upRes.success),
+            map(() => urlRes.key),
+          ),
+        ),
+        switchMap((uploadedKey) => this.docRepo.associateTemplateFile(code, uploadedKey)),
+      );
   }
 }

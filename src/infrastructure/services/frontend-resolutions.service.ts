@@ -6,7 +6,7 @@ import { ResolutionEntity } from '@domain/entities/resolution.entity';
 import { ResolutionMapper } from '../mappers/resolution.mapper';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FrontendResolutionsService {
   private readonly resolutionRepo = inject(IResolutionRepositoryPort);
@@ -17,9 +17,9 @@ export class FrontendResolutionsService {
    */
   createResolution(resolution: Partial<ResolutionEntity>): Observable<ResolutionEntity> {
     const payload = ResolutionMapper.toPayload(resolution);
-    return this.resolutionRepo.submitResolution(payload).pipe(
-      map(res => ResolutionMapper.toDomain(res))
-    );
+    return this.resolutionRepo
+      .submitResolution(payload)
+      .pipe(map((res) => ResolutionMapper.toDomain(res)));
   }
 
   /**
@@ -28,10 +28,10 @@ export class FrontendResolutionsService {
    */
   getResolutionByProtocolId(protocolId: string | number): Observable<ResolutionEntity[]> {
     return this.resolutionRepo.getResolutionByProtocolId(String(protocolId)).pipe(
-      map(res => {
+      map((res) => {
         const rawList = Array.isArray(res) ? res : [res];
-        return rawList.map(item => ResolutionMapper.toDomain(item));
-      })
+        return rawList.map((item) => ResolutionMapper.toDomain(item));
+      }),
     );
   }
 }

@@ -18,7 +18,7 @@ describe('MSPReportsPage', () => {
     modalities: { exempt: 2, expedited: 5, full: 3 },
     resolutions: { approved: 8, conditioned: 2, notApproved: 0 },
     biologicalSamples: { yes: 4, no: 6 },
-    vulnerablePopulations: [{ type: 'Niños', count: 3 }]
+    vulnerablePopulations: [{ type: 'Niños', count: 3 }],
   };
 
   beforeEach(async () => {
@@ -28,14 +28,11 @@ describe('MSPReportsPage', () => {
     mockReportsUseCase.getMSPReport.and.returnValue(of(mockMSPData));
 
     await TestBed.configureTestingModule({
-      imports: [
-        NoopAnimationsModule,
-        MSPReportsPage
-      ],
+      imports: [NoopAnimationsModule, MSPReportsPage],
       providers: [
         { provide: ReportsUseCase, useValue: mockReportsUseCase },
-        { provide: MatSnackBar, useValue: mockSnackBar }
-      ]
+        { provide: MatSnackBar, useValue: mockSnackBar },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MSPReportsPage);
@@ -61,13 +58,21 @@ describe('MSPReportsPage', () => {
   it('should handle exportToExcel without crashing and notify via snackbar', () => {
     component.reportData = mockMSPData;
     component.exportToExcel();
-    expect(mockSnackBar.open).toHaveBeenCalledWith('Excel exportado correctamente', 'Cerrar', jasmine.any(Object));
+    expect(mockSnackBar.open).toHaveBeenCalledWith(
+      'Excel exportado correctamente',
+      'Cerrar',
+      jasmine.any(Object),
+    );
   });
 
   it('should handle exportToPDF without crashing and notify via snackbar', () => {
     component.reportData = mockMSPData;
     component.exportToPDF();
-    expect(mockSnackBar.open).toHaveBeenCalledWith('PDF exportado correctamente', 'Cerrar', jasmine.any(Object));
+    expect(mockSnackBar.open).toHaveBeenCalledWith(
+      'PDF exportado correctamente',
+      'Cerrar',
+      jasmine.any(Object),
+    );
   });
 
   it('should copy summary to clipboard and open snackbar', async () => {
@@ -77,7 +82,11 @@ describe('MSPReportsPage', () => {
     component.copyToClipboard();
 
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(mockSnackBar.open).toHaveBeenCalledWith('Texto copiado al portapapeles', 'Cerrar', jasmine.any(Object));
+    expect(mockSnackBar.open).toHaveBeenCalledWith(
+      'Texto copiado al portapapeles',
+      'Cerrar',
+      jasmine.any(Object),
+    );
   });
 
   it('should not export if reportData is null or undefined', () => {

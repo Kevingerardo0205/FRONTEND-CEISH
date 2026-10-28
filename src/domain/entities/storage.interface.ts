@@ -1,11 +1,11 @@
 export interface GetUploadUrlRequest {
-  key: string;         // Ruta objetivo dentro del bucket
+  key: string; // Ruta objetivo dentro del bucket
   contentType: string; // Tipo MIME (ej: 'application/pdf')
 }
 
 export interface GetUploadUrlResponse {
-  uploadUrl: string;   // URL firmada de S3 de tipo PUT
-  key: string;         // Clave del archivo generada
+  uploadUrl: string; // URL firmada de S3 de tipo PUT
+  key: string; // Clave del archivo generada
 }
 
 export interface GetDownloadUrlResponse {
@@ -18,9 +18,8 @@ export function sanitizeFilename(filename: string): string {
   let name = parts.join('.');
 
   name = name.replace(/\s+/g, '_');
-  name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   name = name.replace(/[^a-zA-Z0-9.\-_]/g, '');
 
   return `${name}.${ext}`;
 }
-

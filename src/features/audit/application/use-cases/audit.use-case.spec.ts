@@ -18,8 +18,8 @@ describe('AuditUseCase', () => {
       action: 'UPDATE',
       entity: 'User',
       recordId: 'USR-001',
-      ipAddress: '127.0.0.1'
-    }
+      ipAddress: '127.0.0.1',
+    },
   ];
 
   const mockTrail: ProtocolTrailEvent[] = [
@@ -29,21 +29,18 @@ describe('AuditUseCase', () => {
       responsible: 'Investigador (INVESTIGADOR)',
       action: 'Creación de Protocolo',
       status: 'COMPLETED',
-      integrityHash: 'sha256-mock-hash'
-    }
+      integrityHash: 'sha256-mock-hash',
+    },
   ];
 
   beforeEach(() => {
     mockAuditRepository = jasmine.createSpyObj<IAuditRepositoryPort>('IAuditRepositoryPort', [
       'getLogs',
-      'getProtocolTrail'
+      'getProtocolTrail',
     ]);
 
     TestBed.configureTestingModule({
-      providers: [
-        AuditUseCase,
-        { provide: IAuditRepositoryPort, useValue: mockAuditRepository }
-      ]
+      providers: [AuditUseCase, { provide: IAuditRepositoryPort, useValue: mockAuditRepository }],
     });
 
     useCase = TestBed.inject(AuditUseCase);

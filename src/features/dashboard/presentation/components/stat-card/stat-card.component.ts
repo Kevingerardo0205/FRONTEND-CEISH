@@ -18,52 +18,58 @@ import { MatIconModule } from '@angular/material/icon';
       </div>
     </div>
   `,
-  styles: [`
-    .stat-card {
-      background: #ffffff;
-      padding: 1.5rem;
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      transition: transform 0.3s ease;
-      border: 1px solid rgba(0, 0, 0, 0.02);
+  styles: [
+    `
+      .stat-card {
+        background: #ffffff;
+        padding: 1.5rem;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.02);
 
-      &:hover {
-        transform: translateY(-5px);
+        &:hover {
+          transform: translateY(-5px);
+        }
       }
-    }
 
-    .stat-icon {
-      width: 54px;
-      height: 54px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      mat-icon { font-size: 26px; width: 26px; height: 26px; }
-    }
+      .stat-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        mat-icon {
+          font-size: 26px;
+          width: 26px;
+          height: 26px;
+        }
+      }
 
-    .stat-content {
-      display: flex;
-      flex-direction: column;
-      .stat-label { 
-        font-size: 0.7rem; 
-        font-weight: 700; 
-        color: #94a3b8; 
-        text-transform: uppercase; 
-        letter-spacing: 0.8px; 
+      .stat-content {
+        display: flex;
+        flex-direction: column;
+        .stat-label {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+        }
+        .stat-value {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: #0f172a;
+          letter-spacing: -0.5px;
+        }
       }
-      .stat-value { 
-        margin: 0; 
-        font-size: 1.5rem; 
-        font-weight: 800; 
-        color: #0f172a; 
-        letter-spacing: -0.5px;
-      }
-    }
-  `]
+    `,
+  ],
 })
 export class StatCardComponent {
   label = input.required<string>();

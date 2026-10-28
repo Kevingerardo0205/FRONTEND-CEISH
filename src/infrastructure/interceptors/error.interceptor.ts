@@ -1,5 +1,11 @@
 import { Injectable, Injector } from '@angular/core';
-import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpErrorResponse } from '@angular/common/http';
+import {
+  HttpRequest,
+  HttpHandler,
+  HttpEvent,
+  HttpInterceptor,
+  HttpErrorResponse,
+} from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject, of } from 'rxjs';
 import { catchError, filter, take, switchMap, retry, delay } from 'rxjs/operators';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
@@ -13,9 +19,14 @@ import { SessionExpiredDialogComponent } from '@shared/components/session-expire
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
   private isRefreshing = false;
-  private refreshTokenSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
+  private refreshTokenSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(
+    null,
+  );
 
-  constructor(private injector: Injector, private router: Router) {}
+  constructor(
+    private injector: Injector,
+    private router: Router,
+  ) {}
 
   private get authFacade(): AuthFacade {
     return this.injector.get(AuthFacade);
@@ -49,8 +60,8 @@ export class ErrorInterceptor implements HttpInterceptor {
               return of(null).pipe(delay(1000));
             }
             throw error;
-          }
-        })
+          },
+        }),
       );
     }
 
@@ -70,12 +81,20 @@ export class ErrorInterceptor implements HttpInterceptor {
           }
           return this.handle401Error(request, next);
         }
-        
+
         if (error instanceof HttpErrorResponse && error.status === 403) {
           const userEmail = error.error?.email || '';
-          if (error.error?.message?.includes('verificar') || error.error?.message?.includes('OTP')) {
+          if (
+            error.error?.message?.includes('verificar') ||
+            error.error?.message?.includes('OTP')
+          ) {
             this.router.navigate(['/auth/confirm-email'], { queryParams: { email: userEmail } });
-            return throwError(() => new Error('Su cuenta no ha sido verificada. Ingrese el código enviado a su correo.'));
+            return throwError(
+              () =>
+                new Error(
+                  'Su cuenta no ha sido verificada. Ingrese el código enviado a su correo.',
+                ),
+            );
           }
           this.router.navigate(['/dashboard']);
           return throwError(() => new Error('No tienes permisos para acceder a este recurso.'));
@@ -85,7 +104,9 @@ export class ErrorInterceptor implements HttpInterceptor {
           return throwError(() => ({
             type: 'CONCURRENCY_ERROR',
             status: 409,
-            message: error.error?.message || 'Este trámite ha sido actualizado por otro usuario. Por favor, recargue el expediente.'
+            message:
+              error.error?.message ||
+              'Este trámite ha sido actualizado por otro usuario. Por favor, recargue el expediente.',
           }));
         }
 
@@ -94,20 +115,19 @@ export class ErrorInterceptor implements HttpInterceptor {
             this.snackBar.open(
               'El servidor del CEISH está experimentando problemas. Por favor, inténtelo de nuevo más tarde.',
               'Cerrar',
-              { duration: 5000 }
+              { duration: 5000 },
             );
           } else if (error.status === 0) {
-            this.snackBar.open(
-              'Error de conexión. Verifique su red de internet.',
-              'Cerrar',
-              { duration: 5000 }
-            );
+            this.snackBar.open('Error de conexión. Verifique su red de internet.', 'Cerrar', {
+              duration: 5000,
+            });
           }
         }
 
-        const errorMessage = error.error?.message || error.statusText;
+        const errorMessage =
+          error.error?.message || this.nestedErrorMessage(error.error) || error.statusText;
         return throwError(() => new Error(errorMessage));
-      })
+      }),
     );
   }
 
@@ -127,28 +147,43 @@ export class ErrorInterceptor implements HttpInterceptor {
           this.authFacade.logout();
           this.showSessionExpiredModal();
           return throwError(() => err);
-        })
+        }),
       );
     } else {
       return this.refreshTokenSubject.pipe(
-        filter(token => token !== null),
+        filter((token) => token !== null),
         take(1),
-        switchMap(jwt => {
+        switchMap((jwt) => {
           return next.handle(this.addToken(request, jwt));
-        })
+        }),
       );
     }
   }
 
+  /** Lee body.error.message (string, o arreglo unido con "; ") del filtro de excepciones del backend. */
+  private nestedErrorMessage(body: unknown): string | null {
+    const nested = (body as { error?: { message?: unknown } } | null)?.error?.message;
+    if (typeof nested === 'string') return nested || null;
+    if (Array.isArray(nested)) {
+      const parts = nested.filter((m): m is string => typeof m === 'string' && m.length > 0);
+      return parts.length ? parts.join('; ') : null;
+    }
+    return null;
+  }
+
   private showSessionExpiredModal(): void {
     try {
-      if (!this.dialog.openDialogs.some(d => d.componentInstance instanceof SessionExpiredDialogComponent)) {
+      if (
+        !this.dialog.openDialogs.some(
+          (d) => d.componentInstance instanceof SessionExpiredDialogComponent,
+        )
+      ) {
         this.dialog.closeAll();
         const dialogRef = this.dialog.open(SessionExpiredDialogComponent, {
           width: '460px',
           disableClose: true,
           panelClass: 'session-expired-dialog-panel',
-          autoFocus: true
+          autoFocus: true,
         });
         dialogRef.afterClosed().subscribe(() => {
           this.router.navigate(['/auth/login']);
@@ -162,8 +197,8 @@ export class ErrorInterceptor implements HttpInterceptor {
   private addToken(request: HttpRequest<unknown>, token: string) {
     return request.clone({
       setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
   }
 }

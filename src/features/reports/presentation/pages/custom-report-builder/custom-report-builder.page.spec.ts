@@ -12,13 +12,8 @@ describe('CustomReportBuilderPage', () => {
     mockSnackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
 
     await TestBed.configureTestingModule({
-      imports: [
-        NoopAnimationsModule,
-        CustomReportBuilderPage
-      ],
-      providers: [
-        { provide: MatSnackBar, useValue: mockSnackBar }
-      ]
+      imports: [NoopAnimationsModule, CustomReportBuilderPage],
+      providers: [{ provide: MatSnackBar, useValue: mockSnackBar }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CustomReportBuilderPage);
@@ -47,7 +42,7 @@ describe('CustomReportBuilderPage', () => {
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       'Generando exportación de datos...',
       'Cerrar',
-      jasmine.objectContaining({ duration: 3000 })
+      jasmine.objectContaining({ duration: 3000 }),
     );
   });
 });

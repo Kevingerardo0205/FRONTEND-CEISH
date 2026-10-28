@@ -4,7 +4,7 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class VerificadoGuard implements CanActivate {
   private authFacade = inject(AuthFacade);
@@ -32,12 +32,15 @@ export class VerificadoGuard implements CanActivate {
     console.warn('[VerificadoGuard] Usuario no verificado:', user.email);
 
     // Si no está verificado, redirigir y avisar
-    this.snackBar.open('⚠️ Debe verificar su correo para acceder a esta función.', 'Verificar ahora', {
-      duration: 5000,
-      panelClass: ['snackbar-warning']
-    }).onAction().subscribe(() => {
-      this.router.navigate(['/auth/confirm-email'], { queryParams: { email: user.email } });
-    });
+    this.snackBar
+      .open('⚠️ Debe verificar su correo para acceder a esta función.', 'Verificar ahora', {
+        duration: 5000,
+        panelClass: ['snackbar-warning'],
+      })
+      .onAction()
+      .subscribe(() => {
+        this.router.navigate(['/auth/confirm-email'], { queryParams: { email: user.email } });
+      });
 
     return this.router.createUrlTree(['/dashboard']);
   }

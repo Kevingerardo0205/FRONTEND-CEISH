@@ -18,8 +18,15 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import { CrearProtocoloDto, InstitucionParticipante, InvestigadorEquipo } from '../../../domain/dtos/crear-protocolo.dto';
-import { ecuadorianPhoneValidator, ecuadorianIdValidator } from '../nuevo-protocolo/nuevo-protocolo.page';
+import {
+  CrearProtocoloDto,
+  InstitucionParticipante,
+  InvestigadorEquipo,
+} from '../../../domain/dtos/crear-protocolo.dto';
+import {
+  ecuadorianPhoneValidator,
+  ecuadorianIdValidator,
+} from '../nuevo-protocolo/nuevo-protocolo.page';
 import { RiskLevel } from '@domain/ports/IProtocolRepositoryPort';
 
 interface ProtocoloEdicion {
@@ -41,7 +48,7 @@ interface ProtocoloEdicion {
   amount?: number;
   principalInvestigatorId?: number;
   studyTypeId?: number;
-  studyType?: { id?: number; name?: string; nombre?: string; };
+  studyType?: { id?: number; name?: string; nombre?: string };
   usesBiologicalSamples?: boolean;
   isVulnerablePopulation?: boolean;
   isIndigenousPopulation?: boolean;
@@ -73,13 +80,24 @@ interface InstitutionFormData {
   selector: 'app-editar-protocolo',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, RouterModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule,
-    MatIconModule, MatCardModule, MatCheckboxModule, MatSnackBarModule,
-    MatProgressSpinnerModule, MatDividerModule, MatToolbarModule, MatTooltipModule
+    CommonModule,
+    ReactiveFormsModule,
+    RouterModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatCheckboxModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
+    MatDividerModule,
+    MatToolbarModule,
+    MatTooltipModule,
   ],
   templateUrl: './editar-protocolo.page.html',
-  styleUrls: ['./editar-protocolo.page.scss']
+  styleUrls: ['./editar-protocolo.page.scss'],
 })
 export class EditarProtocoloPage implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -98,9 +116,15 @@ export class EditarProtocoloPage implements OnInit {
     { value: 'LOCAL', label: 'Local (Cantonal)' },
     { value: 'PROVINCIAL', label: 'Provincial' },
     { value: 'ZONAL', label: 'Zonal / Regional' },
-    { value: 'NACIONAL', label: 'Nacional' }
+    { value: 'NACIONAL', label: 'Nacional' },
   ];
-  readonly funcionesEquipo = ['Investigador Principal', 'Coinvestigador', 'Tutor / Director', 'Asistente de Investigación', 'Estudiante'];
+  readonly funcionesEquipo = [
+    'Investigador Principal',
+    'Coinvestigador',
+    'Tutor / Director',
+    'Asistente de Investigación',
+    'Estudiante',
+  ];
 
   editForm = this.fb.group({
     riskLevelId: [null as number | null],
@@ -109,7 +133,7 @@ export class EditarProtocoloPage implements OnInit {
     lugarEjecucion: [''],
     fechaInicioEstimada: [''],
     fechaFinEstimada: [''],
-    
+
     // Patrocinio
     sponsorRuc: ['', ecuadorianIdValidator],
     sponsorPhone: ['', ecuadorianPhoneValidator],
@@ -120,11 +144,15 @@ export class EditarProtocoloPage implements OnInit {
 
     // Colecciones
     investigators: this.fb.array([]),
-    institutions: this.fb.array([])
+    institutions: this.fb.array([]),
   });
 
-  get investigators() { return this.editForm.get('investigators') as FormArray; }
-  get institutions() { return this.editForm.get('institutions') as FormArray; }
+  get investigators() {
+    return this.editForm.get('investigators') as FormArray;
+  }
+  get institutions() {
+    return this.editForm.get('institutions') as FormArray;
+  }
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -143,9 +171,11 @@ export class EditarProtocoloPage implements OnInit {
     this.protocoloService.getRiskLevels().subscribe({
       next: (levels) => {
         const raw = levels as unknown;
-        const list = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.['data'] as unknown[]);
+        const list = Array.isArray(raw)
+          ? raw
+          : ((raw as Record<string, unknown>)?.['data'] as unknown[]);
         this.nivelesRiesgo = (list || []) as RiskLevel[];
-      }
+      },
     });
   }
 
@@ -155,9 +185,11 @@ export class EditarProtocoloPage implements OnInit {
       next: (res) => {
         this.isLoading = false;
         const raw = res as unknown;
-        const data = ((typeof raw === 'object' && raw !== null && 'data' in (raw as Record<string, unknown>))
-          ? (raw as Record<string, unknown>)['data']
-          : raw) as ProtocoloEdicion;
+        const data = (
+          typeof raw === 'object' && raw !== null && 'data' in (raw as Record<string, unknown>)
+            ? (raw as Record<string, unknown>)['data']
+            : raw
+        ) as ProtocoloEdicion;
         this.protocoloOriginal = data;
 
         // Formatear fechas para los inputs date de HTML
@@ -179,33 +211,40 @@ export class EditarProtocoloPage implements OnInit {
           sponsorAddress: data.sponsorAddress,
           sponsorWeb: data.sponsorWeb,
           sponsorExecutingAgency: data.sponsorExecutingAgency || data.executingOrgan,
-          financingAmount: data.financingAmount || data.amount || 0
+          financingAmount: data.financingAmount || data.amount || 0,
         });
 
         // Rellenar investigadores
         if (data.investigators && Array.isArray(data.investigators)) {
           data.investigators.forEach((inv: InvestigatorFormData) => {
-            this.investigators.push(this.fb.group({
-              funcion: [inv.position || '', Validators.required],
-              nombreCompleto: [inv.fullName || '', [Validators.required, Validators.minLength(5)]],
-              cedula: [inv.identification || '', [Validators.required, ecuadorianIdValidator]],
-              formacion: [inv.education || '', Validators.required],
-              entidad: [inv.institution || '', Validators.required],
-              correo: [inv.email || '', [Validators.required, Validators.email]],
-              celular: [inv.phone || '', [Validators.required, ecuadorianPhoneValidator]]
-            }));
+            this.investigators.push(
+              this.fb.group({
+                funcion: [inv.position || '', Validators.required],
+                nombreCompleto: [
+                  inv.fullName || '',
+                  [Validators.required, Validators.minLength(5)],
+                ],
+                cedula: [inv.identification || '', [Validators.required, ecuadorianIdValidator]],
+                formacion: [inv.education || '', Validators.required],
+                entidad: [inv.institution || '', Validators.required],
+                correo: [inv.email || '', [Validators.required, Validators.email]],
+                celular: [inv.phone || '', [Validators.required, ecuadorianPhoneValidator]],
+              }),
+            );
           });
         }
 
         // Rellenar instituciones
         if (data.institutions && Array.isArray(data.institutions)) {
           data.institutions.forEach((inst: InstitutionFormData) => {
-            this.institutions.push(this.fb.group({
-              nombre: [inst.name || '', Validators.required],
-              tipo: [inst.type === 'PUBLIC' ? 'PUBLICA' : 'PRIVADA', Validators.required],
-              direccion: [inst.address || '', Validators.required],
-              contacto: [inst.contactPerson || '', Validators.required]
-            }));
+            this.institutions.push(
+              this.fb.group({
+                nombre: [inst.name || '', Validators.required],
+                tipo: [inst.type === 'PUBLIC' ? 'PUBLICA' : 'PRIVADA', Validators.required],
+                direccion: [inst.address || '', Validators.required],
+                contacto: [inst.contactPerson || '', Validators.required],
+              }),
+            );
           });
         }
       },
@@ -213,20 +252,22 @@ export class EditarProtocoloPage implements OnInit {
         this.isLoading = false;
         this.snackBar.open('Error al cargar la información del protocolo.', 'Cerrar');
         this.router.navigate(['/investigador/mis-protocolos']);
-      }
+      },
     });
   }
 
   addMiembro() {
-    this.investigators.push(this.fb.group({
-      funcion: ['', Validators.required],
-      nombreCompleto: ['', [Validators.required, Validators.minLength(5)]],
-      cedula: ['', [Validators.required, ecuadorianIdValidator]],
-      formacion: ['', Validators.required],
-      entidad: ['', Validators.required],
-      correo: ['', [Validators.required, Validators.email]],
-      celular: ['', [Validators.required, ecuadorianPhoneValidator]]
-    }));
+    this.investigators.push(
+      this.fb.group({
+        funcion: ['', Validators.required],
+        nombreCompleto: ['', [Validators.required, Validators.minLength(5)]],
+        cedula: ['', [Validators.required, ecuadorianIdValidator]],
+        formacion: ['', Validators.required],
+        entidad: ['', Validators.required],
+        correo: ['', [Validators.required, Validators.email]],
+        celular: ['', [Validators.required, ecuadorianPhoneValidator]],
+      }),
+    );
   }
 
   removeMiembro(index: number) {
@@ -234,12 +275,14 @@ export class EditarProtocoloPage implements OnInit {
   }
 
   addInstitucion() {
-    this.institutions.push(this.fb.group({
-      nombre: ['', Validators.required],
-      tipo: ['PUBLICA', Validators.required],
-      direccion: ['', Validators.required],
-      contacto: ['', Validators.required]
-    }));
+    this.institutions.push(
+      this.fb.group({
+        nombre: ['', Validators.required],
+        tipo: ['PUBLICA', Validators.required],
+        direccion: ['', Validators.required],
+        contacto: ['', Validators.required],
+      }),
+    );
   }
 
   removeInstitucion(index: number) {
@@ -249,7 +292,10 @@ export class EditarProtocoloPage implements OnInit {
   onSave(): void {
     if (this.editForm.invalid) {
       this.editForm.markAllAsTouched();
-      this.snackBar.open('Existen errores en el formulario. Verifique e intente nuevamente.', 'Cerrar');
+      this.snackBar.open(
+        'Existen errores en el formulario. Verifique e intente nuevamente.',
+        'Cerrar',
+      );
       return;
     }
 
@@ -257,21 +303,23 @@ export class EditarProtocoloPage implements OnInit {
     const formVal = this.editForm.getRawValue();
 
     const payload: Partial<CrearProtocoloDto> = {
-      riskLevelId: formVal.riskLevelId ? Number(formVal.riskLevelId) : null as unknown as number,
+      riskLevelId: formVal.riskLevelId ? Number(formVal.riskLevelId) : (null as unknown as number),
       geographicCoverage: formVal.geographicCoverage!,
-      studyDurationMonths: formVal.studyDurationMonths ? Number(formVal.studyDurationMonths) : null as unknown as number,
+      studyDurationMonths: formVal.studyDurationMonths
+        ? Number(formVal.studyDurationMonths)
+        : (null as unknown as number),
       lugarEjecucion: formVal.lugarEjecucion!,
       fechaInicioEstimada: formVal.fechaInicioEstimada || undefined,
       fechaFinEstimada: formVal.fechaFinEstimada || undefined,
-      
+
       sponsorRuc: formVal.sponsorRuc!,
       sponsorPhone: formVal.sponsorPhone!,
       sponsorAddress: formVal.sponsorAddress!,
       sponsorWeb: formVal.sponsorWeb || '',
       sponsorExecutingAgency: formVal.sponsorExecutingAgency!,
       financingAmount: Number(formVal.financingAmount),
-      
-      investigators: this.investigators.getRawValue().map(inv => ({
+
+      investigators: this.investigators.getRawValue().map((inv) => ({
         fullName: inv.nombreCompleto,
         identification: inv.cedula,
         position: inv.funcion,
@@ -279,21 +327,22 @@ export class EditarProtocoloPage implements OnInit {
         email: inv.correo,
         phone: inv.celular,
         education: inv.formacion,
-        role: 'CO_INVESTIGADOR'
+        role: 'CO_INVESTIGADOR',
       })),
-      
-      institutions: this.institutions.getRawValue().map(inst => ({
+
+      institutions: this.institutions.getRawValue().map((inst) => ({
         name: inst.nombre,
         type: inst.tipo === 'PUBLICA' ? 'PUBLIC' : 'PRIVATE',
         address: inst.direccion,
-        contactPerson: inst.contacto
-      }))
+        contactPerson: inst.contacto,
+      })),
     };
 
     // Agregar campos base requeridos para no perder información
     if (this.protocoloOriginal) {
       payload.title = this.protocoloOriginal.title;
-      payload.studyTypeId = this.protocoloOriginal.studyType?.id || this.protocoloOriginal.studyTypeId;
+      payload.studyTypeId =
+        this.protocoloOriginal.studyType?.id || this.protocoloOriginal.studyTypeId;
       payload.principalInvestigatorId = this.protocoloOriginal.principalInvestigatorId;
       payload.usesBiologicalSamples = this.protocoloOriginal.usesBiologicalSamples;
       payload.isVulnerablePopulation = this.protocoloOriginal.isVulnerablePopulation;
@@ -303,17 +352,24 @@ export class EditarProtocoloPage implements OnInit {
       payload.isAffidavitAccepted = this.protocoloOriginal.isAffidavitAccepted;
     }
 
-    this.protocoloService.actualizarProtocolo(this.protocolId, payload as CrearProtocoloDto).subscribe({
-      next: () => {
-        this.isSaving = false;
-        this.snackBar.open('✅ Protocolo actualizado exitosamente.', 'Cerrar', { duration: 4000 });
-        this.router.navigate(['/dashboard/protocols/workspace', this.protocolId, 'info']);
-      },
-      error: (err) => {
-        this.isSaving = false;
-        this.snackBar.open('❌ Error al actualizar: ' + (err.message || 'Error interno'), 'Cerrar');
-      }
-    });
+    this.protocoloService
+      .actualizarProtocolo(this.protocolId, payload as CrearProtocoloDto)
+      .subscribe({
+        next: () => {
+          this.isSaving = false;
+          this.snackBar.open('✅ Protocolo actualizado exitosamente.', 'Cerrar', {
+            duration: 4000,
+          });
+          this.router.navigate(['/dashboard/protocols/workspace', this.protocolId, 'info']);
+        },
+        error: (err) => {
+          this.isSaving = false;
+          this.snackBar.open(
+            '❌ Error al actualizar: ' + (err.message || 'Error interno'),
+            'Cerrar',
+          );
+        },
+      });
   }
 
   onKeyPressNumber(event: KeyboardEvent) {

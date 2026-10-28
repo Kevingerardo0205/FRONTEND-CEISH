@@ -1,9 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { IEvaluationRepositoryPort, ObservationEntry } from '@domain/ports/IEvaluationRepositoryPort';
+import {
+  IEvaluationRepositoryPort,
+  ObservationEntry,
+} from '@domain/ports/IEvaluationRepositoryPort';
 import { ChecklistRequirement } from '@features/investigador/domain/dtos/crear-protocolo.dto';
-import { IProtocolRepositoryPort, ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
+import {
+  IProtocolRepositoryPort,
+  ProtocolDocumentHistoryEntry,
+} from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
 import { ProtocoloDetalle } from '@features/investigador/domain/dtos/crear-protocolo.dto';
 
@@ -27,10 +33,10 @@ export class LoadSubsanacionDetailUseCase {
           if (res && Array.isArray(res.observations)) return [res.observations];
           if (res && Array.isArray(res.data)) return [res.data];
           return [[]];
-        })
+        }),
       ),
       checklist: this.protocoloService.getChecklist(protocolId),
-      documents: this.protocolRepo.getDocumentHistory(String(protocolId))
+      documents: this.protocolRepo.getDocumentHistory(String(protocolId)),
     });
   }
 }

@@ -9,55 +9,74 @@ export const INVESTIGADOR_ROUTES: Routes = [
     children: [
       {
         path: 'nuevo-protocolo',
-        loadComponent: () => import('./presentation/pages/nuevo-protocolo/nuevo-protocolo.page').then(m => m.NuevoProtocoloPage),
+        loadComponent: () =>
+          import('./presentation/pages/nuevo-protocolo/nuevo-protocolo.page').then(
+            (m) => m.NuevoProtocoloPage,
+          ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }
+        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
       {
         path: 'mis-protocolos',
-        loadComponent: () => import('./presentation/pages/mis-protocolos/mis-protocolos.page').then(m => m.MisProtocolosPage),
+        loadComponent: () =>
+          import('./presentation/pages/mis-protocolos/mis-protocolos.page').then(
+            (m) => m.MisProtocolosPage,
+          ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }
+        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
       {
         path: 'protocolo/:id',
-        redirectTo: '/dashboard/protocols/workspace/:id/info'
+        redirectTo: '/dashboard/protocols/workspace/:id/info',
       },
       {
         path: 'protocolo/:id/editar',
-        loadComponent: () => import('./presentation/pages/editar-protocolo/editar-protocolo.page').then(m => m.EditarProtocoloPage),
+        loadComponent: () =>
+          import('./presentation/pages/editar-protocolo/editar-protocolo.page').then(
+            (m) => m.EditarProtocoloPage,
+          ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }
+        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
       {
         path: 'protocolo-legacy/:id',
-        loadComponent: () => import('./presentation/pages/detalle-protocolo/detalle-protocolo.page').then(m => m.DetalleProtocoloPage),
+        loadComponent: () =>
+          import('./presentation/pages/detalle-protocolo/detalle-protocolo.page').then(
+            (m) => m.DetalleProtocoloPage,
+          ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }
+        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
       {
         path: 'enmienda/:id',
-        loadComponent: () => import('./presentation/pages/enmiendas/enmiendas.page').then(m => m.EnmiendasPage),
+        loadComponent: () =>
+          import('./presentation/pages/enmiendas/enmiendas.page').then((m) => m.EnmiendasPage),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }
+        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
       {
         path: 'evento-adverso/:id',
-        loadComponent: () => import('./presentation/pages/eventos-adversos/eventos-adversos.page').then(m => m.EventosAdversosPage),
+        loadComponent: () =>
+          import('./presentation/pages/eventos-adversos/eventos-adversos.page').then(
+            (m) => m.EventosAdversosPage,
+          ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }
+        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
       {
         path: 'renovacion/:id',
-        loadComponent: () => import('./presentation/pages/renovaciones/renovaciones.page').then(m => m.RenovacionesPage),
+        loadComponent: () =>
+          import('./presentation/pages/renovaciones/renovaciones.page').then(
+            (m) => m.RenovacionesPage,
+          ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] }
+        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
       {
         path: '',
         redirectTo: 'mis-protocolos',
-        pathMatch: 'full'
-      }
-    ]
-  }
+        pathMatch: 'full',
+      },
+    ],
+  },
 ];

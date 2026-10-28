@@ -9,13 +9,15 @@ describe('DownloadProtocolDocumentUseCase', () => {
 
   beforeEach(() => {
     mockRepo = jasmine.createSpyObj('IProtocolRepositoryPort', ['getCertificate']);
-    mockRepo.getCertificate.and.returnValue(of(new Blob(['pdf content'], { type: 'application/pdf' })));
+    mockRepo.getCertificate.and.returnValue(
+      of(new Blob(['pdf content'], { type: 'application/pdf' })),
+    );
 
     TestBed.configureTestingModule({
       providers: [
         DownloadProtocolDocumentUseCase,
-        { provide: IProtocolRepositoryPort, useValue: mockRepo }
-      ]
+        { provide: IProtocolRepositoryPort, useValue: mockRepo },
+      ],
     });
 
     useCase = TestBed.inject(DownloadProtocolDocumentUseCase);
@@ -31,7 +33,7 @@ describe('DownloadProtocolDocumentUseCase', () => {
         expect(mockRepo.getCertificate).toHaveBeenCalledWith('123');
         expect(blob).toBeTruthy();
         done();
-      }
+      },
     });
   });
 
@@ -40,7 +42,7 @@ describe('DownloadProtocolDocumentUseCase', () => {
       next: (blob) => {
         expect(blob instanceof Blob).toBeTrue();
         done();
-      }
+      },
     });
   });
 });

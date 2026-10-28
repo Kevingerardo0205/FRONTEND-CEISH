@@ -66,79 +66,98 @@ import { SecretariatMetrics } from '../../application/services/secretariat-dashb
       </div>
     </div>
   `,
-  styles: [`
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-
-    .kpi-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01);
-      transition: all 0.2s ease;
-
-      &.danger {
-        border-color: #fecaca;
-        background: #fff5f5;
-        .value { color: #dc2626; }
+  styles: [
+    `
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
       }
 
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
-      }
-    }
+      .kpi-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01);
+        transition: all 0.2s ease;
 
-    .kpi-icon-wrapper {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
-      }
+        &.danger {
+          border-color: #fecaca;
+          background: #fff5f5;
+          .value {
+            color: #dc2626;
+          }
+        }
 
-      &.blue { background: #eff6ff; color: #2563eb; }
-      &.orange { background: #fff7ed; color: #ea580c; }
-      &.yellow { background: #fef9c3; color: #ca8a04; }
-      &.red { background: #fef2f2; color: #dc2626; }
-      &.green { background: #f0fdf4; color: #16a34a; }
-    }
-
-    .kpi-info {
-      display: flex;
-      flex-direction: column;
-      
-      .value {
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: #0f172a;
-        line-height: 1.1;
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+        }
       }
 
-      .label {
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.2px;
-        margin-top: 4px;
+      .kpi-icon-wrapper {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        mat-icon {
+          font-size: 22px;
+          width: 22px;
+          height: 22px;
+        }
+
+        &.blue {
+          background: #eff6ff;
+          color: #2563eb;
+        }
+        &.orange {
+          background: #fff7ed;
+          color: #ea580c;
+        }
+        &.yellow {
+          background: #fef9c3;
+          color: #ca8a04;
+        }
+        &.red {
+          background: #fef2f2;
+          color: #dc2626;
+        }
+        &.green {
+          background: #f0fdf4;
+          color: #16a34a;
+        }
       }
-    }
-  `]
+
+      .kpi-info {
+        display: flex;
+        flex-direction: column;
+
+        .value {
+          font-size: 1.35rem;
+          font-weight: 800;
+          color: #0f172a;
+          line-height: 1.1;
+        }
+
+        .label {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.2px;
+          margin-top: 4px;
+        }
+      }
+    `,
+  ],
 })
 export class KpiPanelComponent {
   metrics = input.required<SecretariatMetrics>();

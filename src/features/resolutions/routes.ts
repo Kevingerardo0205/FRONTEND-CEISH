@@ -9,21 +9,27 @@ export const RESOLUTION_ROUTES: Routes = [
     children: [
       {
         path: 'calls',
-        loadComponent: () => import('./presentation/pages/calls-management/calls-management.page').then(m => m.CallsManagementPage),
+        loadComponent: () =>
+          import('./presentation/pages/calls-management/calls-management.page').then(
+            (m) => m.CallsManagementPage,
+          ),
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'], permissions: ['RESOLUCION_CONVOCATORIAS'] }
+        data: {
+          roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'],
+          permissions: ['RESOLUCION_CONVOCATORIAS'],
+        },
       },
       {
         path: 'generator',
         component: ResolutionGeneratorPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'] }
+        data: { roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'] },
       },
       {
         path: '',
         redirectTo: 'generator',
-        pathMatch: 'full'
-      }
-    ]
-  }
+        pathMatch: 'full',
+      },
+    ],
+  },
 ];

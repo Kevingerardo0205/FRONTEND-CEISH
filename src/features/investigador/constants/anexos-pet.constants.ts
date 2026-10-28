@@ -1,7 +1,7 @@
 export enum TipoEstudio {
   OBSERVACIONAL = 'IO',
   INTERVENCION = 'EI',
-  ENSAYO_CLINICO = 'EC'
+  ENSAYO_CLINICO = 'EC',
 }
 
 export interface RequisitoDocumento {
@@ -23,7 +23,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Anexo 1',
     obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'anexo2_formulario',
@@ -31,17 +31,24 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Anexo 2',
     obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    formatosAceptados: [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ],
   },
   {
     id: 'anexo3_consentimiento',
     nombre: 'Documento de consentimiento informado / Asentimiento',
     anexo: 'Anexo 3',
-    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION, TipoEstudio.ENSAYO_CLINICO],
+    obligatorioPara: [
+      TipoEstudio.OBSERVACIONAL,
+      TipoEstudio.INTERVENCION,
+      TipoEstudio.ENSAYO_CLINICO,
+    ],
     esCondicional: true,
     condicion: 'Requerido si el estudio involucra seres humanos o muestras biológicas',
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'instrumentos_utilizados',
@@ -49,7 +56,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Soporte Técnico',
     obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'declaratoria_confidencialidad',
@@ -57,7 +64,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Soporte Ético',
     obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'declaracion_conflicto_interes',
@@ -65,23 +72,32 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Soporte Ético',
     obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'anexo4_responsabilidad',
-    nombre: 'Declaración de responsabilidad del investigador principal del centro o de los centros de investigación',
+    nombre:
+      'Declaración de responsabilidad del investigador principal del centro o de los centros de investigación',
     anexo: 'Anexo 4',
-    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION, TipoEstudio.ENSAYO_CLINICO],
+    obligatorioPara: [
+      TipoEstudio.OBSERVACIONAL,
+      TipoEstudio.INTERVENCION,
+      TipoEstudio.ENSAYO_CLINICO,
+    ],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'carta_interes_institucional',
     nombre: 'Carta de interés institucional',
     anexo: 'Anexo 5',
-    obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION, TipoEstudio.ENSAYO_CLINICO],
+    obligatorioPara: [
+      TipoEstudio.OBSERVACIONAL,
+      TipoEstudio.INTERVENCION,
+      TipoEstudio.ENSAYO_CLINICO,
+    ],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'ficha_intervencion',
@@ -89,7 +105,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Soporte Técnico',
     obligatorioPara: [TipoEstudio.INTERVENCION],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'anexo6_carta_ec',
@@ -97,7 +113,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Anexo 6',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'protocolo_investigacion',
@@ -105,7 +121,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Documento Técnico',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 20,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'ficha_descriptiva_ensayo',
@@ -113,7 +129,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'manual_investigador_bpc',
@@ -121,7 +137,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 20,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'material_reclutamiento',
@@ -129,7 +145,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'instrumentos_recoleccion_ec',
@@ -137,7 +153,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'poliza_seguro',
@@ -145,7 +161,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'certificados_bioetica',
@@ -153,7 +169,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'registro_senescyt_ip',
@@ -161,7 +177,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 5,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'seguridad_farmaco_experimental',
@@ -169,7 +185,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 15,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'aprobacion_comite_extranjero',
@@ -179,7 +195,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     esCondicional: true,
     condicion: 'Obligatorio para estudios multicéntricos internacionales',
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'contrato_promotor_investigadores',
@@ -187,7 +203,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'plan_monitoreo_ensayo',
@@ -195,7 +211,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'plan_seguridad_participante',
@@ -203,12 +219,10 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Requisito EC',
     obligatorioPara: [TipoEstudio.ENSAYO_CLINICO],
     maxSizeMB: 10,
-    formatosAceptados: ['application/pdf']
-  }
+    formatosAceptados: ['application/pdf'],
+  },
 ];
 
 export const getRequisitosPorTipoEstudio = (tipo: TipoEstudio): RequisitoDocumento[] => {
-  return REQUISITOS_DOCUMENTOS.filter(req => 
-    req.obligatorioPara.includes(tipo)
-  );
+  return REQUISITOS_DOCUMENTOS.filter((req) => req.obligatorioPara.includes(tipo));
 };

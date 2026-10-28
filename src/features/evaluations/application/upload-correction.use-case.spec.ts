@@ -17,13 +17,15 @@ describe('UploadCorrectionUseCase', () => {
       providers: [
         UploadCorrectionUseCase,
         { provide: ProtocoloService, useValue: pSpy },
-        { provide: IProtocolRepositoryPort, useValue: rSpy }
-      ]
+        { provide: IProtocolRepositoryPort, useValue: rSpy },
+      ],
     });
 
     useCase = TestBed.inject(UploadCorrectionUseCase);
     protocoloServiceSpy = TestBed.inject(ProtocoloService) as jasmine.SpyObj<ProtocoloService>;
-    protocolRepoSpy = TestBed.inject(IProtocolRepositoryPort) as jasmine.SpyObj<IProtocolRepositoryPort>;
+    protocolRepoSpy = TestBed.inject(
+      IProtocolRepositoryPort,
+    ) as jasmine.SpyObj<IProtocolRepositoryPort>;
   });
 
   it('debe llamar a subirDocumento con la versionNumber especificada y retornar el historial actualizado', (done) => {
@@ -33,26 +35,28 @@ describe('UploadCorrectionUseCase', () => {
     protocoloServiceSpy.subirDocumento.and.returnValue(of({ id: 10 } as any));
     protocolRepoSpy.getDocumentHistory.and.returnValue(of(mockDocs as any));
 
-    useCase.execute({
-      file: mockFile,
-      protocolId: 12,
-      requirementId: 5,
-      requirementCode: 'REQ-05',
-      versionNumber: 2
-    }).subscribe({
-      next: (res) => {
-        expect(protocoloServiceSpy.subirDocumento).toHaveBeenCalledWith(
-          mockFile,
-          12,
-          5,
-          'REQ-05',
-          2
-        );
-        expect(protocolRepoSpy.getDocumentHistory).toHaveBeenCalledWith('12');
-        expect(res).toEqual(mockDocs as any);
-        done();
-      },
-      error: done.fail
-    });
+    useCase
+      .execute({
+        file: mockFile,
+        protocolId: 12,
+        requirementId: 5,
+        requirementCode: 'REQ-05',
+        versionNumber: 2,
+      })
+      .subscribe({
+        next: (res) => {
+          expect(protocoloServiceSpy.subirDocumento).toHaveBeenCalledWith(
+            mockFile,
+            12,
+            5,
+            'REQ-05',
+            2,
+          );
+          expect(protocolRepoSpy.getDocumentHistory).toHaveBeenCalledWith('12');
+          expect(res).toEqual(mockDocs as any);
+          done();
+        },
+        error: done.fail,
+      });
   });
 });

@@ -9,11 +9,7 @@ describe('ResolutionFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        ReactiveFormsModule,
-        BrowserAnimationsModule,
-        ResolutionFormComponent
-      ]
+      imports: [ReactiveFormsModule, BrowserAnimationsModule, ResolutionFormComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResolutionFormComponent);
@@ -27,7 +23,7 @@ describe('ResolutionFormComponent', () => {
 
   it('should validate form for type 1 (approval)', () => {
     component.form.get('resolutionTypeId')?.setValue(1);
-    
+
     // Debería ser inválido por defecto (falta observations)
     expect(component.form.valid).toBeFalse();
 
@@ -37,7 +33,7 @@ describe('ResolutionFormComponent', () => {
 
   it('should validate form for type 2 (conditional approval)', () => {
     component.form.get('resolutionTypeId')?.setValue(2);
-    
+
     // Debería requerir majorObservations y correctionProcedure
     expect(component.form.valid).toBeFalse();
 
@@ -57,7 +53,9 @@ describe('ResolutionFormComponent', () => {
     component.form.get('majorObservations')?.setValue('Corto');
     expect(component.form.valid).toBeFalse();
 
-    component.form.get('majorObservations')?.setValue('Justificación de rechazo con más de veinte caracteres.');
+    component.form
+      .get('majorObservations')
+      ?.setValue('Justificación de rechazo con más de veinte caracteres.');
     expect(component.form.valid).toBeTrue();
   });
 

@@ -3,7 +3,7 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
 
 @Directive({
   selector: '[appHasPermission]',
-  standalone: true
+  standalone: true,
 })
 export class PermissionDirective {
   private templateRef = inject(TemplateRef<any>);
@@ -16,9 +16,9 @@ export class PermissionDirective {
     effect(() => {
       const user = this.authFacade.currentUser();
       const permissions = user?.permissions || [];
-      
+
       const hasPermission = Array.isArray(this.requiredPermission)
-        ? this.requiredPermission.some(p => permissions.includes(p))
+        ? this.requiredPermission.some((p) => permissions.includes(p))
         : permissions.includes(this.requiredPermission);
 
       this.viewContainer.clear();

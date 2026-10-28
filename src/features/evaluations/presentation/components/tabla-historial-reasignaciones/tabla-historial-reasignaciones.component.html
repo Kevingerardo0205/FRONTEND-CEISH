@@ -1,0 +1,70 @@
+<div class="history-table-container">
+  <div class="table-header">
+    <div class="title-with-icon">
+      <mat-icon color="primary">history</mat-icon>
+      <h3 class="table-title">Historial Inmutable de Sustituciones (Bitácora de Auditoría)</h3>
+    </div>
+    <span class="badge badge-count">{{ historyRecords.length }} registro(s)</span>
+  </div>
+
+  <div class="table-responsive" *ngIf="historyRecords.length > 0; else emptyState">
+    <table class="table-audit">
+      <thead>
+        <tr>
+          <th>Fecha / Hora</th>
+          <th>Evaluador Saliente</th>
+          <th>Perfil</th>
+          <th>Motivo de Sustitución</th>
+          <th>Justificación</th>
+          <th>Evaluador Sustituto</th>
+          <th>Ejecutado Por</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let record of historyRecords">
+          <td class="cell-date">
+            <mat-icon class="inline-icon">schedule</mat-icon>
+            {{ record.executedAt | date: 'medium' }}
+          </td>
+          <td class="cell-evaluator text-muted-name">
+            <span class="name">{{ record.previousEvaluatorName }}</span>
+          </td>
+          <td class="cell-profile">
+            <span
+              class="badge badge-profile"
+              [ngClass]="'badge-' + (record.evaluatorProfile?.toLowerCase() || '')"
+            >
+              {{ record.evaluatorProfile }}
+            </span>
+          </td>
+          <td class="cell-reason">
+            <span
+              class="badge badge-reason"
+              [ngClass]="'reason-' + (record.reassignmentReason?.toLowerCase() || '')"
+            >
+              {{ record.reassignmentReason }}
+            </span>
+          </td>
+          <td class="cell-obs">
+            {{ record.reasonDescription || '—' }}
+          </td>
+          <td class="cell-evaluator text-success-name">
+            <span class="name">{{ record.newEvaluatorName }}</span>
+          </td>
+          <td class="cell-user">
+            <code>{{ record.executedByUserName || 'Usuario #' + record.executedByUserId }}</code>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #emptyState>
+    <div class="empty-state">
+      <mat-icon class="empty-icon">verified_user</mat-icon>
+      <p class="empty-message">
+        No se registran reasignaciones de evaluadores para este protocolo.
+      </p>
+    </div>
+  </ng-template>
+</div>

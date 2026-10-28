@@ -3,7 +3,14 @@ import { Observable, of, throwError, forkJoin } from 'rxjs';
 import { catchError, map, switchMap, filter } from 'rxjs/operators';
 import { BaseApiService } from '@infrastructure/api/base-api.service';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
-import { CrearProtocoloDto, ProtocoloCreadoResponse, ProtocoloResumen, ProtocoloDetalle, ChecklistRequirement, EstadoProtocolo } from '../../domain/dtos/crear-protocolo.dto';
+import {
+  CrearProtocoloDto,
+  ProtocoloCreadoResponse,
+  ProtocoloResumen,
+  ProtocoloDetalle,
+  ChecklistRequirement,
+  EstadoProtocolo,
+} from '../../domain/dtos/crear-protocolo.dto';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -126,10 +133,8 @@ export class ProtocoloService extends BaseApiService {
    */
   getStudyTypes(): Observable<StudyTypeItem[]> {
     return this.get<ApiEnvelope<StudyTypeItem[]> | StudyTypeItem[]>(
-      `${ENDPOINTS.PROTOCOLS.BASE}/study-types`
-    ).pipe(
-      map(res => unwrap<StudyTypeItem[]>(res) ?? [])
-    );
+      `${ENDPOINTS.PROTOCOLS.BASE}/study-types`,
+    ).pipe(map((res) => unwrap<StudyTypeItem[]>(res) ?? []));
   }
 
   /**
@@ -137,10 +142,8 @@ export class ProtocoloService extends BaseApiService {
    */
   getRiskLevels(): Observable<RiskLevel[]> {
     return this.get<ApiEnvelope<RiskLevel[]> | RiskLevel[]>(
-      `${ENDPOINTS.PROTOCOLS.BASE}/risk-levels`
-    ).pipe(
-      map(res => unwrap<RiskLevel[]>(res) ?? [])
-    );
+      `${ENDPOINTS.PROTOCOLS.BASE}/risk-levels`,
+    ).pipe(map((res) => unwrap<RiskLevel[]>(res) ?? []));
   }
 
   /**
@@ -154,20 +157,26 @@ export class ProtocoloService extends BaseApiService {
       : ENDPOINTS.PROTOCOLS.CHECKLIST(protocolId.toString());
 
     return this.get<ApiEnvelope<ChecklistRequirement[]> | ChecklistRequirement[]>(url).pipe(
-      map(res => unwrap<ChecklistRequirement[]>(res) ?? []),
+      map((res) => unwrap<ChecklistRequirement[]>(res) ?? []),
       catchError((err) => {
-        console.warn(`[ProtocoloService] Error en checklist oficial (${url}), intentando desde detalle...`, err);
+        console.warn(
+          `[ProtocoloService] Error en checklist oficial (${url}), intentando desde detalle...`,
+          err,
+        );
         return this.obtenerProtocolo(protocolId).pipe(
           map((protocol: ProtocoloDetalle) => {
             const proto = protocol as unknown as RawBackendProtocol;
             return proto.checklist || proto.requirements || proto.protocolo_requisitos || [];
           }),
-          catchError(fallbackErr => {
-            console.warn('[ProtocoloService] Fallback desde detalle falló. Retornando array vacío.', fallbackErr);
+          catchError((fallbackErr) => {
+            console.warn(
+              '[ProtocoloService] Fallback desde detalle falló. Retornando array vacío.',
+              fallbackErr,
+            );
             return of([]);
-          })
+          }),
         );
-      })
+      }),
     );
   }
 
@@ -182,23 +191,29 @@ export class ProtocoloService extends BaseApiService {
    * 3. Subida de Archivos vinculada a Requisito (Mapeo Investigador)
    * Endpoint Investigador: POST /protocols/:id/upload-document
    */
-  subirDocumento(file: File, protocolId: number, requirementId: number, requirementCode?: string, versionNumber: number = 1): Observable<DocumentRegistrationResponse> {
+  subirDocumento(
+    file: File,
+    protocolId: number,
+    requirementId: number,
+    requirementCode?: string,
+    versionNumber: number = 1,
+  ): Observable<DocumentRegistrationResponse> {
     const sanitizedName = sanitizeFilename(file.name);
     const vFolder = versionNumber > 1 ? `v${versionNumber}/` : '';
     const s3Key = `protocols/${protocolId}/${vFolder}requirements/${requirementId}/${sanitizedName}`;
 
     return this.s3StorageService.getUploadUrl(s3Key, file.type || 'application/pdf').pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('[ProtocoloService] Error al obtener URL firmada de S3:', err);
         return throwError(() => err);
       }),
-      switchMap(urlRes => {
+      switchMap((urlRes) => {
         return this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, file).pipe(
-          catchError(err => {
+          catchError((err) => {
             console.error('[ProtocoloService] Error al realizar la subida PUT a S3/R2:', err);
             return throwError(() => err);
           }),
-          filter(uploadRes => uploadRes.success),
+          filter((uploadRes) => uploadRes.success),
           switchMap(() => {
             const url = this.isInvestigador
               ? `/protocols/${protocolId}/upload-document`
@@ -208,23 +223,28 @@ export class ProtocoloService extends BaseApiService {
               requirementId: requirementId,
               fileName: sanitizedName,
               path: urlRes.key,
-              sizeBytes: file.size
+              sizeBytes: file.size,
             };
 
             if (requirementCode) {
               payload.requirementCode = requirementCode;
             }
 
-            return this.post<ApiEnvelope<DocumentRegistrationResponse> | DocumentRegistrationResponse>(url, payload).pipe(
-              map(res => unwrap<DocumentRegistrationResponse>(res)),
-              catchError(err => {
-                console.error('[ProtocoloService] Error en el registro del documento en la BD:', err);
+            return this.post<
+              ApiEnvelope<DocumentRegistrationResponse> | DocumentRegistrationResponse
+            >(url, payload).pipe(
+              map((res) => unwrap<DocumentRegistrationResponse>(res)),
+              catchError((err) => {
+                console.error(
+                  '[ProtocoloService] Error en el registro del documento en la BD:',
+                  err,
+                );
                 return throwError(() => err);
-              })
+              }),
             );
-          })
+          }),
         );
-      })
+      }),
     );
   }
 
@@ -233,12 +253,15 @@ export class ProtocoloService extends BaseApiService {
       ? `/protocols/${protocolId}/documents`
       : ENDPOINTS.PROTOCOLS.RECEPTION.DOCUMENTS_HISTORY(protocolId.toString());
     return this.get<ApiEnvelope<DocumentHistoryEntry[]> | DocumentHistoryEntry[]>(url).pipe(
-      map(res => unwrap<DocumentHistoryEntry[]>(res) ?? [])
+      map((res) => unwrap<DocumentHistoryEntry[]>(res) ?? []),
     );
   }
 
-  subirDocumentosBulk(protocolId: number, files: File[]): Observable<DocumentRegistrationResponse[]> {
-    const uploads = files.map(file => this.subirDocumento(file, protocolId, 0));
+  subirDocumentosBulk(
+    protocolId: number,
+    files: File[],
+  ): Observable<DocumentRegistrationResponse[]> {
+    const uploads = files.map((file) => this.subirDocumento(file, protocolId, 0));
     return forkJoin(uploads);
   }
   /**
@@ -250,28 +273,35 @@ export class ProtocoloService extends BaseApiService {
       : ENDPOINTS.PROTOCOLS.RECEPTION.FINALIZE(protocolId.toString()); // 'finalize' para Secretaría
 
     return this.post<ApiEnvelope<FinalizeResponse> | FinalizeResponse>(url, {}).pipe(
-      map(res => unwrap<FinalizeResponse>(res))
+      map((res) => unwrap<FinalizeResponse>(res)),
     );
   }
 
   misProtocolos(): Observable<ProtocoloResumen[]> {
     return this.get<ApiEnvelope<RawBackendProtocol[]> | RawBackendProtocol[]>(
-      `${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?limit=100`
+      `${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?limit=100`,
     ).pipe(
-      map(res => {
+      map((res) => {
         const unwrapped = unwrap<RawBackendProtocol[]>(res);
         // Soporte para respuestas paginadas del helper paginate: { data: [...], total: X }
         let data: RawBackendProtocol[];
         if (Array.isArray(unwrapped)) {
           data = unwrapped;
-        } else if (unwrapped && typeof unwrapped === 'object' && Array.isArray((unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data)) {
+        } else if (
+          unwrapped &&
+          typeof unwrapped === 'object' &&
+          Array.isArray((unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data)
+        ) {
           data = (unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data;
         } else {
           data = [];
         }
 
         if (!data || !Array.isArray(data)) {
-          console.warn('[ProtocoloService] No se encontró una estructura de datos de protocolo válida en el backend:', res);
+          console.warn(
+            '[ProtocoloService] No se encontró una estructura de datos de protocolo válida en el backend:',
+            res,
+          );
           return [];
         }
         // Mapeo explícito para solucionar discrepancia de nombres de propiedades del backend
@@ -285,30 +315,41 @@ export class ProtocoloService extends BaseApiService {
           isTimelineTermsAccepted: p.isTimelineTermsAccepted ?? false,
           timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
           timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
-          versionNumber: p.versionNumber || p.version || 1
+          versionNumber: p.versionNumber || p.version || 1,
         })) as ProtocoloResumen[];
       }),
-      catchError(err => {
-        console.error('[ProtocoloService] Error crítico al obtener mis-protocolos desde la base de datos:', err);
-        this.snackBar.open('⚠️ Error de conexión con la base de datos al cargar sus protocolos.', 'Entendido', {
-          duration: 5000,
-          panelClass: ['snackbar-error']
-        });
+      catchError((err) => {
+        console.error(
+          '[ProtocoloService] Error crítico al obtener mis-protocolos desde la base de datos:',
+          err,
+        );
+        this.snackBar.open(
+          '⚠️ Error de conexión con la base de datos al cargar sus protocolos.',
+          'Entendido',
+          {
+            duration: 5000,
+            panelClass: ['snackbar-error'],
+          },
+        );
         return of([]);
-      })
+      }),
     );
   }
 
   misProtocolosSubsanar(): Observable<ProtocoloResumen[]> {
     return this.get<ApiEnvelope<RawBackendProtocol[]> | RawBackendProtocol[]>(
-      `${ENDPOINTS.PROTOCOLS.BASE}/mis-subsanaciones`
+      `${ENDPOINTS.PROTOCOLS.BASE}/mis-subsanaciones`,
     ).pipe(
-      map(res => {
+      map((res) => {
         const unwrapped = unwrap<RawBackendProtocol[]>(res);
         let data: RawBackendProtocol[];
         if (Array.isArray(unwrapped)) {
           data = unwrapped;
-        } else if (unwrapped && typeof unwrapped === 'object' && Array.isArray((unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data)) {
+        } else if (
+          unwrapped &&
+          typeof unwrapped === 'object' &&
+          Array.isArray((unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data)
+        ) {
           data = (unwrapped as unknown as ApiEnvelope<RawBackendProtocol[]>).data;
         } else {
           data = [];
@@ -326,21 +367,21 @@ export class ProtocoloService extends BaseApiService {
           isTimelineTermsAccepted: p.isTimelineTermsAccepted ?? false,
           timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
           timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
-          versionNumber: p.versionNumber || p.version || 1
+          versionNumber: p.versionNumber || p.version || 1,
         })) as ProtocoloResumen[];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('[ProtocoloService] Error al cargar mis-protocolos para subsanar:', err);
         return of([]);
-      })
+      }),
     );
   }
 
   obtenerProtocolo(codigo: string | number): Observable<ProtocoloDetalle> {
     return this.get<ApiEnvelope<RawBackendProtocol> | RawBackendProtocol>(
-      ENDPOINTS.PROTOCOLS.BY_ID(codigo.toString())
+      ENDPOINTS.PROTOCOLS.BY_ID(codigo.toString()),
     ).pipe(
-      map(res => {
+      map((res) => {
         const p = unwrap<RawBackendProtocol>(res);
         if (!p) throw new Error('No se encontró detalle de protocolo');
         return {
@@ -355,11 +396,13 @@ export class ProtocoloService extends BaseApiService {
           timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
           timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
           title: p.title || p.titulo || '',
-          ceishCode: p.ceishCode || p.codigoCeish || ''
+          ceishCode: p.ceishCode || p.codigoCeish || '',
         } as unknown as ProtocoloDetalle;
       }),
-      catchError(_err => {
-        console.warn(`[ProtocoloService] Error al obtener detalle de protocolo ${codigo}. Usando fallback UAT...`);
+      catchError((_err) => {
+        console.warn(
+          `[ProtocoloService] Error al obtener detalle de protocolo ${codigo}. Usando fallback UAT...`,
+        );
         return of({
           id: 12,
           codigoCeish: 'CEISH-ESPOCH-2026-0012',
@@ -392,9 +435,9 @@ export class ProtocoloService extends BaseApiService {
           financingAmount: 10000,
           isAffidavitAccepted: true,
           investigators: [],
-          institutions: []
+          institutions: [],
         });
-      })
+      }),
     );
   }
 
@@ -405,7 +448,7 @@ export class ProtocoloService extends BaseApiService {
     indigena: boolean = false,
     multicentrico: boolean = false,
     riesgoMayor: boolean = false,
-    institucionesPublicas: boolean = false
+    institucionesPublicas: boolean = false,
   ): Observable<RequirementItem[]> {
     const params = {
       tipo: codigoTipo,
@@ -414,13 +457,12 @@ export class ProtocoloService extends BaseApiService {
       poblacionIndigena: indigena,
       multicentrico: multicentrico,
       riesgoMayor: riesgoMayor,
-      institucionesPublicas: institucionesPublicas
+      institucionesPublicas: institucionesPublicas,
     };
     return this.get<ApiEnvelope<RequirementItem[]> | RequirementItem[]>(
-      ENDPOINTS.PROTOCOLS.REQUIREMENTS, params
-    ).pipe(
-      map(res => unwrap<RequirementItem[]>(res) ?? [])
-    );
+      ENDPOINTS.PROTOCOLS.REQUIREMENTS,
+      params,
+    ).pipe(map((res) => unwrap<RequirementItem[]>(res) ?? []));
   }
 
   obtenerRequisitosDeProtocolo(protocolId: number): Observable<ChecklistRequirement[]> {
@@ -429,16 +471,17 @@ export class ProtocoloService extends BaseApiService {
 
   actualizarProtocolo(id: number, data: Partial<CrearProtocoloDto>): Observable<ProtocoloDetalle> {
     return this.put<ApiEnvelope<ProtocoloDetalle> | ProtocoloDetalle>(
-      `${ENDPOINTS.PROTOCOLS.BASE}/${id}`, data
-    ).pipe(
-      map(res => unwrap<ProtocoloDetalle>(res))
-    );
+      `${ENDPOINTS.PROTOCOLS.BASE}/${id}`,
+      data,
+    ).pipe(map((res) => unwrap<ProtocoloDetalle>(res)));
   }
 
-  acceptTimeline(protocolId: number): Observable<{ message: string; isTimelineTermsAccepted: boolean }> {
+  acceptTimeline(
+    protocolId: number,
+  ): Observable<{ message: string; isTimelineTermsAccepted: boolean }> {
     return this.post<{ message: string; isTimelineTermsAccepted: boolean }>(
       `${ENDPOINTS.PROTOCOLS.BASE}/${protocolId}/accept-timeline`,
-      {}
+      {},
     );
   }
 }

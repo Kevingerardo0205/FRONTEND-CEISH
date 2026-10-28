@@ -9,10 +9,42 @@ describe('LoadReceptionProtocolsUseCase', () => {
   let mockRepo: jasmine.SpyObj<IProtocolRepositoryPort>;
 
   const mockProtocols: ProtocolEntity[] = [
-    { id: '1', title: 'Proto 1', investigatorId: 'u1', type: 'OBSERVACIONAL' as any, status: 'INICIADO' as any, documents: [], version: 1 },
-    { id: '2', title: 'Proto 2', investigatorId: 'u2', type: 'EXPERIMENTAL' as any, status: 'COMPLETO' as any, documents: [], version: 1 },
-    { id: '3', title: 'Proto 3', investigatorId: 'u3', type: 'OBSERVACIONAL' as any, status: 'ARCHIVADO_VENCIMIENTO' as any, documents: [], version: 1 },
-    { id: '4', title: 'Proto 4', investigatorId: 'u4', type: 'EXPERIMENTAL' as any, status: 'EN_REVISION_SECRETARIA' as any, documents: [], version: 1 },
+    {
+      id: '1',
+      title: 'Proto 1',
+      investigatorId: 'u1',
+      type: 'OBSERVACIONAL' as any,
+      status: 'INICIADO' as any,
+      documents: [],
+      version: 1,
+    },
+    {
+      id: '2',
+      title: 'Proto 2',
+      investigatorId: 'u2',
+      type: 'EXPERIMENTAL' as any,
+      status: 'COMPLETO' as any,
+      documents: [],
+      version: 1,
+    },
+    {
+      id: '3',
+      title: 'Proto 3',
+      investigatorId: 'u3',
+      type: 'OBSERVACIONAL' as any,
+      status: 'ARCHIVADO_VENCIMIENTO' as any,
+      documents: [],
+      version: 1,
+    },
+    {
+      id: '4',
+      title: 'Proto 4',
+      investigatorId: 'u4',
+      type: 'EXPERIMENTAL' as any,
+      status: 'EN_REVISION_SECRETARIA' as any,
+      documents: [],
+      version: 1,
+    },
   ];
 
   beforeEach(() => {
@@ -22,8 +54,8 @@ describe('LoadReceptionProtocolsUseCase', () => {
     TestBed.configureTestingModule({
       providers: [
         LoadReceptionProtocolsUseCase,
-        { provide: IProtocolRepositoryPort, useValue: mockRepo }
-      ]
+        { provide: IProtocolRepositoryPort, useValue: mockRepo },
+      ],
     });
 
     useCase = TestBed.inject(LoadReceptionProtocolsUseCase);
@@ -34,15 +66,19 @@ describe('LoadReceptionProtocolsUseCase', () => {
   });
 
   it('should filter out COMPLETO and ARCHIVADO_VENCIMIENTO', (done) => {
-    useCase.execute().subscribe(result => {
+    useCase.execute().subscribe((result) => {
       expect(result.length).toBe(2);
-      expect(result.every(p => p.status !== ('COMPLETO' as any) && p.status !== ('ARCHIVADO_VENCIMIENTO' as any))).toBeTrue();
+      expect(
+        result.every(
+          (p) => p.status !== ('COMPLETO' as any) && p.status !== ('ARCHIVADO_VENCIMIENTO' as any),
+        ),
+      ).toBeTrue();
       done();
     });
   });
 
   it('should only include RECEPCION category protocols', (done) => {
-    useCase.execute().subscribe(result => {
+    useCase.execute().subscribe((result) => {
       expect(result.length).toBe(2);
       done();
     });
@@ -50,7 +86,7 @@ describe('LoadReceptionProtocolsUseCase', () => {
 
   it('should handle empty response', (done) => {
     mockRepo.getReceptionProtocols.and.returnValue(of([]));
-    useCase.execute().subscribe(result => {
+    useCase.execute().subscribe((result) => {
       expect(result.length).toBe(0);
       done();
     });

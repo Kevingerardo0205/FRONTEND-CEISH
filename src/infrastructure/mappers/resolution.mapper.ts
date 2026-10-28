@@ -57,7 +57,6 @@ interface ResolutionDtoRaw {
 }
 
 export class ResolutionMapper {
-  
   /**
    * Transforma la respuesta DTO del backend en una entidad del dominio de la aplicación,
    * deserializando las observaciones consolidadas en campos individuales para la UI.
@@ -80,12 +79,14 @@ export class ResolutionMapper {
       resolutionTypeId: raw.resolutionTypeId as number,
       resolutionType: typeStr,
       issuedAt: raw.issuedAt || raw.fechaEmision || raw.fecha_emision,
-      validityYears: raw.validityYears || raw.vigenciaAprobacionAnios || raw.vigencia_aprobacion_anios || 1,
-      followUpPeriodDays: raw.followUpPeriodDays || raw.periodoSeguimientoDias || raw.periodo_seguimiento_dias,
+      validityYears:
+        raw.validityYears || raw.vigenciaAprobacionAnios || raw.vigencia_aprobacion_anios || 1,
+      followUpPeriodDays:
+        raw.followUpPeriodDays || raw.periodoSeguimientoDias || raw.periodo_seguimiento_dias,
       observations: observations,
       letterFilePath: raw.letterFilePath || raw.archivoCartaPdf || raw.pdfLetterPath,
       createdByUserId: raw.createdByUserId || raw.creadoPor,
-      ...parsedObs
+      ...parsedObs,
     };
   }
 
@@ -95,7 +96,7 @@ export class ResolutionMapper {
    */
   static toPayload(entity: Partial<ResolutionEntity>): CreateResolutionPayloadDTO {
     let consolidatedObs = '';
-    
+
     if (entity.resolutionTypeId === 1) {
       consolidatedObs = entity.observations || '';
     } else if (entity.resolutionTypeId === 2) {
@@ -116,9 +117,10 @@ export class ResolutionMapper {
       protocolId: Number(entity.protocolId),
       resolutionTypeId: Number(entity.resolutionTypeId),
       validityYears: entity.resolutionTypeId === 3 ? undefined : Number(entity.validityYears || 1),
-      followUpPeriodDays: entity.resolutionTypeId === 3 ? undefined : Number(entity.followUpPeriodDays || 180),
+      followUpPeriodDays:
+        entity.resolutionTypeId === 3 ? undefined : Number(entity.followUpPeriodDays || 180),
       observations: consolidatedObs.trim(),
-      pdfLetterPath: entity.letterFilePath
+      pdfLetterPath: entity.letterFilePath,
     };
   }
 
@@ -154,8 +156,10 @@ export class ResolutionMapper {
     const segments = [
       { label: majorLabel, index: majorIdx, key: 'major' },
       { label: minorLabel, index: minorIdx, key: 'minor' },
-      { label: procedureLabel, index: procedureIdx, key: 'procedure' }
-    ].filter(s => s.index !== -1).sort((a, b) => a.index - b.index);
+      { label: procedureLabel, index: procedureIdx, key: 'procedure' },
+    ]
+      .filter((s) => s.index !== -1)
+      .sort((a, b) => a.index - b.index);
 
     for (let i = 0; i < segments.length; i++) {
       const current = segments[i];
@@ -163,7 +167,7 @@ export class ResolutionMapper {
       const start = current.index + current.label.length;
       const end = next ? next.index : obs.length;
       const val = obs.slice(start, end).trim();
-      
+
       if (current.key === 'major') major = val;
       if (current.key === 'minor') minor = val;
       if (current.key === 'procedure') procedure = val;

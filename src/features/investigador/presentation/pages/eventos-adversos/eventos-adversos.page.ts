@@ -16,15 +16,25 @@ import { RequisitoDocumento, TipoEstudio } from '../../../constants/anexos-pet.c
   selector: 'app-eventos-adversos',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, RouterModule, MatCardModule, 
-    MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule,
-    MatSelectModule, MatSnackBarModule, UploadDocumentosComponent
+    CommonModule,
+    ReactiveFormsModule,
+    RouterModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSelectModule,
+    MatSnackBarModule,
+    UploadDocumentosComponent,
   ],
   template: `
     <div class="container py-5 animate-fade-in">
       <header class="mb-5">
         <h1 class="h2 fw-bold mb-1 text-danger">Reporte de Evento Adverso Grave</h1>
-        <p class="text-muted">Notificación obligatoria de EAG / RAGI según farmacovigilancia (Anexos 20, 21, 22)</p>
+        <p class="text-muted">
+          Notificación obligatoria de EAG / RAGI según farmacovigilancia (Anexos 20, 21, 22)
+        </p>
       </header>
 
       <div class="row g-4">
@@ -32,7 +42,7 @@ import { RequisitoDocumento, TipoEstudio } from '../../../constants/anexos-pet.c
           <mat-card class="border-0 shadow-soft p-4 rounded-4 border-top border-danger border-4">
             <form [formGroup]="eventoForm">
               <h5 class="fw-bold mb-4">Datos del Suceso</h5>
-              
+
               <div class="row">
                 <div class="col-md-6">
                   <mat-form-field appearance="outline" class="w-100 mb-3">
@@ -46,21 +56,28 @@ import { RequisitoDocumento, TipoEstudio } from '../../../constants/anexos-pet.c
                 <div class="col-md-6">
                   <mat-form-field appearance="outline" class="w-100 mb-3">
                     <mat-label>Fecha de Ocurrencia</mat-label>
-                    <input matInput type="date" formControlName="fechaEvento">
+                    <input matInput type="date" formControlName="fechaEvento" />
                   </mat-form-field>
                 </div>
               </div>
 
               <mat-form-field appearance="outline" class="w-100 mb-3">
                 <mat-label>Descripción Clínica Inicial</mat-label>
-                <textarea matInput rows="4" formControlName="descripcion" 
-                          placeholder="Describa el suceso, síntomas y medidas tomadas"></textarea>
+                <textarea
+                  matInput
+                  rows="4"
+                  formControlName="descripcion"
+                  placeholder="Describa el suceso, síntomas y medidas tomadas"
+                ></textarea>
                 <mat-error>Requerido</mat-error>
               </mat-form-field>
 
               <div class="alert alert-danger border-0 small d-flex align-items-center">
                 <mat-icon class="me-2">alarm</mat-icon>
-                <span><strong>Recordatorio:</strong> Este reporte inicial debe realizarse en un plazo máximo de 2 días desde conocido el evento.</span>
+                <span
+                  ><strong>Recordatorio:</strong> Este reporte inicial debe realizarse en un plazo
+                  máximo de 2 días desde conocido el evento.</span
+                >
               </div>
             </form>
           </mat-card>
@@ -69,13 +86,18 @@ import { RequisitoDocumento, TipoEstudio } from '../../../constants/anexos-pet.c
         <div class="col-lg-5">
           <app-upload-documentos
             [requisitos]="requisitosEvento"
-            (archivosSubidos)="onArchivosSubidos($event)">
+            (archivosSubidos)="onArchivosSubidos($event)"
+          >
           </app-upload-documentos>
 
           <div class="mt-4 d-grid gap-2">
-            <button mat-flat-button color="warn" class="py-3 fw-bold" 
-                    [disabled]="!eventoForm.valid || !archivosListos" 
-                    (click)="enviarReporte()">
+            <button
+              mat-flat-button
+              color="warn"
+              class="py-3 fw-bold"
+              [disabled]="!eventoForm.valid || !archivosListos"
+              (click)="enviarReporte()"
+            >
               <mat-icon class="me-2">priority_high</mat-icon> Enviar Reporte Urgente
             </button>
             <button mat-button routerLink="/investigador/mis-protocolos">Cancelar</button>
@@ -83,7 +105,7 @@ import { RequisitoDocumento, TipoEstudio } from '../../../constants/anexos-pet.c
         </div>
       </div>
     </div>
-  `
+  `,
 })
 export class EventosAdversosPage implements OnInit {
   private fb = inject(FormBuilder);
@@ -93,7 +115,7 @@ export class EventosAdversosPage implements OnInit {
   eventoForm = this.fb.group({
     tipoEvento: ['EAG', Validators.required],
     fechaEvento: ['', Validators.required],
-    descripcion: ['', [Validators.required, Validators.minLength(30)]]
+    descripcion: ['', [Validators.required, Validators.minLength(30)]],
   });
 
   requisitosEvento: RequisitoDocumento[] = [
@@ -101,10 +123,14 @@ export class EventosAdversosPage implements OnInit {
       id: 'anexo20_21_reporte',
       nombre: 'Anexo 20/21 - Reporte de Evento Adverso',
       anexo: 'Anexo 20/21',
-      obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION, TipoEstudio.ENSAYO_CLINICO],
+      obligatorioPara: [
+        TipoEstudio.OBSERVACIONAL,
+        TipoEstudio.INTERVENCION,
+        TipoEstudio.ENSAYO_CLINICO,
+      ],
       maxSizeMB: 5,
-      formatosAceptados: ['application/pdf']
-    }
+      formatosAceptados: ['application/pdf'],
+    },
   ];
 
   archivosListos = false;
@@ -116,10 +142,14 @@ export class EventosAdversosPage implements OnInit {
   }
 
   enviarReporte() {
-    this.snackBar.open('🚨 Reporte de seguridad enviado. Se notificó a Secretaría y Presidencia.', 'Entendido', { 
-      duration: 10000,
-      panelClass: ['bg-danger', 'text-white']
-    });
+    this.snackBar.open(
+      '🚨 Reporte de seguridad enviado. Se notificó a Secretaría y Presidencia.',
+      'Entendido',
+      {
+        duration: 10000,
+        panelClass: ['bg-danger', 'text-white'],
+      },
+    );
     this.router.navigate(['/investigador/mis-protocolos']);
   }
 }

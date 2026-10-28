@@ -4,7 +4,7 @@ import { IAuditRepositoryPort } from '../../domain/ports/audit-repository.port';
 import { AuditLog, ProtocolTrailEvent, AuditFilters } from '../../domain/entities/audit.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuditUseCase {
   private readonly auditRepo = inject(IAuditRepositoryPort);

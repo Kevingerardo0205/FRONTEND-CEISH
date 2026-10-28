@@ -31,21 +31,21 @@ export class MeetingApiAdapter extends IMeetingRepositoryPort {
 
   list(params: MeetingListParams = {}): Observable<PaginatedMeetings> {
     return this.apiClient.get<unknown>(ENDPOINTS.MEETINGS.BASE, { ...params }).pipe(
-      map((res) => MeetingMapper.toPaginated(res)),
+      map((res) => MeetingMapper.toPaginated(stripTransportEnvelope(res))),
       toMeetingError(),
     );
   }
 
   getById(id: string): Observable<MeetingDetail> {
     return this.apiClient.get<unknown>(ENDPOINTS.MEETINGS.BY_ID(id)).pipe(
-      map((res) => MeetingMapper.toDetail(MeetingMapper.unwrapData(res))),
+      map((res) => MeetingMapper.toDetail(MeetingMapper.unwrapData(stripTransportEnvelope(res)))),
       toMeetingError(),
     );
   }
 
   getPendingProtocols(): Observable<PendingProtocol[]> {
     return this.apiClient.get<unknown>(ENDPOINTS.MEETINGS.PENDING_PROTOCOLS).pipe(
-      map((res) => MeetingMapper.toPendingProtocols(res)),
+      map((res) => MeetingMapper.toPendingProtocols(stripTransportEnvelope(res))),
       toMeetingError(),
     );
   }
@@ -53,7 +53,7 @@ export class MeetingApiAdapter extends IMeetingRepositoryPort {
   /** Sin parámetros: el backend devuelve solo lugares activos. */
   getPlaces(): Observable<MeetingPlaceOption[]> {
     return this.apiClient.get<unknown>(ENDPOINTS.MEETINGS.PLACES).pipe(
-      map((res) => MeetingMapper.toPlaces(res)),
+      map((res) => MeetingMapper.toPlaces(stripTransportEnvelope(res))),
       toMeetingError(),
     );
   }
@@ -70,7 +70,7 @@ export class MeetingApiAdapter extends IMeetingRepositoryPort {
     if (dto.protocolVersionIds !== undefined) body.protocolVersionIds = dto.protocolVersionIds;
 
     return this.apiClient.post<unknown>(ENDPOINTS.MEETINGS.BASE, body).pipe(
-      map((res) => MeetingMapper.toCreated(res)),
+      map((res) => MeetingMapper.toCreated(stripTransportEnvelope(res))),
       toMeetingError(),
     );
   }
@@ -79,7 +79,7 @@ export class MeetingApiAdapter extends IMeetingRepositoryPort {
     return this.apiClient
       .post<unknown>(ENDPOINTS.MEETINGS.CALCULATE_EVAL_DATE, { meetingDate })
       .pipe(
-        map((res) => MeetingMapper.toSuggestedEvalDate(res)),
+        map((res) => MeetingMapper.toSuggestedEvalDate(stripTransportEnvelope(res))),
         toMeetingError(),
       );
   }
@@ -89,6 +89,25 @@ export class MeetingApiAdapter extends IMeetingRepositoryPort {
       .get(`${environment.apiUrl}${ENDPOINTS.MEETINGS.PDF(id)}`, { responseType: 'blob' })
       .pipe(toMeetingError());
   }
+}
+
+/**
+ * Quita SOLO la capa externa que añade el ResponseInterceptor del backend
+ * ({data: INTERNA, statusCode, message}). Si el cuerpo no tiene esa forma
+ * (p. ej. el interceptor ya no envuelve), se devuelve intacto.
+ */
+function stripTransportEnvelope(body: unknown): unknown {
+  if (!isPlainObject(body)) return body;
+  if (typeof body['statusCode'] !== 'number' || typeof body['message'] !== 'string') return body;
+  const inner = body['data'];
+  if (!isPlainObject(inner) || typeof inner['statusCode'] !== 'number' || !('data' in inner)) {
+    return body;
+  }
+  return inner;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function toMeetingError<T>(): OperatorFunction<T, T> {

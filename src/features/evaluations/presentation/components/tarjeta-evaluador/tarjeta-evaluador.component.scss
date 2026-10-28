@@ -1,0 +1,152 @@
+.evaluator-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    .profile-badge-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+
+    .badge-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+
+    &-profile {
+      background-color: #e0e7ff;
+      color: #3730a3;
+
+      &.badge-juridico {
+        background-color: #e0e7ff;
+        color: #3730a3;
+      }
+      &.badge-sociedad_civil {
+        background-color: #fce7f3;
+        color: #9d174d;
+      }
+      &.badge-metodologico {
+        background-color: #fef3c7;
+        color: #92400e;
+      }
+      &.badge-salud {
+        background-color: #dcfce7;
+        color: #166534;
+      }
+    }
+
+    &-annex10 {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+
+    &-status {
+      text-transform: uppercase;
+      background-color: #f3f4f6;
+      color: #374151;
+
+      &.status-assigned {
+        background-color: #dbeafe;
+        color: #1e40af;
+      }
+      &.status-in_progress {
+        background-color: #fef9c3;
+        color: #854d0e;
+      }
+      &.status-submitted {
+        background-color: #dcfce7;
+        color: #166534;
+      }
+      &.status-reassigned {
+        background-color: #fee2e2;
+        color: #991b1b;
+      }
+    }
+  }
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .evaluator-name {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .assignment-meta,
+    .submission-meta {
+      font-size: 0.825rem;
+      color: #64748b;
+
+      .deadline-label,
+      .submitted-label {
+        font-weight: 600;
+        margin-right: 0.25rem;
+      }
+
+      .deadline-value,
+      .submitted-value {
+        color: #334155;
+      }
+    }
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 0.75rem;
+    margin-top: 0.25rem;
+
+    .btn-reassign {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 8px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+}

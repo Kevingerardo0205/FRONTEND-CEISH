@@ -9,17 +9,21 @@ describe('LoadResolutionInsumosUseCase', () => {
 
   beforeEach(() => {
     mockEvalRepo = jasmine.createSpyObj('IEvaluationRepositoryPort', [
-      'getByProtocolId', 'getDocumentDownloadUrl', 'getDocxDownloadUrl'
+      'getByProtocolId',
+      'getDocumentDownloadUrl',
+      'getDocxDownloadUrl',
     ]);
     mockEvalRepo.getByProtocolId.and.returnValue(of([]));
-    mockEvalRepo.getDocumentDownloadUrl.and.returnValue(of({ downloadUrl: 'http://pdf.example.com' }));
+    mockEvalRepo.getDocumentDownloadUrl.and.returnValue(
+      of({ downloadUrl: 'http://pdf.example.com' }),
+    );
     mockEvalRepo.getDocxDownloadUrl.and.returnValue(of({ downloadUrl: 'http://docx.example.com' }));
 
     TestBed.configureTestingModule({
       providers: [
         LoadResolutionInsumosUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: mockEvalRepo }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: mockEvalRepo },
+      ],
     });
 
     useCase = TestBed.inject(LoadResolutionInsumosUseCase);
@@ -30,14 +34,14 @@ describe('LoadResolutionInsumosUseCase', () => {
   });
 
   it('should call getByProtocolId', (done) => {
-    useCase.execute('123').subscribe(result => {
+    useCase.execute('123').subscribe((result) => {
       expect(mockEvalRepo.getByProtocolId).toHaveBeenCalledWith('123');
       done();
     });
   });
 
   it('should call getDocumentDownloadUrl for PDF', (done) => {
-    useCase.downloadPdf('456').subscribe(res => {
+    useCase.downloadPdf('456').subscribe((res) => {
       expect(mockEvalRepo.getDocumentDownloadUrl).toHaveBeenCalledWith('456');
       expect(res.downloadUrl).toBe('http://pdf.example.com');
       done();
@@ -45,7 +49,7 @@ describe('LoadResolutionInsumosUseCase', () => {
   });
 
   it('should call getDocxDownloadUrl for DOCX', (done) => {
-    useCase.downloadDocx('789').subscribe(res => {
+    useCase.downloadDocx('789').subscribe((res) => {
       expect(mockEvalRepo.getDocxDownloadUrl).toHaveBeenCalledWith('789');
       expect(res.downloadUrl).toBe('http://docx.example.com');
       done();

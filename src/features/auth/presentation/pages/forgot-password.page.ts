@@ -24,7 +24,7 @@ import { ForgotPasswordUseCase } from '../../use-cases';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatToolbarModule,
-    RouterModule
+    RouterModule,
   ],
   template: `
     <div class="forgot-layout animate-fade-in">
@@ -54,7 +54,10 @@ import { ForgotPasswordUseCase } from '../../use-cases';
               <mat-icon>lock_reset</mat-icon>
             </div>
             <h1>¿Olvidó su contraseña?</h1>
-            <p class="subtitle">Ingrese su correo institucional. Le enviaremos un código de seguridad para restablecer su clave.</p>
+            <p class="subtitle">
+              Ingrese su correo institucional. Le enviaremos un código de seguridad para restablecer
+              su clave.
+            </p>
           </header>
 
           <mat-card-content class="pt-4">
@@ -62,14 +65,28 @@ import { ForgotPasswordUseCase } from '../../use-cases';
               <div class="field-container">
                 <label class="field-label">Correo Institucional</label>
                 <mat-form-field appearance="outline" class="w-100 custom-field">
-                  <input matInput formControlName="email" placeholder="usuario@espoch.edu.ec" type="email">
+                  <input
+                    matInput
+                    formControlName="email"
+                    placeholder="usuario@espoch.edu.ec"
+                    type="email"
+                  />
                   <mat-icon matSuffix class="text-muted">alternate_email</mat-icon>
-                  <mat-error *ngIf="forgotForm.get('email')?.hasError('required')">El correo es obligatorio</mat-error>
-                  <mat-error *ngIf="forgotForm.get('email')?.hasError('email')">Ingrese un correo institucional válido</mat-error>
+                  <mat-error *ngIf="forgotForm.get('email')?.hasError('required')"
+                    >El correo es obligatorio</mat-error
+                  >
+                  <mat-error *ngIf="forgotForm.get('email')?.hasError('email')"
+                    >Ingrese un correo institucional válido</mat-error
+                  >
                 </mat-form-field>
               </div>
 
-              <button mat-flat-button class="submit-btn w-100 mt-4" type="submit" [disabled]="forgotForm.invalid || isLoading()">
+              <button
+                mat-flat-button
+                class="submit-btn w-100 mt-4"
+                type="submit"
+                [disabled]="forgotForm.invalid || isLoading()"
+              >
                 <mat-spinner *ngIf="isLoading()" diameter="20" class="me-2"></mat-spinner>
                 <span>{{ isLoading() ? 'Enviando código...' : 'Enviar Código de Seguridad' }}</span>
               </button>
@@ -79,145 +96,198 @@ import { ForgotPasswordUseCase } from '../../use-cases';
       </main>
     </div>
   `,
-  styles: [`
-    @use 'variables' as vars;
+  styles: [
+    `
+      @use 'variables' as vars;
 
-    .forgot-layout {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    }
-
-    .forgot-toolbar {
-      background: white !important;
-      height: 70px;
-      padding: 0 2rem;
-
-      .toolbar-content {
-        width: 100%;
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-      }
-    }
-
-    .brand-section {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      .logo-box {
-        width: 40px;
-        height: 40px;
-        background: #003366;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        mat-icon { font-size: 20px; width: 20px; height: 20px; }
-      }
-
-      .brand-text {
+      .forgot-layout {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
-        .main-title { font-weight: 800; font-size: 1rem; color: #003366; letter-spacing: 0.5px; }
-        .sub-title { font-size: 0.65rem; color: #64748b; font-weight: 600; }
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
       }
-    }
 
-    .back-btn {
-      font-weight: 700;
-      border-radius: 10px;
-      color: #003366 !important;
-    }
+      .forgot-toolbar {
+        background: white !important;
+        height: 70px;
+        padding: 0 2rem;
 
-    .forgot-main {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
+        .toolbar-content {
+          width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
+          display: flex;
+          align-items: center;
+        }
+      }
 
-    .forgot-card {
-      max-width: 500px;
-      width: 100%;
-      background: white;
-      border-radius: 24px;
-      padding: 2.5rem;
-      border: 1px solid #e2e8f0;
-    }
+      .brand-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
 
-    .forgot-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-bottom: 2rem;
+        .logo-box {
+          width: 40px;
+          height: 40px;
+          background: #003366;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+        }
 
-      .icon-circle {
-        width: 64px;
-        height: 64px;
-        background: rgba(0, 51, 102, 0.05);
-        color: #003366;
-        border-radius: 20px;
+        .brand-text {
+          display: flex;
+          flex-direction: column;
+          .main-title {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #003366;
+            letter-spacing: 0.5px;
+          }
+          .sub-title {
+            font-size: 0.65rem;
+            color: #64748b;
+            font-weight: 600;
+          }
+        }
+      }
+
+      .back-btn {
+        font-weight: 700;
+        border-radius: 10px;
+        color: #003366 !important;
+      }
+
+      .forgot-main {
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 1.5rem;
-        mat-icon { font-size: 32px; width: 32px; height: 32px; }
+        padding: 2rem;
       }
 
-      h1 { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin: 0 0 0.5rem; letter-spacing: -0.5px; }
-      .subtitle { font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.5; font-weight: 500; }
-    }
+      .forgot-card {
+        max-width: 500px;
+        width: 100%;
+        background: white;
+        border-radius: 24px;
+        padding: 2.5rem;
+        border: 1px solid #e2e8f0;
+      }
 
-    .field-container {
-      .field-label {
-        display: block;
-        font-size: 0.8rem;
+      .forgot-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 2rem;
+
+        .icon-circle {
+          width: 64px;
+          height: 64px;
+          background: rgba(0, 51, 102, 0.05);
+          color: #003366;
+          border-radius: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+          mat-icon {
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+          }
+        }
+
+        h1 {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: #1e293b;
+          margin: 0 0 0.5rem;
+          letter-spacing: -0.5px;
+        }
+        .subtitle {
+          font-size: 0.85rem;
+          color: #64748b;
+          margin: 0;
+          line-height: 1.5;
+          font-weight: 500;
+        }
+      }
+
+      .field-container {
+        .field-label {
+          display: block;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #334155;
+          margin-bottom: 8px;
+        }
+      }
+
+      ::ng-deep .custom-field {
+        width: 100%;
+        .mat-mdc-text-field-wrapper {
+          background-color: #f8fafc !important;
+          border-radius: 12px !important;
+          padding: 0 12px !important;
+        }
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: transparent !important;
+        }
+        &.mat-focused .mat-mdc-text-field-wrapper {
+          background-color: white !important;
+          box-shadow: 0 0 0 2px #003366;
+        }
+      }
+
+      .submit-btn {
+        height: 52px;
+        background-color: #003366 !important;
+        color: white !important;
+        border-radius: 12px;
         font-weight: 700;
-        color: #334155;
-        margin-bottom: 8px;
+        box-shadow: 0 4px 12px rgba(0, 51, 102, 0.15);
+        transition: all 0.2s ease;
+        &:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(0, 51, 102, 0.2);
+        }
       }
-    }
 
-    ::ng-deep .custom-field {
-      width: 100%;
-      .mat-mdc-text-field-wrapper {
-        background-color: #f8fafc !important;
-        border-radius: 12px !important;
-        padding: 0 12px !important;
+      .text-center {
+        text-align: center;
       }
-      .mdc-notched-outline__leading, .mdc-notched-outline__notch, .mdc-notched-outline__trailing {
-        border-color: transparent !important;
+      .w-100 {
+        width: 100%;
       }
-      &.mat-focused .mat-mdc-text-field-wrapper {
-        background-color: white !important;
-        box-shadow: 0 0 0 2px #003366;
+      .mt-4 {
+        margin-top: 1.5rem;
       }
-    }
 
-    .submit-btn {
-      height: 52px;
-      background-color: #003366 !important;
-      color: white !important;
-      border-radius: 12px;
-      font-weight: 700;
-      box-shadow: 0 4px 12px rgba(0, 51, 102, 0.15);
-      transition: all 0.2s ease;
-      &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 51, 102, 0.2); }
-    }
-
-    .text-center { text-align: center; }
-    .w-100 { width: 100%; }
-    .mt-4 { margin-top: 1.5rem; }
-
-    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-  `]
+      .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `,
+  ],
 })
 export class ForgotPasswordPage {
   private readonly fb = inject(FormBuilder);
@@ -228,7 +298,7 @@ export class ForgotPasswordPage {
   isLoading = signal<boolean>(false);
 
   forgotForm: FormGroup = this.fb.group({
-    email: ['', [Validators.required, Validators.email]]
+    email: ['', [Validators.required, Validators.email]],
   });
 
   onSubmit() {
@@ -239,19 +309,27 @@ export class ForgotPasswordPage {
       this.forgotPasswordUseCase.execute(email).subscribe({
         next: () => {
           this.isLoading.set(false);
-          this.snackBar.open('🔑 Código de recuperación enviado. Por favor revise su correo.', 'Entendido', {
-            duration: 5000,
-            panelClass: ['snackbar-success']
-          });
+          this.snackBar.open(
+            '🔑 Código de recuperación enviado. Por favor revise su correo.',
+            'Entendido',
+            {
+              duration: 5000,
+              panelClass: ['snackbar-success'],
+            },
+          );
           this.router.navigate(['/auth/reset-password'], { queryParams: { email } });
         },
         error: (_err) => {
           this.isLoading.set(false);
-          this.snackBar.open('❌ Error al procesar su solicitud. Verifique el correo ingresado.', 'Cerrar', {
-            duration: 5000,
-            panelClass: ['snackbar-error']
-          });
-        }
+          this.snackBar.open(
+            '❌ Error al procesar su solicitud. Verifique el correo ingresado.',
+            'Cerrar',
+            {
+              duration: 5000,
+              panelClass: ['snackbar-error'],
+            },
+          );
+        },
       });
     } else {
       this.forgotForm.markAllAsTouched();

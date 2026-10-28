@@ -1,0 +1,151 @@
+<div class="modal-container">
+  <div class="modal-header">
+    <div class="title-area">
+      <mat-icon color="warn">swap_horiz</mat-icon>
+      <h2>Sustitución de Evaluador Par</h2>
+    </div>
+    <button mat-icon-button (click)="onCancel()" class="close-btn" [disabled]="isSubmitting()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div mat-dialog-content class="modal-content">
+    <!-- Sección Evaluador Saliente (Inmutable) -->
+    <div class="outgoing-card">
+      <div class="card-header-small">
+        <span
+          class="badge-role"
+          [ngClass]="'badge-' + (outgoingProfile() ?? 'sin-perfil').toLowerCase()"
+        >
+          {{ outgoingProfileLabel() }}
+        </span>
+        <span class="badge-status">{{ outgoingStatusLabel }}</span>
+      </div>
+      <div class="outgoing-info">
+        <span class="label">Evaluador Actual (Saliente):</span>
+        <h4 class="name">{{ data.outgoingAssignment.evaluatorFullName }}</h4>
+      </div>
+      <div class="note-annex10" *ngIf="data.outgoingAssignment.isAssignedForAnnex10">
+        <mat-icon>security</mat-icon>
+        <span
+          >Este evaluador fue asignado para <strong>Anexo 10 (Estratificación de Riesgo)</strong>.
+          La responsabilidad se transferirá al sustituto.</span
+        >
+      </div>
+    </div>
+
+    <div *ngIf="outgoingProfile() === null" class="no-candidates-alert outgoing-profile-error">
+      <mat-icon>error</mat-icon>
+      <span>
+        El evaluador saliente no tiene un perfil reconocido (Jurídico, Sociedad Civil, Metodológico
+        o Salud). No es posible proponer un sustituto del mismo perfil.
+      </span>
+    </div>
+
+    <div *ngIf="candidatesError() as loadErr" class="no-candidates-alert candidates-error">
+      <mat-icon>error</mat-icon>
+      <span>{{ loadErr }}</span>
+    </div>
+
+    <!-- Formulario de Reasignación -->
+    <form [formGroup]="form" class="reassign-form">
+      <!-- Selección de sustituto del mismo perfil -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label
+          >Nuevo Evaluador Sustituto (Mismo Perfil: {{ outgoingProfileLabel() }})</mat-label
+        >
+        <mat-select
+          formControlName="newEvaluatorId"
+          placeholder="Seleccione un candidato disponible"
+        >
+          <mat-option *ngFor="let candidate of filteredCandidates()" [value]="candidate.id">
+            <div class="eval-option">
+              <span class="eval-name">{{ candidate.fullName }}</span>
+              <span class="eval-email"
+                >{{ candidate.email }} · Carga actual: {{ candidate.currentLoad }}</span
+              >
+            </div>
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('newEvaluatorId')?.hasError('required')">
+          Debe seleccionar un evaluador sustituto.
+        </mat-error>
+      </mat-form-field>
+
+      <div
+        *ngIf="outgoingProfile() !== null && filteredCandidates().length === 0"
+        class="no-candidates-alert"
+      >
+        <mat-icon>warning</mat-icon>
+        <span
+          >No hay evaluadores disponibles con el perfil {{ outgoingProfileLabel() }} que no estén ya
+          asignados a este protocolo.</span
+        >
+      </div>
+
+      <div *ngIf="unrecognizedProfileCount() > 0" class="candidates-note">
+        <mat-icon>info</mat-icon>
+        <span
+          >{{ unrecognizedProfileCount() }} evaluador(es) del catálogo no tienen un perfil
+          reconocido y no se muestran como candidatos.</span
+        >
+      </div>
+
+      <!-- Motivo de reasignación -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Motivo de Sustitución Reglamentario</mat-label>
+        <mat-select formControlName="reason" placeholder="Elija el motivo">
+          <mat-option *ngFor="let opt of motivoOptions" [value]="opt.value">
+            {{ opt.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('reason')?.hasError('required')">
+          El motivo de sustitución es obligatorio.
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Justificación detallada -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Justificación del Cambio (Mínimo 10 caracteres)</mat-label>
+        <textarea
+          matInput
+          formControlName="reasonDescription"
+          rows="3"
+          placeholder="Describa detalladamente el motivo de la sustitución..."
+        ></textarea>
+        <mat-hint align="end">
+          {{ form.get('reasonDescription')?.value?.length || 0 }} / 10 mín.
+        </mat-hint>
+        <mat-error *ngIf="form.get('reasonDescription')?.hasError('required')">
+          La justificación es obligatoria.
+        </mat-error>
+        <mat-error *ngIf="form.get('reasonDescription')?.hasError('minlength')">
+          La justificación debe tener al menos 10 caracteres.
+        </mat-error>
+      </mat-form-field>
+    </form>
+
+    <div *ngIf="submitError() as errMsg" class="no-candidates-alert submit-error" role="alert">
+      <mat-icon>error</mat-icon>
+      <span>{{ errMsg }}</span>
+    </div>
+  </div>
+
+  <div mat-dialog-actions class="modal-actions">
+    <button mat-stroked-button (click)="onCancel()" [disabled]="isSubmitting()">Cancelar</button>
+    <button
+      mat-flat-button
+      color="warn"
+      [disabled]="
+        form.invalid ||
+        outgoingProfile() === null ||
+        filteredCandidates().length === 0 ||
+        isSubmitting()
+      "
+      (click)="onConfirm()"
+    >
+      <mat-icon>{{ isSubmitting() ? 'hourglass_empty' : 'swap_horiz' }}</mat-icon>
+      Confirmar Sustitución
+    </button>
+  </div>
+</div>
