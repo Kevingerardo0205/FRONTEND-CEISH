@@ -108,11 +108,20 @@ Línea base: **577 pruebas**.
 
 ## 8. Pendientes
 
-- **ADMIN_TI y PRESIDENTA** aparecen en los guards además de los 4 roles. ¿ADMIN_TI sigue existiendo o lo absorbe SECRETARIA? ¿PRESIDENTA es alias de PRESIDENTE? Confirmar y llevarlo a HU-001 del backend.
-- **Consecuencia:** un usuario que solo tenga `ADMIN_TI` o `PRESIDENTA` no tiene rol activo. Esto bloquea T07 y T13.
+- **ADMIN, ADMIN_TI y PRESIDENTA** aparecen en los guards además de los 4 roles. ¿ADMIN y ADMIN_TI siguen existiendo o los absorbe SECRETARIA? ¿PRESIDENTA es alias de PRESIDENTE? Hoy, por ejemplo, `audit/logs` y `notifications/templates` son solo para `ADMIN`. Confirmar y llevarlo a HU-001 del backend.
+- **Consecuencia:** un usuario que solo tenga `ADMIN`, `ADMIN_TI` o `PRESIDENTA` no tiene rol activo. Esto bloquea T07 y T13.
 - **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Propuesta por confirmar.
 
 **Decisión tomada:** el armazón va en `features/shell`.
+
+### PR de F00
+
+| PR | Rama | Tareas | Estado |
+|---|---|---|---|
+| F00a | `feat/f00-base` | T01–T06b, T08–T12, T14b, T15 | 🔲 Pendiente |
+| F00b | `feat/f00b-shell` (desde `dev`, después del merge de F00a) | T07, T13, T14, T16 | 🔲 Bloqueado (HU-001: ADMIN, ADMIN_TI, PRESIDENTA) |
+
+**Propuesta fuera de F00:** un PR `chore/gitattributes` con `* text=auto eol=lf` (hoy no hay `.gitattributes` y cada máquina depende de su `core.autocrlf`).
 
 ## 9. Mapa de equivalencias
 

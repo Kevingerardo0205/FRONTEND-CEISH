@@ -104,10 +104,18 @@ Cada carpeta `F0x-*` tiene exactamente estos tres archivos:
 
 ---
 
-## 6. Ciclo de cada sección
+## 6. Ciclo de cada tarea
 
-- **Paso 0 — antes de escribir código:**
-  - Búsqueda de equivalentes: por cada pieza nueva, buscar en `src/` (con `grep`/`rg`, pegando el comando y las coincidencias) si ya existe algo con el mismo propósito. Clasificarlo como (a) no había nada, (b) el nuevo lo reemplaza (con su tarea de retiro) o (c) debe reutilizarse. El resultado va en el "Mapa de equivalencias" del `plan.md` de la sección.
-- **Antes del PR:**
-  - Revisar las pantallas actuales de la lista "Pantallas actuales a verificar en cada PR" del `plan.md` (por rol) y confirmar que siguen funcionando.
-  - **No se cierra una sección con duplicados sin tarea de retiro.** Cada fila de "Duplicados temporales" debe tener una tarea asignada.
+1. **Una tarea por prompt.**
+2. **Paso 0 (solo lectura):**
+   - Línea base: `npx tsc -p tsconfig.app.json --noEmit`, `npm run lint`, `npm test` y `npx ng build --configuration production`.
+   - Búsqueda de equivalentes: por cada pieza nueva, buscar en `src/` (con `grep`/`rg`, pegando el comando y las coincidencias) si ya existe algo con el mismo propósito. Clasificarlo como (a) no había nada, (b) el nuevo lo reemplaza (con su tarea de retiro) o (c) debe reutilizarse. El resultado va en el "Mapa de equivalencias" del `plan.md` de la sección.
+   - Si algo no cuadra, el agente se detiene.
+3. **Implementación mínima.** Lo demás queda como propuesta.
+4. **Pruebas unitarias + mutaciones a mano:** se rompe el código, la prueba debe fallar, se revierte editando (nunca con `git checkout`) y se confirma con `git diff --stat` vacío.
+5. **Verificación final:** `tsc`, `lint`, `npm test` dos veces y build de producción.
+6. **Desde F01:** prueba de humo en el navegador contra el backend local, y revisión de las pantallas actuales por rol (lista "Pantallas actuales a verificar en cada PR" del `plan.md`; en F00 es la §11) para confirmar que siguen funcionando.
+7. **Un commit de código y uno de docs.**
+8. **Revisión externa del reporte.**
+9. **Push, PR a `dev` con "Create a merge commit" y pull:** los hace el dueño del repositorio.
+10. **No se cierra una sección con duplicados sin tarea de retiro.** Cada fila de "Duplicados temporales" debe tener una tarea asignada.
