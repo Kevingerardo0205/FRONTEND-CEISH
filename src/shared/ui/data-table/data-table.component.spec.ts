@@ -99,6 +99,20 @@ describe('DataTableComponent', () => {
       expect(el.querySelector('app-loading-state [role="status"]')).not.toBeNull();
     });
 
+    it('cargando sin filas muestra el estado cargando y no el vacío', () => {
+      render({ loading: true, rows: [] });
+
+      expect(el.querySelector('app-loading-state')).not.toBeNull();
+      expect(el.querySelector('app-empty-state')).toBeNull();
+    });
+
+    it('cargando con error muestra cargando', () => {
+      render({ loading: true, error: 'No pudimos cargar los protocolos.' });
+
+      expect(el.querySelector('app-loading-state')).not.toBeNull();
+      expect(el.querySelector('app-error-state')).toBeNull();
+    });
+
     it('error: muestra el mensaje y permite reintentar', () => {
       render({ error: 'No pudimos cargar los protocolos.' });
       const retry = jasmine.createSpy('retry');
