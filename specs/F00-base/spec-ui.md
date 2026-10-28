@@ -103,7 +103,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 | Endpoint | Para qué | Estado |
 |---|---|---|
 | Sesión actual (usuario + roles) | Menú, guards, selector de rol | Existe (auth) — verificar que devuelva **varios** roles |
-| `GET /secretaria/pendientes` (conteo) | Contador del menú | **FALTA** (spec-003 RF-ALR.f) — mientras tanto, mock |
+| `GET /secretaria/pendientes` | Contador del menú (cantidad de filas de pendientes) | **FALTA** (spec-003 v1.5.1, RF-ALR.f) — mientras tanto, mock (6) |
 | Etapa en la respuesta de cada protocolo | `StageBar` | **FALTA** (spec-001 RF-EST.2) — mientras tanto, mapeo temporal en el adapter |
 
 ## 9. Criterios de aceptación

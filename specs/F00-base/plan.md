@@ -31,13 +31,16 @@ src/
 | `src/domain/entities/menu-item.entity.ts` | `{ id, label, route, roles: RoleCode[], badge?: 'pendientes' }` |
 | `src/domain/ports/menu-config.port.ts` | Port de la configuración del menú (clase abstracta) |
 | `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles$`). Clase abstracta para no importar `@angular` en domain |
-| `src/features/shell/application/` | `get-menu-for-role.use-case.ts`, `active-role.facade.ts` |
-| `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session-roles.adapter.ts` (`AuthSessionRolesAdapter`, implementa `SessionRolesPort` con `AuthFacade`) |
+| `src/features/shell/domain/pending-count.port.ts` | `PendingCountPort`: `count$: Observable<number>` (clase abstracta) |
+| `src/features/shell/application/` | `get-menu-for-role.use-case.ts`, `active-role.facade.ts`, `get-pending-count.use-case.ts` (fuente del badge 'pendientes') |
+| `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session-roles.adapter.ts` (`AuthSessionRolesAdapter`, implementa `SessionRolesPort` con `AuthFacade`); `pending-count-mock.adapter.ts` (valor fijo configurable con `PENDING_COUNT_MOCK_VALUE`, 6 por defecto); `pending-count-http.adapter.ts` (`GET /secretaria/pendientes`, cuenta las filas; FALTA en backend, no se registra todavía) |
+| `src/features/shell/shell.providers.ts` | `SHELL_PROVIDERS`: `PendingCountPort` → mock. Se registra en las rutas de la sección en T13 |
+| `src/infrastructure/api/endpoints.constant.ts` | `ENDPOINTS.SECRETARIA.PENDIENTES` |
 | `src/shared/ui/` | `stage-bar`, `page-header`, `button-group`, `tabs`, `filter-bar`, `data-table`, `status-chip`, `states`, `undo-toast` (servicio, componente y host), `dialog`, `inline-panel` |
 | `src/app/app.component.ts` | Monta `<app-undo-toast-host />` una sola vez, junto al `router-outlet` |
 | `src/styles/_tokens.scss` | Variables CSS de la §3 de spec-ui |
 
-Pendientes de crear: `PendingCountPort` con adapter mock + adapter HTTP (T12); `src/features/shell/presentation/app-shell/` (T13).
+Pendientes de crear: `src/features/shell/presentation/app-shell/` (T13).
 
 ### application — rol activo
 
@@ -97,7 +100,7 @@ Se quita del menú y de las rutas en F00. El código se borra en F08.
 | presentation | 70 % de los flujos críticos | `StageBar`, `AppShell`, `UndoToast`, `DataTable` (vacío, cargando, error) |
 | arquitectura | — | Prueba o regla de capas: `presentation/**` sin `HttpClient` ni `infrastructure/**`; `domain/**` sin `@angular/*` |
 
-Línea base: **569 pruebas**.
+Línea base: **577 pruebas**.
 
 ## 7. Calidad
 
