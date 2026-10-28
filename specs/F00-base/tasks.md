@@ -18,7 +18,7 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 | T09 | presentation | PageHeader, ButtonGroup, Tabs, FilterBar | src/shared/ui/* + specs | Una acción principal; filtros recordados por vista | Hecho (4509807) |
 | T10 | presentation | DataTable, StatusChip, estados vacío/cargando/error | src/shared/ui/* + specs | Criterio 6 de spec-ui | Hecho (c1ab158) |
 | T11 | presentation | UndoToast (servicio + componente), Dialog, InlinePanel | src/shared/ui/*, infrastructure/services/notification.service.ts + specs | Criterio 5; foco atrapado y Esc en Dialog | Hecho (a88fb24) |
-| T12 | infra | Port PendingCountPort + adapter mock (+ HTTP marcado FALTA) | features/shell/infrastructure/* + spec | El contador del menú sale del mock | Hecho (commit "feat(f00): T12 PendingCountPort con mock") |
+| T12 | infra | Port PendingCountPort + adapter mock (+ HTTP marcado FALTA) | features/shell/infrastructure/* + spec | El contador del menú sale del mock | Hecho (1df1f71) |
 | T13 | presentation | AppShell (menú lateral + barra superior + selector de rol) y nuevo app.routes.ts con lazy loading, guards por rol y redirects desde /dashboard/... | features/shell/presentation/app-shell/*, app.routes.ts + spec | Criterios 1, 3, 4 y 8 de spec-ui | Pendiente |
 | T14 | — | Retirar DashboardPage (layout), sidebar, menu-ui.config.ts y permissions.directive.ts (con sus pruebas) | — | No quedan imports del sidebar viejo; build y pruebas en verde | Pendiente |
 | T15 | arquitectura | Regla o prueba de capas (presentation sin HttpClient ni infrastructure; domain sin @angular), con la única excepción de plan §2 | eslint no-restricted-imports o spec | Romper la regla hace fallar el lint o la prueba | Pendiente |
