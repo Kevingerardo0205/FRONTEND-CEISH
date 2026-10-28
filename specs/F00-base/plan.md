@@ -100,7 +100,7 @@ Se quita del menú y de las rutas en F00. El código se borra en F08.
 | presentation | 70 % de los flujos críticos | `StageBar`, `AppShell`, `UndoToast`, `DataTable` (vacío, cargando, error) |
 | arquitectura | — | Prueba o regla de capas: `presentation/**` sin `HttpClient` ni `infrastructure/**`; `domain/**` sin `@angular/*` |
 
-Línea base: **577 pruebas**.
+Línea base: **579 pruebas**.
 
 ## 7. Calidad
 

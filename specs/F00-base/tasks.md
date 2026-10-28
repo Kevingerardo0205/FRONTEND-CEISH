@@ -28,4 +28,11 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
-- Línea base actual: **577 pruebas**.
+- Línea base actual: **579 pruebas**.
+
+### Auditoría de mutaciones (28/10/2026)
+
+- 15 mutaciones a mano (M1–M15) sobre T03–T12.
+- 14 detectadas en la primera corrida.
+- M9 era una prueba vacía (cargando sin filas), corregida en `3c81c54`.
+- M6 se aplicó con una variante que compila (el rol guardado nunca se usa).
