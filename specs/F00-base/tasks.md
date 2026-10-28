@@ -21,8 +21,8 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 | T12 | infra | Port PendingCountPort + adapter mock (+ HTTP marcado FALTA) | features/shell/infrastructure/* + spec | El contador del menú sale del mock | Hecho (1df1f71) |
 | T13 | presentation | AppShell (menú lateral + barra superior + selector de rol) y nuevo app.routes.ts con lazy loading, guards por rol y redirects desde /dashboard/... | features/shell/presentation/app-shell/*, app.routes.ts + spec | Criterios 1, 3, 4 y 8 de spec-ui | Pendiente |
 | T14 | — | Retirar DashboardPage (layout), sidebar, menu-ui.config.ts, permissions.directive.ts y dashboard-routing.module.ts (archivo de rutas muerto), con sus pruebas | — | No quedan imports del sidebar viejo; build y pruebas en verde | Pendiente |
-| T14b | docs | Regla de uso de StatusChip con ProtocolUI (no había duplicado) | specs/F00-base/plan.md (§8, §9, §10) | Regla escrita en plan §9; ningún mapeo estado→texto ni estado→tono fuera de ProtocolUI | Hecho (commit "docs(f00): T14b sin duplicado; regla de uso de StatusChip con ProtocolUI") |
-| T15 | arquitectura | Regla o prueba de capas (presentation sin HttpClient ni infrastructure; domain sin @angular), con la única excepción de plan §2 | eslint no-restricted-imports o spec | Romper la regla hace fallar el lint o la prueba | Pendiente |
+| T14b | docs | Regla de uso de StatusChip con ProtocolUI (no había duplicado) | specs/F00-base/plan.md (§8, §9, §10) | Regla escrita en plan §9; ningún mapeo estado→texto ni estado→tono fuera de ProtocolUI | Hecho (6bae87e) |
+| T15 | arquitectura | Regla o prueba de capas (presentation sin HttpClient ni infrastructure; domain sin @angular), con la única excepción de plan §2 | eslint no-restricted-imports o spec | Romper la regla hace fallar el lint o la prueba | Hecho (1eb90e8) |
 | T16 | — | Revisión final: build prod, pruebas, lint, visto bueno contra el canvas | — | Capturas del AppShell y StageBar comparadas con el diseño | Pendiente |
 
 ## Calidad

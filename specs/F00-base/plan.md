@@ -61,7 +61,41 @@ Pendientes de crear: `src/features/shell/presentation/app-shell/` (T13).
 ### Excepciones conocidas a las reglas de capas
 
 - `AuthSessionRolesAdapter` importa `AuthFacade` de `features/auth` (regla 5 del README). Está aislado en infrastructure y se corrige cuando `AuthFacade` pase a `core`.
-- T15 debe permitir solo esta excepción.
+- T15 permite solo esta excepción.
+
+### Regla de capas en eslint (T15)
+
+`eslint.config.js`, `no-restricted-imports` con nivel `error`. Cubre alias (`@infrastructure/*`, `@features/*`) y rutas relativas (`…/infrastructure/…`, `…/features/…`). Los `*.spec.ts` quedan fuera. Cada bloque cubre carpetas que no se solapan, porque en flat config la última opción de la regla reemplaza a las anteriores.
+
+| Carpetas | No pueden importar |
+|---|---|
+| `src/shared/ui/**` | `@angular/common/http`, infrastructure, ninguna sección (`features`) |
+| `src/features/shell/presentation/**` | `@angular/common/http`, infrastructure, otra sección |
+| `src/features/shell/application/**` | `@angular/common/http`, infrastructure, otra sección |
+| `src/features/shell/domain/**` | `@angular/*`, infrastructure, otra sección (`rxjs` sí) |
+| `src/domain/value-objects/stage.vo.ts`, `role.vo.ts`, `src/domain/entities/menu-item.entity.ts`, `src/domain/ports/menu-config.port.ts` | `@angular/*`, infrastructure |
+| `src/features/shell/infrastructure/**`, `src/features/shell/*.ts` | otra sección (`shell.providers.ts`, raíz de composición, sí importa su infrastructure) |
+| `src/features/shell/infrastructure/auth-session-roles.adapter.ts` | otra sección salvo `@features/auth` (única excepción) |
+
+Límite conocido: una ruta relativa a otra sección que no pase por `features/` (por ejemplo `../../auth/…` desde `shell/application`) no se detecta; usar siempre el alias `@features/*`.
+
+**Fuera del alcance (migración por sección F01–F08).** Aplicando R1/R2 por línea de comandos (`--rule`) a `src/features/*/{presentation,application}` el 28/10/2026: 25 importaciones de infrastructure en 19 archivos (ninguna de `@angular/common/http`). Por destino: 18 `infrastructure/services`, 3 `infrastructure/api`, 2 `infrastructure/guards`, 1 `infrastructure/mappers`, 1 `infrastructure/adapters`.
+
+| Carpeta | Importaciones de infrastructure |
+|---|---|
+| `features/auth/presentation` | 2 |
+| `features/dashboard/application` | 1 |
+| `features/dashboard/presentation` | 2 |
+| `features/documents/application` | 2 |
+| `features/evaluations/application` | 3 |
+| `features/evaluations/presentation` | 5 |
+| `features/investigador/application` | 4 |
+| `features/investigador/presentation` | 1 |
+| `features/notifications/application` | 1 |
+| `features/protocols/presentation` | 2 |
+| `features/resolutions/application` | 2 |
+
+Cada sección amplía la regla a sus carpetas cuando las reemplaza. R3 aplicado a todo `src/domain/**` y `src/features/*/domain/**` no da errores; se puede ampliar sin migración (en `src/domain`, `ports/IAuthRepositoryPort.ts` importa `@features/auth`, que R3 no cubre).
 
 ## 3. Cambios clave
 
@@ -122,7 +156,7 @@ Línea base: **579 pruebas**.
 
 | PR | Rama | Tareas | Estado |
 |---|---|---|---|
-| F00a | `feat/f00-base` | T01–T06b, T08–T12, T14b, T15 | 🔲 Pendiente |
+| F00a | `feat/f00-base` | T01–T06b, T08–T12, T14b, T15 (todas hechas) | 🔲 Listo para PR |
 | F00b | `feat/f00b-shell` (desde `dev`, después del merge de F00a) | T07, T13, T14, T16 | 🔲 Bloqueado (HU-001: ADMIN, ADMIN_TI, PRESIDENTA) |
 
 **Propuesta fuera de F00:** un PR `chore/gitattributes` con `* text=auto eol=lf` (hoy no hay `.gitattributes` y cada máquina depende de su `core.autocrlf`).
