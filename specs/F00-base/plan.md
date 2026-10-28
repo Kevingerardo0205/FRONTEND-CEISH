@@ -113,3 +113,90 @@ Línea base: **577 pruebas**.
 - **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Propuesta por confirmar.
 
 **Decisión tomada:** el armazón va en `features/shell`.
+
+## 9. Mapa de equivalencias
+
+Búsqueda hecha el 28/10/2026 con `grep -rn` sobre `src/`, excluyendo el código nuevo (`src/shared/ui`, `src/features/shell`).
+Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo lo reemplaza · **(c)** existe y debió reutilizarse.
+
+| Pieza nueva | Equivalente actual (ruta) | Clasificación | Acción |
+|---|---|---|---|
+| `Dialog` | `shared/components/confirm-dialog` (vía `NotificationService.confirm()` y `user-management.page.ts`) | (b) | Migrar sección por sección (TODO en `notification.service`); retirar `ConfirmDialogComponent` cuando no tenga usos (T14d, propuesta) |
+| `Dialog` | `shared/components/conflict-dialog` (`resolution-generator.page.ts`), `shared/components/session-expired-dialog` (`error.interceptor.ts`) | (a) | Propósito distinto (avisos del sistema). Se mantienen |
+| `Dialog` | 13 diálogos propios con `MatDialog` (`assign-peers-modal`, `modal-reasignacion`, `extend/suspend-role-dialog`, `otp-verification`…) | (a) | Son formularios, no confirmaciones. Se revisan al reemplazar cada pantalla |
+| `UndoToast` | `infrastructure/services/notification.service.ts` (`notify()`) | (b) | Ya reemplazado por dentro en T11 (`notify()` → `UndoToastService`) |
+| `UndoToast` | `MatSnackBar` directo: 39 archivos, 167 llamadas a `snackBar.open(` | (b) | Se retira al reemplazar cada pantalla (F01–F08); las que sobrevivan, T14c (propuesta) |
+| `StatusChip` | `shared/utils/protocol-ui.util.ts` (`ProtocolUI.label/class`, `EstadoUIMap`) + pipes `protocolStatusLabel` / `protocolStatusClass` | **(c)** | `StatusChip` debe tomar el texto de `ProtocolUI.label` y el tono de `ProtocolUI.class` (pending→ámbar, review→azul, approved→verde, rejected→rojo) en vez de un mapeo nuevo. Corrección en prompt aparte (T14b, propuesta) |
+| `StatusChip` | `.status-badge` global en `src/styles/styles.scss` (hex sueltos) y clases locales `.status-chip`, `.badge-status` | (b) | Retirar `.status-badge` cuando no tenga usos (T14b, propuesta) |
+| `StageBar` | `protocols/presentation/pages/protocol-workspace/protocol-workspace.component.ts` (`progress-scaffold`, 4 pasos con `isStepActive`/`isStepCompleted`) | (b) | Reemplazar en el espacio del protocolo (F02, propuesta) cuando el backend exponga `etapa` |
+| `StageBar` | Timelines de historial: `detalle-protocolo.page.ts`, `audit/protocol-trail.page.ts`; `mat-stepper` en formularios (`register`, `nuevo-protocolo`, `protocol-form`, `adverse-event-form`) | (a) | Propósito distinto (historial y asistentes de formulario) |
+| `DataTable` | `mat-table` en 14 archivos (`workflow-table`, `peer-risk-pending-table`, `protocols/components/protocol-list.page.ts`, `protocol-reception-new`, `evaluation-list`, `user-table`…) y `<table>` en 19 | (b) | Cada lista se reemplaza en su sección (F01–F08). `DataTable` no tiene orden ni paginación; 2 archivos usan `mat-paginator` |
+| `FilterBar` | Búsquedas propias en `dashboard-secretaria` (`SecretariatDashboardService.searchQuery`), `protocol-reception-new`, `user-management`, `calls-management`, `template-management`, `evaluator-load` | (b) | Se reemplazan con cada pantalla |
+| `PageHeader` | Encabezados propios (`page-header`, `ops-header`, `header-section`…) en 31 archivos | (b) | Se reemplazan con cada pantalla |
+| `ButtonGroup` | `view-selector` / `selector-btn` en `dashboard-secretaria.page.ts` | (b) | F01 |
+| `Tabs` | `mat-tab-group` / `MatTabsModule` en 7 archivos (`protocol-workspace`, `protocol-detail-tab`, `protocol-validation-list`, `detalle-protocolo`, `subsanacion`, `notifications-center`, `protocols/components/protocol-detail.page.ts`) | (b) | Dentro del protocolo, F02–F07; fuera del protocolo pasan a `ButtonGroup` |
+| `InlinePanel` | `mat-expansion-panel` en `audit-logs`, `sidebar`, `subsanacion` | (a) | Acordeones, propósito distinto |
+| `Stage` VO | `domain/enums/protocol-status.enum.ts`, `domain/catalogs/estado.catalog.ts` + `estado.alias.ts` (estados, no etapas) | (a) | No existía el concepto de etapa. Los pasos de `protocol-workspace` se retiran con `StageBar` (F02) |
+| `Role` VO | Cadenas de rol sueltas en `data.roles` de las rutas (`ADMIN`, `ADMIN_TI`, `PRESIDENTA`…), `verificado.guard.ts` (`adminRoles`), `dashboard-home.page.ts` (`userRole` por `user.rol`) | (a) | No había un tipo central. Las cadenas se migran en T07 (bloqueado) y T13 |
+| `menu.config` + `GetMenuForRoleUseCase` | `AuthFacade.menuConfig()` + `shared/constants/menu-ui.config.ts` + `dashboard/presentation/components/sidebar` | (b) | T13 conecta el nuevo, T14 retira el viejo |
+| `ActiveRoleFacade` | `AuthFacade.getActiveRoles()` (roles vigentes, sin selección) | (a) | No existía un rol elegido. Se reutiliza `getActiveRoles()` vía `AuthSessionRolesAdapter` |
+| `ActiveRoleFacade` | `dashboard-home.page.ts`: `userRole` usa solo el rol primario (`user.rol`) | (b) | Se retira con `DashboardPage` (T14) |
+| `role.guard` (T07) | `infrastructure/guards/role.guard.ts` | (b) | T07 lo adapta (bloqueado por HU-001) |
+| — | `shared/directives/permissions.directive.ts` (`appHasPermission`): 0 usos | (b) | T14 |
+| `PendingCountPort` | `SecretariatDashboardService.metrics` (`pendingReception`, `observed`, `overdue`, `slaRisk` calculados en el frontend) | (b) | Se retira con `dashboard-secretaria` en F01 (Mis pendientes) |
+| `PendingCountPort` | `notifications-center.page.ts` (`matBadge` de no leídas) | (a) | Propósito distinto |
+| `_tokens.scss` | `src/styles/_variables.scss` (variables Sass con hex) | (b) | Conviven; lo nuevo usa tokens y lo viejo se migra al reemplazar pantallas |
+
+## 10. Duplicados temporales
+
+| Qué convive | Por qué | Tarea que lo retira | PR |
+|---|---|---|---|
+| Menú viejo (`AuthFacade.menuConfig()` + `menu-ui.config.ts` + `sidebar`) y `menu.config` nuevo | `AppShell` todavía no existe | T13 (conecta) + T14 (retira) | PR F00 (`feat/f00-base`) |
+| Filtro `OUT_OF_SCOPE_MENU_PERMISSIONS` en `AuthFacade.menuConfig()` (T01b) | Ocultar seguridad y enmiendas mientras vive el menú viejo | T14 | PR F00 |
+| `role.guard` con cadenas de rol y `Role` VO | T07 bloqueado por HU-001 | T07 | PR F00 (si se desbloquea) |
+| `permissions.directive.ts` sin usos | Código muerto | T14 | PR F00 |
+| `dashboard/presentation/dashboard-routing.module.ts` sin referencias | Código muerto (las rutas vivas están en `dashboard/routes.ts`) | **T14 (propuesta: agregarlo a T14)** | PR F00 |
+| `ConfirmDialogComponent` (`NotificationService.confirm()`) y `Dialog` | La firma de `confirm()` se mantiene para no romper pantallas | **T14d (propuesta):** retirar `ConfirmDialogComponent` cuando `confirm()` no tenga llamadas | PR de la última sección que lo use |
+| `MatSnackBar` directo (167 llamadas) y `UndoToast` | Las pantallas viejas lo usan directo | Cada sección F01–F08; **T14c (propuesta)** para las que no se reemplazan (auth, perfil…) | PR de cada sección |
+| `ProtocolUI` + `.status-badge` y `StatusChip` | `StatusChip` no reutiliza `ProtocolUI` (clase (c)) | **T14b (propuesta):** tono derivado de `ProtocolUI.class`, y retirar `.status-badge` sin usos | PR F00 o F01 |
+| `progress-scaffold` de `protocol-workspace` y `StageBar` | El backend no expone `etapa` (RF-EST.2) | **F02 (propuesta)** | PR F02 |
+| `SecretariatDashboardService.metrics` y `PendingCountPort` | El KPI está oculto (T01b) pero el servicio sigue calculando | F01 (Mis pendientes) | PR F01 |
+| Listas con `mat-table`, buscadores y encabezados propios, y `DataTable`, `FilterBar`, `PageHeader` | Las pantallas se reemplazan una sección a la vez | Cada sección F01–F08 (README §3 regla 5) | PR de cada sección |
+| Código de `features/security`, `features/amendments`, `deadlines-radar`, `kpi-panel`, `audit-feed` | Rutas redirigidas en T01b; el código se borra después | **F08 (propuesta de tarea en F08-configuracion-y-reportes)** | PR F08 |
+| `_variables.scss` y `_tokens.scss` | Migración gradual de estilos | Cada sección, al reemplazar sus pantallas | PR de cada sección |
+
+## 11. Pantallas actuales a verificar en cada PR
+
+Fuente: `app.routes.ts`, `dashboard/routes.ts` y los `routes.ts` de cada feature. Todo cuelga de `/dashboard` (`DashboardPage`, `AuthGuard`).
+Las rutas con `data.permissions` dependen de los permisos que el backend asigne al rol; aquí se ubican por el rol que normalmente los tiene.
+
+**Secretaría**
+- `/dashboard/home` (`DashboardSecretariaPage` cuando `user.rol === 'SECRETARIA'`), `/dashboard/profile`
+- `/dashboard/admin/users` (permiso `USUARIOS_VER`), `/dashboard/admin/templates` (`CONFIG_PLANTILLAS`)
+- `/dashboard/protocols/list`, `/dashboard/protocols/workspace/:id/{info|validation|evaluation|follow-up}`, `/dashboard/protocols/validation/list`, `/dashboard/protocols/reception/new`
+- `/dashboard/evaluations/assignment`, `/dashboard/evaluations/reassignment/:protocolId`, `/dashboard/evaluations/reassign/:id`, `/dashboard/evaluations/consolidation/:id`, `/dashboard/evaluations/subsanaciones`
+- `/dashboard/resolutions/calls`, `/dashboard/resolutions/generator` (roles `SECRETARIA`, `PRESIDENTE`, `ADMIN_TI`)
+- `/dashboard/follow-up/adverse-events`, `/dashboard/follow-up/adverse-events/new`, `/dashboard/renewals/request`
+- `/dashboard/reports/{stats|msp|custom}` (roles `SECRETARIA`, `PRESIDENTE`, `ADMIN_TI`)
+- `/dashboard/audit/trail/:id`, `/dashboard/notifications/center`
+- `/dashboard/investigador/*` (las rutas del investigador también admiten `SECRETARIA`)
+
+**Evaluador**
+- `/dashboard/home`, `/dashboard/profile`, `/dashboard/notifications/center`
+- `/dashboard/evaluations/list`, `/dashboard/evaluations/evaluate/:id`, `/dashboard/evaluations/evaluate-risk/:id`
+- `/dashboard/protocols/workspace/:id/evaluation`
+
+**Presidente**
+- `/dashboard/home`, `/dashboard/profile`, `/dashboard/notifications/center`
+- `/dashboard/resolutions/calls`, `/dashboard/resolutions/generator`
+- `/dashboard/reports/{stats|msp|custom}`, `/dashboard/audit/trail/:id`
+- `/dashboard/admin/ai-assistant` (roles `ADMIN_TI`, `PRESIDENTE`)
+
+**Investigador**
+- `/dashboard/home`, `/dashboard/profile`, `/dashboard/notifications/center`
+- `/dashboard/investigador/{nuevo-protocolo|mis-protocolos|protocolo/:id/editar|protocolo-legacy/:id|evento-adverso/:id|renovacion/:id}`
+- `/dashboard/investigador/protocolo/:id` → redirige a `/dashboard/protocols/workspace/:id/info`
+
+**Fuera de los 4 roles** (se verifican igual): `/dashboard/audit/logs` y `/dashboard/notifications/templates` (rol `ADMIN`); `/auth/{login|register|confirm-email|setup-account|forgot-password|reset-password}`.
+
+**Redirigidas en T01b** (deben llevar a `/dashboard/home`): `/dashboard/admin/security`, `/dashboard/amendments`, `/dashboard/investigador/enmienda/:id`.

@@ -101,3 +101,13 @@ Cada carpeta `F0x-*` tiene exactamente estos tres archivos:
   8. Pendientes
 - **`plan.md`** — Cómo se construye, por capa: domain, application, infrastructure y presentation. Incluye rutas, qué se reutiliza o retira del código actual, y pruebas.
 - **`tasks.md`** — Tareas pequeñas en orden, cada una con su capa, archivos y criterio de terminado.
+
+---
+
+## 6. Ciclo de cada sección
+
+- **Paso 0 — antes de escribir código:**
+  - Búsqueda de equivalentes: por cada pieza nueva, buscar en `src/` (con `grep`/`rg`, pegando el comando y las coincidencias) si ya existe algo con el mismo propósito. Clasificarlo como (a) no había nada, (b) el nuevo lo reemplaza (con su tarea de retiro) o (c) debe reutilizarse. El resultado va en el "Mapa de equivalencias" del `plan.md` de la sección.
+- **Antes del PR:**
+  - Revisar las pantallas actuales de la lista "Pantallas actuales a verificar en cada PR" del `plan.md` (por rol) y confirmar que siguen funcionando.
+  - **No se cierra una sección con duplicados sin tarea de retiro.** Cada fila de "Duplicados temporales" debe tener una tarea asignada.
