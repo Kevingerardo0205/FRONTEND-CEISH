@@ -6,6 +6,7 @@ import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import {
   MODULE_UI_MAP,
+  OUT_OF_SCOPE_MENU_PERMISSIONS,
   PERMISSION_UI_MAP,
   toSentenceCase,
   MenuUIItem,
@@ -85,6 +86,7 @@ export class AuthFacade {
       };
 
       perms.forEach((p) => {
+        if (OUT_OF_SCOPE_MENU_PERMISSIONS.has(p.code)) return;
         const mod = p.module;
         const permUI = PERMISSION_UI_MAP[p.code];
 

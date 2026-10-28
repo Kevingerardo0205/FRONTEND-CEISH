@@ -47,12 +47,10 @@ export const INVESTIGADOR_ROUTES: Routes = [
         canActivate: [RoleGuard],
         data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
       },
+      // Retirado en F00-T01b: fuera de alcance (el código se borra en F08).
       {
         path: 'enmienda/:id',
-        loadComponent: () =>
-          import('./presentation/pages/enmiendas/enmiendas.page').then((m) => m.EnmiendasPage),
-        canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
+        redirectTo: '/dashboard/home',
       },
       {
         path: 'evento-adverso/:id',

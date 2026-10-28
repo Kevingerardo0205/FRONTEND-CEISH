@@ -25,11 +25,10 @@ export const DASHBOARD_ROUTES: Routes = [
         canActivate: [AuthGuard],
         data: { permissions: ['USUARIOS_VER'] },
       },
+      // Retirado en F00-T01b: fuera de alcance (el código se borra en F08).
       {
         path: 'admin/security',
-        loadChildren: () => import('@features/security/routes').then((m) => m.SECURITY_ROUTES),
-        canActivate: [AuthGuard],
-        data: { permissions: ['PERMISOS_GESTIONAR'] },
+        redirectTo: '/dashboard/home',
       },
       {
         path: 'admin/ai-assistant',
@@ -67,9 +66,10 @@ export const DASHBOARD_ROUTES: Routes = [
         path: 'resolutions',
         loadChildren: () => import('@features/resolutions/routes').then((m) => m.RESOLUTION_ROUTES),
       },
+      // Retirado en F00-T01b: fuera de alcance (el código se borra en F08).
       {
         path: 'amendments',
-        loadChildren: () => import('@features/amendments/routes').then((m) => m.AMENDMENT_ROUTES),
+        redirectTo: '/dashboard/home',
       },
       {
         path: 'renewals',
