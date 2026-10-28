@@ -1,21 +1,16 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { BehaviorSubject } from 'rxjs';
+import { SessionRolesPort } from '../domain/session-roles.port';
 import { ActiveRoleFacade } from './active-role.facade';
 
 describe('ActiveRoleFacade', () => {
   const STORAGE_KEY = 'ceish.activeRole';
-  let roles: ReturnType<typeof signal<string[]>>;
+  let roles$: BehaviorSubject<string[]>;
 
   function createFacade(initialRoles: string[]): ActiveRoleFacade {
-    roles = signal(initialRoles);
+    roles$ = new BehaviorSubject(initialRoles);
     TestBed.configureTestingModule({
-      providers: [
-        {
-          provide: AuthFacade,
-          useValue: { currentUser: () => roles(), getActiveRoles: () => roles() },
-        },
-      ],
+      providers: [{ provide: SessionRolesPort, useValue: { roles$ } }],
     });
     return TestBed.inject(ActiveRoleFacade);
   }
@@ -24,10 +19,29 @@ describe('ActiveRoleFacade', () => {
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
   it('con un solo rol, ese es el activo', () => {
-    const facade = createFacade(['SECRETARIA']);
+    const facade = createFacade(['EVALUADOR']);
 
-    expect(facade.availableRoles()).toEqual(['SECRETARIA']);
+    expect(facade.availableRoles()).toEqual(['EVALUADOR']);
+    expect(facade.activeRole()).toBe('EVALUADOR');
+  });
+
+  it('con varios roles y nada guardado, activa el de mayor prioridad', () => {
+    const facade = createFacade(['INVESTIGADOR', 'EVALUADOR', 'PRESIDENTE', 'SECRETARIA']);
+
+    expect(facade.availableRoles()).toEqual([
+      'SECRETARIA',
+      'PRESIDENTE',
+      'EVALUADOR',
+      'INVESTIGADOR',
+    ]);
     expect(facade.activeRole()).toBe('SECRETARIA');
+  });
+
+  it('ignora sin error los roles que el VO no reconoce (ADMIN_TI, PRESIDENTA)', () => {
+    const facade = createFacade(['ADMIN_TI', 'PRESIDENTA', 'INVESTIGADOR']);
+
+    expect(facade.availableRoles()).toEqual(['INVESTIGADOR']);
+    expect(facade.activeRole()).toBe('INVESTIGADOR');
   });
 
   it('sin roles reconocidos no hay rol activo', () => {
@@ -35,13 +49,6 @@ describe('ActiveRoleFacade', () => {
 
     expect(facade.availableRoles()).toEqual([]);
     expect(facade.activeRole()).toBeNull();
-  });
-
-  it('con varios roles expone solo los roles fijos y activa el primero', () => {
-    const facade = createFacade(['EVALUADOR', 'ADMIN_TI', 'INVESTIGADOR']);
-
-    expect(facade.availableRoles()).toEqual(['EVALUADOR', 'INVESTIGADOR']);
-    expect(facade.activeRole()).toBe('EVALUADOR');
   });
 
   it('switchRole cambia el rol activo y lo guarda', () => {
@@ -60,28 +67,32 @@ describe('ActiveRoleFacade', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it('recupera la última elección guardada', () => {
+  it('usa el último rol guardado si sigue siendo válido', () => {
     localStorage.setItem(STORAGE_KEY, 'INVESTIGADOR');
-    const facade = createFacade(['EVALUADOR', 'INVESTIGADOR']);
+    const facade = createFacade(['SECRETARIA', 'INVESTIGADOR']);
 
     expect(facade.activeRole()).toBe('INVESTIGADOR');
   });
 
-  it('ignora una elección guardada que no es un rol válido o que el usuario ya no tiene', () => {
+  it('ignora un rol guardado que no es válido y vuelve a la prioridad', () => {
     localStorage.setItem(STORAGE_KEY, 'ADMIN_TI');
-    const facade = createFacade(['EVALUADOR', 'INVESTIGADOR']);
-    expect(facade.activeRole()).toBe('EVALUADOR');
+    const facade = createFacade(['INVESTIGADOR', 'EVALUADOR']);
 
-    TestBed.resetTestingModule();
-    localStorage.setItem(STORAGE_KEY, 'SECRETARIA');
-    expect(createFacade(['EVALUADOR']).activeRole()).toBe('EVALUADOR');
+    expect(facade.activeRole()).toBe('EVALUADOR');
   });
 
-  it('se actualiza cuando cambian los roles del usuario', () => {
+  it('ignora un rol guardado que el usuario ya no tiene', () => {
+    localStorage.setItem(STORAGE_KEY, 'SECRETARIA');
+    const facade = createFacade(['INVESTIGADOR', 'EVALUADOR']);
+
+    expect(facade.activeRole()).toBe('EVALUADOR');
+  });
+
+  it('se actualiza cuando cambian los roles de la sesión', () => {
     const facade = createFacade(['EVALUADOR', 'INVESTIGADOR']);
     facade.switchRole('INVESTIGADOR');
 
-    roles.set(['EVALUADOR']);
+    roles$.next(['EVALUADOR']);
 
     expect(facade.activeRole()).toBe('EVALUADOR');
   });

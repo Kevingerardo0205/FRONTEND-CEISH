@@ -1,24 +1,31 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Role, RoleCode } from '@domain/value-objects/role.vo';
+import { SessionRolesPort } from '../domain/session-roles.port';
 
 const STORAGE_KEY = 'ceish.activeRole';
-const ROLE_CODES: readonly string[] = Role.all().map((r) => r.code);
+// Prioridad para el rol por defecto: el orden de Role.all().
+const ROLE_PRIORITY: readonly RoleCode[] = Role.all().map((r) => r.code);
+
+function isRoleCode(code: string | null): code is RoleCode {
+  return code !== null && (ROLE_PRIORITY as readonly string[]).includes(code);
+}
 
 /**
- * Rol activo de la sesión (spec-ui F00 §2). Solo considera los roles fijos del VO;
- * los demás códigos del backend (ADMIN_TI, PRESIDENTA…) se ignoran hasta confirmarlos.
+ * Rol activo de la sesión (spec-ui F00 §2).
+ * Por defecto: el último guardado si sigue siendo válido; si no, el de mayor prioridad
+ * (SECRETARIA > PRESIDENTE > EVALUADOR > INVESTIGADOR).
  */
 @Injectable({ providedIn: 'root' })
 export class ActiveRoleFacade {
-  private authFacade = inject(AuthFacade);
+  private sessionRoles = toSignal(inject(SessionRolesPort).roles$, { initialValue: [] });
   private selectedRole = signal<RoleCode | null>(this.readStoredRole());
 
+  // TODO pendiente HU-001: ADMIN_TI, PRESIDENTA y otros códigos que el VO no reconoce
+  // se ignoran sin error hasta confirmar si existen como roles propios.
   readonly availableRoles = computed<RoleCode[]>(() => {
-    this.authFacade.currentUser();
-    return this.authFacade
-      .getActiveRoles()
-      .filter((code): code is RoleCode => ROLE_CODES.includes(code));
+    const roles = this.sessionRoles();
+    return ROLE_PRIORITY.filter((code) => roles.includes(code));
   });
 
   readonly activeRole = computed<RoleCode | null>(() => {
@@ -40,7 +47,7 @@ export class ActiveRoleFacade {
   private readStoredRole(): RoleCode | null {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored && ROLE_CODES.includes(stored) ? (stored as RoleCode) : null;
+      return isRoleCode(stored) ? stored : null;
     } catch {
       return null;
     }
