@@ -17,7 +17,7 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 | T08 | presentation | StageBar | src/shared/ui/stage-bar/* + spec | Criterio 2 de spec-ui | Hecho (c07697d) |
 | T09 | presentation | PageHeader, ButtonGroup, Tabs, FilterBar | src/shared/ui/* + specs | Una acción principal; filtros recordados por vista | Hecho (4509807) |
 | T10 | presentation | DataTable, StatusChip, estados vacío/cargando/error | src/shared/ui/* + specs | Criterio 6 de spec-ui | Hecho (c1ab158) |
-| T11 | presentation | UndoToast (servicio + componente), Dialog, InlinePanel | src/shared/ui/*, infrastructure/services/notification.service.ts + specs | Criterio 5; foco atrapado y Esc en Dialog | Pendiente |
+| T11 | presentation | UndoToast (servicio + componente), Dialog, InlinePanel | src/shared/ui/*, infrastructure/services/notification.service.ts + specs | Criterio 5; foco atrapado y Esc en Dialog | Hecho (commit "feat(f00): T11 UndoToast, Dialog e InlinePanel") |
 | T12 | infra | Port PendingCountPort + adapter mock (+ HTTP marcado FALTA) | features/shell/infrastructure/* + spec | El contador del menú sale del mock | Pendiente |
 | T13 | presentation | AppShell (menú lateral + barra superior + selector de rol) y nuevo app.routes.ts con lazy loading, guards por rol y redirects desde /dashboard/... | features/shell/presentation/app-shell/*, app.routes.ts + spec | Criterios 1, 3, 4 y 8 de spec-ui | Pendiente |
 | T14 | — | Retirar DashboardPage (layout), sidebar, menu-ui.config.ts y permissions.directive.ts (con sus pruebas) | — | No quedan imports del sidebar viejo; build y pruebas en verde | Pendiente |
@@ -27,4 +27,4 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
-- Línea base actual: **541 pruebas**.
+- Línea base actual: **569 pruebas**.

@@ -17,7 +17,7 @@ src/
 │   ├── api/endpoints.constant.ts   ← URLs del backend
 │   ├── guards/          ← auth, role, verificado
 │   ├── interceptors/    ← jwt, error, audit
-│   └── services/notification.service.ts   ← MatSnackBar + confirm con MatDialog
+│   └── services/notification.service.ts   ← notify() con UndoToast + confirm() con MatDialog
 ├── shared/              ← ui, pipes, utils, constants
 └── styles/
 ```
@@ -33,10 +33,11 @@ src/
 | `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles$`). Clase abstracta para no importar `@angular` en domain |
 | `src/features/shell/application/` | `get-menu-for-role.use-case.ts`, `active-role.facade.ts` |
 | `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session-roles.adapter.ts` (`AuthSessionRolesAdapter`, implementa `SessionRolesPort` con `AuthFacade`) |
-| `src/shared/ui/` | `stage-bar`, `page-header`, `button-group`, `tabs`, `filter-bar`, `data-table`, `status-chip`, `states` |
+| `src/shared/ui/` | `stage-bar`, `page-header`, `button-group`, `tabs`, `filter-bar`, `data-table`, `status-chip`, `states`, `undo-toast` (servicio, componente y host), `dialog`, `inline-panel` |
+| `src/app/app.component.ts` | Monta `<app-undo-toast-host />` una sola vez, junto al `router-outlet` |
 | `src/styles/_tokens.scss` | Variables CSS de la §3 de spec-ui |
 
-Pendientes de crear: `undo-toast`, `dialog` e `inline-panel` en `src/shared/ui/` (T11); `PendingCountPort` con adapter mock + adapter HTTP (T12); `src/features/shell/presentation/app-shell/` (T13).
+Pendientes de crear: `PendingCountPort` con adapter mock + adapter HTTP (T12); `src/features/shell/presentation/app-shell/` (T13).
 
 ### application — rol activo
 
@@ -50,6 +51,9 @@ Pendientes de crear: `undo-toast`, `dialog` e `inline-panel` en `src/shared/ui/`
 - `StatusTone` vive en `shared/ui/status-chip`, porque es de presentación y no de dominio.
 - `DataTable` muestra los estados con esta prioridad: cargando > error > vacío > datos.
 - `PageHeader` usa el input `heading` y no `title`.
+- `UndoToast`: `UndoToastService.show({ message, undo?, duration?, tone? })`, un aviso a la vez (el nuevo reemplaza al anterior), 5 s por defecto. `tone` (`success` | `error` | `info`) existe para conservar el tipo de `notify()`. La región `role="status"` del host está siempre en el DOM.
+- `notification.service`: misma firma pública. `notify()` usa `UndoToast` (4 s, como antes); `confirm()` sigue con `MatDialog` y un TODO para migrar a `Dialog` sección por sección.
+- `Dialog` (solo acciones irreversibles) e `InlinePanel`: `open` es un `model()`. Cancelar o Esc cierran; Confirmar solo emite `confirmed` y la pantalla decide cuándo cerrar. `Dialog` usa `cdkTrapFocus` con `autoCapture` (foco atrapado y devuelto al abrir/cerrar).
 
 ### Excepciones conocidas a las reglas de capas
 
@@ -93,7 +97,7 @@ Se quita del menú y de las rutas en F00. El código se borra en F08.
 | presentation | 70 % de los flujos críticos | `StageBar`, `AppShell`, `UndoToast`, `DataTable` (vacío, cargando, error) |
 | arquitectura | — | Prueba o regla de capas: `presentation/**` sin `HttpClient` ni `infrastructure/**`; `domain/**` sin `@angular/*` |
 
-Línea base: **541 pruebas**.
+Línea base: **569 pruebas**.
 
 ## 7. Calidad
 
