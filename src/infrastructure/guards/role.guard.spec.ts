@@ -118,6 +118,28 @@ describe('RoleGuard (rol activo — spec-001 v3.5.3)', () => {
     expect(mockNotificationService.notify).toHaveBeenCalledTimes(1);
   });
 
+  // (g) el rol activo se lee en cada navegación (M8: leerlo una vez en el constructor → falla)
+  it('(g) si el rol activo cambia entre dos llamadas, la segunda decide con el rol nuevo', () => {
+    mockAuthFacade.currentUser.and.returnValue(
+      { ...USUARIO_PRUEBA, roles: ['EVALUADOR', 'PRESIDENTE'] } as any,
+    );
+    mockRouter.createUrlTree.and.returnValue('/dashboard' as any);
+    const route = { data: { roles: ['PRESIDENTE'] } } as unknown as ActivatedRouteSnapshot;
+
+    mockActiveRoleFacade.activeRole.and.returnValue('PRESIDENTE');
+    expect(guard.canActivate(route)).toBeTrue();
+    expect(mockNotificationService.notify).not.toHaveBeenCalled();
+
+    mockActiveRoleFacade.activeRole.and.returnValue('EVALUADOR');
+    const result = guard.canActivate(route);
+    expect(mockNotificationService.notify).toHaveBeenCalledOnceWith(
+      'No tiene acceso a esta sección con el rol activo.',
+      'info',
+    );
+    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
+    expect(result).toBe('/dashboard' as any);
+  });
+
   // prueba del provider (M7: quitar el provider de app.config.ts → falla)
   it('SessionRolesPort está provisto en appConfig: ActiveRoleFacade se inyecta sin NullInjectorError', () => {
     TestBed.resetTestingModule();
