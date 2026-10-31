@@ -27,7 +27,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 | EVALUADOR (+ perfil) | Se define en su sección (fuera de F00) |
 | INVESTIGADOR | Se define en su sección (fuera de F00) |
 
-**Varios roles a la vez:** cuando la persona tiene más de un rol, el avatar muestra un **selector de rol activo**. El menú y las rutas corresponden al rol elegido. → *Propuesta; confirmar.*
+**Varios roles a la vez:** cuando la persona tiene más de un rol, el avatar muestra un **selector de rol activo**. El menú y las rutas corresponden al rol elegido. — Confirmado (spec-001 v3.5.3, HU-001 resuelto por backend TSK-001.1c, 31/10/2026).
 
 **Selector de rol activo:**
 - Solo aparece si la persona tiene más de un rol.

@@ -27,7 +27,7 @@ src/
 | Archivo | Contenido |
 |---|---|
 | `src/domain/value-objects/stage.vo.ts` | Las 6 etapas: Recepción, Asignación, Evaluación (incluye riesgo), Resolución, Seguimiento, Renovación |
-| `src/domain/value-objects/role.vo.ts` | 4 roles fijos: `SECRETARIA`, `PRESIDENTE`, `EVALUADOR`, `INVESTIGADOR`. Sin `ADMIN_TI` ni `PRESIDENTA` (pendiente HU-001) |
+| `src/domain/value-objects/role.vo.ts` | 4 roles fijos: `SECRETARIA`, `PRESIDENTE`, `EVALUADOR`, `INVESTIGADOR`. Sin `ADMIN_TI` ni `PRESIDENTA` (confirmado HU-001, 31/10/2026) |
 | `src/domain/entities/menu-item.entity.ts` | `{ id, label, route, roles: RoleCode[], badge?: 'pendientes' }` |
 | `src/domain/ports/menu-config.port.ts` | Port de la configuración del menú (clase abstracta) |
 | `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles$`). Clase abstracta para no importar `@angular` en domain |
@@ -142,8 +142,8 @@ Línea base: **579 pruebas**.
 
 ## 8. Pendientes
 
-- **ADMIN, ADMIN_TI y PRESIDENTA** aparecen en los guards además de los 4 roles. ¿ADMIN y ADMIN_TI siguen existiendo o los absorbe SECRETARIA? ¿PRESIDENTA es alias de PRESIDENTE? Hoy, por ejemplo, `audit/logs` y `notifications/templates` son solo para `ADMIN`. Confirmar y llevarlo a HU-001 del backend.
-- **Consecuencia:** un usuario que solo tenga `ADMIN`, `ADMIN_TI` o `PRESIDENTA` no tiene rol activo. Esto bloquea T07 y T13.
+- **HU-001 resuelto (31/10/2026):** ADMIN_TI fue retirado del backend (TSK-001.1c, PR #63). PRESIDENTA no existe. Solo hay 4 roles: SECRETARIA, PRESIDENTE, EVALUADOR, INVESTIGADOR. Las cadenas sueltas `ADMIN`, `ADMIN_TI` y `PRESIDENTA` en las rutas se migran en T13.
+- **Desbloqueado:** T07 hecho (2afc6ff). T13 en alcance de F00b.
 - **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Propuesta por confirmar.
 - **Para F01: revisar contra el canvas** (decisiones de texto y color, no de negocio; en `EstadoUIMap` de `shared/utils/protocol-ui.util.ts`):
   - `ARCHIVADO_VENCIMIENTO` usa `'pending'` (ámbar); ¿debería ser gris?
@@ -157,7 +157,7 @@ Línea base: **579 pruebas**.
 | PR | Rama | Tareas | Estado |
 |---|---|---|---|
 | F00a | `feat/f00-base` | T01–T06b, T08–T12, T14b, T15 (todas hechas) | 🔲 Listo para PR |
-| F00b | `feat/f00b-shell` (desde `dev`, después del merge de F00a) | T07, T13, T14, T16 | 🔲 Bloqueado (HU-001: ADMIN, ADMIN_TI, PRESIDENTA) |
+| F00b | `feat/f00b-shell` (desde `dev`, después del merge de F00a) | T07, T13, T14, T16 | 🔲 En curso (T07 hecho 31/10/2026; pendiente T13, T14, T16) |
 
 **Propuesta fuera de F00:** un PR `chore/gitattributes` con `* text=auto eol=lf` (hoy no hay `.gitattributes` y cada máquina depende de su `core.autocrlf`).
 
