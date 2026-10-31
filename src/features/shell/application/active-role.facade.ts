@@ -21,8 +21,9 @@ export class ActiveRoleFacade {
   private sessionRoles = toSignal(inject(SessionRolesPort).roles$, { initialValue: [] });
   private selectedRole = signal<RoleCode | null>(this.readStoredRole());
 
-  // TODO pendiente HU-001: ADMIN_TI, PRESIDENTA y otros códigos que el VO no reconoce
-  // se ignoran sin error hasta confirmar si existen como roles propios.
+  // Decisión tomada (spec-001 v3.5.3, 31/10/2026): solo existen los 4 roles del VO.
+  // ADMIN_TI fue retirado (TSK-001.1c, PR #63 del backend). PRESIDENTA no existe.
+  // Los códigos desconocidos se siguen ignorando sin error para robustez ante cambios futuros.
   readonly availableRoles = computed<RoleCode[]>(() => {
     const roles = this.sessionRoles();
     return ROLE_PRIORITY.filter((code) => roles.includes(code));

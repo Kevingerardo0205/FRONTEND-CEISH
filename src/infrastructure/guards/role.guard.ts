@@ -1,13 +1,17 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, Router, UrlTree } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import { NotificationService } from '@infrastructure/services/notification.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class RoleGuard implements CanActivate {
   constructor(
-    private AuthFacade: AuthFacade,
+    private authFacade: AuthFacade,
+    private activeRoleFacade: ActiveRoleFacade,
+    private notificationService: NotificationService,
     private router: Router,
   ) {}
 
@@ -15,19 +19,16 @@ export class RoleGuard implements CanActivate {
     const rawRoles = route.data['roles'];
     if (!rawRoles) return true;
 
-    const requiredRoles = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
-    const user = this.AuthFacade.currentUser();
+    const requiredRoles: string[] = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
+    const user = this.authFacade.currentUser();
 
     if (!user) return this.router.createUrlTree(['/auth/login']);
 
-    if (this.AuthFacade.hasAnyRole(requiredRoles)) {
-      return true;
-    }
+    const active = this.activeRoleFacade.activeRole();
 
-    const activeRoles = this.AuthFacade.getActiveRoles();
-    console.warn(
-      `[RoleGuard] Acceso denegado: Usuario ${user.email} con roles [${activeRoles.join(', ')}] intentó acceder a ruta para [${requiredRoles.join(', ')}]`,
-    );
+    if (active && requiredRoles.includes(active)) return true;
+
+    this.notificationService.notify('No tiene acceso a esta sección con el rol activo.', 'info');
     return this.router.createUrlTree(['/dashboard']);
   }
 }

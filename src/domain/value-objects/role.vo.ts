@@ -9,8 +9,9 @@ export class InvalidRoleError extends Error {
 }
 
 /**
- * Rol fijo del sistema (spec-001 HU-001). Los roles no se editan desde la aplicación.
- * ADMIN_TI y PRESIDENTA quedan fuera hasta confirmarlos con el comité.
+ * Rol fijo del sistema (spec-001 HU-001, v3.5.3). Los roles no se editan desde la aplicación.
+ * Solo existen 4 roles: SECRETARIA, PRESIDENTE, EVALUADOR e INVESTIGADOR.
+ * ADMIN_TI fue retirado (TSK-001.1c, PR #63 del backend). PRESIDENTA no existe.
  */
 export class Role {
   private static readonly ROLES: readonly Role[] = [

@@ -39,6 +39,8 @@ import { IReportRepositoryPort } from '../features/reports/domain/ports/report-r
 import { ReportRepositoryAdapter } from '../features/reports/infrastructure/adapters/report-repository.adapter';
 import { IMeetingRepositoryPort } from '@domain/ports/IMeetingRepositoryPort';
 import { MeetingApiAdapter } from '@infrastructure/adapters/meeting-api.adapter';
+import { SessionRolesPort } from '@features/shell/domain/session-roles.port';
+import { AuthSessionRolesAdapter } from '@features/shell/infrastructure/auth-session-roles.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -62,5 +64,6 @@ export const appConfig: ApplicationConfig = {
     { provide: IAuditRepositoryPort, useClass: AuditRepositoryAdapter },
     { provide: IReportRepositoryPort, useClass: ReportRepositoryAdapter },
     { provide: IMeetingRepositoryPort, useClass: MeetingApiAdapter },
+    { provide: SessionRolesPort, useClass: AuthSessionRolesAdapter },
   ],
 };
