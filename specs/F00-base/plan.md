@@ -27,7 +27,7 @@ src/
 | Archivo | Contenido |
 |---|---|
 | `src/domain/value-objects/stage.vo.ts` | Las 6 etapas: Recepción, Asignación, Evaluación (incluye riesgo), Resolución, Seguimiento, Renovación |
-| `src/domain/value-objects/role.vo.ts` | 4 roles fijos: `SECRETARIA`, `PRESIDENTE`, `EVALUADOR`, `INVESTIGADOR`. Sin `ADMIN_TI` ni `PRESIDENTA` (confirmado HU-001, 31/10/2026) |
+| `src/domain/value-objects/role.vo.ts` | 4 roles fijos: `SECRETARIA`, `PRESIDENTE`, `EVALUADOR`, `INVESTIGADOR`. Sin `ADMIN_TI`, `ADMIN` ni `PRESIDENTA`: confirmado por spec 001 v3.5.3 del backend (HU-001, TSK-001.1), 31/10/2026 |
 | `src/domain/entities/menu-item.entity.ts` | `{ id, label, route, roles: RoleCode[], badge?: 'pendientes' }` |
 | `src/domain/ports/menu-config.port.ts` | Port de la configuración del menú (clase abstracta) |
 | `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles$`). Clase abstracta para no importar `@angular` en domain |
@@ -143,8 +143,8 @@ Línea base: **579 pruebas**.
 ## 8. Pendientes
 
 - **HU-001 resuelto (31/10/2026):** ADMIN_TI fue retirado del backend (TSK-001.1c, PR #63). PRESIDENTA no existe. Solo hay 4 roles: SECRETARIA, PRESIDENTE, EVALUADOR, INVESTIGADOR. Las cadenas sueltas `ADMIN`, `ADMIN_TI` y `PRESIDENTA` en las rutas se migran en T13.
-- **Desbloqueado:** T07 hecho (2afc6ff). T13 en alcance de F00b.
-- **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Propuesta por confirmar.
+- **Desbloqueado:** T07 hecho (2afc6ff; prueba (g) en 8c5ad4f): el guard decide con el rol activo. T13 en alcance de F00b.
+- **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Confirmado (spec 001 v3.5.3 del backend, 31/10/2026): varios roles del comité pueden estar vigentes a la vez.
 - **Para F01: revisar contra el canvas** (decisiones de texto y color, no de negocio; en `EstadoUIMap` de `shared/utils/protocol-ui.util.ts`):
   - `ARCHIVADO_VENCIMIENTO` usa `'pending'` (ámbar); ¿debería ser gris?
   - `DISCREPANCIA_RIESGO` usa `'rejected'` (rojo).
@@ -156,7 +156,7 @@ Línea base: **579 pruebas**.
 
 | PR | Rama | Tareas | Estado |
 |---|---|---|---|
-| F00a | `feat/f00-base` | T01–T06b, T08–T12, T14b, T15 (todas hechas) | 🔲 Listo para PR |
+| F00a | `feat/f00-base` | T01–T06b, T08–T12, T14b, T15 (todas hechas) | ✅ Hecho (PR #9) |
 | F00b | `feat/f00b-shell` (desde `dev`, después del merge de F00a) | T07, T13, T14, T16 | 🔲 En curso (T07 hecho 31/10/2026; pendiente T13, T14, T16) |
 
 **Propuesta fuera de F00:** un PR `chore/gitattributes` con `* text=auto eol=lf` (hoy no hay `.gitattributes` y cada máquina depende de su `core.autocrlf`).
@@ -184,11 +184,11 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 | `Tabs` | `mat-tab-group` / `MatTabsModule` en 7 archivos (`protocol-workspace`, `protocol-detail-tab`, `protocol-validation-list`, `detalle-protocolo`, `subsanacion`, `notifications-center`, `protocols/components/protocol-detail.page.ts`) | (b) | Dentro del protocolo, F02–F07; fuera del protocolo pasan a `ButtonGroup` |
 | `InlinePanel` | `mat-expansion-panel` en `audit-logs`, `sidebar`, `subsanacion` | (a) | Acordeones, propósito distinto |
 | `Stage` VO | `domain/enums/protocol-status.enum.ts`, `domain/catalogs/estado.catalog.ts` + `estado.alias.ts` (estados, no etapas) | (a) | No existía el concepto de etapa. Los pasos de `protocol-workspace` se retiran con `StageBar` (F02) |
-| `Role` VO | Cadenas de rol sueltas en `data.roles` de las rutas (`ADMIN`, `ADMIN_TI`, `PRESIDENTA`…), `verificado.guard.ts` (`adminRoles`), `dashboard-home.page.ts` (`userRole` por `user.rol`) | (a) | No había un tipo central. Las cadenas se migran en T07 (bloqueado) y T13 |
+| `Role` VO | Cadenas de rol sueltas en `data.roles` de las rutas (`ADMIN`, `ADMIN_TI`, `PRESIDENTA`…), `verificado.guard.ts` (`adminRoles`), `dashboard-home.page.ts` (`userRole` por `user.rol`) | (a) | No había un tipo central. `role.guard` ya decide con el rol activo (`RoleCode`, T07, 2afc6ff); las cadenas de `data.roles` y `verificado.guard` se migran en T13 |
 | `menu.config` + `GetMenuForRoleUseCase` | `AuthFacade.menuConfig()` + `shared/constants/menu-ui.config.ts` + `dashboard/presentation/components/sidebar` | (b) | T13 conecta el nuevo, T14 retira el viejo |
 | `ActiveRoleFacade` | `AuthFacade.getActiveRoles()` (roles vigentes, sin selección) | (a) | No existía un rol elegido. Se reutiliza `getActiveRoles()` vía `AuthSessionRolesAdapter` |
 | `ActiveRoleFacade` | `dashboard-home.page.ts`: `userRole` usa solo el rol primario (`user.rol`) | (b) | Se retira con `DashboardPage` (T14) |
-| `role.guard` (T07) | `infrastructure/guards/role.guard.ts` | (b) | T07 lo adapta (bloqueado por HU-001) |
+| `role.guard` (T07) | `infrastructure/guards/role.guard.ts` | (b) | Adaptado en T07 (2afc6ff): decide con el rol activo, no con cualquier rol vigente |
 | — | `shared/directives/permissions.directive.ts` (`appHasPermission`): 0 usos | (b) | T14 |
 | `PendingCountPort` | `SecretariatDashboardService.metrics` (`pendingReception`, `observed`, `overdue`, `slaRisk` calculados en el frontend) | (b) | Se retira con `dashboard-secretaria` en F01 (Mis pendientes) |
 | `PendingCountPort` | `notifications-center.page.ts` (`matBadge` de no leídas) | (a) | Propósito distinto |
@@ -200,7 +200,7 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 |---|---|---|---|
 | Menú viejo (`AuthFacade.menuConfig()` + `menu-ui.config.ts` + `sidebar`) y `menu.config` nuevo | `AppShell` todavía no existe | T13 (conecta) + T14 (retira) | PR F00 (`feat/f00-base`) |
 | Filtro `OUT_OF_SCOPE_MENU_PERMISSIONS` en `AuthFacade.menuConfig()` (T01b) | Ocultar seguridad y enmiendas mientras vive el menú viejo | T14 | PR F00 |
-| `role.guard` con cadenas de rol y `Role` VO | T07 bloqueado por HU-001 | T07 | PR F00 (si se desbloquea) |
+| Cadenas de rol sueltas en `data.roles` (`ADMIN`, `ADMIN_TI`, `PRESIDENTA`) y `Role` VO | T07 ya compara con el rol activo; las rutas cambian con el nuevo `app.routes.ts` | T13 | PR F00b |
 | `permissions.directive.ts` sin usos | Código muerto | T14 | PR F00 |
 | `dashboard/presentation/dashboard-routing.module.ts` sin referencias | Código muerto (las rutas vivas están en `dashboard/routes.ts`) | **T14 (propuesta: agregarlo a T14)** | PR F00 |
 | `ConfirmDialogComponent` (`NotificationService.confirm()`) y `Dialog` | La firma de `confirm()` se mantiene para no romper pantallas | **T14d (propuesta):** retirar `ConfirmDialogComponent` cuando `confirm()` no tenga llamadas | PR de la última sección que lo use |
