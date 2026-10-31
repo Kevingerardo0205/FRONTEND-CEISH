@@ -1,0 +1,40 @@
+// src/styles/_tokens.scss
+// Tokens de diseño del rediseño (specs/F00-base/spec-ui.md §3).
+// Variables CSS globales: el código nuevo toma colores, radios y alturas de aquí.
+
+:root {
+  // Colores
+  --c-primary: #3f51b5;
+  --c-primary-dark: #303f9f;
+  --c-primary-soft: #e8eaf6;
+  --c-brand: #0f2a4a;
+  --c-bg: #f8fafc;
+  --c-surface: #ffffff;
+  --c-border: #e2e8f0;
+  --c-text: #0f172a;
+  --c-text-2: #475569;
+
+  // Tonos de estado (StatusChip): fondo / texto
+  --tone-verde-bg: #dcfce7;
+  --tone-verde-fg: #166534;
+  --tone-ambar-bg: #fef3c7;
+  --tone-ambar-fg: #92400e;
+  --tone-rojo-bg: #fee2e2;
+  --tone-rojo-fg: #991b1b;
+  --tone-azul-bg: #e8eaf6;
+  --tone-azul-fg: #303f9f;
+  --tone-gris-bg: #f1f5f9;
+  --tone-gris-fg: #334155;
+
+  // Tipografía
+  --font-content: 'Roboto', sans-serif;
+  --font-menu: 'Outfit', sans-serif;
+
+  // Radios
+  --radius-control: 10px;
+  --radius-card: 16px;
+
+  // Alturas mínimas (accesibilidad)
+  --min-h-action: 44px;
+  --min-h-filter: 40px;
+}

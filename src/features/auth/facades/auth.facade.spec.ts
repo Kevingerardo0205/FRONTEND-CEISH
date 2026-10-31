@@ -106,4 +106,25 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
       expect(facade.hasAllPermissions(['P1', 'P2', 'P3'])).toBeTrue();
     });
   });
+
+  describe('menuConfig()', () => {
+    it('no muestra seguridad/permisos ni enmiendas (retirado en F00-T01b)', () => {
+      const mod = { code: 'MOD_SEGUIMIENTO', name: 'Seguimiento', icon: 'history', order: 5 };
+      facade.setUser({
+        ...mockMultiRoleUser,
+        fullPermissions: [
+          { code: 'PERMISOS_GESTIONAR', module: { ...mod, code: 'MOD_USUARIOS' } },
+          { code: 'SEGUIMIENTO_ENMIENDAS', module: mod },
+          { code: 'SEGUIMIENTO_VER', module: mod },
+        ],
+      });
+
+      const paths = facade.menuConfig().flatMap((g) => g.subItems.map((s) => s.path));
+      const codes = facade.menuConfig().flatMap((g) => g.subItems.map((s) => s.code));
+
+      expect(paths).toEqual(['/dashboard/follow-up']);
+      expect(codes).not.toContain('PERMISOS_GESTIONAR');
+      expect(codes).not.toContain('SEGUIMIENTO_ENMIENDAS');
+    });
+  });
 });

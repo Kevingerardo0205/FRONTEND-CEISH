@@ -15,6 +15,15 @@ export const MODULE_UI_MAP: Record<string, MenuUIItem> = {
   MOD_CONFIG: { label: 'Configuración', icon: 'settings' },
 };
 
+/**
+ * Permisos que ya no generan entrada en el menú.
+ * Retirado en F00-T01b: seguridad/permisos y enmiendas quedan fuera de alcance.
+ */
+export const OUT_OF_SCOPE_MENU_PERMISSIONS: ReadonlySet<string> = new Set([
+  'PERMISOS_GESTIONAR',
+  'SEGUIMIENTO_ENMIENDAS',
+]);
+
 export const PERMISSION_UI_MAP: Record<string, MenuUIItem | MenuUIItem[]> = {
   DASHBOARD_VER_PRINCIPAL: { label: 'Inicio', icon: 'home', path: '/dashboard/home' },
   DASHBOARD_RESUMEN: { label: 'Resumen', icon: 'analytics', path: '/dashboard/home' },

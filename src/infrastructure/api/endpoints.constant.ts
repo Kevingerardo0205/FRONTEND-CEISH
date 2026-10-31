@@ -77,6 +77,9 @@ export const ENDPOINTS = {
     CALCULATE_EVAL_DATE: '/evaluations/meetings/calculate-eval-date',
     PDF: (id: string) => `/evaluations/meetings/${id}/pdf`,
   },
+  SECRETARIA: {
+    PENDIENTES: '/secretaria/pendientes', // FALTA en backend (spec-003 RF-ALR.f)
+  },
   AI_ASSISTANT: '/ai-assistant/chat',
   AI_ASSISTANT_ALLOWED_ROLES: '/ai-assistant/allowed-roles',
   AI_ASSISTANT_ADMIN: {

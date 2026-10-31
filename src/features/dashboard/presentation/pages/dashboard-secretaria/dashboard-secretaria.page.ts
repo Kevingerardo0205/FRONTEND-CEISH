@@ -10,11 +10,8 @@ import { CommonModule } from '@angular/common';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { SecretariatDashboardService } from './application/services/secretariat-dashboard.service';
-import { KpiPanelComponent } from './components/kpi-panel/kpi-panel.component';
 import { WorkflowTableComponent } from '../../components/workflow-table/workflow-table.component';
 import { PeerRiskPendingTableComponent } from '../../components/peer-risk-pending-table/peer-risk-pending-table.component';
-import { DeadlinesRadarComponent } from './components/deadlines-radar/deadlines-radar.component';
-import { AuditFeedComponent } from './components/audit-feed/audit-feed.component';
 import { LoadPendingPeerAssignmentProtocolsUseCase } from '@features/evaluations/application/load-pending-peer-assignment-protocols.use-case';
 import { PendingPeerAssignmentProtocol } from '@domain/entities/peer-evaluation.entity';
 import { ActivatedRoute } from '@angular/router';
@@ -28,11 +25,8 @@ import { ActivatedRoute } from '@angular/router';
     CommonModule,
     MatProgressBarModule,
     MatIconModule,
-    KpiPanelComponent,
     WorkflowTableComponent,
     PeerRiskPendingTableComponent,
-    DeadlinesRadarComponent,
-    AuditFeedComponent,
   ],
   template: `
     <div class="ops-center animate-fade-in">
@@ -60,9 +54,6 @@ import { ActivatedRoute } from '@angular/router';
           />
         </div>
       </header>
-
-      <!-- 2. Panel KPI Superior -->
-      <app-kpi-panel [metrics]="metrics()"></app-kpi-panel>
 
       <!-- 3. Contenedor Principal (Grid Asimétrico) -->
       <div class="ops-grid">
@@ -103,12 +94,7 @@ import { ActivatedRoute } from '@angular/router';
           >
           </app-peer-risk-pending-table>
         </main>
-
-        <aside class="ops-side-col">
-          <!-- Radar de Urgencias y Auditoría -->
-          <app-deadlines-radar [protocols]="protocols()"></app-deadlines-radar>
-          <app-audit-feed></app-audit-feed>
-        </aside>
+        <!-- Radar de plazos, KPI y auditoría retirados en F00-T01b (componentes se borran en F08) -->
       </div>
     </div>
   `,

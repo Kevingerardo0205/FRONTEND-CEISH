@@ -2,6 +2,7 @@
 @use '@angular/material/prebuilt-themes/indigo-pink.css';
 @use 'variables' as v;
 @use 'themes' as t;
+@use 'tokens';
 
 // Reset básico
 * {
@@ -20,6 +21,16 @@ body {
   background-color: v.$color-bg-body;
   color: v.$color-text-main;
   line-height: 1.6;
+}
+
+// Accesibilidad: oculta a la vista, visible para lectores de pantalla
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 // Utilidades Modernas
