@@ -1,7 +1,8 @@
 # F00 · Base del rediseño — spec-ui
 
-**Versión:** 0.1 (borrador) · **Fecha:** 28/10/2026 · **Rama:** `feat/f00-base`
+**Versión:** 0.2 · **Fecha:** 31/10/2026 · **Rama:** `feat/f00b-shell`
 **Cubre:** spec-001 RF-EST.1, RF-EST.2, RF-EST.3 y HU-001 (roles fijos) · spec-003 RF-ALR.f (solo la entrada del menú)
+**Actualización 31/10/2026:** F00b se limita al módulo de la SECRETARIA (decisiones D1, D3, D4, D6 y D7).
 
 ---
 
@@ -34,6 +35,11 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - Al cambiar de rol, se recarga el menú y se navega al inicio de ese rol.
 - El rol inicial sigue la regla de `plan.md` §2 (application — rol activo): el último elegido si sigue siendo válido; si no, el de mayor prioridad (SECRETARIA > PRESIDENTE > EVALUADOR > INVESTIGADOR).
 
+### Alcance de F00b (31/10/2026)
+
+- **D1 — AppShell solo para SECRETARIA.** El `AppShell` (menú lateral y barra superior) se monta únicamente para el rol activo `SECRETARIA`. `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` siguen con `DashboardPage` y su menú actual, sin cambios, hasta que se defina su sección.
+- **D3 — Inicio por rol.** `SECRETARIA` entra a `/pendientes` dentro del AppShell (hasta F01, la pantalla actual de la Secretaría de forma temporal). `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` entran a `/dashboard/home`, como hoy. Al cambiar de rol activo, cada uno va a su inicio. Se implementa en T13c y T13d.
+
 ## 3. Tokens de diseño
 
 | Token | Valor | Uso |
@@ -58,6 +64,8 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - **Barra superior:** búsqueda global de protocolos (código o título), notificaciones y avatar con el selector de rol.
 - El elemento activo del menú se resalta con `--c-primary-soft`.
 - El menú sale de una **configuración por rol**. No va escrito en el HTML.
+- **D1 (31/10/2026):** este armazón aplica solo al rol activo `SECRETARIA`. Los otros tres roles conservan `DashboardPage` y su menú actual hasta su sección.
+- **D7 (31/10/2026):** la búsqueda global se oculta hasta que exista el endpoint; la campana lleva a `notifications/center`, y el contador de no leídas solo se muestra cuando ya exista una fuente. Se implementa en T13b.
 
 ## 5. Componentes compartidos
 
@@ -98,6 +106,13 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - Un guard por rol protege cada ruta.
 - Si alguien sin permiso entra a una ruta, vuelve a su inicio con un aviso.
 
+**Roles por ruta (31/10/2026):**
+
+- **D6:** las rutas de la Secretaría llevan `data.roles` + `RoleGuard`, además del permiso que ya tengan.
+- **D4:** `audit/logs` y `audit/trail/:id` → `SECRETARIA`, `PRESIDENTE`; `notifications/templates` → `SECRETARIA`; la administración del asistente IA → `SECRETARIA`; `admin/users` y `admin/templates` → `SECRETARIA`; reportes y resoluciones → `SECRETARIA`, `PRESIDENTE`. Se retira `ADMIN_ALL` del padre de `audit` (no está en la matriz de HU-001 y cerraba la sección para todos).
+- **D5:** `protocols/list`, `protocols/validation/list` y `protocols/reception/new` → `SECRETARIA`.
+- Los roles de las rutas de investigador y de evaluación no cambian en F00b, salvo retirar los códigos que no existen (`ADMIN`, `ADMIN_TI`, `PRESIDENTA`). Quién entra a esas rutas queda como duda abierta en `plan.md` §8. El detalle ruta por ruta está en `plan.md` §11.
+
 ## 8. Endpoints que usa F00
 
 | Endpoint | Para qué | Estado |
@@ -119,6 +134,6 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 
 ## 10. Pendientes
 
-- Selector de rol activo para usuarios con varios roles: **confirmar**.
-- **ADMIN_TI y PRESIDENTA:** ¿ADMIN_TI sigue existiendo o lo absorbe SECRETARIA? ¿PRESIDENTA es alias de PRESIDENTE? Ver spec-001 v3.4.1, HU-001 (roles fijos). Mientras no se confirme, un usuario que solo tenga esos roles no tiene rol activo.
-- Menús de Presidencia, Evaluador e Investigador: se definen en sus secciones.
+- Selector de rol activo para usuarios con varios roles: **confirmado** (spec-001 v3.5.3, HU-001 resuelto, 31/10/2026; ver §2).
+- **ADMIN_TI y PRESIDENTA: resuelto (31/10/2026).** `ADMIN_TI` fue absorbido por `SECRETARIA` y retirado del backend; `PRESIDENTA` no existe. Solo hay 4 roles (ver §2). Las cadenas sueltas se retiran de las rutas en T13a.
+- Menús de Presidencia, Evaluador e Investigador: se mantienen como están hoy (`DashboardPage` y su menú actual) hasta que se definan en sus secciones. F00b solo cubre el AppShell de la Secretaría (D1).

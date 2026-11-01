@@ -145,6 +145,11 @@ Línea base: **579 pruebas**.
 - **HU-001 resuelto (31/10/2026):** ADMIN_TI fue retirado del backend (TSK-001.1c, PR #63). PRESIDENTA no existe. Solo hay 4 roles: SECRETARIA, PRESIDENTE, EVALUADOR, INVESTIGADOR. Las cadenas sueltas `ADMIN`, `ADMIN_TI` y `PRESIDENTA` en las rutas se migran en T13.
 - **Desbloqueado:** T07 hecho (2afc6ff; prueba (g) en 8c5ad4f): el guard decide con el rol activo. T13 en alcance de F00b.
 - **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Confirmado (spec 001 v3.5.3 del backend, 31/10/2026): varios roles del comité pueden estar vigentes a la vez.
+- **D2 (31/10/2026) — dudas abiertas de rutas:** en F00b no se cambia quién entra a las rutas de investigador ni a las de evaluación; solo se retiran de `data.roles` los códigos que no existen. Queda por definir:
+  - quién entra a las rutas de investigador (el usuario indica que la Secretaría solo observa, desde su vista del protocolo con etapas, F02);
+  - quién entra a evaluar.
+- **Alias de permisos fuera de la matriz (31/10/2026):** `DOCUMENTOS_VALIDAR`, `RECEPCION_VER`, `EVALUATORS_ASSIGN` y `EVALUATORS_SUGGEST` no están en la matriz de HU-001; se quedan como están en las rutas hasta que la Secretaría valide la matriz (D8).
+- **T14 (31/10/2026):** su alcance pasa a "retirar solo lo que quede sin uso" al cerrar F00b. `DashboardPage`, el `sidebar` y `menu-ui.config.ts` siguen vivos para `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` (D1).
 - **Para F01: revisar contra el canvas** (decisiones de texto y color, no de negocio; en `EstadoUIMap` de `shared/utils/protocol-ui.util.ts`):
   - `ARCHIVADO_VENCIMIENTO` usa `'pending'` (ámbar); ¿debería ser gris?
   - `DISCREPANCIA_RIESGO` usa `'rejected'` (rojo).
@@ -157,7 +162,7 @@ Línea base: **579 pruebas**.
 | PR | Rama | Tareas | Estado |
 |---|---|---|---|
 | F00a | `feat/f00-base` | T01–T06b, T08–T12, T14b, T15 (todas hechas) | ✅ Hecho (PR #9) |
-| F00b | `feat/f00b-shell` (desde `dev`, después del merge de F00a) | T07, T13, T14, T16 | 🔲 En curso (T07 hecho 31/10/2026; pendiente T13, T14, T16) |
+| F00b | `feat/f00b-shell` (desde `dev`, después del merge de F00a) | F00b = Secretaría: T07, T13a a T13d, T14 parcial, T16 | 🔲 En curso (T07 hecho 31/10/2026; pendientes T13a–T13d, T14 parcial y T16) |
 
 **Propuesta fuera de F00:** un PR `chore/gitattributes` con `* text=auto eol=lf` (hoy no hay `.gitattributes` y cada máquina depende de su `core.autocrlf`).
 
@@ -219,14 +224,14 @@ Las rutas con `data.permissions` dependen de los permisos que el backend asigne 
 
 **Secretaría**
 - `/dashboard/home` (`DashboardSecretariaPage` cuando `user.rol === 'SECRETARIA'`), `/dashboard/profile`
-- `/dashboard/admin/users` (permiso `USUARIOS_VER`), `/dashboard/admin/templates` (`CONFIG_PLANTILLAS`)
-- `/dashboard/protocols/list`, `/dashboard/protocols/workspace/:id/{info|validation|evaluation|follow-up}`, `/dashboard/protocols/validation/list`, `/dashboard/protocols/reception/new`
+- `/dashboard/admin/users` (rol `SECRETARIA`, permiso `USUARIOS_VER`), `/dashboard/admin/templates` (rol `SECRETARIA`, permiso `CONFIG_PLANTILLAS`)
+- `/dashboard/protocols/list`, `/dashboard/protocols/validation/list`, `/dashboard/protocols/reception/new` (roles `SECRETARIA`), `/dashboard/protocols/workspace/:id/{info|validation|evaluation|follow-up}`
 - `/dashboard/evaluations/assignment`, `/dashboard/evaluations/reassignment/:protocolId`, `/dashboard/evaluations/reassign/:id`, `/dashboard/evaluations/consolidation/:id`, `/dashboard/evaluations/subsanaciones`
-- `/dashboard/resolutions/calls`, `/dashboard/resolutions/generator` (roles `SECRETARIA`, `PRESIDENTE`, `ADMIN_TI`)
+- `/dashboard/resolutions/calls`, `/dashboard/resolutions/generator` (roles `SECRETARIA`, `PRESIDENTE`)
 - `/dashboard/follow-up/adverse-events`, `/dashboard/follow-up/adverse-events/new`, `/dashboard/renewals/request`
-- `/dashboard/reports/{stats|msp|custom}` (roles `SECRETARIA`, `PRESIDENTE`, `ADMIN_TI`)
-- `/dashboard/audit/trail/:id`, `/dashboard/notifications/center`
-- `/dashboard/investigador/*` (las rutas del investigador también admiten `SECRETARIA`)
+- `/dashboard/reports/{stats|msp|custom}` (roles `SECRETARIA`, `PRESIDENTE`)
+- `/dashboard/audit/logs`, `/dashboard/audit/trail/:id` (roles `SECRETARIA`, `PRESIDENTE`), `/dashboard/notifications/center`
+- `/dashboard/investigador/*` (las rutas del investigador también admiten `SECRETARIA`; ver D2 en §8)
 
 **Evaluador**
 - `/dashboard/home`, `/dashboard/profile`, `/dashboard/notifications/center`
@@ -237,13 +242,13 @@ Las rutas con `data.permissions` dependen de los permisos que el backend asigne 
 - `/dashboard/home`, `/dashboard/profile`, `/dashboard/notifications/center`
 - `/dashboard/resolutions/calls`, `/dashboard/resolutions/generator`
 - `/dashboard/reports/{stats|msp|custom}`, `/dashboard/audit/trail/:id`
-- `/dashboard/admin/ai-assistant` (roles `ADMIN_TI`, `PRESIDENTE`)
+- `/dashboard/admin/ai-assistant` (rol `SECRETARIA`; administración del asistente IA)
 
 **Investigador**
 - `/dashboard/home`, `/dashboard/profile`, `/dashboard/notifications/center`
 - `/dashboard/investigador/{nuevo-protocolo|mis-protocolos|protocolo/:id/editar|protocolo-legacy/:id|evento-adverso/:id|renovacion/:id}`
 - `/dashboard/investigador/protocolo/:id` → redirige a `/dashboard/protocols/workspace/:id/info`
 
-**Fuera de los 4 roles** (se verifican igual): `/dashboard/audit/logs` y `/dashboard/notifications/templates` (rol `ADMIN`); `/auth/{login|register|confirm-email|setup-account|forgot-password|reset-password}`.
+**Sin rol del comité** (se verifican igual): `/auth/{login|register|confirm-email|setup-account|forgot-password|reset-password}`. `audit/logs` y `notifications/templates` ya tienen roles de la matriz (ver Secretaría).
 
 **Redirigidas en T01b** (deben llevar a `/dashboard/home`): `/dashboard/admin/security`, `/dashboard/amendments`, `/dashboard/investigador/enmienda/:id`.
