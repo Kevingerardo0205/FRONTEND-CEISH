@@ -8,6 +8,6 @@ export const AI_ASSISTANT_ADMIN_ROUTES: Routes = [
     loadComponent: () =>
       import('./presentation/pages/ai-assistant-admin.page').then((m) => m.AiAssistantAdminPage),
     canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['ADMIN_TI', 'PRESIDENTE'] },
+    data: { roles: ['SECRETARIA'] },
   },
 ];

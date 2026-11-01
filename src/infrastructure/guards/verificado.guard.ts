@@ -19,9 +19,9 @@ export class VerificadoGuard implements CanActivate {
       return this.router.createUrlTree(['/auth/login']);
     }
 
-    // Roles administrativos no requieren verificación de email para gestionar el sistema
-    const adminRoles = ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'ADMIN_TI'];
-    if (this.authFacade.hasAnyRole(adminRoles)) {
+    // Los roles del comité no requieren verificación de email para gestionar el sistema
+    const committeeRoles = ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR'];
+    if (this.authFacade.hasAnyRole(committeeRoles)) {
       return true;
     }
 

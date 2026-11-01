@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { DashboardPage } from './presentation/pages/dashboard.page';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
+import { RoleGuard } from '@infrastructure/guards/role.guard';
 
 export const DASHBOARD_ROUTES: Routes = [
   {
@@ -22,8 +23,8 @@ export const DASHBOARD_ROUTES: Routes = [
         path: 'admin/users',
         loadComponent: () =>
           import('./presentation/pages/user-management.page').then((m) => m.UserManagementPage),
-        canActivate: [AuthGuard],
-        data: { permissions: ['USUARIOS_VER'] },
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['SECRETARIA'], permissions: ['USUARIOS_VER'] },
       },
       // Retirado en F00-T01b: fuera de alcance (el código se borra en F08).
       {
@@ -34,8 +35,8 @@ export const DASHBOARD_ROUTES: Routes = [
         path: 'admin/ai-assistant',
         loadChildren: () =>
           import('@features/ai-assistant-admin/routes').then((m) => m.AI_ASSISTANT_ADMIN_ROUTES),
-        canActivate: [AuthGuard],
-        data: { permissions: ['CONFIG_PLANTILLAS'] },
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['SECRETARIA'], permissions: ['CONFIG_PLANTILLAS'] },
       },
       {
         path: 'admin/templates',
@@ -43,8 +44,8 @@ export const DASHBOARD_ROUTES: Routes = [
           import('./presentation/pages/template-management/template-management.page').then(
             (m) => m.TemplateManagementPage,
           ),
-        canActivate: [AuthGuard],
-        data: { permissions: ['CONFIG_PLANTILLAS'] },
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['SECRETARIA'], permissions: ['CONFIG_PLANTILLAS'] },
       },
       {
         path: 'protocols',
@@ -87,8 +88,8 @@ export const DASHBOARD_ROUTES: Routes = [
       {
         path: 'audit',
         loadChildren: () => import('@features/audit/routes').then((m) => m.AUDIT_ROUTES),
-        canActivate: [AuthGuard],
-        data: { permissions: ['ADMIN_ALL'] },
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['SECRETARIA', 'PRESIDENTE'] },
       },
       {
         path: 'notifications',

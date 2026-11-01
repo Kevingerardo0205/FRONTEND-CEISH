@@ -7,7 +7,7 @@ export const AUDIT_ROUTES: Routes = [
     loadComponent: () =>
       import('./presentation/pages/audit-logs/audit-logs.page').then((m) => m.AuditLogsPage),
     canActivate: [RoleGuard],
-    data: { roles: ['ADMIN'] },
+    data: { roles: ['SECRETARIA', 'PRESIDENTE'] },
   },
   {
     path: 'trail/:id',
@@ -16,7 +16,7 @@ export const AUDIT_ROUTES: Routes = [
         (m) => m.ProtocolTrailPage,
       ),
     canActivate: [RoleGuard],
-    data: { roles: ['SECRETARIA', 'PRESIDENTE', 'PRESIDENTA', 'ADMIN'] },
+    data: { roles: ['SECRETARIA', 'PRESIDENTE'] },
   },
   {
     path: '',

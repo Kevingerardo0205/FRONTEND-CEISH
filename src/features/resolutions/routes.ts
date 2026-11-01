@@ -15,7 +15,7 @@ export const RESOLUTION_ROUTES: Routes = [
           ),
         canActivate: [AuthGuard, RoleGuard],
         data: {
-          roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'],
+          roles: ['SECRETARIA', 'PRESIDENTE'],
           permissions: ['RESOLUCION_CONVOCATORIAS'],
         },
       },
@@ -23,7 +23,7 @@ export const RESOLUTION_ROUTES: Routes = [
         path: 'generator',
         component: ResolutionGeneratorPage,
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'] },
+        data: { roles: ['SECRETARIA', 'PRESIDENTE'] },
       },
       {
         path: '',

@@ -10,14 +10,14 @@ export const REPORTS_ROUTES: Routes = [
         (m) => m.StatsDashboardPage,
       ),
     canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'] },
+    data: { roles: ['SECRETARIA', 'PRESIDENTE'] },
   },
   {
     path: 'msp',
     loadComponent: () =>
       import('./presentation/pages/msp-reports/msp-reports.page').then((m) => m.MSPReportsPage),
     canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'] },
+    data: { roles: ['SECRETARIA', 'PRESIDENTE'] },
   },
   {
     path: 'custom',
@@ -26,7 +26,7 @@ export const REPORTS_ROUTES: Routes = [
         (m) => m.CustomReportBuilderPage,
       ),
     canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['SECRETARIA', 'PRESIDENTE', 'ADMIN_TI'] },
+    data: { roles: ['SECRETARIA', 'PRESIDENTE'] },
   },
 
   {
