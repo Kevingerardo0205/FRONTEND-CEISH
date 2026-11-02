@@ -15,13 +15,17 @@ export class InvalidRoleError extends Error {
  */
 export class Role {
   private static readonly ROLES: readonly Role[] = [
-    new Role('SECRETARIA'),
-    new Role('PRESIDENTE'),
-    new Role('EVALUADOR'),
-    new Role('INVESTIGADOR'),
+    new Role('SECRETARIA', 'Secretaría'),
+    new Role('PRESIDENTE', 'Presidente'),
+    new Role('EVALUADOR', 'Evaluador'),
+    new Role('INVESTIGADOR', 'Investigador'),
   ];
 
-  private constructor(readonly code: RoleCode) {}
+  private constructor(
+    readonly code: RoleCode,
+    /** Nombre legible para la interfaz (selector de rol). */
+    readonly label: string,
+  ) {}
 
   static fromBackend(code: unknown): Role {
     const role = Role.ROLES.find((r) => r.code === code);

@@ -41,7 +41,7 @@ export class ActiveRoleFacade {
     if (!this.availableRoles().includes(role)) return false;
     this.selectedRole.set(role);
     this.storeRole(role);
-    // TODO T13: navegar al inicio del rol elegido.
+    // La navegación al inicio del rol la hace presentation (RoleSelectorComponent, T13c).
     return true;
   }
 

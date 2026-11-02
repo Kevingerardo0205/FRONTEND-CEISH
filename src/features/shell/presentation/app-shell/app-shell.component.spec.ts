@@ -28,7 +28,9 @@ describe('AppShellComponent (T13b)', () => {
   };
 
   let mockActiveRoleFacade: {
+    availableRoles: ReturnType<typeof signal<RoleCode[]>>;
     activeRole: ReturnType<typeof signal<RoleCode | null>>;
+    switchRole: jasmine.Spy;
   };
 
   let mockPendingCountUseCase: {
@@ -49,7 +51,9 @@ describe('AppShellComponent (T13b)', () => {
     };
 
     mockActiveRoleFacade = {
+      availableRoles: signal<RoleCode[]>(['SECRETARIA', 'EVALUADOR']),
       activeRole: signal<RoleCode | null>('SECRETARIA'),
+      switchRole: jasmine.createSpy('switchRole').and.returnValue(true),
     };
 
     mockPendingCountUseCase = {
@@ -217,13 +221,14 @@ describe('AppShellComponent (T13b)', () => {
       expect(avatarName.nativeElement.textContent.trim()).toBe('Usuario Prueba');
     });
 
-    it('el menú de usuario contiene Mi perfil y espacio para el selector de rol', () => {
+    it('el menú de usuario muestra el selector de rol (T13c) con los roles disponibles', () => {
       const avatarBtn = fixture.debugElement.query(By.css('[data-testid="avatar-button"]'));
       avatarBtn.nativeElement.click();
       fixture.detectChanges();
 
-      const slot = document.querySelector('[data-testid="role-selector-slot"]');
-      expect(slot).not.toBeNull();
+      const selector = document.querySelector('app-role-selector [data-testid="role-selector"]');
+      expect(selector).not.toBeNull();
+      expect(selector?.querySelectorAll('.role-option').length).toBe(2);
     });
   });
 

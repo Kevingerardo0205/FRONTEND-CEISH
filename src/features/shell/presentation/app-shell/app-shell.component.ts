@@ -20,6 +20,7 @@ import { GetMenuForRoleUseCase } from '../../application/get-menu-for-role.use-c
 import { ActiveRoleFacade } from '../../application/active-role.facade';
 import { GetPendingCountUseCase } from '../../application/get-pending-count.use-case';
 import { SessionUserPort } from '../../domain/session-user.port';
+import { RoleSelectorComponent } from '../role-selector/role-selector.component';
 
 // Igual que el respaldo del backend (RagService.getAllowedRoles, HU-001 f).
 const ASSISTANT_FALLBACK_ROLES: readonly string[] = ['SECRETARIA', 'EVALUADOR', 'PRESIDENTE'];
@@ -42,6 +43,7 @@ const ASSISTANT_FALLBACK_ROLES: readonly string[] = ['SECRETARIA', 'EVALUADOR', 
     MatMenuModule,
     MatDividerModule,
     AiAssistantComponent,
+    RoleSelectorComponent,
   ],
   templateUrl: './app-shell.component.html',
   styleUrls: ['./app-shell.component.scss'],

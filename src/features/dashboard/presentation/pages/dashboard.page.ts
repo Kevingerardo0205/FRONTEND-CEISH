@@ -19,6 +19,7 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { SidebarComponent } from '../components/sidebar/sidebar.component';
 import { AiAssistantComponent } from '@shared/components/ai-assistant/ai-assistant.component';
 import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
+import { RoleSelectorComponent } from '@features/shell/presentation/role-selector/role-selector.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -34,6 +35,7 @@ import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepository
     MatDividerModule,
     SidebarComponent,
     AiAssistantComponent,
+    RoleSelectorComponent,
   ],
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss'],
