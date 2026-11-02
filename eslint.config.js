@@ -57,7 +57,7 @@ module.exports = tseslint.config(
   // R1: shared/ui
   layers(["src/shared/ui/**/*.ts"], [NO_HTTP, NO_INFRASTRUCTURE, NO_FEATURES]),
   // R1 + R4: presentation de shell
-  layers(["src/features/shell/presentation/**/*.ts"], [NO_HTTP, NO_INFRASTRUCTURE, NO_OTHER_FEATURES]),
+  layers(["src/features/shell/presentation/**/*.ts"], [NO_HTTP, NO_INFRASTRUCTURE, NO_OTHER_FEATURES_EXCEPT_AUTH]),
   // R2 + R4: application de shell
   layers(["src/features/shell/application/**/*.ts"], [NO_HTTP, NO_INFRASTRUCTURE, NO_OTHER_FEATURES]),
   // R3 + R4: domain de shell

@@ -1,0 +1,124 @@
+<div class="shell-layout">
+  <!-- BARRA LATERAL (SIDEBAR) -->
+  <aside class="shell-sidebar" aria-label="Navegación lateral">
+    <div class="sidebar-header">
+      <div class="brand-logo">
+        <span class="brand-title">CEISH</span>
+        <span class="brand-subtitle">ESPOCH</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Menú principal">
+      <ul class="nav-list">
+        @for (item of menuItems(); track item.id) {
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              #rla="routerLinkActive"
+              [attr.aria-current]="rla.isActive ? 'page' : null"
+            >
+              <mat-icon class="nav-icon">{{ getIcon(item.id) }}</mat-icon>
+              <span class="nav-label">{{ item.label }}</span>
+
+              @if (item.badge === 'pendientes' && pendingCount() !== null && pendingCount() !== undefined) {
+                <span class="pending-badge" data-testid="pending-badge">{{ pendingCount() }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button
+        type="button"
+        class="nav-link logout-link"
+        (click)="onLogout()"
+        aria-label="Cerrar sesión"
+      >
+        <mat-icon class="nav-icon">logout</mat-icon>
+        <span class="nav-label">Cerrar sesión</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL Y BARRA SUPERIOR -->
+  <div class="shell-main">
+    <!-- BARRA SUPERIOR (TOPBAR) -->
+    <header class="shell-topbar" role="banner">
+      <div class="topbar-left">
+        <span class="topbar-title">Comité de Ética de Investigación en Seres Humanos</span>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Notificaciones: enlace a center sin badge mientras no haya fuente -->
+        <a
+          mat-icon-button
+          routerLink="/dashboard/notifications/center"
+          class="bell-btn"
+          aria-label="Notificaciones"
+          data-testid="notifications-bell"
+        >
+          <mat-icon>notifications</mat-icon>
+        </a>
+
+        <mat-divider vertical class="topbar-divider"></mat-divider>
+
+        <!-- Avatar de Usuario y Menú -->
+        <button
+          type="button"
+          mat-button
+          [matMenuTriggerFor]="userMenu"
+          class="avatar-btn"
+          aria-label="Menú de usuario"
+          data-testid="avatar-button"
+        >
+          <div class="avatar-circle">
+            {{ userInitials() }}
+          </div>
+          <span class="avatar-name">{{ userName() }}</span>
+          <mat-icon class="expand-icon">expand_more</mat-icon>
+        </button>
+
+        <mat-menu #userMenu="matMenu" xPosition="before" class="user-dropdown-panel">
+          <div class="dropdown-header">
+            <div class="dropdown-avatar">{{ userInitials() }}</div>
+            <div class="dropdown-user-info">
+              <span class="dropdown-name">{{ userName() }}</span>
+              <span class="dropdown-email">{{ userEmail() }}</span>
+            </div>
+          </div>
+
+          <!-- Espacio reservado para selector de rol activo (T13c) -->
+          <div class="role-selector-slot" data-testid="role-selector-slot"></div>
+
+          <mat-divider></mat-divider>
+
+          <button mat-menu-item routerLink="/dashboard/profile" class="dropdown-item">
+            <mat-icon>person_outline</mat-icon>
+            <span>Mi perfil</span>
+          </button>
+
+          <mat-divider></mat-divider>
+
+          <button mat-menu-item (click)="onLogout()" class="dropdown-item logout-item">
+            <mat-icon>logout</mat-icon>
+            <span>Cerrar sesión</span>
+          </button>
+        </mat-menu>
+      </div>
+    </header>
+
+    <!-- CUERPO DE CONTENIDO -->
+    <main class="shell-content" role="main">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+
+  <!-- ASISTENTE DE IA INTELIGENTE RAG -->
+  @if (showAssistant()) {
+    <app-ai-assistant></app-ai-assistant>
+  }
+</div>
