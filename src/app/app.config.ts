@@ -40,7 +40,11 @@ import { ReportRepositoryAdapter } from '../features/reports/infrastructure/adap
 import { IMeetingRepositoryPort } from '@domain/ports/IMeetingRepositoryPort';
 import { MeetingApiAdapter } from '@infrastructure/adapters/meeting-api.adapter';
 import { SessionRolesPort } from '@features/shell/domain/session-roles.port';
-import { AuthSessionRolesAdapter } from '@features/shell/infrastructure/auth-session-roles.adapter';
+import {
+  AuthSessionRolesAdapter,
+  AuthSessionUserAdapter,
+} from '@features/shell/infrastructure/auth-session-roles.adapter';
+import { SessionUserPort } from '@features/shell/domain/session-user.port';
 import { MenuConfigPort } from '@domain/ports/menu-config.port';
 import { StaticMenuConfigAdapter } from '@features/shell/infrastructure/menu.config';
 
@@ -67,6 +71,8 @@ export const appConfig: ApplicationConfig = {
     { provide: IReportRepositoryPort, useClass: ReportRepositoryAdapter },
     { provide: IMeetingRepositoryPort, useClass: MeetingApiAdapter },
     { provide: SessionRolesPort, useClass: AuthSessionRolesAdapter },
+    { provide: SessionUserPort, useClass: AuthSessionUserAdapter },
+    // Registro único: GetMenuForRoleUseCase es providedIn 'root' y solo ve el inyector raíz.
     { provide: MenuConfigPort, useClass: StaticMenuConfigAdapter },
   ],
 };

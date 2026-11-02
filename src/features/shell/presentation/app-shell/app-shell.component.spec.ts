@@ -2,12 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { AppShellComponent } from './app-shell.component';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '../../application/active-role.facade';
 import { GetMenuForRoleUseCase } from '../../application/get-menu-for-role.use-case';
 import { GetPendingCountUseCase } from '../../application/get-pending-count.use-case';
+import { SessionUser, SessionUserPort } from '../../domain/session-user.port';
 import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
 import { MenuConfigPort } from '@domain/ports/menu-config.port';
 import { StaticMenuConfigAdapter } from '../../infrastructure/menu.config';
@@ -22,8 +22,8 @@ describe('AppShellComponent (T13b)', () => {
   let fixture: ComponentFixture<AppShellComponent>;
   let router: Router;
 
-  let mockAuthFacade: {
-    currentUser: ReturnType<typeof signal>;
+  let mockSessionUser: {
+    user$: BehaviorSubject<SessionUser | null>;
     logout: jasmine.Spy;
   };
 
@@ -39,19 +39,12 @@ describe('AppShellComponent (T13b)', () => {
     getAllowedRoles: jasmine.Spy;
   };
 
-  const createMockUser = (rol: string, nombre = 'Usuario Prueba') => ({
-    id: 'user-1',
-    nombre,
-    email: 'usuario.prueba@example.test',
-    rol,
-    roles: [rol],
-    activo: true,
-    emailVerificado: true,
-  });
-
   beforeEach(async () => {
-    mockAuthFacade = {
-      currentUser: signal(createMockUser('SECRETARIA')),
+    mockSessionUser = {
+      user$: new BehaviorSubject<SessionUser | null>({
+        name: 'Usuario Prueba',
+        email: 'usuario.prueba@example.test',
+      }),
       logout: jasmine.createSpy('logout'),
     };
 
@@ -82,7 +75,7 @@ describe('AppShellComponent (T13b)', () => {
           { path: 'dashboard/profile', component: DummyComponent },
           { path: 'dashboard/notifications/center', component: DummyComponent },
         ]),
-        { provide: AuthFacade, useValue: mockAuthFacade },
+        { provide: SessionUserPort, useValue: mockSessionUser },
         { provide: ActiveRoleFacade, useValue: mockActiveRoleFacade },
         { provide: MenuConfigPort, useClass: StaticMenuConfigAdapter },
         { provide: GetPendingCountUseCase, useValue: mockPendingCountUseCase },
@@ -122,9 +115,8 @@ describe('AppShellComponent (T13b)', () => {
     });
   });
 
-  describe('Cálculo de menú con rol activo vs user.rol', () => {
-    it('muestra el menú de Secretaría si activeRole es SECRETARIA aunque user.rol sea INVESTIGADOR', () => {
-      mockAuthFacade.currentUser.set(createMockUser('INVESTIGADOR'));
+  describe('Menú calculado con el rol activo', () => {
+    it('muestra el menú de Secretaría si el rol activo es SECRETARIA', () => {
       mockActiveRoleFacade.activeRole.set('SECRETARIA');
       fixture.detectChanges();
 
@@ -133,8 +125,7 @@ describe('AppShellComponent (T13b)', () => {
       expect(items[0].label).toBe('Mis pendientes');
     });
 
-    it('no muestra el menú de Secretaría si activeRole no es SECRETARIA aunque user.rol sea SECRETARIA', () => {
-      mockAuthFacade.currentUser.set(createMockUser('SECRETARIA'));
+    it('no muestra el menú de Secretaría si el rol activo es INVESTIGADOR', () => {
       mockActiveRoleFacade.activeRole.set('INVESTIGADOR');
       fixture.detectChanges();
 
@@ -143,10 +134,6 @@ describe('AppShellComponent (T13b)', () => {
     });
 
     it('no muestra el menú de Secretaría a un usuario con varios roles si el rol activo es EVALUADOR', () => {
-      mockAuthFacade.currentUser.set({
-        ...createMockUser('SECRETARIA'),
-        roles: ['SECRETARIA', 'EVALUADOR'],
-      });
       mockActiveRoleFacade.activeRole.set('EVALUADOR');
       fixture.detectChanges();
 
@@ -206,11 +193,11 @@ describe('AppShellComponent (T13b)', () => {
   });
 
   describe('Barra superior', () => {
-    it('no contiene ningún campo de búsqueda global (D7)', () => {
-      const searchBox = fixture.debugElement.query(
-        By.css('.search-box, input[type="search"], input[placeholder*="Buscar"]'),
+    it('no contiene ningún elemento de búsqueda global (D7: oculta hasta que exista el endpoint)', () => {
+      const search = fixture.debugElement.queryAll(
+        By.css('input[type="search"], .search-box, [role="search"], input[placeholder*="Buscar"]'),
       );
-      expect(searchBox).toBeNull();
+      expect(search.length).toBe(0);
     });
 
     it('la campana de notificaciones tiene enlace a /dashboard/notifications/center y sin badge', () => {
@@ -241,20 +228,20 @@ describe('AppShellComponent (T13b)', () => {
   });
 
   describe('Cerrar sesión', () => {
-    it('el botón de cerrar sesión en el sidebar ejecuta authFacade.logout() y redirige a /auth/login', () => {
+    it('el botón de cerrar sesión en el sidebar cierra la sesión por el puerto y redirige a /auth/login', () => {
       spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
       const logoutBtn = fixture.debugElement.query(By.css('.logout-link'));
       logoutBtn.nativeElement.click();
 
-      expect(mockAuthFacade.logout).toHaveBeenCalledTimes(1);
+      expect(mockSessionUser.logout).toHaveBeenCalledTimes(1);
       expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
     });
 
-    it('la opción de cerrar sesión en el menú de usuario ejecuta authFacade.logout() y redirige a /auth/login', () => {
+    it('la opción de cerrar sesión en el menú de usuario cierra la sesión por el puerto y redirige a /auth/login', () => {
       spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
       component.onLogout();
 
-      expect(mockAuthFacade.logout).toHaveBeenCalledTimes(1);
+      expect(mockSessionUser.logout).toHaveBeenCalledTimes(1);
       expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
     });
   });
@@ -278,7 +265,7 @@ describe('AppShellComponent (T13b)', () => {
       expect(assistant).toBeNull();
     });
 
-    it('la lista de roles de respaldo no contiene ADMIN_TI', () => {
+    it('la lista de roles de respaldo es la del backend (sin ADMIN_TI ni INVESTIGADOR)', () => {
       mockAiAssistantRepo.getAllowedRoles.and.returnValue(
         throwError(() => new Error('Error al cargar roles')),
       );
@@ -287,8 +274,7 @@ describe('AppShellComponent (T13b)', () => {
       testFixture.detectChanges();
 
       const roles = testFixture.componentInstance.allowedAssistantRoles();
-      expect(roles).toEqual(['SECRETARIA', 'EVALUADOR', 'PRESIDENTE', 'INVESTIGADOR']);
-      expect(roles).not.toContain('ADMIN_TI');
+      expect(roles).toEqual(['SECRETARIA', 'EVALUADOR', 'PRESIDENTE']);
     });
   });
 

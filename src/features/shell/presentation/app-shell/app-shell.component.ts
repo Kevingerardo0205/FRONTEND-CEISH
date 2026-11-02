@@ -14,12 +14,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { AiAssistantComponent } from '@shared/components/ai-assistant/ai-assistant.component';
 import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
 import { GetMenuForRoleUseCase } from '../../application/get-menu-for-role.use-case';
 import { ActiveRoleFacade } from '../../application/active-role.facade';
 import { GetPendingCountUseCase } from '../../application/get-pending-count.use-case';
+import { SessionUserPort } from '../../domain/session-user.port';
+
+// Igual que el respaldo del backend (RagService.getAllowedRoles, HU-001 f).
+const ASSISTANT_FALLBACK_ROLES: readonly string[] = ['SECRETARIA', 'EVALUADOR', 'PRESIDENTE'];
 
 /**
  * AppShell: Armazón de la aplicación (spec-ui §4).
@@ -45,7 +48,7 @@ import { GetPendingCountUseCase } from '../../application/get-pending-count.use-
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppShellComponent implements OnInit {
-  private readonly authFacade = inject(AuthFacade);
+  private readonly sessionUser = inject(SessionUserPort);
   private readonly router = inject(Router);
   private readonly getMenuForRoleUseCase = inject(GetMenuForRoleUseCase);
   private readonly activeRoleFacade = inject(ActiveRoleFacade);
@@ -70,8 +73,8 @@ export class AppShellComponent implements OnInit {
   );
 
   // Usuario y avatar
-  readonly user = this.authFacade.currentUser;
-  readonly userName = computed(() => this.user()?.nombre || 'Usuario');
+  readonly user = toSignal(this.sessionUser.user$, { initialValue: null });
+  readonly userName = computed(() => this.user()?.name || 'Usuario');
   readonly userEmail = computed(() => this.user()?.email || '');
   readonly userInitials = computed(() => {
     const name = this.userName().trim();
@@ -84,7 +87,7 @@ export class AppShellComponent implements OnInit {
       .toUpperCase();
   });
 
-  // Roles permitidos para el asistente de IA (respaldo sin ADMIN_TI, TSK-001.1c)
+  // Roles permitidos para el asistente de IA
   readonly allowedAssistantRoles = signal<string[]>([]);
   readonly showAssistant = computed(() => {
     const role = this.activeRole();
@@ -102,21 +105,11 @@ export class AppShellComponent implements OnInit {
             '[AppShell] Error al cargar roles permitidos del asistente de IA. Usando lista de respaldo.',
             err,
           );
-          this.allowedAssistantRoles.set([
-            'SECRETARIA',
-            'EVALUADOR',
-            'PRESIDENTE',
-            'INVESTIGADOR',
-          ]);
+          this.allowedAssistantRoles.set([...ASSISTANT_FALLBACK_ROLES]);
         },
       });
     } else {
-      this.allowedAssistantRoles.set([
-        'SECRETARIA',
-        'EVALUADOR',
-        'PRESIDENTE',
-        'INVESTIGADOR',
-      ]);
+      this.allowedAssistantRoles.set([...ASSISTANT_FALLBACK_ROLES]);
     }
   }
 
@@ -138,7 +131,7 @@ export class AppShellComponent implements OnInit {
   }
 
   onLogout(): void {
-    this.authFacade.logout();
+    this.sessionUser.logout();
     this.router.navigate(['/auth/login']);
   }
 }
