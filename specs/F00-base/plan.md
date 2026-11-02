@@ -34,7 +34,9 @@ src/
 | `src/features/shell/domain/pending-count.port.ts` | `PendingCountPort`: `count$: Observable<number>` (clase abstracta) |
 | `src/features/shell/application/` | `get-menu-for-role.use-case.ts`, `active-role.facade.ts`, `get-pending-count.use-case.ts` (fuente del badge 'pendientes') |
 | `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session-roles.adapter.ts` (`AuthSessionRolesAdapter`, implementa `SessionRolesPort` con `AuthFacade`); `pending-count-mock.adapter.ts` (valor fijo configurable con `PENDING_COUNT_MOCK_VALUE`, 6 por defecto); `pending-count-http.adapter.ts` (`GET /secretaria/pendientes`, cuenta las filas; FALTA en backend, no se registra todavía) |
-| `src/features/shell/shell.providers.ts` | `SHELL_PROVIDERS`: `PendingCountPort` → mock. Se registra en las rutas de la sección en T13 |
+| `src/features/shell/shell.providers.ts` | `SHELL_PROVIDERS`: vacío desde la corrección de T13b (41a8571). `MenuConfigPort`, `SessionRolesPort` y `SessionUserPort` se registran en `app.config.ts`; `PendingCountPort` no se registra hasta que exista `GET /secretaria/pendientes` (el mock solo se usa en pruebas). Se retira en T14 |
+| `src/features/shell/domain/role-home.ts` | `ROLE_HOME`: inicio de cada rol (D3). SECRETARIA → `/pendientes`; PRESIDENTE, EVALUADOR e INVESTIGADOR → `/dashboard/home`. Único lugar donde se cambia |
+| `src/features/shell/presentation/role-selector/` | `RoleSelectorComponent` (T13c): selector de rol activo; navega a `ROLE_HOME` |
 | `src/infrastructure/api/endpoints.constant.ts` | `ENDPOINTS.SECRETARIA.PENDIENTES` |
 | `src/shared/ui/` | `stage-bar`, `page-header`, `button-group`, `tabs`, `filter-bar`, `data-table`, `status-chip`, `states`, `undo-toast` (servicio, componente y host), `dialog`, `inline-panel` |
 | `src/app/app.component.ts` | Monta `<app-undo-toast-host />` una sola vez, junto al `router-outlet` |

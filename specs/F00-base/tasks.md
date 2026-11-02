@@ -21,7 +21,7 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 | T12 | infra | Port PendingCountPort + adapter mock (+ HTTP marcado FALTA) | features/shell/infrastructure/* + spec | El contador del menú sale del mock | Hecho (1df1f71) |
 | T13a | infra + rutas | Códigos de rol en las rutas según la matriz fija (D2, D4, D5, D6) y `verificado.guard` con los 3 roles del comité | features/{ai-assistant-admin,audit,notifications,reports,resolutions,investigador,protocols,evaluations}/routes.ts, features/dashboard/routes.ts, src/infrastructure/guards/verificado.guard.ts + specs | Ningún `data.roles` usa códigos fuera de `Role.all()`; la tabla ruta→roles de D2/D4/D5 y las pruebas de `verificado.guard` están en verde | Hecho (bfd2dfc; 590 pruebas; mutaciones M1–M5 detectadas) |
 | T13b | presentation | Providers de shell (`MenuConfigPort` y `SHELL_PROVIDERS`, hoy sin registrar) + AppShell de la Secretaría con menú lateral de 5 entradas y barra superior | features/shell/shell.providers.ts, src/app/app.config.ts, features/shell/presentation/app-shell/* + spec | Criterio 1 de spec-ui | Hecho (d87b76b; corrección 41a8571: búsqueda oculta, `SessionUserPort`, `MenuConfigPort` solo en app.config.ts, contador sin mock en la app real; 618 pruebas; mutaciones A–H detectadas) |
-| T13c | presentation | Selector de rol con navegación al inicio de cada rol | features/shell/presentation/app-shell/* (selector) + spec | Criterios 3 y 8 de spec-ui | Pendiente |
+| T13c | presentation | Selector de rol con navegación al inicio de cada rol | features/shell/presentation/app-shell/* (selector) + spec | Criterios 3 y 8 de spec-ui | Hecho (7ee153a; 627 pruebas; mutaciones M1–M6 detectadas; `ROLE_HOME` en features/shell/domain/role-home.ts; selector también en DashboardPage) |
 | T13d | presentation + app | Rutas nuevas bajo el AppShell (`/pendientes`, `/protocolos`, `/convocatorias`, `/reportes`, `/configuracion`) con lazy loading, redirects desde `/dashboard/...` donde haya equivalente y `RoleGuard` que redirige al inicio del rol activo | src/app/app.routes.ts, features/shell/presentation/app-shell/* + spec | Criterio 4 de spec-ui | Pendiente |
 | T14 | — | Retirar solo lo que quede sin uso tras F00b (DashboardPage, sidebar, menu-ui.config.ts, permissions.directive.ts y dashboard-routing.module.ts, con sus pruebas, cuando ningún rol los use) | — | No quedan imports de código retirado; build y pruebas en verde. `DashboardPage`, el `sidebar` y `menu-ui.config.ts` siguen vivos para PRESIDENTE, EVALUADOR e INVESTIGADOR | Pendiente |
 | T14b | docs | Regla de uso de StatusChip con ProtocolUI (no había duplicado) | specs/F00-base/plan.md (§8, §9, §10) | Regla escrita en plan §9; ningún mapeo estado→texto ni estado→tono fuera de ProtocolUI | Hecho (6bae87e) |
@@ -31,7 +31,7 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
-- Línea base actual: **618 pruebas** (corrección de T13b: +4; `shell.providers.spec` pasa de 2 a 4 y `AuthSessionUserAdapter` agrega 2). Antes de la corrección eran 614, con **21** pruebas en `AppShellComponent` (no 16, como decía la fila anterior); antes de T13b, 590; antes de T13a, 584.
+- Línea base actual: **627 pruebas** (T13c: +9; 6 en `RoleSelectorComponent`, 2 en `dashboard.page.spec` y 1 en el Role VO, por el nombre legible). Antes de T13c eran 618 (corrección de T13b: +4; `shell.providers.spec` pasa de 2 a 4 y `AuthSessionUserAdapter` agrega 2). Antes de la corrección eran 614, con **21** pruebas en `AppShellComponent` (no 16, como decía la fila anterior); antes de T13b, 590; antes de T13a, 584.
 
 ### Auditoría de mutaciones (28/10/2026)
 
@@ -92,3 +92,20 @@ Mutaciones medidas con `npx ng test --watch=false --browsers=ChromeHeadless --in
 
 - `GET /secretaria/pendientes` no existe en el backend: no hay controlador `secretaria` y solo aparece en `specs/003-flujo-mvp/spec.md:198` (RF-ALR.f). Sin `PendingCountPort` registrado, `GetPendingCountUseCase` emite `null` y el contador queda oculto. `PendingCountMockAdapter` solo se usa en pruebas.
 - `SessionUserPort` (`features/shell/domain`) y su adapter `AuthSessionUserAdapter` se registran en `app.config.ts`, igual que `SessionRolesPort`. El adapter vive en `auth-session-roles.adapter.ts`, la única excepción de capas que puede leer `@features/auth`, para no tocar `eslint.config.js`, que volvió a quedar igual que en `d87b76b~1`.
+
+### Auditoría de mutaciones T13c (02/11/2026) — RoleSelectorComponent + ROLE_HOME · 627 pruebas totales
+
+Mutaciones medidas con `npx ng test --watch=false --browsers=ChromeHeadless`, sobre `src/features/shell/**/*.spec.ts`, `dashboard.page.spec.ts` y `role.vo.spec.ts` (79 pruebas). Cada una se revirtió editando y se comprobó que el hash de `git diff` volvía al de partida.
+
+| Mutación | Qué se rompió | Prueba que falla | Tests |
+|---|---|---|---|
+| M1 selector con un solo rol | `visible = roles().length > 0` | criterio 8: con un solo rol no hay selector; DashboardPage: con un solo rol, el menú de avatar no muestra el selector | 2 failed, 77 passed |
+| M2 no navegar después de cambiar | Quitar `router.navigateByUrl(ROLE_HOME[code])` | criterio 3: al cambiar de rol cambia el activo y navega al inicio del rol nuevo; criterio 8: SECRETARIA+EVALUADOR con EVALUADOR activo, al cambiar a SECRETARIA queda en /pendientes | 2 failed, 77 passed |
+| M3 navegar al inicio del rol anterior | `ROLE_HOME[previous]` con el rol activo antes del cambio | las mismas dos de M2 | 2 failed, 77 passed |
+| M4 navegar aunque `switchRole` devuelva false | Navegar fuera del `if` | si switchRole devuelve false, no navega | 1 failed, 78 passed |
+| M5 quitar el selector de DashboardPage | Borrar `<app-role-selector>` de `dashboard.page.html` | DashboardPage: el menú de avatar muestra el selector para volver a SECRETARIA; DashboardPage: con un solo rol, el menú de avatar no muestra el selector | 2 failed, 77 passed |
+| M6 SECRETARIA → `/dashboard/home` en `ROLE_HOME` | `SECRETARIA: '/dashboard/home'` | criterio 8: SECRETARIA+EVALUADOR con EVALUADOR activo, al cambiar a SECRETARIA queda en /pendientes | 1 failed, 78 passed |
+
+- Criterio 8, parte del rol inicial: ya lo cubren `active-role.facade.spec.ts` ("con varios roles y nada guardado, activa el de mayor prioridad" y "usa el último rol guardado si sigue siendo válido"). No se duplicó.
+- "Ve el menú de Secretaría" con el rol activo SECRETARIA lo cubre `app-shell.component.spec.ts` (T13b).
+- La navegación al inicio la hace presentation (`RoleSelectorComponent`), no `ActiveRoleFacade`. El TODO T13 del facade se reemplazó por esa nota.

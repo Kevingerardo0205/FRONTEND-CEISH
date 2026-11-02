@@ -33,6 +33,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 **Selector de rol activo:**
 - Solo aparece si la persona tiene más de un rol.
 - Al cambiar de rol, se recarga el menú y se navega al inicio de ese rol.
+- Mientras existan los dos layouts (D1), el selector vive en el avatar del AppShell y también en el menú de avatar de `DashboardPage`, para que quien cambie a PRESIDENTE, EVALUADOR o INVESTIGADOR pueda volver a SECRETARIA (T13c, 02/11/2026).
 - El rol inicial sigue la regla de `plan.md` §2 (application — rol activo): el último elegido si sigue siendo válido; si no, el de mayor prioridad (SECRETARIA > PRESIDENTE > EVALUADOR > INVESTIGADOR).
 
 ### Alcance de F00b (31/10/2026)
