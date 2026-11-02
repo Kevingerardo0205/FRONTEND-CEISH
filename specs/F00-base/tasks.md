@@ -20,7 +20,7 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 | T11 | presentation | UndoToast (servicio + componente), Dialog, InlinePanel | src/shared/ui/*, infrastructure/services/notification.service.ts + specs | Criterio 5; foco atrapado y Esc en Dialog | Hecho (a88fb24) |
 | T12 | infra | Port PendingCountPort + adapter mock (+ HTTP marcado FALTA) | features/shell/infrastructure/* + spec | El contador del menú sale del mock | Hecho (1df1f71) |
 | T13a | infra + rutas | Códigos de rol en las rutas según la matriz fija (D2, D4, D5, D6) y `verificado.guard` con los 3 roles del comité | features/{ai-assistant-admin,audit,notifications,reports,resolutions,investigador,protocols,evaluations}/routes.ts, features/dashboard/routes.ts, src/infrastructure/guards/verificado.guard.ts + specs | Ningún `data.roles` usa códigos fuera de `Role.all()`; la tabla ruta→roles de D2/D4/D5 y las pruebas de `verificado.guard` están en verde | Hecho (bfd2dfc; 590 pruebas; mutaciones M1–M5 detectadas) |
-| T13b | presentation | Providers de shell (`MenuConfigPort` y `SHELL_PROVIDERS`, hoy sin registrar) + AppShell de la Secretaría con menú lateral de 5 entradas y barra superior | features/shell/shell.providers.ts, src/app/app.config.ts, features/shell/presentation/app-shell/* + spec | Criterio 1 de spec-ui | Pendiente |
+| T13b | presentation | Providers de shell (`MenuConfigPort` y `SHELL_PROVIDERS`, hoy sin registrar) + AppShell de la Secretaría con menú lateral de 5 entradas y barra superior | features/shell/shell.providers.ts, src/app/app.config.ts, features/shell/presentation/app-shell/* + spec | Criterio 1 de spec-ui | Hecho (d87b76b; 614 pruebas; mutaciones M1–M6 detectadas; MenuConfigPort registrado en app.config.ts y shell.providers.ts) |
 | T13c | presentation | Selector de rol con navegación al inicio de cada rol | features/shell/presentation/app-shell/* (selector) + spec | Criterios 3 y 8 de spec-ui | Pendiente |
 | T13d | presentation + app | Rutas nuevas bajo el AppShell (`/pendientes`, `/protocolos`, `/convocatorias`, `/reportes`, `/configuracion`) con lazy loading, redirects desde `/dashboard/...` donde haya equivalente y `RoleGuard` que redirige al inicio del rol activo | src/app/app.routes.ts, features/shell/presentation/app-shell/* + spec | Criterio 4 de spec-ui | Pendiente |
 | T14 | — | Retirar solo lo que quede sin uso tras F00b (DashboardPage, sidebar, menu-ui.config.ts, permissions.directive.ts y dashboard-routing.module.ts, con sus pruebas, cuando ningún rol los use) | — | No quedan imports de código retirado; build y pruebas en verde. `DashboardPage`, el `sidebar` y `menu-ui.config.ts` siguen vivos para PRESIDENTE, EVALUADOR e INVESTIGADOR | Pendiente |
@@ -31,7 +31,7 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
-- Línea base actual: **590 pruebas** (T13a: +6; `verificado.guard.spec` pasa de 5 a 7 y `route-roles.spec` agrega 4). Antes de T13a eran 584.
+- Línea base actual: **614 pruebas** (T13b: +24; 16 en AppShellComponent, 6 en get-pending-count.use-case, 2 en shell.providers). Antes de T13b eran 590 (y antes de T13a eran 584).
 
 ### Auditoría de mutaciones (28/10/2026)
 
@@ -67,3 +67,17 @@ Las mutaciones de rutas se midieron con `route-roles.spec.ts` (4 pruebas); la de
 | M3 quitar SECRETARIA de notifications/templates | `roles: ['PRESIDENTE']` | mantiene la tabla ruta → roles de las decisiones D2, D4 y D5 | 1 failed, 3 passed |
 | M4 agregar PRESIDENTA a una ruta de investigador | `roles: ['INVESTIGADOR', 'SECRETARIA', 'PRESIDENTA']` en `investigador/nuevo-protocolo` | no usa códigos de rol fuera de Role.all(); mantiene la tabla ruta → roles de las decisiones D2, D4 y D5 | 2 failed, 2 passed |
 | M5 quitar un rol del comité de los exentos de verificado.guard | lista `['SECRETARIA', 'PRESIDENTE']`, sin `EVALUADOR` | debe consultar los 3 roles del comité exentos de verificación; debe bloquear y notificar a un investigador no verificado (no exento) | 2 failed, 5 passed |
+
+### Auditoría de mutaciones T13b (02/11/2026) — AppShellComponent + shell providers · 614 pruebas totales
+
+Las 6 mutaciones (M1–M6) se probaron con `npx ng test --watch=false --browsers=ChromeHeadless` y se revirtieron editando el archivo, verificando `git diff --stat` tras cada reversión.
+
+| Mutación | Qué se rompió | Prueba que falla | Tests |
+|---|---|---|---|
+| M1 invertir el orden de los elementos del menú | `.map((item) => ...).reverse()` en `menuItems` computado | AppShellComponent Menú lateral (Sidebar) debe renderizar exactamente 5 enlaces de navegación en el orden del spec (§4, Criterio 1); AppShellComponent Menú lateral (Sidebar) el primer elemento debe ser 'Mis pendientes' con ruta '/dashboard/secretaria' | 2 failed, 612 passed |
+| M2 calcular el menú con `user.rol` en lugar de `activeRole` | `menuConfig.getMenu(this.authFacade.currentUser()?.rol || 'SECRETARIA')` | AppShellComponent Menú lateral (Sidebar) debe computar el menú a partir del rol activo de ActiveRoleFacade (no del rol estático de AuthFacade); AppShellComponent Menú lateral (Sidebar) debe reactualizar el menú cuando el rol activo cambie; AppShellComponent Menú lateral (Sidebar) no debe mostrar las 5 opciones de secretaría si el rol activo no es SECRETARIA | 3 failed, 611 passed |
+| M3 quitar `routerLinkActive` o `aria-current` del enlace activo | Eliminar `[attr.aria-current]="rla.isActive ? 'page' : null"` en `app-shell.component.html` | AppShellComponent Menú lateral (Sidebar) debe marcar el elemento activo con routerLinkActive y aria-current="page" | 1 failed, 613 passed |
+| M4 quitar `MenuConfigPort` de `app.config.ts` | Eliminar `{ provide: MenuConfigPort, useClass: StaticMenuConfigAdapter }` de `appConfig` | AppShellComponent Providers en app.config.ts debe registrar MenuConfigPort sin lanzar NullInjectorError | 1 failed, 613 passed |
+| M5 mostrar el contador en 0 cuando no hay fuente disponible | `pendingCount = computed(() => this.rawPendingCount() ?? 0)` | AppShellComponent Contador de pendientes (badge) no debe mostrarse si la fuente no está disponible o es null (Regla 7); AppShellComponent Contador de pendientes (badge) no debe mostrar un '0' inventado cuando el valor es null; AppShellComponent Contador de pendientes (badge) debe ocultarse si el observable de pendientes emite error | 3 failed, 611 passed |
+| M6 volver a incluir un campo de búsqueda en la barra superior (violando D7) | Agregar `<div class="search-box"><input type="search" ... /></div>` en `app-shell.component.html` | AppShellComponent Barra superior (TopBar) no debe incluir barra de búsqueda global (D7) | 1 failed, 613 passed |
+
