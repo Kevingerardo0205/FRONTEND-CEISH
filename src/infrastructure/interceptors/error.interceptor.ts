@@ -9,6 +9,7 @@ import {
 import { Observable, throwError, BehaviorSubject, of } from 'rxjs';
 import { catchError, filter, take, switchMap, retry, delay } from 'rxjs/operators';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -96,7 +97,9 @@ export class ErrorInterceptor implements HttpInterceptor {
                 ),
             );
           }
-          this.router.navigate(['/dashboard']);
+          // D12: inicio del rol activo. RoleHome se pide al Injector aquí, igual que AuthFacade,
+          // para no crear un ciclo HttpClient → interceptor → ActiveRoleFacade → AuthFacade.
+          this.router.navigateByUrl(this.injector.get(RoleHome).urlTree());
           return throwError(() => new Error('No tienes permisos para acceder a este recurso.'));
         }
 

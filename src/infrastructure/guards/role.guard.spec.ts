@@ -5,6 +5,7 @@ import { ActiveRoleFacade } from '@features/shell/application/active-role.facade
 import { NotificationService } from '@infrastructure/services/notification.service';
 import { appConfig } from '@app/app.config';
 import { RoleGuard } from './role.guard';
+import { NO_ACTIVE_ROLE_MESSAGE } from './role-home.guard';
 
 describe('RoleGuard (rol activo — spec-001 v3.5.3)', () => {
   let guard: RoleGuard;
@@ -26,7 +27,7 @@ describe('RoleGuard (rol activo — spec-001 v3.5.3)', () => {
     mockAuthFacade = jasmine.createSpyObj('AuthFacade', ['currentUser']);
     mockActiveRoleFacade = jasmine.createSpyObj('ActiveRoleFacade', ['activeRole']);
     mockNotificationService = jasmine.createSpyObj('NotificationService', ['notify']);
-    mockRouter = jasmine.createSpyObj('Router', ['createUrlTree']);
+    mockRouter = jasmine.createSpyObj('Router', ['createUrlTree', 'parseUrl']);
 
     TestBed.configureTestingModule({
       providers: [
@@ -74,30 +75,49 @@ describe('RoleGuard (rol activo — spec-001 v3.5.3)', () => {
     );
     // Activo: INVESTIGADOR; ruta requiere SECRETARIA → debe denegar
     mockActiveRoleFacade.activeRole.and.returnValue('INVESTIGADOR');
-    mockRouter.createUrlTree.and.returnValue('/dashboard' as any);
+    mockRouter.parseUrl.and.returnValue('/dashboard/home' as any);
     const route = { data: { roles: ['SECRETARIA'] } } as unknown as ActivatedRouteSnapshot;
     const result = guard.canActivate(route);
     expect(mockNotificationService.notify).toHaveBeenCalledWith(
       'No tiene acceso a esta sección con el rol activo.',
       'info',
     );
-    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
-    expect(result).toBe('/dashboard' as any);
+    // D12: vuelve al inicio del rol activo (ROLE_HOME), no a /dashboard.
+    expect(mockRouter.parseUrl).toHaveBeenCalledWith('/dashboard/home');
+    expect(result).toBe('/dashboard/home' as any);
+  });
+
+  it('(d2) D12: SECRETARIA+EVALUADOR con EVALUADOR activo en ruta de SECRETARIA vuelve a /dashboard/home', () => {
+    mockAuthFacade.currentUser.and.returnValue(
+      { ...USUARIO_PRUEBA, roles: ['SECRETARIA', 'EVALUADOR'] } as any,
+    );
+    mockActiveRoleFacade.activeRole.and.returnValue('EVALUADOR');
+    mockRouter.parseUrl.and.callFake((url: string) => url as any);
+    const route = { data: { roles: ['SECRETARIA'] } } as unknown as ActivatedRouteSnapshot;
+    expect(guard.canActivate(route)).toBe('/dashboard/home' as any);
+  });
+
+  it('(d3) D12: PRESIDENTE activo en ruta de EVALUADOR vuelve al inicio de PRESIDENTE', () => {
+    mockAuthFacade.currentUser.and.returnValue(USUARIO_PRUEBA as any);
+    mockActiveRoleFacade.activeRole.and.returnValue('PRESIDENTE');
+    mockRouter.parseUrl.and.callFake((url: string) => url as any);
+    const route = { data: { roles: ['EVALUADOR'] } } as unknown as ActivatedRouteSnapshot;
+    expect(guard.canActivate(route)).toBe('/dashboard/home' as any);
+    expect(mockRouter.createUrlTree).not.toHaveBeenCalledWith(['/dashboard']);
   });
 
   // (e) sin rol activo (null) → redirige + notify
   it('(e) deniega si activeRole() devuelve null (usuario sin rol vigente reconocido)', () => {
     mockAuthFacade.currentUser.and.returnValue(USUARIO_PRUEBA as any);
     mockActiveRoleFacade.activeRole.and.returnValue(null);
-    mockRouter.createUrlTree.and.returnValue('/dashboard' as any);
+    mockRouter.createUrlTree.and.returnValue('/auth/login' as any);
     const route = { data: { roles: ['SECRETARIA'] } } as unknown as ActivatedRouteSnapshot;
     const result = guard.canActivate(route);
-    expect(mockNotificationService.notify).toHaveBeenCalledWith(
-      'No tiene acceso a esta sección con el rol activo.',
-      'info',
-    );
-    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
-    expect(result).toBe('/dashboard' as any);
+    // D12: sin rol activo → /auth/login con "Su cuenta no tiene un rol vigente." (un solo aviso).
+    expect(mockNotificationService.notify).toHaveBeenCalledOnceWith(NO_ACTIVE_ROLE_MESSAGE, 'info');
+    expect(NO_ACTIVE_ROLE_MESSAGE).toBe('Su cuenta no tiene un rol vigente.');
+    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/auth/login']);
+    expect(result).toBe('/auth/login' as any);
   });
 
   // (f) data.roles como cadena → funciona
@@ -112,7 +132,7 @@ describe('RoleGuard (rol activo — spec-001 v3.5.3)', () => {
   it('notifica exactamente una vez por intento de acceso denegado', () => {
     mockAuthFacade.currentUser.and.returnValue(USUARIO_PRUEBA as any);
     mockActiveRoleFacade.activeRole.and.returnValue('INVESTIGADOR');
-    mockRouter.createUrlTree.and.returnValue('/dashboard' as any);
+    mockRouter.parseUrl.and.returnValue('/dashboard/home' as any);
     const route = { data: { roles: ['SECRETARIA', 'PRESIDENTE'] } } as unknown as ActivatedRouteSnapshot;
     guard.canActivate(route);
     expect(mockNotificationService.notify).toHaveBeenCalledTimes(1);
@@ -123,7 +143,7 @@ describe('RoleGuard (rol activo — spec-001 v3.5.3)', () => {
     mockAuthFacade.currentUser.and.returnValue(
       { ...USUARIO_PRUEBA, roles: ['EVALUADOR', 'PRESIDENTE'] } as any,
     );
-    mockRouter.createUrlTree.and.returnValue('/dashboard' as any);
+    mockRouter.parseUrl.and.returnValue('/dashboard/home' as any);
     const route = { data: { roles: ['PRESIDENTE'] } } as unknown as ActivatedRouteSnapshot;
 
     mockActiveRoleFacade.activeRole.and.returnValue('PRESIDENTE');
@@ -136,8 +156,8 @@ describe('RoleGuard (rol activo — spec-001 v3.5.3)', () => {
       'No tiene acceso a esta sección con el rol activo.',
       'info',
     );
-    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
-    expect(result).toBe('/dashboard' as any);
+    expect(mockRouter.parseUrl).toHaveBeenCalledWith('/dashboard/home');
+    expect(result).toBe('/dashboard/home' as any);
   });
 
   // prueba del provider (M7: quitar el provider de app.config.ts → falla)

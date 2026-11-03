@@ -1,8 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { Provider } from '@angular/core';
+import { NEVER, of } from 'rxjs';
 import { Route, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { RoleCode } from '@domain/value-objects/role.vo';
+import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
+import { LoginPage } from '@features/auth/presentation/pages/login.page';
+import { NO_ACTIVE_ROLE_MESSAGE } from '@infrastructure/guards/role-home.guard';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { NotificationService } from '@infrastructure/services/notification.service';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
@@ -24,10 +29,12 @@ describe('Rutas por rol activo (T13d)', () => {
 
   /** Sesión de prueba: `roles` vigentes; sin roles, no hay sesión. */
   async function start(
-    roles: RoleCode[] | null,
+    roles: string[] | null,
     active?: RoleCode,
     permissions: string[] = [],
+    extra: Provider[] = [],
   ): Promise<void> {
+    let token: string | null = roles ? 'token-de-prueba' : null;
     if (roles) {
       localStorage.setItem(
         'user',
@@ -50,14 +57,15 @@ describe('Rutas por rol activo (T13d)', () => {
         {
           provide: TokenStoreAdapter,
           useValue: {
-            getToken: () => (roles ? 'token-de-prueba' : null),
+            getToken: () => token,
             getRefreshToken: () => null,
-            saveToken: () => undefined,
+            saveToken: (t: string) => (token = t),
             saveRefreshToken: () => undefined,
             removeTokens: () => undefined,
           },
         },
         { provide: NotificationService, useValue: { notify } },
+        ...extra,
       ],
     });
     harness = await RouterTestingHarness.create();
@@ -212,6 +220,78 @@ describe('Rutas por rol activo (T13d)', () => {
       expect(TestBed.inject(ActiveRoleFacade).activeRole()).toBe('EVALUADOR');
       expect(router.url).toBe('/dashboard/home');
       expect(has('app-dashboard')).toBeTrue();
+      // D14: user.rol es SECRETARIA, pero DashboardHomePage elige con el rol activo.
+      expect(has('app-dashboard-home')).toBeTrue();
+      expect(has('app-dashboard-secretaria')).toBeFalse();
+    });
+  });
+
+  describe('D13: login e inicio sin rol activo', () => {
+    async function loginAs(roles: string[]): Promise<void> {
+      const user = {
+        id: 1,
+        nombre: 'Usuario Prueba',
+        email: 'usuario.prueba@example.test',
+        rol: roles[0],
+        roles,
+        permissions: [],
+      };
+      await start(
+        null,
+        undefined,
+        [],
+        [
+          {
+            provide: IAuthRepositoryPort,
+            useValue: {
+              login: () => of({ accessToken: 'token-de-prueba', refreshToken: 'r', user }),
+              logAudit: () => of(undefined),
+              getUserById: () => NEVER,
+            },
+          },
+        ],
+      );
+      const page = (await harness.navigateByUrl('/auth/login', LoginPage)) as LoginPage;
+      page.loginForm.setValue({ email: user.email, password: 'clave-de-prueba' });
+      page.onSubmit();
+      await harness.fixture.whenStable();
+      harness.fixture.detectChanges();
+    }
+
+    it('login de SECRETARIA → /pendientes (inicio del rol activo)', async () => {
+      await loginAs(['SECRETARIA']);
+      expect(router.url).toBe('/pendientes');
+      expect(has('app-shell')).toBeTrue();
+    });
+
+    it('login de EVALUADOR → /dashboard/home', async () => {
+      await loginAs(['EVALUADOR']);
+      expect(router.url).toBe('/dashboard/home');
+      expect(has('app-dashboard')).toBeTrue();
+    });
+
+    it('login sin rol reconocido → /auth/login con aviso', async () => {
+      await loginAs(['ADMIN_TI']);
+      expect(router.url).toBe('/auth/login');
+      expect(notify).toHaveBeenCalledOnceWith(NO_ACTIVE_ROLE_MESSAGE, 'info');
+    });
+
+    it("sesión sin rol activo: '' → /auth/login con aviso", async () => {
+      await start(['ADMIN_TI']);
+
+      await harness.navigateByUrl('/');
+
+      expect(router.url).toBe('/auth/login');
+      expect(notify).toHaveBeenCalledOnceWith(NO_ACTIVE_ROLE_MESSAGE, 'info');
+    });
+
+    it('sesión sin rol activo: /pendientes → /auth/login con un solo aviso', async () => {
+      await start(['ADMIN_TI']);
+
+      await harness.navigateByUrl('/pendientes');
+
+      expect(router.url).toBe('/auth/login');
+      expect(notify).toHaveBeenCalledOnceWith(NO_ACTIVE_ROLE_MESSAGE, 'info');
     });
   });
 

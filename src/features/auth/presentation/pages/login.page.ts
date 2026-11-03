@@ -18,6 +18,7 @@ import { LoginUseCase } from '../../use-cases';
 
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { OtpVerificationDialogComponent } from '../components/otp-verification/otp-verification-dialog.component';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
 
 @Component({
   selector: 'app-login-page',
@@ -457,6 +458,7 @@ export class LoginPage {
   private readonly fb = inject(FormBuilder);
   private readonly loginUseCase = inject(LoginUseCase);
   private readonly router = inject(Router);
+  private readonly roleHome = inject(RoleHome);
   private readonly dialog = inject(MatDialog);
 
   loginForm: FormGroup;
@@ -485,7 +487,8 @@ export class LoginPage {
       this.loginUseCase.execute(this.loginForm.value).subscribe({
         next: () => {
           this.isLoading.set(false);
-          this.router.navigate(['/dashboard/home']);
+          // D13: inicio del rol activo (T13d-0: el rol ya está disponible tras setAuth).
+          this.router.navigateByUrl(this.roleHome.urlTree());
         },
         error: (err: any) => {
           this.isLoading.set(false);

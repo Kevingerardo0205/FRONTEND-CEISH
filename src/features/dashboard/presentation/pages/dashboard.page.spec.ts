@@ -9,6 +9,11 @@ import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepository
 import { RoleCode } from '@domain/value-objects/role.vo';
 import { SidebarComponent } from '../components/sidebar/sidebar.component';
 import { DashboardPage } from './dashboard.page';
+import { registerLocaleData } from '@angular/common';
+import localeEs from '@angular/common/locales/es';
+
+// La barra muestra la fecha con locale 'es': la prueba no depende de que otro spec lo registre.
+registerLocaleData(localeEs);
 
 @Component({ selector: 'app-sidebar', standalone: true, template: '' })
 class SidebarStubComponent {
@@ -17,7 +22,7 @@ class SidebarStubComponent {
 }
 
 describe('DashboardPage: selector de rol (T13c)', () => {
-  function setup(available: RoleCode[]) {
+  function setup(available: RoleCode[], assistantRoles: string[] = []) {
     TestBed.configureTestingModule({
       imports: [DashboardPage],
       providers: [
@@ -40,7 +45,7 @@ describe('DashboardPage: selector de rol (T13c)', () => {
         },
         {
           provide: IAiAssistantRepositoryPort,
-          useValue: { getAllowedRoles: () => of({ allowedRoles: [] }) },
+          useValue: { getAllowedRoles: () => of({ allowedRoles: assistantRoles }) },
         },
       ],
     });
@@ -61,6 +66,27 @@ describe('DashboardPage: selector de rol (T13c)', () => {
     const selector = document.querySelector('app-role-selector [data-testid="role-selector"]');
     expect(selector).not.toBeNull();
     expect(selector?.querySelector('.role-option[data-role="SECRETARIA"]')).not.toBeNull();
+  });
+
+  it('D14: el role-badge muestra la etiqueta del rol activo, no user.rol', () => {
+    // user.rol del mock es EVALUADOR; el rol activo es SECRETARIA.
+    setup(['SECRETARIA', 'EVALUADOR']);
+
+    expect(document.querySelector('.role-badge')?.textContent?.trim()).toBe('Secretaría');
+  });
+
+  it('D14: showAssistant decide con el rol activo, no con user.rol', () => {
+    // El asistente solo admite SECRETARIA; user.rol es EVALUADOR y el rol activo SECRETARIA.
+    const fixture = setup(['SECRETARIA', 'EVALUADOR'], ['SECRETARIA']);
+
+    expect(fixture.componentInstance.showAssistant()).toBeTrue();
+  });
+
+  it('D14: con EVALUADOR activo y asistente solo de SECRETARIA, no se muestra', () => {
+    const fixture = setup(['EVALUADOR'], ['SECRETARIA']);
+
+    expect(fixture.componentInstance.showAssistant()).toBeFalse();
+    expect(document.querySelector('.role-badge')?.textContent?.trim()).toBe('Evaluador');
   });
 
   it('con un solo rol, el menú de avatar no muestra el selector', () => {

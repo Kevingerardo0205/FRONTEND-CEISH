@@ -4,6 +4,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { of } from 'rxjs';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { VerificadoGuard } from './verificado.guard';
+import { RoleHome } from './role-home.guard';
 
 const COMMITTEE_ROLES = ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR'];
 
@@ -33,6 +34,7 @@ describe('VerificadoGuard (role-based email verification)', () => {
         { provide: AuthFacade, useValue: mockAuthFacade },
         { provide: Router, useValue: mockRouter },
         { provide: MatSnackBar, useValue: mockSnackBar },
+        { provide: RoleHome, useValue: { urlTree: () => '/dashboard/home' } },
       ],
     });
 
@@ -85,8 +87,6 @@ describe('VerificadoGuard (role-based email verification)', () => {
     mockAuthFacade.currentUser.and.returnValue(unverifiedUser('INVESTIGADOR') as any);
     mockAuthFacade.hasAnyRole.and.returnValue(false);
     mockSnackBar.open.and.returnValue({ onAction: () => of(undefined) } as any);
-    mockRouter.createUrlTree.and.returnValue('/dashboard' as any);
-
     const result = guard.canActivate();
 
     expect(mockAuthFacade.hasAnyRole).toHaveBeenCalledWith(COMMITTEE_ROLES);
@@ -95,7 +95,8 @@ describe('VerificadoGuard (role-based email verification)', () => {
       jasmine.any(String),
       jasmine.any(Object),
     );
-    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
-    expect(result).toBe('/dashboard' as any);
+    // D12: vuelve al inicio del rol activo (RoleHome), no a /dashboard.
+    expect(mockRouter.createUrlTree).not.toHaveBeenCalled();
+    expect(result).toBe('/dashboard/home' as any);
   });
 });

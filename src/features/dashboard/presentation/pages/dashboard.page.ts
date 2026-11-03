@@ -20,6 +20,8 @@ import { SidebarComponent } from '../components/sidebar/sidebar.component';
 import { AiAssistantComponent } from '@shared/components/ai-assistant/ai-assistant.component';
 import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
 import { RoleSelectorComponent } from '@features/shell/presentation/role-selector/role-selector.component';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import { Role } from '@domain/value-objects/role.vo';
 
 @Component({
   selector: 'app-dashboard',
@@ -44,6 +46,7 @@ export class DashboardPage implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly router = inject(Router);
   private readonly aiAssistantRepository = inject(IAiAssistantRepositoryPort);
+  private readonly activeRoleFacade = inject(ActiveRoleFacade);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
@@ -57,11 +60,15 @@ export class DashboardPage implements OnInit {
 
   userName = computed(() => this.user()?.nombre || 'Usuario');
   userEmail = computed(() => this.user()?.email || '');
-  userRole = computed(() => this.user()?.rol || 'Invitado');
+  // D14 (03/11/2026): el avatar y el asistente usan el rol activo, no user.rol.
+  userRole = computed(() => {
+    const active = this.activeRoleFacade.activeRole();
+    return active ? Role.fromBackend(active).label : 'Invitado';
+  });
   showAssistant = computed(() => {
-    const role = this.userRole();
+    const active = this.activeRoleFacade.activeRole();
     const allowed = this.allowedRoles();
-    return allowed.some((r) => r.toUpperCase() === role.toUpperCase());
+    return !!active && allowed.some((r) => r.toUpperCase() === active);
   });
   userInitials = computed(() => {
     const name = this.userName();

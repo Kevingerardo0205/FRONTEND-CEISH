@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, Router, UrlTree } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { RoleHome } from './role-home.guard';
 
 @Injectable({
   providedIn: 'root',
@@ -8,6 +9,7 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
 export class AuthGuard implements CanActivate {
   private authFacade = inject(AuthFacade);
   private router = inject(Router);
+  private roleHome = inject(RoleHome);
 
   canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
     // 1. Verificar Autenticación
@@ -50,6 +52,7 @@ export class AuthGuard implements CanActivate {
       `[AuthGuard] Acceso denegado: Usuario ${user?.email} (${user?.rol}) no cuenta con los permisos requeridos: ${requiredPermissions}. Permisos actuales:`,
       userPermissions,
     );
-    return this.router.createUrlTree(['/dashboard']);
+    // D12: vuelve al inicio del rol activo.
+    return this.roleHome.urlTree();
   }
 }
