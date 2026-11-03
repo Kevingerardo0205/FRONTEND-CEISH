@@ -1,0 +1,273 @@
+import { TestBed } from '@angular/core/testing';
+import { Route, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { RoleCode } from '@domain/value-objects/role.vo';
+import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
+import { NotificationService } from '@infrastructure/services/notification.service';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import { ROLE_HOME } from '@features/shell/domain/role-home';
+import { RoleSelectorComponent } from '@features/shell/presentation/role-selector/role-selector.component';
+import { appConfig } from './app.config';
+import { SECRETARIA_ROUTES, routes } from './app.routes';
+
+const ROLE_KEY = 'ceish.activeRole';
+
+/**
+ * Rutas de T13d (D9–D11, D13) con el router, los guards, AuthFacade, ActiveRoleFacade y
+ * el adapter reales; solo el almacén de tokens, las notificaciones y HTTP son de prueba.
+ */
+describe('Rutas por rol activo (T13d)', () => {
+  let notify: jasmine.Spy;
+  let harness: RouterTestingHarness;
+  let router: Router;
+
+  /** Sesión de prueba: `roles` vigentes; sin roles, no hay sesión. */
+  async function start(
+    roles: RoleCode[] | null,
+    active?: RoleCode,
+    permissions: string[] = [],
+  ): Promise<void> {
+    if (roles) {
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          id: 1,
+          nombre: 'Usuario Prueba',
+          email: 'usuario.prueba@example.test',
+          rol: roles[0],
+          roles,
+          permissions,
+        }),
+      );
+    }
+    if (active) localStorage.setItem(ROLE_KEY, active);
+    notify = jasmine.createSpy('notify');
+    TestBed.configureTestingModule({
+      providers: [
+        ...appConfig.providers,
+        provideHttpClientTesting(),
+        {
+          provide: TokenStoreAdapter,
+          useValue: {
+            getToken: () => (roles ? 'token-de-prueba' : null),
+            getRefreshToken: () => null,
+            saveToken: () => undefined,
+            saveRefreshToken: () => undefined,
+            removeTokens: () => undefined,
+          },
+        },
+        { provide: NotificationService, useValue: { notify } },
+      ],
+    });
+    harness = await RouterTestingHarness.create();
+    router = TestBed.inject(Router);
+  }
+
+  const has = (selector: string) => harness.fixture.nativeElement.querySelector(selector) !== null;
+
+  beforeEach(() => {
+    localStorage.removeItem('user');
+    localStorage.removeItem(ROLE_KEY);
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('user');
+    localStorage.removeItem(ROLE_KEY);
+  });
+
+  describe('criterio 4: rutas solo de SECRETARIA', () => {
+    it('INVESTIGADOR que abre /pendientes vuelve a /dashboard/home con aviso', async () => {
+      await start(['INVESTIGADOR']);
+
+      await harness.navigateByUrl('/pendientes');
+
+      expect(router.url).toBe('/dashboard/home');
+      expect(notify).toHaveBeenCalledOnceWith(
+        'No tiene acceso a esta sección con el rol activo.',
+        'info',
+      );
+    });
+
+    it('EVALUADOR que abre /reportes vuelve a /dashboard/home con aviso', async () => {
+      await start(['EVALUADOR']);
+
+      await harness.navigateByUrl('/reportes');
+
+      expect(router.url).toBe('/dashboard/home');
+      expect(notify).toHaveBeenCalledTimes(1);
+    });
+
+    it('SECRETARIA en /pendientes ve el AppShell', async () => {
+      await start(['SECRETARIA']);
+
+      await harness.navigateByUrl('/pendientes');
+
+      expect(router.url).toBe('/pendientes');
+      expect(has('app-shell')).toBeTrue();
+      expect(has('app-dashboard')).toBeFalse();
+      expect(notify).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('D9: layout de /dashboard/... según el rol activo', () => {
+    it('SECRETARIA en /dashboard/protocols/workspace/1/info ve el AppShell', async () => {
+      await start(['SECRETARIA']);
+
+      await harness.navigateByUrl('/dashboard/protocols/workspace/1/info');
+
+      expect(router.url).toBe('/dashboard/protocols/workspace/1/info');
+      expect(has('app-shell')).toBeTrue();
+      expect(has('app-dashboard')).toBeFalse();
+    });
+
+    it('EVALUADOR en /dashboard/protocols/workspace/1/info ve DashboardPage', async () => {
+      await start(['EVALUADOR']);
+
+      await harness.navigateByUrl('/dashboard/protocols/workspace/1/info');
+
+      expect(router.url).toBe('/dashboard/protocols/workspace/1/info');
+      expect(has('app-dashboard')).toBeTrue();
+      expect(has('app-shell')).toBeFalse();
+    });
+
+    it('al cambiar de rol con el selector, la navegación al inicio del rol cambia de layout', async () => {
+      await start(['SECRETARIA', 'EVALUADOR'], 'SECRETARIA');
+      await harness.navigateByUrl('/pendientes');
+      expect(has('app-shell')).toBeTrue();
+
+      const selector = TestBed.createComponent(RoleSelectorComponent).componentInstance;
+      selector.select('EVALUADOR');
+      await harness.fixture.whenStable();
+      harness.fixture.detectChanges();
+
+      expect(router.url).toBe('/dashboard/home');
+      expect(has('app-dashboard')).toBeTrue();
+      expect(has('app-shell')).toBeFalse();
+
+      selector.select('SECRETARIA');
+      await harness.fixture.whenStable();
+      harness.fixture.detectChanges();
+
+      expect(router.url).toBe('/pendientes');
+      expect(has('app-shell')).toBeTrue();
+      expect(has('app-dashboard')).toBeFalse();
+    });
+  });
+
+  describe("D13: rutas '' y **", () => {
+    for (const url of ['/', '/ruta-que-no-existe']) {
+      it(`${url} con SECRETARIA va a /pendientes`, async () => {
+        await start(['SECRETARIA']);
+        await harness.navigateByUrl(url);
+        expect(router.url).toBe('/pendientes');
+      });
+
+      it(`${url} con EVALUADOR va a /dashboard/home`, async () => {
+        await start(['EVALUADOR']);
+        await harness.navigateByUrl(url);
+        expect(router.url).toBe('/dashboard/home');
+      });
+
+      it(`${url} sin sesión va a /auth/login`, async () => {
+        await start(null);
+        await harness.navigateByUrl(url);
+        expect(router.url).toBe('/auth/login');
+      });
+    }
+  });
+
+  describe('D11: /dashboard/home → /pendientes solo con SECRETARIA activa', () => {
+    it('SECRETARIA: /dashboard/home?tab=peers → /pendientes?tab=peers', async () => {
+      await start(['SECRETARIA']);
+
+      await harness.navigateByUrl('/dashboard/home?tab=peers');
+
+      expect(router.url).toBe('/pendientes?tab=peers');
+      expect(has('app-shell')).toBeTrue();
+    });
+
+    it('SECRETARIA: /dashboard → /pendientes', async () => {
+      await start(['SECRETARIA']);
+
+      await harness.navigateByUrl('/dashboard');
+
+      expect(router.url).toBe('/pendientes');
+    });
+
+    it('PRESIDENTE: /dashboard/home?tab=peers se queda en /dashboard/home', async () => {
+      await start(['PRESIDENTE']);
+
+      await harness.navigateByUrl('/dashboard/home?tab=peers');
+
+      expect(router.url).toBe('/dashboard/home?tab=peers');
+      expect(has('app-dashboard')).toBeTrue();
+    });
+
+    it('SECRETARIA+EVALUADOR con EVALUADOR activo se queda en /dashboard/home', async () => {
+      await start(['SECRETARIA', 'EVALUADOR'], 'EVALUADOR');
+
+      await harness.navigateByUrl('/dashboard/home');
+
+      expect(TestBed.inject(ActiveRoleFacade).activeRole()).toBe('EVALUADOR');
+      expect(router.url).toBe('/dashboard/home');
+      expect(has('app-dashboard')).toBeTrue();
+    });
+  });
+
+  describe('ROLE_HOME admite a su rol (sin bucle ni rechazo)', () => {
+    for (const role of ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`${role} entra a ${ROLE_HOME[role]} sin aviso`, async () => {
+        await start([role]);
+
+        await harness.navigateByUrl(ROLE_HOME[role]);
+
+        expect(router.url).toBe(ROLE_HOME[role]);
+        expect(notify).not.toHaveBeenCalled();
+      });
+    }
+  });
+
+  describe('D10: rutas nuevas lazy', () => {
+    const leaves = (list: Route[]): Route[] =>
+      list.flatMap((r) => (r.children ? leaves(r.children) : r.redirectTo ? [] : [r]));
+
+    it('las 5 entradas del menú existen bajo el AppShell', () => {
+      const paths = SECRETARIA_ROUTES.map((r) => r.path);
+      expect(paths).toEqual([
+        'pendientes',
+        'protocolos',
+        'convocatorias',
+        'reportes',
+        'configuracion',
+      ]);
+    });
+
+    it('cada ruta nueva usa loadComponent y no component', () => {
+      const pages = leaves(SECRETARIA_ROUTES);
+      expect(pages.length).toBe(5);
+      for (const page of pages) {
+        expect(page.loadComponent).withContext(String(page.path)).toBeDefined();
+        expect(page.component).withContext(String(page.path)).toBeUndefined();
+      }
+      const shell = routes.find((r) => r.children === SECRETARIA_ROUTES);
+      expect(shell?.loadComponent).toBeDefined();
+      expect(shell?.component).toBeUndefined();
+    });
+
+    it('cada ruta nueva exige el rol SECRETARIA con RoleGuard', () => {
+      for (const page of leaves(SECRETARIA_ROUTES)) {
+        expect(page.data?.['roles']).withContext(String(page.path)).toEqual(['SECRETARIA']);
+      }
+    });
+
+    it('/configuracion → /configuracion/usuarios para SECRETARIA', async () => {
+      await start(['SECRETARIA'], undefined, ['USUARIOS_VER']);
+
+      await harness.navigateByUrl('/configuracion');
+
+      expect(router.url).toBe('/configuracion/usuarios');
+      expect(has('app-shell')).toBeTrue();
+    });
+  });
+});
