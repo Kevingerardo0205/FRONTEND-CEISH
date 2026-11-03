@@ -41,6 +41,13 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - **D1 — AppShell solo para SECRETARIA.** El `AppShell` (menú lateral y barra superior) se monta únicamente para el rol activo `SECRETARIA`. `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` siguen con `DashboardPage` y su menú actual, sin cambios, hasta que se defina su sección.
 - **D3 — Inicio por rol.** `SECRETARIA` entra a `/pendientes` dentro del AppShell (hasta F01, la pantalla actual de la Secretaría de forma temporal). `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` entran a `/dashboard/home`, como hoy. Al cambiar de rol activo, cada uno va a su inicio. Se implementa en T13c y T13d.
 
+### Inicio por rol activo (T13d, 03/11/2026)
+
+- **D12 — Sin acceso, vuelve al inicio del rol activo.** `RoleGuard`, `AuthGuard`, `VerificadoGuard` y el 403 de `error.interceptor` mandan a `ROLE_HOME[rol activo]`. Sin rol activo (sesión sin un rol reconocido): `/auth/login` con el aviso "Su cuenta no tiene un rol vigente."
+- **D13 — Login y ruta raíz.** El login lleva a `ROLE_HOME[rol activo]`. Las rutas `''` y `**`: con sesión, `ROLE_HOME[rol activo]`; sin sesión, `/auth/login`.
+- **D14 — Layout actual con el rol activo.** En `DashboardPage`, la etiqueta del avatar y el asistente usan el rol activo (etiqueta del VO `Role`). `DashboardHomePage` elige su contenido con el rol activo, no con `user.rol`. El retiro sigue en T14.
+- **D15 — El rol activo existe en la primera navegación.** Al recargar y justo después del login, los guards ven el rol activo correcto. Se confirmó que llegaba tarde y se corrigió en el puerto de roles y en el facade (T13d-0).
+
 ## 3. Tokens de diseño
 
 | Token | Valor | Uso |
@@ -106,6 +113,19 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - Cada sección se carga de forma diferida (lazy).
 - Un guard por rol protege cada ruta.
 - Si alguien sin permiso entra a una ruta, vuelve a su inicio con un aviso.
+
+**Rutas de F00b (T13d, 03/11/2026):**
+
+- **D9 — `/dashboard/...` dentro del AppShell para la Secretaría.** `dashboard/routes.ts` tiene dos padres con los mismos hijos (`DASHBOARD_CHILDREN`): primero `AppShellComponent`, con `canMatch` por rol activo `SECRETARIA`; después `DashboardPage`, para los otros roles. Los dos llevan `AuthGuard`. Así, los enlaces a `/dashboard/...` de las pantallas de la Secretaría no la sacan del AppShell.
+- **D10 — Rutas nuevas, solo SECRETARIA.** Van bajo el AppShell, son lazy y llevan `RoleGuard` (`data.roles: ['SECRETARIA']`) más los permisos de la ruta de origen:
+  - `/pendientes` → `DashboardSecretariaPage`;
+  - `/protocolos` → `ProtocolValidationListPage` (temporal hasta F01);
+  - `/convocatorias` → `CallsManagementPage` (`RESOLUCION_CONVOCATORIAS`);
+  - `/reportes` → `StatsDashboardPage`;
+  - `/configuracion` → `/configuracion/usuarios` → `UserManagementPage` (`USUARIOS_VER`). Plazos es F08.
+
+  PRESIDENTE sigue entrando a convocatorias y reportes por `/dashboard/...`.
+- **D11 — `/dashboard/home`, `/dashboard` y `/dashboard/` → `/pendientes`.** Solo con el rol activo `SECRETARIA`, y conservando los query params (`?tab=peers`). Con otros roles no cambia. En F00b no hay otros redirects sin condición.
 
 **Roles por ruta (31/10/2026):**
 

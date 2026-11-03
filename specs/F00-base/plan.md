@@ -30,7 +30,7 @@ src/
 | `src/domain/value-objects/role.vo.ts` | 4 roles fijos: `SECRETARIA`, `PRESIDENTE`, `EVALUADOR`, `INVESTIGADOR`. Sin `ADMIN_TI`, `ADMIN` ni `PRESIDENTA`: confirmado por spec 001 v3.5.3 del backend (HU-001, TSK-001.1), 31/10/2026 |
 | `src/domain/entities/menu-item.entity.ts` | `{ id, label, route, roles: RoleCode[], badge?: 'pendientes' }` |
 | `src/domain/ports/menu-config.port.ts` | Port de la configuración del menú (clase abstracta) |
-| `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles$`). Clase abstracta para no importar `@angular` en domain |
+| `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles(): string[]`, lectura síncrona desde T13d-0; antes `roles$`). Clase abstracta para no importar `@angular` en domain |
 | `src/features/shell/domain/pending-count.port.ts` | `PendingCountPort`: `count$: Observable<number>` (clase abstracta) |
 | `src/features/shell/application/` | `get-menu-for-role.use-case.ts`, `active-role.facade.ts`, `get-pending-count.use-case.ts` (fuente del badge 'pendientes') |
 | `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session-roles.adapter.ts` (`AuthSessionRolesAdapter`, implementa `SessionRolesPort` con `AuthFacade`); `pending-count-mock.adapter.ts` (valor fijo configurable con `PENDING_COUNT_MOCK_VALUE`, 6 por defecto); `pending-count-http.adapter.ts` (`GET /secretaria/pendientes`, cuenta las filas; FALTA en backend, no se registra todavía) |
@@ -106,6 +106,10 @@ Cada sección amplía la regla a sus carpetas cuando las reemplaza. R3 aplicado 
 - **Avisos:** `notification.service` pasa a `UndoToast` + `Dialog`. La confirmación se reserva para lo irreversible.
 - **Etapas:** el backend no expone la etapa. Se usa un mapeo temporal estado→etapa basado en `shared/utils/estado.resolver.ts`, marcado `// TODO RF-EST.2` y cubierto por pruebas.
 - **Rutas viejas:** `/dashboard/...` redirige a las rutas nuevas, con el mismo patrón de redirects legacy de `features/protocols/routes.ts`.
+  - En F00b (T13d, D9–D11) hay un solo redirect, condicionado por rol: `/dashboard`, `/dashboard/` y `/dashboard/home` → `/pendientes` con el rol activo `SECRETARIA`, conservando los query params.
+  - **Regla de dos padres:** `dashboard/routes.ts` monta los mismos hijos (`DASHBOARD_CHILDREN`) bajo `AppShellComponent` (con `canMatch` por rol activo `SECRETARIA`, primero) y bajo `DashboardPage` (después). Retiro: el primero cuando F01–F08 muevan las pantallas de la Secretaría a sus rutas nuevas; el segundo en T14, cuando ningún rol use `DashboardPage`.
+  - Rutas nuevas en `app.routes.ts` (`SECRETARIA_ROUTES`, bajo el AppShell, lazy, con `RoleGuard` SECRETARIA): `/pendientes`, `/protocolos`, `/convocatorias`, `/reportes` y `/configuracion/usuarios`. Cada sección de F01–F08 reemplaza la pantalla temporal de su ruta.
+  - Inicio: `RoleHome` (`infrastructure/guards/role-home.guard.ts`) da `ROLE_HOME[rol activo]` a los guards, al interceptor, al login y a `''`/`**`.
 - **Espacio del protocolo:** `protocol-workspace` se reutiliza como base en F02–F07.
 
 ## 4. Reutilizar / Ajustar / Reemplazar / Retirar
@@ -221,11 +225,12 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 
 ## 11. Pantallas actuales a verificar en cada PR
 
-Fuente: `app.routes.ts`, `dashboard/routes.ts` y los `routes.ts` de cada feature. Todo cuelga de `/dashboard` (`DashboardPage`, `AuthGuard`).
+Fuente: `app.routes.ts`, `dashboard/routes.ts` y los `routes.ts` de cada feature. Todo cuelga de `/dashboard` (`AuthGuard`), salvo las rutas nuevas de la Secretaría. Desde T13d, `/dashboard/...` se muestra dentro del AppShell con el rol activo `SECRETARIA` y dentro de `DashboardPage` con los otros roles (regla de dos padres, §3).
 Las rutas con `data.permissions` dependen de los permisos que el backend asigne al rol; aquí se ubican por el rol que normalmente los tiene.
 
 **Secretaría**
-- `/dashboard/home` (`DashboardSecretariaPage` cuando `user.rol === 'SECRETARIA'`), `/dashboard/profile`
+- Rutas nuevas (T13d, D10; AppShell, `RoleGuard` SECRETARIA): `/pendientes` (`DashboardSecretariaPage`), `/protocolos` (`ProtocolValidationListPage`, temporal hasta F01), `/convocatorias` (`CallsManagementPage`), `/reportes` (`StatsDashboardPage`) y `/configuracion` → `/configuracion/usuarios` (`UserManagementPage`)
+- `/dashboard/home` → `/pendientes` con el rol activo `SECRETARIA` (D11). `DashboardHomePage` elige su contenido con el rol activo (D14). `/dashboard/profile`
 - `/dashboard/admin/users` (rol `SECRETARIA`, permiso `USUARIOS_VER`), `/dashboard/admin/templates` (rol `SECRETARIA`, permiso `CONFIG_PLANTILLAS`)
 - `/dashboard/protocols/list`, `/dashboard/protocols/validation/list`, `/dashboard/protocols/reception/new` (roles `SECRETARIA`), `/dashboard/protocols/workspace/:id/{info|validation|evaluation|follow-up}`
 - `/dashboard/evaluations/assignment`, `/dashboard/evaluations/reassignment/:protocolId`, `/dashboard/evaluations/reassign/:id`, `/dashboard/evaluations/consolidation/:id`, `/dashboard/evaluations/subsanaciones`
