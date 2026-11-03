@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { AuthSessionRolesAdapter, AuthSessionUserAdapter } from './auth-session-roles.adapter';
 
 describe('AuthSessionRolesAdapter', () => {
-  it('emite los roles vigentes de AuthFacade cada vez que cambia el usuario', () => {
+  it('dentro de un computed, da los roles vigentes al instante cada vez que cambia el usuario', () => {
     const user = signal<{ roles: string[] } | null>({ roles: ['SECRETARIA'] });
     TestBed.configureTestingModule({
       providers: [
@@ -16,14 +16,12 @@ describe('AuthSessionRolesAdapter', () => {
       ],
     });
     const adapter = TestBed.inject(AuthSessionRolesAdapter);
-    const emitted: string[][] = [];
-    adapter.roles$.subscribe((r) => emitted.push(r));
+    const roles = computed(() => adapter.roles());
 
-    TestBed.tick();
+    expect(roles()).toEqual(['SECRETARIA']);
     user.set({ roles: ['EVALUADOR', 'INVESTIGADOR'] });
-    TestBed.tick();
-
-    expect(emitted).toEqual([['SECRETARIA'], ['EVALUADOR', 'INVESTIGADOR']]);
+    // Sin TestBed.tick(): el cambio se ve sin esperar a un effect (T13d-0).
+    expect(roles()).toEqual(['EVALUADOR', 'INVESTIGADOR']);
   });
 });
 

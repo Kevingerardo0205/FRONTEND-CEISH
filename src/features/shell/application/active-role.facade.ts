@@ -1,5 +1,4 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { Role, RoleCode } from '@domain/value-objects/role.vo';
 import { SessionRolesPort } from '../domain/session-roles.port';
 
@@ -18,7 +17,9 @@ function isRoleCode(code: string | null): code is RoleCode {
  */
 @Injectable({ providedIn: 'root' })
 export class ActiveRoleFacade {
-  private sessionRoles = toSignal(inject(SessionRolesPort).roles$, { initialValue: [] });
+  private sessionRolesPort = inject(SessionRolesPort);
+  // computed y no toSignal(Observable): el rol activo se ve en la primera navegación (T13d-0).
+  private sessionRoles = computed(() => this.sessionRolesPort.roles());
   private selectedRole = signal<RoleCode | null>(this.readStoredRole());
 
   // Decisión tomada (spec-001 v3.5.3, 31/10/2026): solo existen los 4 roles del VO.
