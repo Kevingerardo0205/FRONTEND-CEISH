@@ -33,8 +33,8 @@ src/
 | `src/features/shell/domain/session-roles.port.ts` | `SessionRolesPort`: roles de la sesión (`roles(): string[]`, lectura síncrona desde T13d-0; antes `roles$`). Clase abstracta para no importar `@angular` en domain |
 | `src/features/shell/domain/pending-count.port.ts` | `PendingCountPort`: `count$: Observable<number>` (clase abstracta) |
 | `src/features/shell/application/` | `get-menu-for-role.use-case.ts`, `active-role.facade.ts`, `get-pending-count.use-case.ts` (fuente del badge 'pendientes') |
-| `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session-roles.adapter.ts` (`AuthSessionRolesAdapter`, implementa `SessionRolesPort` con `AuthFacade`); `pending-count-mock.adapter.ts` (valor fijo configurable con `PENDING_COUNT_MOCK_VALUE`, 6 por defecto); `pending-count-http.adapter.ts` (`GET /secretaria/pendientes`, cuenta las filas; FALTA en backend, no se registra todavía) |
-| `src/features/shell/shell.providers.ts` | `SHELL_PROVIDERS`: vacío desde la corrección de T13b (41a8571). `MenuConfigPort`, `SessionRolesPort` y `SessionUserPort` se registran en `app.config.ts`; `PendingCountPort` no se registra hasta que exista `GET /secretaria/pendientes` (el mock solo se usa en pruebas). Se retira en T14 |
+| `src/features/shell/infrastructure/` | `menu.config.ts` (menú de Secretaría, 5 entradas, y `StaticMenuConfigAdapter`); `auth-session.adapter.ts` (`AuthSessionRolesAdapter` y `AuthSessionUserAdapter`, implementan `SessionRolesPort` y `SessionUserPort` con `AuthFacade`; renombrado en T14, antes `auth-session-roles.adapter.ts`); `pending-count-mock.adapter.ts` (valor fijo configurable con `PENDING_COUNT_MOCK_VALUE`, 6 por defecto); `pending-count-http.adapter.ts` (`GET /secretaria/pendientes`, cuenta las filas; FALTA en backend, no se registra todavía) |
+| ~~`src/features/shell/shell.providers.ts`~~ | Retirado en T14 (estaba vacío desde 41a8571). `MenuConfigPort`, `SessionRolesPort` y `SessionUserPort` se registran en `app.config.ts`; `PendingCountPort` no se registra hasta que exista `GET /secretaria/pendientes`. Sus 4 pruebas sobre `appConfig` siguen en `src/app/app.config.shell.spec.ts` |
 | `src/features/shell/domain/role-home.ts` | `ROLE_HOME`: inicio de cada rol (D3). SECRETARIA → `/pendientes`; PRESIDENTE, EVALUADOR e INVESTIGADOR → `/dashboard/home`. Único lugar donde se cambia |
 | `src/features/shell/presentation/role-selector/` | `RoleSelectorComponent` (T13c): selector de rol activo; navega a `ROLE_HOME` |
 | `src/infrastructure/api/endpoints.constant.ts` | `ENDPOINTS.SECRETARIA.PENDIENTES` |
@@ -77,7 +77,7 @@ src/
 | `src/features/shell/domain/**` | `@angular/*`, infrastructure, otra sección (`rxjs` sí) |
 | `src/domain/value-objects/stage.vo.ts`, `role.vo.ts`, `src/domain/entities/menu-item.entity.ts`, `src/domain/ports/menu-config.port.ts` | `@angular/*`, infrastructure |
 | `src/features/shell/infrastructure/**`, `src/features/shell/*.ts` | otra sección (`shell.providers.ts`, raíz de composición, sí importa su infrastructure) |
-| `src/features/shell/infrastructure/auth-session-roles.adapter.ts` | otra sección salvo `@features/auth` (única excepción) |
+| `src/features/shell/infrastructure/auth-session.adapter.ts` | otra sección salvo `@features/auth` (única excepción) |
 
 Límite conocido: una ruta relativa a otra sección que no pase por `features/` (por ejemplo `../../auth/…` desde `shell/application`) no se detecta; usar siempre el alias `@features/*`.
 
@@ -125,7 +125,7 @@ Cada sección amplía la regla a sus carpetas cuando las reemplaza. R3 aplicado 
 |---|---|
 | **Reutilizar** | `auth.guard`, `verificado.guard`, interceptores (jwt, error, audit), `endpoints.constant`, adapters, `confirm-dialog`, `session-expired-dialog`, `conflict-dialog`, `file-uploader`, pipes `protocol-status-*`, `estado.resolver` |
 | **Ajustar** | `role.guard`: varios roles + rol activo |
-| **Reemplazar** | `DashboardPage` (layout) y `sidebar` → `AppShell`; `notification.service` → `UndoToast`/`Dialog`; `permissions.directive` → directiva por rol, o eliminarla |
+| **Reemplazar** | `DashboardPage` (layout) y `sidebar` → `AppShell`; `notification.service` → `UndoToast`/`Dialog`; `permissions.directive` → directiva por rol, o eliminarla (eliminada en T14, sin usos) |
 | **Retirar** | `shared/constants/menu-ui.config.ts` |
 
 ## 5. Fuera de alcance
@@ -157,13 +157,13 @@ Línea base: **579 pruebas**.
 
 - **HU-001 resuelto (31/10/2026):** ADMIN_TI fue retirado del backend (TSK-001.1c, PR #63). PRESIDENTA no existe. Solo hay 4 roles: SECRETARIA, PRESIDENTE, EVALUADOR, INVESTIGADOR. Las cadenas sueltas `ADMIN`, `ADMIN_TI` y `PRESIDENTA` en las rutas se migran en T13.
 - **Desbloqueado:** T07 hecho (2afc6ff; prueba (g) en 8c5ad4f): el guard decide con el rol activo. T13 en alcance de F00b.
-- **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Confirmado (spec 001 v3.5.3 del backend, 31/10/2026): varios roles del comité pueden estar vigentes a la vez.
-  - Implementado. Caso real confirmado por el usuario (03/11/2026): la Presidenta tiene PRESIDENTE + EVALUADOR (preside y también evalúa protocolos). Pendiente de validar con ella y con la Secretaría: si prefiere cambiar de rol con el selector o ver todo junto, con qué rol entra primero, y si hay otras personas del comité con dos roles. Se define al diseñar la sección de Presidencia.
+- **Selector de rol activo** para quien tiene varios roles (decisión del 03/11/2026): Implementado. Caso real confirmado por el usuario (03/11/2026): la Presidenta tiene PRESIDENTE + EVALUADOR (preside y también evalúa protocolos). Pendiente de validar con ella y con la Secretaría: si prefiere cambiar de rol con el selector o ver todo junto, con qué rol entra primero, y si hay otras personas del comité con dos roles. Se define al diseñar la sección de Presidencia.
 - **D2 (31/10/2026) — dudas abiertas de rutas:** en F00b no se cambia quién entra a las rutas de investigador ni a las de evaluación; solo se retiran de `data.roles` los códigos que no existen. Queda por definir:
   - quién entra a las rutas de investigador (el usuario indica que la Secretaría solo observa, desde su vista del protocolo con etapas, F02);
   - quién entra a evaluar.
 - **Alias de permisos fuera de la matriz (31/10/2026):** `DOCUMENTOS_VALIDAR`, `RECEPCION_VER`, `EVALUATORS_ASSIGN` y `EVALUATORS_SUGGEST` no están en la matriz de HU-001; se quedan como están en las rutas hasta que la Secretaría valide la matriz (D8).
 - **Código de error estable en el login (T13d-4, 04/11/2026) — propuesta al backend:** hoy el frontend reconoce los errores del login por el texto (`features/auth/domain/auth-errors.ts`): "confirma tu correo" (403, correo sin verificar → OTP), "locked" (403, cuenta bloqueada) y el mensaje del 401 de cuenta desactivada. Se propone que `validateUser` devuelva además un código estable en el cuerpo, por ejemplo `error: 'EMAIL_NOT_VERIFIED'`, `'ACCOUNT_LOCKED'` y `'ACCOUNT_DISABLED'`, para no depender del texto. Cuando exista, `isEmailVerificationRequired` e `isAccountLocked` leen el código primero. También conviene traducir "Account temporarily locked. Try again later." e "Invalid credentials".
+- **Deuda técnica (T14, 04/11/2026):** BaseApiService.handleError convierte cualquier error en un Error sin status ni cuerpo; afecta a todos los adapters. El login ya no pasa por ahí (T13d-4). Revisar en una tarea aparte.
 - **T14 (31/10/2026):** su alcance pasa a "retirar solo lo que quede sin uso" al cerrar F00b. `DashboardPage`, el `sidebar` y `menu-ui.config.ts` siguen vivos para `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` (D1).
 - **Para F01: revisar contra el canvas** (decisiones de texto y color, no de negocio; en `EstadoUIMap` de `shared/utils/protocol-ui.util.ts`):
   - `ARCHIVADO_VENCIMIENTO` usa `'pending'` (ámbar); ¿debería ser gris?
@@ -209,7 +209,7 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 | `ActiveRoleFacade` | `AuthFacade.getActiveRoles()` (roles vigentes, sin selección) | (a) | No existía un rol elegido. Se reutiliza `getActiveRoles()` vía `AuthSessionRolesAdapter` |
 | `ActiveRoleFacade` | `dashboard-home.page.ts`: `userRole` usa solo el rol primario (`user.rol`) | (b) | Se retira con `DashboardPage` (T14) |
 | `role.guard` (T07) | `infrastructure/guards/role.guard.ts` | (b) | Adaptado en T07 (2afc6ff): decide con el rol activo, no con cualquier rol vigente |
-| — | `shared/directives/permissions.directive.ts` (`appHasPermission`): 0 usos | (b) | T14 |
+| — | `shared/directives/permissions.directive.ts` (`appHasPermission`): 0 usos | (b) | Retirado en T14 |
 | `PendingCountPort` | `SecretariatDashboardService.metrics` (`pendingReception`, `observed`, `overdue`, `slaRisk` calculados en el frontend) | (b) | Se retira con `dashboard-secretaria` en F01 (Mis pendientes) |
 | `PendingCountPort` | `notifications-center.page.ts` (`matBadge` de no leídas) | (a) | Propósito distinto |
 | `_tokens.scss` | `src/styles/_variables.scss` (variables Sass con hex) | (b) | Conviven; lo nuevo usa tokens y lo viejo se migra al reemplazar pantallas |
@@ -221,8 +221,8 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 | Menú viejo (`AuthFacade.menuConfig()` + `menu-ui.config.ts` + `sidebar`) y `menu.config` nuevo | `AppShell` todavía no existe | T13 (conecta) + T14 (retira) | PR F00 (`feat/f00-base`) |
 | Filtro `OUT_OF_SCOPE_MENU_PERMISSIONS` en `AuthFacade.menuConfig()` (T01b) | Ocultar seguridad y enmiendas mientras vive el menú viejo | T14 | PR F00 |
 | Cadenas de rol sueltas en `data.roles` (`ADMIN`, `ADMIN_TI`, `PRESIDENTA`) y `Role` VO | T07 ya compara con el rol activo; las rutas cambian con el nuevo `app.routes.ts` | T13 | PR F00b |
-| `permissions.directive.ts` sin usos | Código muerto | T14 | PR F00 |
-| `dashboard/presentation/dashboard-routing.module.ts` sin referencias | Código muerto (las rutas vivas están en `dashboard/routes.ts`) | **T14 (propuesta: agregarlo a T14)** | PR F00 |
+| `permissions.directive.ts` sin usos | Código muerto | Retirado en T14 | PR T14 (`chore/t14-retiro-parcial`) |
+| `dashboard/presentation/dashboard-routing.module.ts` sin referencias | Código muerto (las rutas vivas están en `dashboard/routes.ts`) | Retirado en T14 | PR T14 (`chore/t14-retiro-parcial`) |
 | `ConfirmDialogComponent` (`NotificationService.confirm()`) y `Dialog` | La firma de `confirm()` se mantiene para no romper pantallas | **T14d (propuesta):** retirar `ConfirmDialogComponent` cuando `confirm()` no tenga llamadas | PR de la última sección que lo use |
 | `MatSnackBar` directo (167 llamadas) y `UndoToast` | Las pantallas viejas lo usan directo | Cada sección F01–F08; **T14c (propuesta)** para las que no se reemplazan (auth, perfil…) | PR de cada sección |
 | `.status-badge` (y `.badge-status`, `.status-tag`, `.status-chip` locales) y `StatusChip` | Las pantallas viejas pintan el estado con sus propias clases (vía pipes de `ProtocolUI`) | Cada sección F01–F08, al reemplazar sus pantallas; `.status-badge` se borra cuando no tenga usos. La regla de uso de `StatusChip` con `ProtocolUI` está en §9 (T14b) | PR de cada sección |
