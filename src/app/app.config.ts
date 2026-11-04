@@ -43,7 +43,7 @@ import { SessionRolesPort } from '@features/shell/domain/session-roles.port';
 import {
   AuthSessionRolesAdapter,
   AuthSessionUserAdapter,
-} from '@features/shell/infrastructure/auth-session-roles.adapter';
+} from '@features/shell/infrastructure/auth-session.adapter';
 import { SessionUserPort } from '@features/shell/domain/session-user.port';
 import { MenuConfigPort } from '@domain/ports/menu-config.port';
 import { StaticMenuConfigAdapter } from '@features/shell/infrastructure/menu.config';

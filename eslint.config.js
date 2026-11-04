@@ -76,11 +76,11 @@ module.exports = tseslint.config(
   layers(
     ["src/features/shell/infrastructure/**/*.ts", "src/features/shell/*.ts"],
     [NO_OTHER_FEATURES],
-    { ignores: ["src/features/shell/infrastructure/auth-session-roles.adapter.ts"] },
+    { ignores: ["src/features/shell/infrastructure/auth-session.adapter.ts"] },
   ),
   // R4, excepción conocida (plan §2): el adapter de roles lee AuthFacade
   layers(
-    ["src/features/shell/infrastructure/auth-session-roles.adapter.ts"],
+    ["src/features/shell/infrastructure/auth-session.adapter.ts"],
     [NO_OTHER_FEATURES_EXCEPT_AUTH],
   ),
   {
