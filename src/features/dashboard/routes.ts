@@ -2,8 +2,7 @@ import { Routes } from '@angular/router';
 import { DashboardPage } from './presentation/pages/dashboard.page';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
-import { activeRoleIs, redirectKeepingQuery } from '@infrastructure/guards/role-home.guard';
-import { AppShellComponent } from '@features/shell/presentation/app-shell/app-shell.component';
+import { redirectKeepingQuery } from '@infrastructure/guards/role-home.guard';
 
 /**
  * Hijos de /dashboard, compartidos por los dos layouts (D9, 03/11/2026).
@@ -104,26 +103,23 @@ const DASHBOARD_CHILDREN: Routes = [
 ];
 
 /**
- * Dos padres con los mismos hijos (D9). El primero coincide solo con el rol activo
- * SECRETARIA y muestra /dashboard/... dentro del AppShell; los otros roles caen en el
- * segundo, el layout actual (DashboardPage). canMatch se evalúa en cada navegación.
- * Retiro: el primero cuando F01–F08 dejen sin hijos a la Secretaría; el segundo en T14,
- * cuando ningún rol use DashboardPage.
+ * /dashboard/... de la Secretaría (D9, T13d-3): se carga como hijo 'dashboard' del único
+ * AppShell de app.routes.ts, así /pendientes y /dashboard/... comparten la misma instancia.
+ * D11: /dashboard y /dashboard/home → /pendientes, conservando los query params (?tab=peers).
+ * Retiro: cuando F01–F08 muevan las pantallas de la Secretaría a sus rutas nuevas.
+ */
+export const SECRETARIA_DASHBOARD_ROUTES: Routes = [
+  { path: 'home', redirectTo: redirectKeepingQuery('/pendientes'), pathMatch: 'full' },
+  { path: '', redirectTo: redirectKeepingQuery('/pendientes'), pathMatch: 'full' },
+  ...DASHBOARD_CHILDREN,
+];
+
+/**
+ * /dashboard/... de los otros roles, con el layout actual (DashboardPage). La Secretaría
+ * no llega aquí: el padre del AppShell (canMatch SECRETARIA) va antes en app.routes.ts.
+ * Retiro: en T14, cuando ningún rol use DashboardPage.
  */
 export const DASHBOARD_ROUTES: Routes = [
-  {
-    path: '',
-    component: AppShellComponent,
-    canMatch: [activeRoleIs('SECRETARIA')],
-    canActivate: [AuthGuard],
-    children: [
-      // D11: /dashboard y /dashboard/home → /pendientes solo con SECRETARIA activa.
-      // Conserva los query params (?tab=peers).
-      { path: 'home', redirectTo: redirectKeepingQuery('/pendientes'), pathMatch: 'full' },
-      { path: '', redirectTo: redirectKeepingQuery('/pendientes'), pathMatch: 'full' },
-      ...DASHBOARD_CHILDREN,
-    ],
-  },
   {
     path: '',
     component: DashboardPage,

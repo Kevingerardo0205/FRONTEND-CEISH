@@ -2,6 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { Provider } from '@angular/core';
 import { NEVER, of } from 'rxjs';
 import { Route, Router } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
+import { AppShellComponent } from '@features/shell/presentation/app-shell/app-shell.component';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { RoleCode } from '@domain/value-objects/role.vo';
@@ -137,6 +140,31 @@ describe('Rutas por rol activo (T13d)', () => {
       expect(router.url).toBe('/dashboard/protocols/workspace/1/info');
       expect(has('app-dashboard')).toBeTrue();
       expect(has('app-shell')).toBeFalse();
+    });
+
+    it('T13d-3: /pendientes ↔ /dashboard/protocols/workspace/1/info conserva la misma instancia del AppShell', async () => {
+      const getAllowedRoles = jasmine
+        .createSpy('getAllowedRoles')
+        .and.returnValue(of({ allowedRoles: ['SECRETARIA'] }));
+      await start(
+        ['SECRETARIA'],
+        undefined,
+        [],
+        [{ provide: IAiAssistantRepositoryPort, useValue: { getAllowedRoles } }],
+      );
+      const shell = () => harness.fixture.debugElement.query(By.directive(AppShellComponent));
+
+      await harness.navigateByUrl('/pendientes');
+      const first = shell().componentInstance;
+
+      await harness.navigateByUrl('/dashboard/protocols/workspace/1/info');
+      expect(router.url).toBe('/dashboard/protocols/workspace/1/info');
+      expect(shell().componentInstance).toBe(first);
+
+      await harness.navigateByUrl('/pendientes');
+      expect(router.url).toBe('/pendientes');
+      expect(shell().componentInstance).toBe(first);
+      expect(getAllowedRoles).toHaveBeenCalledTimes(1);
     });
 
     it('al cambiar de rol con el selector, la navegación al inicio del rol cambia de layout', async () => {
@@ -330,9 +358,15 @@ describe('Rutas por rol activo (T13d)', () => {
         expect(page.loadComponent).withContext(String(page.path)).toBeDefined();
         expect(page.component).withContext(String(page.path)).toBeUndefined();
       }
-      const shell = routes.find((r) => r.children === SECRETARIA_ROUTES);
+      // T13d-3: el padre del AppShell es el que lleva canMatch; sus hijos son las rutas
+      // nuevas más 'dashboard'. El padre de respaldo (criterio 4) no tiene layout.
+      const shell = routes.find((r) => r.canMatch && r.children?.includes(SECRETARIA_ROUTES[0]));
       expect(shell?.loadComponent).toBeDefined();
       expect(shell?.component).toBeUndefined();
+      expect(shell?.children?.find((r) => r.path === 'dashboard')?.loadChildren).toBeDefined();
+      const fallback = routes.find((r) => r.children === SECRETARIA_ROUTES);
+      expect(fallback?.component).toBeUndefined();
+      expect(fallback?.loadComponent).toBeUndefined();
     });
 
     it('cada ruta nueva exige el rol SECRETARIA con RoleGuard', () => {
