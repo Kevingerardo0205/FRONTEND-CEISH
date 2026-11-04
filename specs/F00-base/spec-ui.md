@@ -35,6 +35,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - Al cambiar de rol, se recarga el menú y se navega al inicio de ese rol.
 - Mientras existan los dos layouts (D1), el selector vive en el avatar del AppShell y también en el menú de avatar de `DashboardPage`, para que quien cambie a PRESIDENTE, EVALUADOR o INVESTIGADOR pueda volver a SECRETARIA (T13c, 02/11/2026).
 - El rol inicial sigue la regla de `plan.md` §2 (application — rol activo): el último elegido si sigue siendo válido; si no, el de mayor prioridad (SECRETARIA > PRESIDENTE > EVALUADOR > INVESTIGADOR).
+- Implementado. Caso real confirmado por el usuario (03/11/2026): la Presidenta tiene PRESIDENTE + EVALUADOR (preside y también evalúa protocolos). Pendiente de validar con ella y con la Secretaría: si prefiere cambiar de rol con el selector o ver todo junto, con qué rol entra primero, y si hay otras personas del comité con dos roles. Se define al diseñar la sección de Presidencia.
 
 ### Alcance de F00b (31/10/2026)
 
@@ -116,7 +117,10 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 
 **Rutas de F00b (T13d, 03/11/2026):**
 
-- **D9 — `/dashboard/...` dentro del AppShell para la Secretaría.** `dashboard/routes.ts` tiene dos padres con los mismos hijos (`DASHBOARD_CHILDREN`): primero `AppShellComponent`, con `canMatch` por rol activo `SECRETARIA`; después `DashboardPage`, para los otros roles. Los dos llevan `AuthGuard`. Así, los enlaces a `/dashboard/...` de las pantallas de la Secretaría no la sacan del AppShell.
+- **D9 — `/dashboard/...` dentro del AppShell para la Secretaría.** Así, los enlaces a `/dashboard/...` de las pantallas de la Secretaría no la sacan del AppShell. Estructura desde T13d-3 (03/11/2026), un solo AppShell:
+  - En `app.routes.ts`, un único padre `''` con `AppShellComponent`, `canMatch` por rol activo `SECRETARIA` y `AuthGuard`. Sus hijos son las rutas nuevas (D10) y `dashboard`, que carga `DASHBOARD_CHILDREN` con los redirects de D11. Al ir de `/pendientes` a `/dashboard/...` y volver, la instancia del AppShell es la misma.
+  - Después, un padre `''` sin layout con las mismas rutas nuevas: con otro rol activo, su `RoleGuard` da el aviso y lleva al inicio (criterio 4).
+  - Después, `dashboard` con `DashboardPage` y `AuthGuard`, para los otros roles.
 - **D10 — Rutas nuevas, solo SECRETARIA.** Van bajo el AppShell, son lazy y llevan `RoleGuard` (`data.roles: ['SECRETARIA']`) más los permisos de la ruta de origen:
   - `/pendientes` → `DashboardSecretariaPage`;
   - `/protocolos` → `ProtocolValidationListPage` (temporal hasta F01);

@@ -42,7 +42,7 @@ src/
 | `src/app/app.component.ts` | Monta `<app-undo-toast-host />` una sola vez, junto al `router-outlet` |
 | `src/styles/_tokens.scss` | Variables CSS de la §3 de spec-ui |
 
-Pendientes de crear: `src/features/shell/presentation/app-shell/` (T13).
+`src/features/shell/presentation/app-shell/` y `role-selector/` ya existen (T13b y T13c). Las rutas por rol activo están en `src/app/app.routes.ts`, `src/features/dashboard/routes.ts` y `src/infrastructure/guards/role-home.guard.ts` (T13d).
 
 ### application — rol activo
 
@@ -107,7 +107,14 @@ Cada sección amplía la regla a sus carpetas cuando las reemplaza. R3 aplicado 
 - **Etapas:** el backend no expone la etapa. Se usa un mapeo temporal estado→etapa basado en `shared/utils/estado.resolver.ts`, marcado `// TODO RF-EST.2` y cubierto por pruebas.
 - **Rutas viejas:** `/dashboard/...` redirige a las rutas nuevas, con el mismo patrón de redirects legacy de `features/protocols/routes.ts`.
   - En F00b (T13d, D9–D11) hay un solo redirect, condicionado por rol: `/dashboard`, `/dashboard/` y `/dashboard/home` → `/pendientes` con el rol activo `SECRETARIA`, conservando los query params.
-  - **Regla de dos padres:** `dashboard/routes.ts` monta los mismos hijos (`DASHBOARD_CHILDREN`) bajo `AppShellComponent` (con `canMatch` por rol activo `SECRETARIA`, primero) y bajo `DashboardPage` (después). Retiro: el primero cuando F01–F08 muevan las pantallas de la Secretaría a sus rutas nuevas; el segundo en T14, cuando ningún rol use `DashboardPage`.
+  - **Estructura de rutas (T13d-3, un solo AppShell):** `app.routes.ts`, en este orden:
+    1. `''` exacto → inicio del rol activo.
+    2. Un único padre `''` con `AppShellComponent`, `canMatch` por rol activo `SECRETARIA` y `AuthGuard`. Sus hijos: `SECRETARIA_ROUTES` y `dashboard` → `SECRETARIA_DASHBOARD_ROUTES` (redirects de D11 + `DASHBOARD_CHILDREN`).
+    3. Un padre `''` sin layout con `SECRETARIA_ROUTES`, para que otro rol reciba el aviso del `RoleGuard` (criterio 4) en vez de caer en `**`.
+    4. `dashboard` → `DASHBOARD_ROUTES` (`DashboardPage`, `AuthGuard`) para los otros roles.
+    5. `**` → inicio del rol activo.
+
+    `DASHBOARD_CHILDREN` se comparte entre los padres 2 y 4. Retiro: el hijo `dashboard` del AppShell, cuando F01–F08 muevan las pantallas de la Secretaría a sus rutas nuevas; el padre 4 y el padre 3, en T14, cuando ningún rol use `DashboardPage`.
   - Rutas nuevas en `app.routes.ts` (`SECRETARIA_ROUTES`, bajo el AppShell, lazy, con `RoleGuard` SECRETARIA): `/pendientes`, `/protocolos`, `/convocatorias`, `/reportes` y `/configuracion/usuarios`. Cada sección de F01–F08 reemplaza la pantalla temporal de su ruta.
   - Inicio: `RoleHome` (`infrastructure/guards/role-home.guard.ts`) da `ROLE_HOME[rol activo]` a los guards, al interceptor, al login y a `''`/`**`.
 - **Espacio del protocolo:** `protocol-workspace` se reutiliza como base en F02–F07.
@@ -151,6 +158,7 @@ Línea base: **579 pruebas**.
 - **HU-001 resuelto (31/10/2026):** ADMIN_TI fue retirado del backend (TSK-001.1c, PR #63). PRESIDENTA no existe. Solo hay 4 roles: SECRETARIA, PRESIDENTE, EVALUADOR, INVESTIGADOR. Las cadenas sueltas `ADMIN`, `ADMIN_TI` y `PRESIDENTA` en las rutas se migran en T13.
 - **Desbloqueado:** T07 hecho (2afc6ff; prueba (g) en 8c5ad4f): el guard decide con el rol activo. T13 en alcance de F00b.
 - **Selector de rol activo** para quien tiene varios roles: queda con la regla de §2 (application — rol activo). Confirmado (spec 001 v3.5.3 del backend, 31/10/2026): varios roles del comité pueden estar vigentes a la vez.
+  - Implementado. Caso real confirmado por el usuario (03/11/2026): la Presidenta tiene PRESIDENTE + EVALUADOR (preside y también evalúa protocolos). Pendiente de validar con ella y con la Secretaría: si prefiere cambiar de rol con el selector o ver todo junto, con qué rol entra primero, y si hay otras personas del comité con dos roles. Se define al diseñar la sección de Presidencia.
 - **D2 (31/10/2026) — dudas abiertas de rutas:** en F00b no se cambia quién entra a las rutas de investigador ni a las de evaluación; solo se retiran de `data.roles` los códigos que no existen. Queda por definir:
   - quién entra a las rutas de investigador (el usuario indica que la Secretaría solo observa, desde su vista del protocolo con etapas, F02);
   - quién entra a evaluar.
@@ -225,7 +233,7 @@ Clasificación: **(a)** no había nada equivalente · **(b)** existe y el nuevo 
 
 ## 11. Pantallas actuales a verificar en cada PR
 
-Fuente: `app.routes.ts`, `dashboard/routes.ts` y los `routes.ts` de cada feature. Todo cuelga de `/dashboard` (`AuthGuard`), salvo las rutas nuevas de la Secretaría. Desde T13d, `/dashboard/...` se muestra dentro del AppShell con el rol activo `SECRETARIA` y dentro de `DashboardPage` con los otros roles (regla de dos padres, §3).
+Fuente: `app.routes.ts`, `dashboard/routes.ts` y los `routes.ts` de cada feature. Todo cuelga de `/dashboard` (`AuthGuard`), salvo las rutas nuevas de la Secretaría. Desde T13d, `/dashboard/...` se muestra dentro del AppShell con el rol activo `SECRETARIA` y dentro de `DashboardPage` con los otros roles (estructura de rutas, §3).
 Las rutas con `data.permissions` dependen de los permisos que el backend asigne al rol; aquí se ubican por el rol que normalmente los tiene.
 
 **Secretaría**
