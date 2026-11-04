@@ -189,7 +189,9 @@ export class AuthApiAdapter extends BaseApiService implements IAuthRepositoryPor
       password: credentials.password,
     };
 
-    return this.post<unknown>(ENDPOINTS.AUTH.LOGIN, loginPayload).pipe(
+    // T13d-4: apiClient directo y no this.post, para que el login reciba el HttpErrorResponse
+    // del interceptor (status y cuerpo) y no un Error sin status de BaseApiService.handleError.
+    return this.apiClient.post<unknown>(ENDPOINTS.AUTH.LOGIN, loginPayload).pipe(
       map((response: unknown) => {
         const envelope = response as { data?: RawLoginPayload };
         const payload = envelope.data ?? (response as RawLoginPayload);

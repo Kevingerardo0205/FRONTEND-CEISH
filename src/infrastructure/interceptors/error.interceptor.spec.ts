@@ -73,6 +73,49 @@ describe('ErrorInterceptor', () => {
       .flush({ message: 'Forbidden resource' }, { status: 403, statusText: 'Forbidden' });
   });
 
+  describe('T13d-4: 403 en rutas públicas de auth', () => {
+    const verificationBody = {
+      statusCode: 403,
+      path: '/api/auth/login',
+      error: {
+        message: 'Por favor, confirma tu correo electrónico antes de iniciar sesión.',
+        error: 'Forbidden',
+        statusCode: 403,
+      },
+    };
+
+    for (const path of ['/api/auth/login', '/api/auth/register', '/api/auth/confirm-email']) {
+      it(`${path}: relanza el HttpErrorResponse original, sin navegar`, (done) => {
+        httpClient.post(path, {}).subscribe({
+          error: (err) => {
+            expect(err instanceof HttpErrorResponse).toBeTrue();
+            expect((err as HttpErrorResponse).status).toBe(403);
+            expect((err as HttpErrorResponse).error).toEqual(verificationBody);
+            expect(mockRouter.navigate).not.toHaveBeenCalled();
+            expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+            done();
+          },
+        });
+
+        httpMock.expectOne(path).flush(verificationBody, { status: 403, statusText: 'Forbidden' });
+      });
+    }
+
+    it('un 403 fuera de auth sigue yendo al inicio del rol activo (D12)', (done) => {
+      httpClient.get('/api/auth/users').subscribe({
+        error: (err) => {
+          expect(err instanceof HttpErrorResponse).toBeFalse();
+          expect(mockRouter.navigateByUrl).toHaveBeenCalledOnceWith('inicio-del-rol-activo' as any);
+          done();
+        },
+      });
+
+      httpMock
+        .expectOne('/api/auth/users')
+        .flush({ message: 'Forbidden resource' }, { status: 403, statusText: 'Forbidden' });
+    });
+  });
+
   it('debe reintentar llamadas GET fallidas en caso de error 503 y luego fallar', (done) => {
     httpClient.get('/api/protocols').subscribe({
       next: () => fail('No debería tener éxito'),
