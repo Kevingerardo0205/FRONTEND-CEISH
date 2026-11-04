@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { computed, signal } from '@angular/core';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-import { AuthSessionRolesAdapter, AuthSessionUserAdapter } from './auth-session-roles.adapter';
+import { AuthSessionRolesAdapter, AuthSessionUserAdapter } from './auth-session.adapter';
 
 describe('AuthSessionRolesAdapter', () => {
   it('dentro de un computed, da los roles vigentes al instante cada vez que cambia el usuario', () => {

@@ -10,7 +10,7 @@ import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { NotificationService } from '@infrastructure/services/notification.service';
 import { ActiveRoleFacade } from '../application/active-role.facade';
 import { SessionRolesPort } from '../domain/session-roles.port';
-import { AuthSessionRolesAdapter } from './auth-session-roles.adapter';
+import { AuthSessionRolesAdapter } from './auth-session.adapter';
 
 @Component({ standalone: true, template: '<p id="ok">ok</p>' })
 class ProbeComponent {}
