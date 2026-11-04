@@ -6,6 +6,7 @@ import { MatRippleModule } from '@angular/material/core';
 import { RouterModule } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { UserRole } from '@domain/entities/user.entity';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { EvaluatorLoadComponent } from '../components/evaluator-load/evaluator-load.component';
 import { DashboardFacade } from '../facades/dashboard.facade';
 import { DashboardSecretariaPage } from './dashboard-secretaria/dashboard-secretaria.page';
@@ -580,10 +581,12 @@ interface DashboardConfig {
 export class DashboardHomePage implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly dashboardFacade = inject(DashboardFacade);
+  private readonly activeRoleFacade = inject(ActiveRoleFacade);
 
   user = this.authFacade.currentUser;
   userName = computed(() => this.user()?.nombre?.split(' ')[0] || 'Usuario');
-  userRole = computed(() => (this.user()?.rol?.toUpperCase() as UserRole) || 'INVESTIGADOR');
+  // D14 (03/11/2026): el contenido se elige con el rol activo, no con user.rol.
+  userRole = computed(() => (this.activeRoleFacade.activeRole() as UserRole | null) || 'INVESTIGADOR');
   myProtocols = this.dashboardFacade.myProtocols;
   isMobile = window.innerWidth < 768;
 

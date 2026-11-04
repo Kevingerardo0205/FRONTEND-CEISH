@@ -1,0 +1,21 @@
+@if (visible()) {
+  <div class="role-selector" role="group" aria-labelledby="role-selector-title" data-testid="role-selector">
+    <span id="role-selector-title" class="role-selector-title">Rol activo</span>
+    @for (role of roles(); track role.code) {
+      <button
+        type="button"
+        class="role-option"
+        role="menuitemradio"
+        [class.active]="role.code === activeRole()"
+        [attr.aria-checked]="role.code === activeRole()"
+        [attr.data-role]="role.code"
+        (click)="select(role.code)"
+      >
+        <mat-icon class="role-check" aria-hidden="true">
+          {{ role.code === activeRole() ? 'radio_button_checked' : 'radio_button_unchecked' }}
+        </mat-icon>
+        <span>{{ role.label }}</span>
+      </button>
+    }
+  </div>
+}

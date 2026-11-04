@@ -6,6 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { of } from 'rxjs';
 import { SessionExpiredDialogComponent } from '@shared/components/session-expired-dialog/session-expired-dialog.component';
 import {
@@ -30,7 +31,7 @@ describe('ErrorInterceptor', () => {
       afterClosed: () => of(true),
     } as any);
 
-    mockRouter = jasmine.createSpyObj('Router', ['navigate']);
+    mockRouter = jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl']);
     mockAuthFacade = jasmine.createSpyObj('AuthFacade', ['refreshToken', 'logout']);
 
     TestBed.configureTestingModule({
@@ -46,6 +47,7 @@ describe('ErrorInterceptor', () => {
         { provide: MatDialog, useValue: mockDialog },
         { provide: Router, useValue: mockRouter },
         { provide: AuthFacade, useValue: mockAuthFacade },
+        { provide: RoleHome, useValue: { urlTree: () => 'inicio-del-rol-activo' } },
       ],
     });
 
@@ -55,6 +57,63 @@ describe('ErrorInterceptor', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  it('D12: un 403 sin verificación pendiente navega al inicio del rol activo, no a /dashboard', (done) => {
+    httpClient.post('/api/protocolos', {}).subscribe({
+      error: () => {
+        expect(mockRouter.navigateByUrl).toHaveBeenCalledOnceWith('inicio-del-rol-activo' as any);
+        expect(mockRouter.navigate).not.toHaveBeenCalledWith(['/dashboard']);
+        done();
+      },
+    });
+
+    httpMock
+      .expectOne('/api/protocolos')
+      .flush({ message: 'Forbidden resource' }, { status: 403, statusText: 'Forbidden' });
+  });
+
+  describe('T13d-4: 403 en rutas públicas de auth', () => {
+    const verificationBody = {
+      statusCode: 403,
+      path: '/api/auth/login',
+      error: {
+        message: 'Por favor, confirma tu correo electrónico antes de iniciar sesión.',
+        error: 'Forbidden',
+        statusCode: 403,
+      },
+    };
+
+    for (const path of ['/api/auth/login', '/api/auth/register', '/api/auth/confirm-email']) {
+      it(`${path}: relanza el HttpErrorResponse original, sin navegar`, (done) => {
+        httpClient.post(path, {}).subscribe({
+          error: (err) => {
+            expect(err instanceof HttpErrorResponse).toBeTrue();
+            expect((err as HttpErrorResponse).status).toBe(403);
+            expect((err as HttpErrorResponse).error).toEqual(verificationBody);
+            expect(mockRouter.navigate).not.toHaveBeenCalled();
+            expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+            done();
+          },
+        });
+
+        httpMock.expectOne(path).flush(verificationBody, { status: 403, statusText: 'Forbidden' });
+      });
+    }
+
+    it('un 403 fuera de auth sigue yendo al inicio del rol activo (D12)', (done) => {
+      httpClient.get('/api/auth/users').subscribe({
+        error: (err) => {
+          expect(err instanceof HttpErrorResponse).toBeFalse();
+          expect(mockRouter.navigateByUrl).toHaveBeenCalledOnceWith('inicio-del-rol-activo' as any);
+          done();
+        },
+      });
+
+      httpMock
+        .expectOne('/api/auth/users')
+        .flush({ message: 'Forbidden resource' }, { status: 403, statusText: 'Forbidden' });
+    });
   });
 
   it('debe reintentar llamadas GET fallidas en caso de error 503 y luego fallar', (done) => {

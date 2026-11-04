@@ -9,12 +9,34 @@ import {
 import { Observable, throwError, BehaviorSubject, of } from 'rxjs';
 import { catchError, filter, take, switchMap, retry, delay } from 'rxjs/operators';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { AuthResponse } from '@domain/entities/user.entity';
 import { SessionExpiredDialogComponent } from '@shared/components/session-expired-dialog/session-expired-dialog.component';
+import { isEmailVerificationRequired } from '@features/auth/domain/auth-errors';
+import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
+
+/**
+ * Rutas públicas de auth que llama una pantalla (sin JwtAuthGuard en el backend). /auth/refresh
+ * también es pública, pero la llama este interceptor y no una pantalla: queda fuera.
+ */
+const PUBLIC_AUTH_PATHS: readonly string[] = [
+  ENDPOINTS.AUTH.LOGIN,
+  ENDPOINTS.AUTH.REGISTER,
+  ENDPOINTS.AUTH.SETUP_ACCOUNT,
+  ENDPOINTS.AUTH.VERIFY_OTP,
+  ENDPOINTS.AUTH.RESEND_OTP,
+  ENDPOINTS.AUTH.FORGOT_PASSWORD,
+  ENDPOINTS.AUTH.RESET_PASSWORD,
+];
+
+function isPublicAuthRequest(url: string): boolean {
+  const path = url.split('?')[0];
+  return PUBLIC_AUTH_PATHS.some((p) => path.endsWith(p));
+}
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
@@ -83,11 +105,13 @@ export class ErrorInterceptor implements HttpInterceptor {
         }
 
         if (error instanceof HttpErrorResponse && error.status === 403) {
+          // T13d-4: en las rutas públicas de auth decide la pantalla (por ejemplo, el login abre
+          // el OTP); sin navegar, sin avisos de rol y con el HttpErrorResponse original.
+          if (isPublicAuthRequest(url)) {
+            return throwError(() => error);
+          }
           const userEmail = error.error?.email || '';
-          if (
-            error.error?.message?.includes('verificar') ||
-            error.error?.message?.includes('OTP')
-          ) {
+          if (isEmailVerificationRequired(error)) {
             this.router.navigate(['/auth/confirm-email'], { queryParams: { email: userEmail } });
             return throwError(
               () =>
@@ -96,7 +120,9 @@ export class ErrorInterceptor implements HttpInterceptor {
                 ),
             );
           }
-          this.router.navigate(['/dashboard']);
+          // D12: inicio del rol activo. RoleHome se pide al Injector aquí, igual que AuthFacade,
+          // para no crear un ciclo HttpClient → interceptor → ActiveRoleFacade → AuthFacade.
+          this.router.navigateByUrl(this.injector.get(RoleHome).urlTree());
           return throwError(() => new Error('No tienes permisos para acceder a este recurso.'));
         }
 

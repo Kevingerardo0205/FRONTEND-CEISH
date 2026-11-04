@@ -16,7 +16,7 @@ export const NOTIFICATION_ROUTES: Routes = [
         (m) => m.EmailTemplatesPage,
       ),
     canActivate: [RoleGuard],
-    data: { roles: ['ADMIN'] },
+    data: { roles: ['SECRETARIA'] },
   },
   {
     path: '',

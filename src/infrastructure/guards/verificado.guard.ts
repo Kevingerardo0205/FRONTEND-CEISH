@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { RoleHome } from './role-home.guard';
 
 @Injectable({
   providedIn: 'root',
@@ -10,6 +11,7 @@ export class VerificadoGuard implements CanActivate {
   private authFacade = inject(AuthFacade);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private roleHome = inject(RoleHome);
 
   canActivate(): boolean | UrlTree {
     const user = this.authFacade.currentUser();
@@ -19,9 +21,9 @@ export class VerificadoGuard implements CanActivate {
       return this.router.createUrlTree(['/auth/login']);
     }
 
-    // Roles administrativos no requieren verificación de email para gestionar el sistema
-    const adminRoles = ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'ADMIN_TI'];
-    if (this.authFacade.hasAnyRole(adminRoles)) {
+    // Los roles del comité no requieren verificación de email para gestionar el sistema
+    const committeeRoles = ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR'];
+    if (this.authFacade.hasAnyRole(committeeRoles)) {
       return true;
     }
 
@@ -42,6 +44,7 @@ export class VerificadoGuard implements CanActivate {
         this.router.navigate(['/auth/confirm-email'], { queryParams: { email: user.email } });
       });
 
-    return this.router.createUrlTree(['/dashboard']);
+    // D12: vuelve al inicio del rol activo.
+    return this.roleHome.urlTree();
   }
 }

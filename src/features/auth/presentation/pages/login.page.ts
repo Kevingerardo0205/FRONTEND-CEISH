@@ -18,6 +18,14 @@ import { LoginUseCase } from '../../use-cases';
 
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { OtpVerificationDialogComponent } from '../components/otp-verification/otp-verification-dialog.component';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
+import {
+  backendErrorMessage,
+  isAccountLocked,
+  isEmailVerificationRequired,
+} from '@features/auth/domain/auth-errors';
+
+export const ACCOUNT_LOCKED_MESSAGE = 'Cuenta bloqueada temporalmente. Intente más tarde.';
 
 @Component({
   selector: 'app-login-page',
@@ -457,6 +465,7 @@ export class LoginPage {
   private readonly fb = inject(FormBuilder);
   private readonly loginUseCase = inject(LoginUseCase);
   private readonly router = inject(Router);
+  private readonly roleHome = inject(RoleHome);
   private readonly dialog = inject(MatDialog);
 
   loginForm: FormGroup;
@@ -485,19 +494,24 @@ export class LoginPage {
       this.loginUseCase.execute(this.loginForm.value).subscribe({
         next: () => {
           this.isLoading.set(false);
-          this.router.navigate(['/dashboard/home']);
+          // D13: inicio del rol activo (T13d-0: el rol ya está disponible tras setAuth).
+          this.router.navigateByUrl(this.roleHome.urlTree());
         },
         error: (err: any) => {
           this.isLoading.set(false);
 
-          const errorMsg = err.message || '';
-          if (errorMsg.includes('verificar') || errorMsg.includes('verify') || err.status === 403) {
+          // T13d-4: el OTP se abre solo cuando falta verificar el correo.
+          if (isEmailVerificationRequired(err)) {
             this.openOtpDialog(this.loginForm.value.email);
             return;
           }
 
           this.attempts.update((a) => a + 1);
-          this.errorMessage.set(err.message || 'Credenciales incorrectas');
+          this.errorMessage.set(
+            isAccountLocked(err)
+              ? ACCOUNT_LOCKED_MESSAGE
+              : backendErrorMessage(err) || err.message || 'Credenciales incorrectas',
+          );
 
           if (this.attempts() >= 3) {
             this.isLocked.set(true);

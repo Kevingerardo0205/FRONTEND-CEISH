@@ -13,6 +13,15 @@ describe('Role (VO)', () => {
     });
   });
 
+  it('cada rol tiene su nombre legible', () => {
+    expect(Role.all().map((r) => r.label)).toEqual([
+      'Secretaría',
+      'Presidente',
+      'Evaluador',
+      'Investigador',
+    ]);
+  });
+
   it('fromBackend devuelve siempre la misma instancia para un código', () => {
     expect(Role.fromBackend('SECRETARIA')).toBe(Role.fromBackend('SECRETARIA'));
   });

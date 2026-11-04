@@ -1,16 +1,16 @@
 import { TestBed } from '@angular/core/testing';
-import { BehaviorSubject } from 'rxjs';
+import { signal, WritableSignal } from '@angular/core';
 import { SessionRolesPort } from '../domain/session-roles.port';
 import { ActiveRoleFacade } from './active-role.facade';
 
 describe('ActiveRoleFacade', () => {
   const STORAGE_KEY = 'ceish.activeRole';
-  let roles$: BehaviorSubject<string[]>;
+  let roles: WritableSignal<string[]>;
 
   function createFacade(initialRoles: string[]): ActiveRoleFacade {
-    roles$ = new BehaviorSubject(initialRoles);
+    roles = signal(initialRoles);
     TestBed.configureTestingModule({
-      providers: [{ provide: SessionRolesPort, useValue: { roles$ } }],
+      providers: [{ provide: SessionRolesPort, useValue: { roles: () => roles() } }],
     });
     return TestBed.inject(ActiveRoleFacade);
   }
@@ -92,7 +92,7 @@ describe('ActiveRoleFacade', () => {
     const facade = createFacade(['EVALUADOR', 'INVESTIGADOR']);
     facade.switchRole('INVESTIGADOR');
 
-    roles$.next(['EVALUADOR']);
+    roles.set(['EVALUADOR']);
 
     expect(facade.activeRole()).toBe('EVALUADOR');
   });

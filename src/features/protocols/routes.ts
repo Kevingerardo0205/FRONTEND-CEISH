@@ -4,6 +4,7 @@ import { ProtocolValidationListPage } from './presentation/pages/protocol-valida
 import { ProtocolValidationDetailPage } from './presentation/pages/protocol-validation-detail/protocol-validation-detail.page';
 import { ProtocolReceptionNewPage } from './presentation/pages/protocol-reception-new/protocol-reception-new.page';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
+import { RoleGuard } from '@infrastructure/guards/role.guard';
 
 import { ProtocolWorkspaceComponent } from './presentation/pages/protocol-workspace/protocol-workspace.component';
 
@@ -15,6 +16,8 @@ export const PROTOCOL_ROUTES: Routes = [
       {
         path: 'list',
         component: ProtocolListPage,
+        canActivate: [RoleGuard],
+        data: { roles: ['SECRETARIA'] },
       },
       {
         path: 'workspace/:id',
@@ -64,8 +67,9 @@ export const PROTOCOL_ROUTES: Routes = [
       {
         path: 'validation/list',
         component: ProtocolValidationListPage,
-        canActivate: [AuthGuard],
+        canActivate: [AuthGuard, RoleGuard],
         data: {
+          roles: ['SECRETARIA'],
           permissions: ['RECEPCION_VALIDAR', 'DOCUMENTOS_VALIDAR', 'RECEPCION_VER'],
           permissionStrategy: 'any',
         },
@@ -73,8 +77,9 @@ export const PROTOCOL_ROUTES: Routes = [
       {
         path: 'reception/new',
         component: ProtocolReceptionNewPage,
-        canActivate: [AuthGuard],
+        canActivate: [AuthGuard, RoleGuard],
         data: {
+          roles: ['SECRETARIA'],
           permissions: ['RECEPCION_NUEVO', 'RECEPCION_VER'],
           permissionStrategy: 'any',
         },

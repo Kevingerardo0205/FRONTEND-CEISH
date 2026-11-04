@@ -1,5 +1,4 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { Role, RoleCode } from '@domain/value-objects/role.vo';
 import { SessionRolesPort } from '../domain/session-roles.port';
 
@@ -18,11 +17,14 @@ function isRoleCode(code: string | null): code is RoleCode {
  */
 @Injectable({ providedIn: 'root' })
 export class ActiveRoleFacade {
-  private sessionRoles = toSignal(inject(SessionRolesPort).roles$, { initialValue: [] });
+  private sessionRolesPort = inject(SessionRolesPort);
+  // computed y no toSignal(Observable): el rol activo se ve en la primera navegación (T13d-0).
+  private sessionRoles = computed(() => this.sessionRolesPort.roles());
   private selectedRole = signal<RoleCode | null>(this.readStoredRole());
 
-  // TODO pendiente HU-001: ADMIN_TI, PRESIDENTA y otros códigos que el VO no reconoce
-  // se ignoran sin error hasta confirmar si existen como roles propios.
+  // Decisión tomada (spec-001 v3.5.3, 31/10/2026): solo existen los 4 roles del VO.
+  // ADMIN_TI fue retirado (TSK-001.1c, PR #63 del backend). PRESIDENTA no existe.
+  // Los códigos desconocidos se siguen ignorando sin error para robustez ante cambios futuros.
   readonly availableRoles = computed<RoleCode[]>(() => {
     const roles = this.sessionRoles();
     return ROLE_PRIORITY.filter((code) => roles.includes(code));
@@ -40,7 +42,7 @@ export class ActiveRoleFacade {
     if (!this.availableRoles().includes(role)) return false;
     this.selectedRole.set(role);
     this.storeRole(role);
-    // TODO T13: navegar al inicio del rol elegido.
+    // La navegación al inicio del rol la hace presentation (RoleSelectorComponent, T13c).
     return true;
   }
 

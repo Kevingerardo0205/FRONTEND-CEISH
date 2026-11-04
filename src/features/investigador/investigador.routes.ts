@@ -14,7 +14,7 @@ export const INVESTIGADOR_ROUTES: Routes = [
             (m) => m.NuevoProtocoloPage,
           ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
+        data: { roles: ['INVESTIGADOR', 'SECRETARIA'] },
       },
       {
         path: 'mis-protocolos',
@@ -23,7 +23,7 @@ export const INVESTIGADOR_ROUTES: Routes = [
             (m) => m.MisProtocolosPage,
           ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
+        data: { roles: ['INVESTIGADOR', 'SECRETARIA'] },
       },
       {
         path: 'protocolo/:id',
@@ -36,7 +36,7 @@ export const INVESTIGADOR_ROUTES: Routes = [
             (m) => m.EditarProtocoloPage,
           ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
+        data: { roles: ['INVESTIGADOR', 'SECRETARIA'] },
       },
       {
         path: 'protocolo-legacy/:id',
@@ -45,7 +45,7 @@ export const INVESTIGADOR_ROUTES: Routes = [
             (m) => m.DetalleProtocoloPage,
           ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
+        data: { roles: ['INVESTIGADOR', 'SECRETARIA'] },
       },
       // Retirado en F00-T01b: fuera de alcance (el código se borra en F08).
       {
@@ -59,7 +59,7 @@ export const INVESTIGADOR_ROUTES: Routes = [
             (m) => m.EventosAdversosPage,
           ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
+        data: { roles: ['INVESTIGADOR', 'SECRETARIA'] },
       },
       {
         path: 'renovacion/:id',
@@ -68,7 +68,7 @@ export const INVESTIGADOR_ROUTES: Routes = [
             (m) => m.RenovacionesPage,
           ),
         canActivate: [RoleGuard],
-        data: { roles: ['INVESTIGADOR', 'ADMIN', 'SECRETARIA', 'PRESIDENTA'] },
+        data: { roles: ['INVESTIGADOR', 'SECRETARIA'] },
       },
       {
         path: '',

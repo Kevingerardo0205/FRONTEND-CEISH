@@ -1,11 +1,11 @@
 import { Provider } from '@angular/core';
-import { PendingCountPort } from './domain/pending-count.port';
-import { PendingCountMockAdapter } from './infrastructure/pending-count-mock.adapter';
 
 /**
- * Proveedores de la sección shell (port → adapter). Se registran en las rutas de la
- * sección en T13. Contador de pendientes: mock hasta que exista GET /secretaria/pendientes.
+ * Proveedores de la sección shell (port → adapter) que no van en app.config.ts.
+ * Hoy está vacío:
+ * - MenuConfigPort se registra solo en app.config.ts, porque GetMenuForRoleUseCase es
+ *   providedIn 'root' y no ve los proveedores de una ruta.
+ * - PendingCountPort no se registra: GET /secretaria/pendientes no existe en el backend
+ *   (spec-003 RF-ALR.f). Sin proveedor, el contador queda oculto. El mock solo se usa en pruebas.
  */
-export const SHELL_PROVIDERS: Provider[] = [
-  { provide: PendingCountPort, useClass: PendingCountMockAdapter },
-];
+export const SHELL_PROVIDERS: Provider[] = [];
