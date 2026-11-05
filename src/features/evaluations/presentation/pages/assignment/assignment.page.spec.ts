@@ -23,4 +23,8 @@ describe('AssignmentPage', () => {
   it('debe crear el componente', () => {
     expect(component).toBeTruthy();
   });
+
+  it('F01 T01-0: lleva a la bandeja en su ruta propia, /estratificacion-riesgo', () => {
+    expect(routerSpy.navigate).toHaveBeenCalledOnceWith(['/estratificacion-riesgo']);
+  });
 });
