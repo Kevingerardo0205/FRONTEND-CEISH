@@ -1,6 +1,7 @@
 # F01 · Mis pendientes y Protocolos — spec-ui
 
-**Versión:** 0.1 · **Fecha:** 05/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
+**Versión:** 0.2 · **Fecha:** 05/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
+**Historial:** 0.1 (05/11/2026) primer borrador · 0.2 (05/11/2026) dudas D1–D9 decididas; cotejo con el canvas: "Ver convocatoria" lleva a `/convocatorias`, ASIGNAR abre el espacio del protocolo, `/protocolos` pide `PROTOCOLOS_LISTAR`, columnas y destinos por etapa anotados como pendientes, diferencias con el canvas (§9.2)
 **Cubre:** spec-003 v1.5.3 RF-ALR.f (RF-ALR.f.1 a f.7) · spec-001 v3.5.6 RF-EST.1, RF-EST.2 (parcial) y RF-EST.3 (contrato de `GET /protocols`, TSK-001.4)
 **Depende de:** F00 (tokens, AppShell, `shared/ui`, `Stage`, rutas por rol activo)
 **Canvas:** `canvas/01-mis-pendientes.png` y `canvas/02-protocolos.png` (tablero "Pantallas Secretaría — CEISH-ESPOCH", 28/10/2026), con las decisiones C1–C7 del 05/11/2026.
@@ -54,7 +55,7 @@ Zonas, de arriba abajo, con C1–C7 aplicadas:
    - Línea 3, solo si `lugar` no es null: `{lugar.nombre}`; si `lugar.esVirtual` y `enlaceReunion` es válido, un enlace `Unirse a la reunión` (§7).
    - Línea 4: `{protocolosATratar} protocolos a tratar` (con 1: `1 protocolo a tratar`).
    - **Sin línea de informes**: `informesATratar` es siempre null y null significa "no disponible", no "cero" (RF-ALR.f.7).
-   - Sin enlace "Ver convocatoria": `/convocatorias/:id` no existe hasta F04 (Duda D3).
+   - Enlace `Ver convocatoria` (`routerLink="/convocatorias"`), a la pantalla de Convocatorias que ya existe: `app.routes.ts:36-44` (`CallsManagementPage`, `RoleGuard` + `AuthGuard`, `data: { roles: ['SECRETARIA'], permissions: ['RESOLUCION_CONVOCATORIAS'] }`; el mismo permiso que pide `GET /meetings/next`). Abre la lista de convocatorias, no esa convocatoria: `CallsManagementPage` no lee parámetros de ruta ni de URL (decisión D3). Solo se muestra cuando hay reunión (no en vacío ni en error).
 4. **Filtros** (`ButtonGroup`, `aria-pressed`): `Todos · {todos}`, `Vencidos · {vencidos}`, `Hoy · {hoy}`, `Esta semana · {semana}`. Los conteos salen de `totales` y no dependen del filtro (RF-ALR.f.3). Hoy y Esta semana se muestran con su conteo real (hoy siempre 0, ver §9). El grupo de conteos vive en una región `aria-live="polite"`.
 5. **Tabla de pendientes** (contrato A), columnas:
 
@@ -76,10 +77,16 @@ Todas van como botones del mismo tipo (con borde), con `aria-label="{accionTexto
 | `accion` | `accionTexto` (RF-ALR.f.1) | Destino | Evidencia |
 |---|---|---|---|
 | `VALIDAR` | Validar documentos | `/dashboard/protocols/workspace/{protocolId}/validation` | `protocols/routes.ts:23-36` (`workspace/:id` → hijo `validation` → `ProtocolValidationDetailPage`); mismo enlace en `protocol-validation-list.page.ts:151` |
-| `ASIGNAR` | Asignar evaluadores | `/dashboard/evaluations/assignment` → bandeja "Estratificación de Riesgo" (ruta de T01-0) | `evaluations/routes.ts:15-22` (`AssignmentPage`); `assignment.page.ts:29` redirige hoy a la bandeja. Abre la bandeja, no el protocolo (Duda D1) |
+| `ASIGNAR` | Asignar evaluadores | `/dashboard/protocols/workspace/{protocolId}/info`: el espacio de ESE protocolo, con la acción `Asignar Pares` | `protocols/routes.ts:23-32` (`workspace/:id` → `info`); `protocol-workspace.component.ts:558-560` muestra `Asignar Pares` cuando el estado es `COMPLETO` o `INCOMPLETO`, y `:627-668` abre `AssignPeersModalComponent` con ese protocolo (el mismo modal de la bandeja, `peer-risk-pending-table.component.ts:250-252`). Decisión D1 |
 | `REASIGNAR` | Reasignar evaluador | `/dashboard/evaluations/reassignment/{protocolId}` | `evaluations/routes.ts:24-31` (`ReassignmentPage`); lee `protocolId` en `reassignment.page.ts:83` |
 
 Las tres rutas cuelgan de `/dashboard/...`, que para la Secretaría se carga dentro del mismo AppShell (`dashboard/routes.ts:51-57` y `111-115`, `app.routes.ts:100-104`).
+
+**Por qué ASIGNAR muestra `Asignar Pares` en el espacio del protocolo (verificado en el código, no en el navegador):**
+- El espacio carga el protocolo con `GET /protocols/:id` (`protocol-workspace.component.ts:614-620` → `protocol-workspace.service.ts:28-32` → `protocol-api.adapter.ts:185-188`), y el estado sale primero de `receptionStatus` (`protocol-api.adapter.ts:349-353`).
+- En el backend, `GET /protocols/:id` responde con `ProtocolMapper.toResponse`, que incluye `receptionStatus` (`protocol.controller.ts:215-232` y `protocol.mapper.ts:55` del backend). `receptionStatus` es `COMPLETO` cuando la recepción tiene `statusId` 10 (`protocol.entity.orm.ts:162-164` del backend). Es la misma condición de la fila b de RF-ALR.f.1.
+- No se verificó que `findOne` cargue la recepción de la versión activa: lo comprueba la prueba de humo de T01-5. Si no aparece `Asignar Pares`, se registra como hallazgo, se detiene la tarea y se decide (la alternativa es la bandeja `/estratificacion-riesgo`).
+- `AssignmentPage` no acepta el protocolo: no tiene parámetros y solo redirige (`assignment.page.ts:25-30`).
 
 **Regla:** si llega una `accion` fuera de estas tres, la fila se muestra sin botón (no se inventa un destino) y se registra con `console.warn`.
 
@@ -90,7 +97,7 @@ Las tres rutas cuelgan de `/dashboard/...`, que para la Secretaría se carga den
 3. **Botones de etapa** (`ButtonGroup`, C2): `Todos`, `Recepción`, `Asignación`, `Evaluación`, `Resolución`, `Seguimiento`, `Renovación` (etiquetas de `Stage.all()`). Sin contadores (F00 §5). El botón activo sale de `?etapa=` (`Todos` = sin parámetro). Un `?etapa=` desconocido se trata como `Todos` y se quita de la URL.
 4. **Filtros** (`FilterBar`, `viewKey = 'protocolos'`):
    - `Buscar`: "Código, título o investigador". Busca en código, título, investigador principal y coinvestigadores (RF-EST.3, TSK-001.4; dato verificado). Debounce de 300 ms. Máximo 100 caracteres (`maxlength`).
-   - `Año`: `Todos` (por defecto, sin `year`) y los años de 2000 al año en curso, del más reciente al más antiguo.
+   - `Año`: `Todos` (por defecto, sin `year`) y los años de 2000 al año en curso, del más reciente al más antiguo. El canvas arranca en 2026; se mantiene `Todos` (decisión D8, diferencia con el canvas en §9.2).
    - **Sin selector "Etapa"** (C2).
 5. **Tabla** (contrato C), columnas:
 
@@ -100,7 +107,8 @@ Las tres rutas cuelgan de `/dashboard/...`, que para la Secretaría se carga den
    | Investigador principal | `principalInvestigator.fullName` (o `Sin investigador principal`) |
    | Etapa | chip neutro con la etiqueta de `Stage` (§5.3) |
 
-   **Sin columna Estado** (§9, Duda D4). **Sin "›"** y sin la nota "Clic en una fila…" (C5): en F01 las filas no navegan (Duda D5).
+   Las mismas tres columnas en todas las etapas (las columnas propias de cada etapa están en §9.1).
+   **Sin columna Estado** (decisión D4, §9). **Sin "›"** y sin la nota "Clic en una fila…" (C5): en F01 las filas no navegan (decisión D5; destinos del canvas en §9.1).
 6. **Paginación:** 20 por página. Texto `Mostrando {a}–{b} de {total}`. Botones `Anterior` y `Siguiente` de al menos 44 px de alto, deshabilitados en los extremos. `page` va en la URL; al cambiar la etapa, la búsqueda o el año se vuelve a la página 1.
 
 ## 4. Contratos del backend
@@ -192,7 +200,7 @@ Los errores nunca se muestran como "sin resultados".
 
 ## 6. Interacciones
 
-- **Mis pendientes:** al pulsar un filtro se pide `GET /secretaria/pendientes?filtro=…`. El filtro no va en la URL en F01 (Duda D7). La acción de cada fila navega a su destino (§3.1.1).
+- **Mis pendientes:** al pulsar un filtro se pide `GET /secretaria/pendientes?filtro=…`. El filtro no va en la URL en F01 (decisión D7). La acción de cada fila navega a su destino (§3.1.1). `Ver convocatoria` navega a `/convocatorias`.
 - **Protocolos:** etapa, búsqueda, año y página van en la URL (`etapa`, `search`, `year`, `page`). Recargar o volver atrás reproduce la misma vista. Cambiar etapa, búsqueda o año pone `page=1`.
 - **Contador del menú:** `totales.todos` de `GET /secretaria/pendientes` (sin mock).
 
@@ -215,7 +223,7 @@ Los errores nunca se muestran como "sin resultados".
 7. Cada `estadoPlazo` muestra el tono y el texto de §5.2; `fechaPlazo` `2026-10-21T04:59:59.999Z` se muestra `20/10/2026`.
 8. Cada fila muestra el botón de su `accion` con `aria-label="{accionTexto} {ceishCode}"` y navega al destino de §3.1.1. Una `accion` desconocida no muestra botón.
 9. Una etapa desconocida muestra `Etapa no reconocida` y el resto de la fila se ve completo.
-10. Tarjeta: con datos muestra convocatoria, tipo, `dd/MM/yyyy, HH:mm`, lugar y protocolos a tratar, **sin** línea de informes; con `data = null` muestra `No hay una reunión programada.`; con error muestra `ErrorState` con Reintentar y la tabla de pendientes se ve igual.
+10. Tarjeta: con datos muestra convocatoria, tipo, `dd/MM/yyyy, HH:mm`, lugar, protocolos a tratar y el enlace `Ver convocatoria` a `/convocatorias`, **sin** línea de informes; con `data = null` muestra `No hay una reunión programada.` (sin enlace); con error muestra `ErrorState` con Reintentar (sin enlace) y la tabla de pendientes se ve igual.
 11. `enlaceReunion` `https://…` se muestra con `target="_blank"` y `rel="noopener noreferrer"`; `javascript:…` o un texto no URL queda `null` y se muestra `Enlace no disponible`.
 12. Protocolos: `?etapa=EVALUACION` marca el botón Evaluación y pide `etapa=EVALUACION&page=1&limit=20`; `?etapa=XYZ` se trata como Todos.
 13. La búsqueda espera 300 ms sin teclear antes de pedir; cambiar búsqueda, año o etapa vuelve a `page=1`.
@@ -225,6 +233,8 @@ Los errores nunca se muestran como "sin resultados".
 17. El contador del menú muestra `totales.todos`; si la petición falla, no se muestra.
 18. Ningún archivo de `presentation` o `application` de F01 importa `@angular/common/http` ni `infrastructure` (regla de eslint).
 19. Ningún archivo de F01 usa `innerHTML` ni `bypassSecurityTrust*`, ni agrega colores hex.
+20. ASIGNAR navega a `/dashboard/protocols/workspace/{protocolId}/info`; VALIDAR, a `…/workspace/{protocolId}/validation`; REASIGNAR, a `/dashboard/evaluations/reassignment/{protocolId}`.
+21. La ruta `/protocolos` pide el permiso `PROTOCOLOS_LISTAR` (el mismo de `GET /protocols`, RF-EST.3); `path`, `canActivate` y `data.roles` no cambian.
 
 ## 9. Pendientes
 
@@ -234,21 +244,56 @@ Los errores nunca se muestran como "sin resultados".
 - **Columna Estado en Protocolos:** no se muestra en F01. El contrato C trae `receptionStatus` (código de recepción) y `statusId` (estado del protocolo, null en Recepción y Asignación). El código tiene etiquetas por código (`protocol-ui.util.ts:11-24`, `ProtocolUI.label`), pero:
   - `receptionStatus` puede traer `PENDIENTE_SUBSANACION`, `EVALUACION_SUBSANACIONES` o `ARCHIVADO`, que no están en `EstadoCatalog` (`estado.catalog.ts:7-24`); `ProtocolUI.label` devolvería el código crudo (`protocol-ui.util.ts:28-30`);
   - mostrar una sola etiqueta exige elegir entre `statusId` y `receptionStatus`, que es una regla de negocio que no está en el backend.
-  Ver Duda D4.
+  Decisión D4: sin columna Estado en F01. **Pendiente de validar con la Secretaría** qué estados quiere ver en cada etapa (los chips del canvas, §9.1), para pedir al backend un `estadoActual` legible en `GET /protocols`, como ya entrega `GET /secretaria/pendientes`.
 - **Colores ESPOCH:** unificar `_variables.scss` (`#003366`) con los tokens de F00 (`--c-primary #3f51b5`).
 - **Deuda sin tarea en F01:** los 18 `window.open(res.downloadUrl, '_blank')` sin validar la URL ni `noopener`; `BaseApiService.handleError` (`base-api.service.ts:41-53`) asume errores de Axios; `ErrorInterceptor` convierte el error en `new Error(message)` y pierde el código de estado (`error.interceptor.ts:153-155`).
 - **Bug "[object Object]" del tablero "Validar documentos":** ese tablero no está en `canvas/`, así que no se verificó en imagen. En el código, `protocol-validation-detail.page.ts:359` interpola `item.observations`. F01 lo evita con mappers que validan tipos; la pantalla de validación es de F02.
 
-## 10. Dudas
+### 9.1 Protocolos por etapa (llega cuando el backend lo entregue)
 
-| # | Duda | Opción recomendada |
+En F01 **todas las etapas muestran las mismas columnas**: Protocolo, Investigador principal y Etapa, con la búsqueda y el año como únicos filtros. El canvas define columnas y filtros propios por etapa; llegan cuando el backend los entregue (spec-001 RF-EST.3: "Falta implementar: las columnas por etapa y los filtros propios de cada etapa"):
+
+| Etapa | Columnas propias | Filtros propios |
 |---|---|---|
-| D1 | ASIGNAR ("Asignar evaluadores") lleva a la bandeja "Estratificación de Riesgo", no al protocolo. ¿Es la pantalla correcta para esa fila? La condición de la fila b (RF-ALR.f.1: recepción completa, sin riesgo confirmado, sin asignación activa) coincide con los protocolos que esa bandeja lista, pero no se verificó con datos | Mantener la bandeja en F01; confirmar con la Secretaría; el acceso directo por protocolo es de F03 |
-| D2 | ¿Cuál es la ruta definitiva de la bandeja? T01-0 la deja en `/estratificacion-riesgo` (temporal, fuera del menú) | Temporal hasta F03 (Asignación) |
-| D3 | "Ver convocatoria" en la tarjeta: `/convocatorias/:id` no existe | Sin enlace en F01; F04 lo agrega |
-| D4 | Columna Estado en Protocolos (§9) | Pedir al backend un `estadoActual` legible en `GET /protocols`, como en pendientes |
-| D5 | ¿Las filas de Protocolos abren algo? Las rutas por etapa son de F02–F07 | Sin navegación en F01. Alternativa: `/dashboard/protocols/workspace/:id/info` si la Secretaría lo pide |
-| D6 | `AssignmentPage` también aparece en el menú antiguo por permisos (`menu-ui.config.ts:111-124`). Con T01-0, un rol que no es SECRETARIA que llegue ahí verá el aviso de RoleGuard en lugar de su inicio sin aviso | Aceptarlo: hoy ese rol tampoco ve la bandeja |
-| D7 | ¿El filtro de Mis pendientes va en la URL (`?filtro=`)? | No en F01; la vista arranca en Todos |
-| D8 | El año por defecto de Protocolos | `Todos` (sin `year`) |
-| D9 | La ruta `/protocolos` conserva los permisos de la Validación Documental (`RECEPCION_VALIDAR`, `DOCUMENTOS_VALIDAR`, `RECEPCION_VER`, `app.routes.ts:30-34`), pero `GET /protocols` pide `PROTOCOLOS_LISTAR` (RF-EST.3). Una cuenta sin ese permiso vería un 403 | No cambiar `data` en F01 (decisión: solo cambia `loadComponent`); confirmar que la Secretaría tiene `PROTOCOLOS_LISTAR` y ajustar el permiso de la ruta en una tarea aparte |
+| Recepción | Recibido · Requisitos revisados | Estado: Por revisar, Con observaciones, Esperando aceptación de tiempos |
+| Asignación | Evaluadores (n de mín. 3) · Tipo de revisión | Tipo de revisión: Pleno, Expedita · Estado: Sin evaluadores, Esperando firma |
+| Evaluación | Riesgo · Dictámenes | Riesgo: Pendiente, Fijado, No coinciden · Dictámenes: Al día, Dictamen vencido, Completos |
+| Resolución | Resultado del pleno · Sesión | Resultado |
+| Seguimiento | Informe · Fecha de entrega | Informe: Inicio, Avance, Final · Estado: Por entregar, Recibido, Vencido |
+| Renovación | Vence · Paso | Paso · Estado |
+| Todas | Estado, con chips | — (pendiente de D4) |
+
+**Clic en una fila** (fuera de F01, C5 y D5). Destino que define el canvas para cada etapa, cuando existan esas pantallas (F02–F07):
+
+| Etapa | Destino |
+|---|---|
+| Recepción | Validar documentos |
+| Asignación | Asignar evaluadores |
+| Evaluación | El protocolo en la pestaña Evaluadores, o la Sesión del pleno |
+| Resolución | Emitir resolución, o Resolución con condición |
+| Seguimiento | Seguimiento del protocolo |
+| Renovación | Renovación del protocolo |
+
+### 9.2 Diferencias con el canvas
+
+| # | Canvas | F01 | Motivo | Estado |
+|---|---|---|---|---|
+| DC1 | El filtro de año arranca en 2026 | Arranca en `Todos` | En el propio canvas hay protocolos de 2025 en Renovación que quedarían ocultos (D8) | Decidido |
+| DC2 | Validar y Asignar con plazo ("Hoy") | `Sin plazo` | El backend los entrega como `SIN_PLAZO` (RF-ALR.f.1, filas a y b) | Pendiente de validar con la Secretaría |
+| DC3 | ASIGNAR abre la asignación de ese protocolo | Abre el espacio de ese protocolo, donde `Asignar Pares` abre la asignación con un clic (§3.1.1) | El espacio no abre el modal solo; ninguna ruta abre la asignación directamente (`assignment.page.ts:25-30`) | Decidido (D1) |
+| DC4 | "Ver convocatoria" abre esa convocatoria | Abre la lista de Convocatorias | `CallsManagementPage` no lee parámetros (D3) | Decidido |
+| DC5 | Botones "Validar", "Asignar", "Reasignar" | `accionTexto` del backend: "Validar documentos", "Asignar evaluadores", "Reasignar evaluador" | El texto sale del contrato (RF-ALR.f.1), no se inventa | Decidido |
+
+## 10. Dudas y decisiones
+
+| # | Duda | Estado | Decisión |
+|---|---|---|---|
+| D1 | ¿A dónde lleva ASIGNAR? | Decidido (05/11/2026) | Al espacio de ese protocolo, `/dashboard/protocols/workspace/{protocolId}/info`, con la acción `Asignar Pares` (§3.1.1). La bandeja sigue disponible en `/estratificacion-riesgo`. Diferencia con el canvas DC3. Se confirma en la prueba de humo de T01-5 |
+| D2 | Ruta de la bandeja "Estratificación de Riesgo" | Decidido | `/estratificacion-riesgo`, temporal hasta F03 (Asignación), fuera del menú |
+| D3 | Destino de "Ver convocatoria" | Decidido | `/convocatorias` (`app.routes.ts:36-44`), la lista. Diferencia con el canvas DC4 |
+| D4 | Columna Estado en Protocolos | Decidido: sin columna en F01 | Pendiente de validar con la Secretaría qué estados quiere ver, para pedir al backend un `estadoActual` legible en `GET /protocols` (§9) |
+| D5 | ¿Las filas de Protocolos abren algo? | Decidido | No en F01. Destinos del canvas por etapa en §9.1 |
+| D6 | Con T01-0, un rol que no es SECRETARIA que llegue a `AssignmentPage` (menú antiguo por permisos, `menu-ui.config.ts:111-124`) verá el aviso de RoleGuard | Decidido | Se acepta: hoy ese rol tampoco ve la bandeja |
+| D7 | ¿El filtro de Mis pendientes va en la URL? | Decidido | No en F01; la vista arranca en Todos |
+| D8 | Año por defecto en Protocolos | Decidido | `Todos`. Diferencia con el canvas DC1 |
+| D9 | Permiso de la ruta `/protocolos`: hoy los de la Validación Documental (`app.routes.ts:30-34`); `GET /protocols` pide `PROTOCOLOS_LISTAR` (RF-EST.3) | Decidido | En T01-7, `data.permissions` de `/protocolos` pasa a `['PROTOCOLOS_LISTAR']` (sin `permissionStrategy`), igual que el backend, con una prueba de rutas. Es la única excepción a "path, guards y data no cambian" |

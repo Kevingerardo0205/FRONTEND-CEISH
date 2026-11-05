@@ -2,6 +2,7 @@
 
 **Estilo:** capas + Clean Architecture (ADR-001) · **Angular 20:** componentes standalone, signals, `ChangeDetectionStrategy.OnPush`, `inject()`
 **Estado:** borrador 05/11/2026. Rutas y líneas verificadas con lectura del código en `docs/f01-pendientes-protocolos` (base: `dev`, 0 commits por delante).
+**Revisión 05/11/2026 (spec-ui 0.2):** D1–D9 decididas; ASIGNAR → espacio del protocolo; "Ver convocatoria" → `/convocatorias`; `/protocolos` con `PROTOCOLOS_LISTAR` (T01-7); `providers` en las rutas aprobado.
 **Línea base (Paso 0, 05/11/2026):** `npx tsc -p tsconfig.app.json --noEmit` exit 0 · `npx eslint "src/**/*.ts"` 0 errores y 75 avisos · `npx ng test --watch=false --browsers=ChromeHeadless` `TOTAL: 699 SUCCESS` · build de producción NO EJECUTADO en el Paso 0.
 
 ---
@@ -127,9 +128,10 @@ En `SECRETARIA_ROUTES` (`app.routes.ts:12-35`):
 | Ruta | Cambia | No cambia |
 |---|---|---|
 | `pendientes` (`:14-21`) | `loadComponent` → `MisPendientesPage`; se agrega `providers: PENDIENTES_PROVIDERS` | `path`, `canActivate: [RoleGuard, AuthGuard]`, `data: { roles: ['SECRETARIA'] }` |
-| `protocolos` (`:22-35`) | `loadComponent` → `ProtocolosPage`; se agrega `providers: PROTOCOLOS_PROVIDERS`; se borra el comentario "Temporal hasta F01" | `path`, `canActivate`, `data` (roles y permisos actuales) |
+| `protocolos` (`:22-35`) | `loadComponent` → `ProtocolosPage`; se agrega `providers: PROTOCOLOS_PROVIDERS`; se borra el comentario "Temporal hasta F01"; **`data.permissions` pasa a `['PROTOCOLOS_LISTAR']`** y se quita `permissionStrategy` (D9) | `path`, `canActivate`, `data.roles: ['SECRETARIA']` |
 
-- `providers` es la única clave nueva, por la decisión de §3. Una prueba compara `path`, `canActivate` y `data` antes y después.
+- **Aprobado (05/11/2026):** además del `loadComponent`, las dos rutas llevan `providers` (decisión de §3). `path`, `canActivate` y `data` no cambian; la única excepción es el permiso de `/protocolos` (D9, T01-7). Una prueba compara esas claves antes y después.
+- **D9:** hoy `/protocolos` pide `RECEPCION_VALIDAR`, `DOCUMENTOS_VALIDAR` o `RECEPCION_VER` (`app.routes.ts:30-34`), los de la Validación Documental. `GET /protocols` pide `PROTOCOLOS_LISTAR` (spec-001 RF-EST.3, TSK-001.4). `AuthGuard` compara `data.permissions` con los permisos de la sesión (`auth.guard.ts:22-44`). En T01-7 la ruta pide `PROTOCOLOS_LISTAR`; una prueba de rutas comprueba que una SECRETARIA sin ese permiso no entra y una con él sí. La prueba de humo confirma que la sesión real de la Secretaría trae `PROTOCOLOS_LISTAR` (hoy el código del frontend no lo menciona: `grep -rn "PROTOCOLOS_LISTAR" src` sin resultados).
 - Como `SECRETARIA_ROUTES` se usa en el padre del AppShell (`app.routes.ts:99`) y en el respaldo sin layout (`:112`), el criterio 4 de F00 sigue igual.
 - `ROLE_HOME` (`role-home.ts:8-13`) y `redirectKeepingQuery` (`role-home.guard.ts:42-44`) no cambian.
 - `ProtocolValidationListPage` sigue en `/dashboard/protocols/validation/list` (`protocols/routes.ts:67-76`).
@@ -139,10 +141,14 @@ En `SECRETARIA_ROUTES` (`app.routes.ts:12-35`):
 | `accion` | Ruta | Evidencia |
 |---|---|---|
 | `VALIDAR` | `['/dashboard/protocols/workspace', protocolId, 'validation']` | `protocols/routes.ts:23-36`; mismo enlace en `protocol-validation-list.page.ts:151` y `protocol-workspace.component.ts:626` |
-| `ASIGNAR` | `['/dashboard/evaluations/assignment']` → `/estratificacion-riesgo` (tras T01-0) | `evaluations/routes.ts:15-22`; `assignment.page.ts:29`. No abre el protocolo (Duda D1) |
+| `ASIGNAR` | `['/dashboard/protocols/workspace', protocolId, 'info']` | `protocols/routes.ts:23-32`; `protocol-workspace.component.ts:558-560` (acción `Asignar Pares` con estado `COMPLETO` o `INCOMPLETO`) y `:627-668` (abre `AssignPeersModalComponent` con ese protocolo, el mismo modal que usa la bandeja en `peer-risk-pending-table.component.ts:250-252`). El estado sale de `receptionStatus` (`protocol-api.adapter.ts:349-353`), que `GET /protocols/:id` incluye (backend: `protocol.controller.ts:215-232`, `protocol.mapper.ts:55`). D1 |
 | `REASIGNAR` | `['/dashboard/evaluations/reassignment', protocolId]` | `evaluations/routes.ts:24-31`; `reassignment.page.ts:83` lee `protocolId` (o `id`) |
 
-Las tres existen, así que se muestran los tres botones. `/dashboard/...` se carga dentro del AppShell de la Secretaría (`dashboard/routes.ts:51-57` y `:111-115`; `app.routes.ts:100-104`).
+Las tres existen, así que se muestran los tres botones.
+
+**Revisión de ASIGNAR (D1):** `AssignmentPage` no acepta el protocolo: no tiene parámetros de ruta ni de URL y solo redirige (`assignment.page.ts:25-30`). Ninguna ruta abre la asignación de un protocolo directamente; el espacio del protocolo sí recibe `:id` y ofrece `Asignar Pares`. Diferencia con el canvas: la asignación queda a un clic (spec-ui §9.2, DC3). No se verificó en el navegador que `GET /protocols/:id` cargue la recepción de la versión activa (de eso depende que aparezca `Asignar Pares`): lo comprueba la prueba de humo de T01-5.
+
+**"Ver convocatoria" (D3):** `routerLink="/convocatorias"` → `CallsManagementPage` (`app.routes.ts:36-44`, `RoleGuard` + `AuthGuard`, `roles: ['SECRETARIA']`, `permissions: ['RESOLUCION_CONVOCATORIAS']`). La página no lee parámetros (no usa `ActivatedRoute`), así que abre la lista, no esa convocatoria. `/dashboard/...` se carga dentro del AppShell de la Secretaría (`dashboard/routes.ts:51-57` y `:111-115`; `app.routes.ts:100-104`).
 
 ## 5. Mapa de equivalencias (búsqueda del Paso 0)
 
@@ -209,7 +215,7 @@ Jasmine + Karma: `npx ng test --watch=false --browsers=ChromeHeadless` (y `--inc
 | facades | `TestBed` con los ports sustituidos (`{ provide: PendientesPort, useValue: { obtener: jasmine.createSpy() } }`, `IMeetingRepositoryPort` igual): estados por bloque, error de un bloque sin afectar al otro, reintentar, cambio de filtro |
 | componentes | `TestBed.createComponent` + `fixture.componentRef.setInput(...)` (como `data-table.component.spec.ts:29-40`): textos, tonos, `aria-pressed`, `aria-label`, `href`/`target`/`rel`, estados |
 | páginas | `TestBed` con la fachada o los ports sustituidos; `Router` real con `provideRouter([])` para comprobar la URL (etapa, page, búsqueda con `fakeAsync` + `tick(300)`) |
-| rutas | `app.routes.spec.ts` y `role-home.routes.spec.ts` (usan `appConfig.providers` + `provideHttpClientTesting()`, `app.routes.spec.ts:57-59`): criterio 4, `ROLE_HOME`, `?tab=peers` → `/pendientes?tab=peers`, `/estratificacion-riesgo`, y que `path`/`canActivate`/`data` de `pendientes` y `protocolos` no cambiaron |
+| rutas | `app.routes.spec.ts` y `role-home.routes.spec.ts` (usan `appConfig.providers` + `provideHttpClientTesting()`, `app.routes.spec.ts:57-59`): criterio 4, `ROLE_HOME`, `?tab=peers` → `/pendientes?tab=peers`, `/estratificacion-riesgo`, que `path`/`canActivate`/`data` de `pendientes` no cambiaron y que en `protocolos` solo cambió `data.permissions` a `['PROTOCOLOS_LISTAR']` (SECRETARIA sin ese permiso no entra; con él, sí) |
 
 Los providers de ruta (`PENDIENTES_PROVIDERS`) tienen prioridad sobre los de `TestBed`: en las pruebas de rutas, las peticiones van a `HttpTestingController`; en las de la página, se sustituye la fachada con `TestBed.overrideComponent`.
 
@@ -234,7 +240,9 @@ Con SECRETARIA, después de cada tarea que toque rutas (T01-0, T01-5, T01-7):
 1. Login → `/pendientes` dentro del AppShell, con el contador del menú.
 2. `/dashboard/evaluations/assignment` → `/estratificacion-riesgo`: bandeja, asignar pares y recarga.
 3. `/dashboard/protocols/workspace/:id/validation` (Validar) y `/dashboard/protocols/validation/list`.
-4. `/dashboard/evaluations/reassignment/:protocolId` (Reasignar).
-5. `/convocatorias`, `/reportes`, `/configuracion/usuarios`.
-6. Cambio de rol con el selector (SECRETARIA ↔ otro rol) y vuelta a `/pendientes`.
-7. Con INVESTIGADOR: `/pendientes`, `/protocolos` y `/estratificacion-riesgo` → su inicio con aviso.
+4. `/dashboard/protocols/workspace/:id/info` desde una fila ASIGNAR: aparece `Asignar Pares` y abre la asignación de ese protocolo (D1).
+5. `/dashboard/evaluations/reassignment/:protocolId` (Reasignar).
+6. `Ver convocatoria` → `/convocatorias`; también `/reportes` y `/configuracion/usuarios`.
+7. `/protocolos` con la sesión real de la Secretaría (permiso `PROTOCOLOS_LISTAR`, D9).
+8. Cambio de rol con el selector (SECRETARIA ↔ otro rol) y vuelta a `/pendientes`.
+9. Con INVESTIGADOR: `/pendientes`, `/protocolos` y `/estratificacion-riesgo` → su inicio con aviso.
