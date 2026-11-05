@@ -26,6 +26,7 @@ export class AssignmentPage implements OnInit {
   private router = inject(Router);
 
   ngOnInit() {
-    this.router.navigate(['/dashboard/home'], { queryParams: { tab: 'peers' } });
+    // F01 T01-0: la bandeja vive en su ruta propia (antes /dashboard/home?tab=peers).
+    this.router.navigate(['/estratificacion-riesgo']);
   }
 }

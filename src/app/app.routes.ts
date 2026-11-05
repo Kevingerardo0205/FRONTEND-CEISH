@@ -67,6 +67,22 @@ export const SECRETARIA_ROUTES: Routes = [
       },
     ],
   },
+  {
+    // F01 T01-0: bandeja "Estratificación de Riesgo" en su ruta propia, temporal hasta F03.
+    // No está en el menú; se llega desde /dashboard/evaluations/assignment (AssignmentPage).
+    // Permisos: los de /dashboard/evaluations/assignment (evaluations/routes.ts).
+    path: 'estratificacion-riesgo',
+    loadComponent: () =>
+      import('@features/dashboard/presentation/pages/peer-risk-pending/peer-risk-pending.page').then(
+        (m) => m.PeerRiskPendingPage,
+      ),
+    canActivate: [RoleGuard, AuthGuard],
+    data: {
+      roles: ['SECRETARIA'],
+      permissions: ['EVALUATORS_ASSIGN', 'EVALUATORS_SUGGEST', 'EVALUACION_ASIGNAR'],
+      permissionStrategy: 'any',
+    },
+  },
 ];
 
 export const routes: Routes = [
