@@ -21,7 +21,7 @@
         class="protocolos-page__select"
         (change)="cambiarAnio($any($event.target).value)"
       >
-        <option value="">Todos</option>
+        <option value="" [selected]="!query().year">Todos</option>
         @for (anio of anios; track anio) {
           <option [value]="anio" [selected]="query().year === +anio">{{ anio }}</option>
         }

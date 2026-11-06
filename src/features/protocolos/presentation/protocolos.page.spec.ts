@@ -156,6 +156,21 @@ describe('ProtocolosPage (F01 T01-7)', () => {
     expect(ultimaConsulta()).toEqual({ year: 2000, page: 1, limit: 20 });
   }));
 
+  it('?year=2025 deja seleccionada la opción 2025 (no "Todos") y pide year=2025', fakeAsync(() => {
+    const select = abrir('/protocolos?year=2025').querySelector<HTMLSelectElement>('select')!;
+    expect(select.value).toBe('2025');
+    expect(select.selectedOptions[0]?.textContent?.trim()).toBe('2025');
+    expect(ultimaConsulta()).toEqual({ year: 2025, page: 1, limit: 20 });
+  }));
+
+  it('al volver de ?year=2025 a sin año, el select vuelve a "Todos"', fakeAsync(() => {
+    abrir('/protocolos?year=2025');
+    harness.navigateByUrl('/protocolos');
+    flush();
+    harness.detectChanges();
+    expect(el().querySelector<HTMLSelectElement>('select')!.value).toBe('');
+  }));
+
   it('el año en curso se calcula en hora de Ecuador: 01/01/2027 00:30 UTC sigue siendo 2026', fakeAsync(() => {
     jasmine.clock().install();
     jasmine.clock().mockDate(new Date('2027-01-01T00:30:00.000Z'));
