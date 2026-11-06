@@ -3,6 +3,7 @@
 **Estilo:** capas + Clean Architecture (ADR-001) · **Angular 20:** componentes standalone, signals, `ChangeDetectionStrategy.OnPush`, `inject()`
 **Estado:** borrador 05/11/2026. Rutas y líneas verificadas con lectura del código en `docs/f01-pendientes-protocolos` (base: `dev`, 0 commits por delante).
 **Revisión 05/11/2026 (spec-ui 0.2):** D1–D9 decididas; ASIGNAR → espacio del protocolo; "Ver convocatoria" → `/convocatorias`; `/protocolos` con `PROTOCOLOS_LISTAR` (T01-7); `providers` en las rutas aprobado.
+**Revisión 05/11/2026 (spec-ui 0.4, T01-6):** D10, `year` de la URL de 2000 al año en curso.
 **Línea base (Paso 0, 05/11/2026):** `npx tsc -p tsconfig.app.json --noEmit` exit 0 · `npx eslint "src/**/*.ts"` 0 errores y 75 avisos · `npx ng test --watch=false --browsers=ChromeHeadless` `TOTAL: 699 SUCCESS` · build de producción NO EJECUTADO en el Paso 0.
 
 ---
@@ -65,7 +66,7 @@ src/features/protocolos/          ← Protocolos (/protocolos)
 |---|---|---|---|---|
 | domain | CREAR | `domain/protocol-list-item.model.ts` | `ProtocolListItem { id: number \| string, ceishCode: string \| null, title, etapa: Stage \| null, principalInvestigator: { id, fullName } \| null }`; `ProtocolListQuery { search?, year?, etapa?: StageCode, page, limit }`; `ProtocolListResult { items, total, page, limit, totalPages }` | T01-6 |
 | domain | CREAR | `domain/protocolos-list.port.ts` | `abstract class ProtocolosListPort { abstract listar(q: ProtocolListQuery): Observable<ProtocolListResult> }` | T01-6 |
-| domain | CREAR | `domain/protocol-list-query.rules.ts` + spec | `queryDesdeUrl(params)`: valida `etapa` contra `Stage.all()`, `year` entero 2000–2100, `page` entero ≥ 1, `search` recortado ≤ 100; descarta lo inválido; `limit` fijo en 20 | T01-6 |
+| domain | CREAR | `domain/protocol-list-query.rules.ts` + spec | `queryDesdeUrl(params, anioActual)`: valida `etapa` contra `Stage.all()`, `year` entero de 2000 a `anioActual` (spec-ui 0.4, D10), `page` entero ≥ 1 (si no, 1), `search` recortado ≤ 100 (vacío o más largo: no se envía); descarta lo inválido; `limit` fijo en 20 | T01-6 |
 | infrastructure | CREAR | `infrastructure/protocol-list.mapper.ts` + spec | Mapper estricto; `ceishCode` nullable; `principalInvestigator` null u objeto con `fullName` string; `etapa` desconocida → `null`. Lee solo los campos que usa (los demás campos existentes se ignoran) | T01-6 |
 | infrastructure | CREAR | `infrastructure/protocolos-http.adapter.ts` + spec | `GET ENDPOINTS.PROTOCOLS.BASE` con `search`, `year`, `etapa`, `page`, `limit` (omite los vacíos); **propaga** el error | T01-6 |
 | raíz | CREAR | `protocolos.providers.ts` | `PROTOCOLOS_PROVIDERS = [{ provide: ProtocolosListPort, useClass: ProtocolosHttpAdapter }]` | T01-6 |

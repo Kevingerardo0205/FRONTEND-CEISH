@@ -1,7 +1,7 @@
 # F01 · Mis pendientes y Protocolos — spec-ui
 
-**Versión:** 0.3 · **Fecha:** 05/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
-**Historial:** 0.1 (05/11/2026) primer borrador · 0.2 (05/11/2026) dudas D1–D9 decididas; cotejo con el canvas: "Ver convocatoria" lleva a `/convocatorias`, ASIGNAR abre el espacio del protocolo, `/protocolos` pide `PROTOCOLOS_LISTAR`, columnas y destinos por etapa anotados como pendientes, diferencias con el canvas (§9.2) · 0.3 (05/11/2026, T01-3) criterio 17: con `totales.todos = 0` el contador no se muestra
+**Versión:** 0.4 · **Fecha:** 05/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
+**Historial:** 0.1 (05/11/2026) primer borrador · 0.2 (05/11/2026) dudas D1–D9 decididas; cotejo con el canvas: "Ver convocatoria" lleva a `/convocatorias`, ASIGNAR abre el espacio del protocolo, `/protocolos` pide `PROTOCOLOS_LISTAR`, columnas y destinos por etapa anotados como pendientes, diferencias con el canvas (§9.2) · 0.3 (05/11/2026, T01-3) criterio 17: con `totales.todos = 0` el contador no se muestra · 0.4 (05/11/2026, T01-6) D10: `year` de la URL se valida de 2000 al año en curso (antes 2000–2100); `search` de más de 100 caracteres se descarta
 **Cubre:** spec-003 v1.5.3 RF-ALR.f (RF-ALR.f.1 a f.7) · spec-001 v3.5.6 RF-EST.1, RF-EST.2 (parcial) y RF-EST.3 (contrato de `GET /protocols`, TSK-001.4)
 **Depende de:** F00 (tokens, AppShell, `shared/ui`, `Stage`, rutas por rol activo)
 **Canvas:** `canvas/01-mis-pendientes.png` y `canvas/02-protocolos.png` (tablero "Pantallas Secretaría — CEISH-ESPOCH", 28/10/2026), con las decisiones C1–C7 del 05/11/2026.
@@ -210,7 +210,7 @@ Los errores nunca se muestran como "sin resultados".
 2. Los mappers validan el tipo de cada campo (como `meeting.mapper.ts:164-175`, `str()` y `nullableStr()`). Un campo de texto que no es string ni null es un error de contrato, no un `[object Object]` en pantalla.
 3. `enlaceReunion` se valida **en el mapper**: `new URL(valor)` dentro de `try`; solo se acepta si `protocol` es `http:` o `https:`. Si no, queda `null` y la tarjeta muestra `Enlace no disponible`.
 4. El enlace se renderiza `<a [href]="enlace" target="_blank" rel="noopener noreferrer">`.
-5. Los parámetros de la URL (`etapa`, `year`, `page`, `search`) se validan antes de enviarlos: etapa contra `Stage.all()`, `year` entero 2000–2100, `page` entero ≥ 1, `search` recortado y ≤ 100 caracteres. Un valor inválido se descarta.
+5. Los parámetros de la URL (`etapa`, `year`, `page`, `search`) se validan antes de enviarlos: etapa contra `Stage.all()`, `year` entero de 2000 al año en curso (D10), `page` entero ≥ 1, `search` recortado y ≤ 100 caracteres. Un valor inválido se descarta (un `search` vacío o de más de 100 caracteres no se envía).
 
 ## 8. Criterios de aceptación
 
@@ -297,3 +297,4 @@ En F01 **todas las etapas muestran las mismas columnas**: Protocolo, Investigado
 | D7 | ¿El filtro de Mis pendientes va en la URL? | Decidido | No en F01; la vista arranca en Todos |
 | D8 | Año por defecto en Protocolos | Decidido | `Todos`. Diferencia con el canvas DC1 |
 | D9 | Permiso de la ruta `/protocolos`: hoy los de la Validación Documental (`app.routes.ts:30-34`); `GET /protocols` pide `PROTOCOLOS_LISTAR` (RF-EST.3) | Decidido | En T01-7, `data.permissions` de `/protocolos` pasa a `['PROTOCOLOS_LISTAR']` (sin `permissionStrategy`), igual que el backend, con una prueba de rutas. Es la única excepción a "path, guards y data no cambian" |
+| D10 | Rango de `year` en la URL de Protocolos: el backend acepta 2000–2100 (§4 C), el selector Año ofrece de 2000 al año en curso (§3.2) | Decidido (05/11/2026, T01-6) | Se valida de 2000 al año en curso, igual que el selector: un año futuro en la URL se descarta. El año en curso se pasa como argumento a `queryDesdeUrl` (las pruebas no dependen del reloj) |
