@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+
+.protocolos-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  font-family: var(--font-content);
+}
+
+.protocolos-page__anio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--c-text-2);
+}
+
+.protocolos-page__select {
+  min-height: var(--min-h-filter);
+  padding: 0 0.75rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-control);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.protocolos-page__vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 1.5rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+}
+
+.protocolos-page__limpiar {
+  min-height: var(--min-h-action);
+  padding: 0 1rem;
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-control);
+  background: var(--c-surface);
+  color: var(--c-primary-dark);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--c-primary-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}

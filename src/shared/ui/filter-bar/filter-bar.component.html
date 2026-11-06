@@ -6,6 +6,7 @@
     [id]="searchId"
     [placeholder]="placeholder()"
     [value]="state().search"
+    [attr.maxlength]="maxLength()"
     (input)="onSearchInput($event)"
   />
   <div class="filter-bar__filters">

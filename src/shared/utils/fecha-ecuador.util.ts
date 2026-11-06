@@ -60,3 +60,14 @@ function partesEnEcuador(
   for (const { type, value } of formato.formatToParts(instante)) partes[type] = value;
   return partes;
 }
+
+/**
+ * Año en curso en America/Guayaquil (F01 T01-7). No usa `getFullYear()`, que da el año del
+ * navegador: el 31/12 desde las 19:00 de Ecuador un navegador en UTC ya diría el año siguiente.
+ */
+export function anioEcuador(instante: Date = new Date()): number {
+  const anio = new Intl.DateTimeFormat('en-US', { timeZone: ZONA_ECUADOR, year: 'numeric' })
+    .formatToParts(instante)
+    .find((p) => p.type === 'year')?.value;
+  return Number(anio);
+}

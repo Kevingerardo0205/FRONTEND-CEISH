@@ -3,6 +3,7 @@ import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { activeRoleIs, redirectToRoleHome } from '@infrastructure/guards/role-home.guard';
 import { PENDIENTES_PROVIDERS } from '@features/pendientes/pendientes.providers';
+import { PROTOCOLOS_PROVIDERS } from '@features/protocolos/protocolos.providers';
 
 /**
  * Rutas nuevas de la Secretaría bajo el AppShell (D10, 03/11/2026; spec-ui §7).
@@ -21,18 +22,13 @@ export const SECRETARIA_ROUTES: Routes = [
     data: { roles: ['SECRETARIA'] },
   },
   {
-    // Temporal hasta F01: Validación Documental.
+    // F01 T01-7: Protocolos. El permiso es el de GET /protocols (D9, RF-EST.3).
     path: 'protocolos',
     loadComponent: () =>
-      import('@features/protocols/presentation/pages/protocol-validation-list/protocol-validation-list.page').then(
-        (m) => m.ProtocolValidationListPage,
-      ),
+      import('@features/protocolos/presentation/protocolos.page').then((m) => m.ProtocolosPage),
+    providers: PROTOCOLOS_PROVIDERS,
     canActivate: [RoleGuard, AuthGuard],
-    data: {
-      roles: ['SECRETARIA'],
-      permissions: ['RECEPCION_VALIDAR', 'DOCUMENTOS_VALIDAR', 'RECEPCION_VER'],
-      permissionStrategy: 'any',
-    },
+    data: { roles: ['SECRETARIA'], permissions: ['PROTOCOLOS_LISTAR'] },
   },
   {
     path: 'convocatorias',
