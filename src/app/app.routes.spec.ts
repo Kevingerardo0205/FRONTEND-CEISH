@@ -9,6 +9,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from 'src/environments/environment';
 import { PENDIENTES_PROVIDERS } from '@features/pendientes/pendientes.providers';
+import { PROTOCOLOS_PROVIDERS } from '@features/protocolos/protocolos.providers';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { RoleCode } from '@domain/value-objects/role.vo';
@@ -170,6 +171,57 @@ describe('Rutas por rol activo (T13d)', () => {
       expect(httpMock.match((r) => r.url === urlPendientes).length).toBe(0);
       expect(has('app-mis-pendientes-page')).toBeTrue();
       expect(harness.fixture.nativeElement.textContent).toContain('No pudimos cargar sus pendientes.');
+    });
+  });
+
+  describe('F01 T01-7: /protocolos muestra Protocolos (D9: PROTOCOLOS_LISTAR)', () => {
+    const VALIDACION = ['RECEPCION_VALIDAR', 'DOCUMENTOS_VALIDAR', 'RECEPCION_VER'];
+
+    it('SECRETARIA con PROTOCOLOS_LISTAR ve ProtocolosPage dentro del AppShell', async () => {
+      await start(['SECRETARIA'], undefined, ['PROTOCOLOS_LISTAR']);
+
+      await harness.navigateByUrl('/protocolos');
+
+      expect(router.url).toBe('/protocolos');
+      expect(has('app-shell app-protocolos-page')).toBeTrue();
+      expect(has('app-protocol-validation-list')).toBeFalse();
+    });
+
+    it('SECRETARIA sin PROTOCOLOS_LISTAR (solo con los de Validación Documental) no entra', async () => {
+      await start(['SECRETARIA'], undefined, VALIDACION);
+
+      await harness.navigateByUrl('/protocolos');
+
+      expect(router.url).not.toBe('/protocolos');
+      expect(has('app-protocolos-page')).toBeFalse();
+    });
+
+    it('INVESTIGADOR que abre /protocolos vuelve a su inicio con aviso', async () => {
+      await start(['INVESTIGADOR'], undefined, ['PROTOCOLOS_LISTAR']);
+
+      await harness.navigateByUrl('/protocolos');
+
+      expect(router.url).toBe('/dashboard/home');
+      expect(notify).toHaveBeenCalledOnceWith(
+        'No tiene acceso a esta sección con el rol activo.',
+        'info',
+      );
+    });
+
+    it('path, canActivate y data.roles no cambian; data.permissions es PROTOCOLOS_LISTAR (sin permissionStrategy)', () => {
+      const ruta = SECRETARIA_ROUTES.find((r) => r.path === 'protocolos');
+      expect(ruta?.canActivate).toEqual([RoleGuard, AuthGuard]);
+      expect(ruta?.data).toEqual({ roles: ['SECRETARIA'], permissions: ['PROTOCOLOS_LISTAR'] });
+      expect(ruta?.providers).toBe(PROTOCOLOS_PROVIDERS);
+    });
+
+    it('/dashboard/protocols/validation/list sigue abriendo ProtocolValidationListPage', async () => {
+      await start(['SECRETARIA'], undefined, VALIDACION);
+
+      await harness.navigateByUrl('/dashboard/protocols/validation/list');
+
+      expect(router.url).toBe('/dashboard/protocols/validation/list');
+      expect(has('app-protocol-validation-list')).toBeTrue();
     });
   });
 

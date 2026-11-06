@@ -36,6 +36,8 @@ export class FilterBarComponent {
   readonly viewKey = input.required<string>();
   readonly placeholder = input('Buscar');
   readonly searchLabel = input('Buscar');
+  /** Máximo de caracteres de la búsqueda (opcional; F01 T01-7). */
+  readonly maxLength = input<number | null>(null);
 
   readonly changed = output<FilterState>();
 
@@ -67,6 +69,15 @@ export class FilterBarComponent {
 
   clear(): void {
     this.update(EMPTY_STATE);
+  }
+
+  /**
+   * Pone el estado sin emitir `changed` (F01 T01-7): para una vista que guarda sus filtros en la
+   * URL, que manda sobre lo recordado.
+   */
+  reset(state: FilterState): void {
+    this.stateSignal.set(state);
+    FilterBarComponent.memory.set(this.viewKey(), state);
   }
 
   private update(state: FilterState): void {

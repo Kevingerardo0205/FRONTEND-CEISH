@@ -1,4 +1,5 @@
 import {
+  anioEcuador,
   ZONA_ECUADOR,
   fechaCalendario,
   fechaEcuador,
@@ -98,5 +99,20 @@ describe('fecha-ecuador.util (F01 T01-1)', () => {
     expect(opciones.length).toBe(2);
     for (const o of opciones) expect(o?.timeZone).toBe(ZONA_ECUADOR);
     expect(ZONA_ECUADOR).toBe('America/Guayaquil');
+  });
+});
+
+describe('anioEcuador (F01 T01-7)', () => {
+  it('31/12/2026 a las 19:00 de Ecuador (01/01/2027 00:00 UTC) sigue siendo 2026', () => {
+    expect(anioEcuador(new Date('2027-01-01T00:00:00.000Z'))).toBe(2026);
+  });
+
+  it('31/12/2026 a las 23:59 de Ecuador sigue siendo 2026; un minuto después, 2027', () => {
+    expect(anioEcuador(new Date('2027-01-01T04:59:00.000Z'))).toBe(2026);
+    expect(anioEcuador(new Date('2027-01-01T05:00:00.000Z'))).toBe(2027);
+  });
+
+  it('sin argumento usa el instante actual', () => {
+    expect(anioEcuador()).toBe(anioEcuador(new Date()));
   });
 });

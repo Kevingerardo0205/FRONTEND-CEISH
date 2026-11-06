@@ -1,0 +1,59 @@
+<section class="protocolos-page">
+  <app-page-header [heading]="titulo()" />
+
+  <app-button-group
+    label="Filtrar por etapa"
+    [options]="etapas"
+    [active]="etapaActiva()"
+    (activeChange)="cambiarEtapa($event)"
+  />
+
+  <app-filter-bar
+    viewKey="protocolos"
+    searchLabel="Buscar"
+    placeholder="Código, título o investigador"
+    [maxLength]="searchMaximo"
+    (changed)="buscar($event)"
+  >
+    <label class="protocolos-page__anio">
+      <span>Año</span>
+      <select
+        class="protocolos-page__select"
+        (change)="cambiarAnio($any($event.target).value)"
+      >
+        <option value="" [selected]="!query().year">Todos</option>
+        @for (anio of anios; track anio) {
+          <option [value]="anio" [selected]="query().year === +anio">{{ anio }}</option>
+        }
+      </select>
+    </label>
+  </app-filter-bar>
+
+  @switch (facade.estado().estado) {
+    @case ('cargando') {
+      <app-loading-state message="Cargando protocolos…" />
+    }
+    @case ('error') {
+      <app-error-state message="No pudimos cargar los protocolos." (retry)="facade.reintentar()" />
+    }
+    @default {
+      @if (facade.estado().datos; as r) {
+        @if (r.items.length === 0) {
+          <div class="protocolos-page__vacio">
+            @if (conFiltros()) {
+              <app-empty-state message="Ningún protocolo coincide con la búsqueda." />
+              <button type="button" class="protocolos-page__limpiar" (click)="limpiarFiltros()">
+                Limpiar filtros
+              </button>
+            } @else {
+              <app-empty-state message="Todavía no hay protocolos registrados." />
+            }
+          </div>
+        } @else {
+          <app-protocolos-table [items]="r.items" />
+        }
+        <app-pager [page]="r.page" [limit]="r.limit" [total]="r.total" (pageChange)="cambiarPagina($event)" />
+      }
+    }
+  }
+</section>
