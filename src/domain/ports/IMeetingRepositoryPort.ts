@@ -5,6 +5,7 @@ import {
   MeetingDetail,
   MeetingListParams,
   MeetingPlaceOption,
+  NextMeeting,
   PaginatedMeetings,
   PendingProtocol,
 } from '@domain/entities/meeting.entity';
@@ -19,4 +20,6 @@ export abstract class IMeetingRepositoryPort {
   abstract calculateEvalDate(meetingDate: string): Observable<string>;
   /** Descarga autenticada de GET /meetings/:id/pdf. */
   abstract downloadPdf(id: string): Observable<Blob>;
+  /** GET /meetings/next (RF-ALR.f.7): la próxima reunión, o `null` si no hay ninguna. */
+  abstract next(): Observable<NextMeeting | null>;
 }

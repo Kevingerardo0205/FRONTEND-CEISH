@@ -8,6 +8,7 @@ import {
   nullableStr,
   num,
   oneOf,
+  safeHttpUrl,
   str,
   stripTransportEnvelope,
   unwrapData,
@@ -113,5 +114,28 @@ describe('contract-readers (F01 T01-2)', () => {
     expect(unwrapData({ data: null })).toBeNull();
     expect(errorDe(() => unwrapData({ statusCode: 200 })).path).toBe('response.data');
     expect(errorDe(() => unwrapData('x')).path).toBe('response');
+  });
+});
+
+describe('safeHttpUrl (F01 T01-4, spec-ui §7.3)', () => {
+  it('acepta https:// y http:// tal cual llegan', () => {
+    expect(safeHttpUrl('https://meet.example.test/ceish')).toBe('https://meet.example.test/ceish');
+    expect(safeHttpUrl('http://sala.example.test/reunion?id=3')).toBe(
+      'http://sala.example.test/reunion?id=3',
+    );
+  });
+
+  it('javascript:, data:, ftp:, texto que no es URL y cadena vacía → null', () => {
+    expect(safeHttpUrl('javascript:alert(1)')).toBeNull();
+    expect(safeHttpUrl('data:text/html,<script>alert(1)</script>')).toBeNull();
+    expect(safeHttpUrl('ftp://archivos.example.test/acta.pdf')).toBeNull();
+    expect(safeHttpUrl('sala 3')).toBeNull();
+    expect(safeHttpUrl('')).toBeNull();
+  });
+
+  it('un valor que no es string → null', () => {
+    expect(safeHttpUrl(null)).toBeNull();
+    expect(safeHttpUrl(42)).toBeNull();
+    expect(safeHttpUrl({ href: 'https://meet.example.test' })).toBeNull();
   });
 });

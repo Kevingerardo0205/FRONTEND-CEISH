@@ -291,6 +291,108 @@ describe('MeetingApiAdapter', () => {
   });
 });
 
+const NEXT = {
+  id: '7a1b2c3d-0000-4000-8000-0000000000aa',
+  numeroConvocatoria: '001-2026',
+  tipoSesion: 'EXTRAORDINARIA',
+  fechaReunion: '2026-11-10T14:00:00.000Z',
+  lugar: {
+    nombre: 'Sala virtual',
+    esVirtual: true,
+    enlaceReunion: 'https://meet.example.test/ceish',
+  },
+  protocolosATratar: 2,
+  informesATratar: null,
+};
+
+describe('MeetingApiAdapter.next() (F01 T01-4)', () => {
+  let adapter: MeetingApiAdapter;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    adapter = TestBed.inject(MeetingApiAdapter);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('hace GET /evaluations/meetings/next sin query params y mapea data', () => {
+    let result: unknown;
+    let error: unknown = null;
+    adapter.next().subscribe({ next: (r) => (result = r), error: (e) => (error = e) });
+    const req = httpMock.expectOne('/api/evaluations/meetings/next');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.keys()).toEqual([]);
+    req.flush({ statusCode: 200, message: 'OK', data: NEXT });
+    expect(error).toBeNull();
+    expect(result).toEqual({
+      id: NEXT.id,
+      numeroConvocatoria: '001-2026',
+      tipoSesion: 'EXTRAORDINARIA',
+      fechaReunion: '2026-11-10T14:00:00.000Z',
+      lugar: {
+        nombre: 'Sala virtual',
+        esVirtual: true,
+        enlaceReunion: 'https://meet.example.test/ceish',
+      },
+      protocolosATratar: 2,
+    });
+  });
+
+  it('data: null → emite null (no hay reunión)', () => {
+    const emitted: unknown[] = [];
+    let error: unknown = null;
+    adapter.next().subscribe({ next: (r) => emitted.push(r), error: (e) => (error = e) });
+    httpMock
+      .expectOne('/api/evaluations/meetings/next')
+      .flush({ statusCode: 200, message: 'Sin reunión', data: null });
+    expect(error).toBeNull();
+    expect(emitted).toEqual([null]);
+  });
+
+  it('con envoltorio de transporte doble y data null también emite null', () => {
+    const emitted: unknown[] = [];
+    let error: unknown = null;
+    adapter.next().subscribe({ next: (r) => emitted.push(r), error: (e) => (error = e) });
+    httpMock.expectOne('/api/evaluations/meetings/next').flush({
+      statusCode: 200,
+      message: 'OK',
+      data: { statusCode: 200, message: 'Sin reunión', data: null },
+    });
+    expect(error).toBeNull();
+    expect(emitted).toEqual([null]);
+  });
+
+  it('un 403 llega normalizado (MeetingApiError con status 403) al suscriptor', () => {
+    let error: unknown;
+    let emitted = false;
+    adapter.next().subscribe({ next: () => (emitted = true), error: (e) => (error = e) });
+    httpMock
+      .expectOne('/api/evaluations/meetings/next')
+      .flush(
+        { statusCode: 403, message: 'Forbidden resource' },
+        { status: 403, statusText: 'Forbidden' },
+      );
+    expect(emitted).toBeFalse();
+    expect(error instanceof MeetingApiError).toBeTrue();
+    expect((error as MeetingApiError).status).toBe(403);
+    expect((error as MeetingApiError).message).toBe('Forbidden resource');
+  });
+
+  it('una respuesta fuera de contrato llega como MeetingContractError', () => {
+    let error: unknown;
+    adapter.next().subscribe({ error: (e) => (error = e) });
+    httpMock
+      .expectOne('/api/evaluations/meetings/next')
+      .flush({ statusCode: 200, message: 'OK', data: { ...NEXT, tipoSesion: 'ESPECIAL' } });
+    expect(error instanceof MeetingContractError).toBeTrue();
+    expect((error as MeetingContractError).path).toBe('data.tipoSesion');
+  });
+});
+
 describe('normalizeMeetingError', () => {
   it('reconoce SEGUIMIENTO_NO_DISPONIBLE en el Error re-lanzado por el ErrorInterceptor', () => {
     const err = normalizeMeetingError(new Error('SEGUIMIENTO_NO_DISPONIBLE')) as MeetingApiError;
