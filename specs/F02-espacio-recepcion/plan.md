@@ -1,6 +1,7 @@
 # F02 · Espacio del protocolo + Recepción — plan
 
-**Versión:** 0.1 · **Fecha:** 06/11/2026 · **Spec:** `spec-ui.md` 0.1
+**Versión:** 0.3 · **Fecha:** 06/11/2026 · **Spec:** `spec-ui.md` 0.3
+**Historial:** 0.1 (06/11/2026) primer plan. 0.3 (06/11/2026) decisiones E9–E16 de la spec: `Contadas` sin enviar (E10), requisito sin documento y TSK-F02-12 (E11), documento en otra pestaña con `safeHttpsUrl` (E13), observaciones generales en `finalize` con TSK-F02-11 (E14), plazo de 30 días (E15); TSK reordenados por prioridad (§8).
 **Patrón:** el de F01 (`specs/F01-pendientes-protocolos/plan.md`): sección propia con `domain`/`application`/`infrastructure`/`presentation`, port de la sección registrado en la ruta, fachada con signals provista en la página, mappers estrictos con `contract-readers`, estados por bloque.
 
 ---
@@ -24,10 +25,10 @@ src/features/espacio-protocolo/      ← /protocolos/:id/{resumen|documentos|rec
 
 | Acción | Archivo | Contenido | Tarea |
 |---|---|---|---|
-| CREAR | `espacio.model.ts` | `CabeceraProtocolo { id, ceishCode: string \| null, version: number \| null, title, investigador: string \| null, tipoEstudio: string \| null, enviadoEl: string \| null (ISO), estadoRecepcion: string \| null, etapa: Stage \| null }`; `EstadoRequisito = 'APROBADO' \| 'RECHAZADO' \| 'NO_APLICA' \| 'PRESENTADO' \| 'PENDIENTE' \| 'NO_PRESENTADO'`; `DocumentoAdjunto { id, fileName, uploadedAt: string \| null, paginasDeclaradas: number \| null }`; `RequisitoRecepcion { id, code, name, estado: EstadoRequisito \| null, observacion: string \| null, documento: DocumentoAdjunto \| null }`; `DetalleRecepcion { cabecera, requisitos, cerrada: boolean }`; `ResultadoCierre = { tipo: 'COMPLETO', ceishCode } \| { tipo: 'INCOMPLETO', faltantes: string[], plazo: string \| null }` | T02-1 |
-| CREAR | `recepcion.port.ts` | `abstract class RecepcionPort { detalle(protocolId); validar(documentId, { decision: 'APROBAR' \| 'OBSERVAR', observacion?, paginasContadas? }); cerrar(protocolId): Observable<ResultadoCierre>; urlDocumento(documentId): Observable<string> }` | T02-1 |
+| CREAR | `espacio.model.ts` | `CabeceraProtocolo { id, ceishCode: string \| null, version: number \| null, title, investigador: string \| null, tipoEstudio: string \| null, enviadoEl: string \| null (ISO), estadoRecepcion: string \| null, etapa: Stage \| null }`; `EstadoRequisito = 'APROBADO' \| 'RECHAZADO' \| 'NO_APLICA' \| 'PRESENTADO' \| 'PENDIENTE' \| 'NO_PRESENTADO'`; `DocumentoAdjunto { id, fileName, uploadedAt: string \| null, paginasDeclaradas: number \| null }`; `RequisitoRecepcion { id, code, name, estado: EstadoRequisito \| null, observacion: string \| null, documento: DocumentoAdjunto \| null }`; `DetalleRecepcion { cabecera, requisitos, cerrada: boolean }`; `ResultadoCierre = { tipo: 'COMPLETO', ceishCode } \| { tipo: 'INCOMPLETO', faltantes: string[], plazo: string \| null }` (`plazo` = `deadline` ISO de la respuesta, E15). Sin campo de páginas contadas en el modelo del backend (E10: viven solo en la pantalla) | T02-1 |
+| CREAR | `recepcion.port.ts` | `abstract class RecepcionPort { detalle(protocolId); validar(documentId, { decision: 'APROBAR' \| 'OBSERVAR', observacion? }); cerrar(protocolId): Observable<ResultadoCierre>; urlDocumento(documentId): Observable<string> }`. **Sin** `paginasContadas` (E10; se agrega con TSK-F02-1). Después: `cerrar(protocolId, observacionGeneral?)` en T02-10 (TSK-F02-11) y `observarSinDocumento(protocolId, requisitoId, observacion)` en T02-11 (TSK-F02-12) | T02-1 (T02-10, T02-11) |
 | CREAR | `resumen.port.ts` | `abstract class ResumenProtocoloPort { obtener(id) }` y `DocumentosPort { listar(protocolId) }` | T02-6 |
-| CREAR | `recepcion.rules.ts` + spec | `contadores(requisitos) → { aprobados, observados, sinRevisar, sinDocumento, total }` (spec-ui §5.1); `accionPrincipal(contadores, cerrada, puedeValidar) → { texto, habilitada, motivo } \| null` (§3.2); `paginas(declaradas, contadas) → { valida, coinciden }` (§5.2); `observacionValida(texto, min, max)` | T02-2 |
+| CREAR | `recepcion.rules.ts` + spec | `contadores(requisitos) → { aprobados, observados, sinRevisar, sinDocumento, total }` (spec-ui §5.1: sin documento y sin observar cuenta en `sinRevisar`, E11; `total` = todo menos `NO_APLICA`); `accionPrincipal(contadores, cerrada, puedeValidar) → { texto, habilitada, motivo } \| null` (§3.2: `s > 0` deshabilitada; `o > 0` `Enviar observaciones`; si no, `Aprobar recepción`); `paginas(declaradas, contadas) → { valida, coinciden }` (§5.2); `puedeAprobar(requisito, contadas) → { habilitado, motivo }` (sin documento → `No hay documento para aprobar.`; no coinciden → `Las páginas no coinciden: observa el documento`, E10); `observacionInicial(declaradas, contadas) → 'Páginas declaradas d, contadas c' \| ''`; `observacionValida(texto, 5, 1000)` y `observacionGeneralValida(texto, 2000)` (P8, por confirmar) | T02-2 |
 | CREAR | `pestanas.rules.ts` + spec | `pestanaDesdeUrl(segmento) → 'resumen' \| 'documentos' \| 'recepcion' \| 'recorrido'` (desconocida → `recepcion`, la pestaña por defecto) | T02-4 |
 
 ### 2.2 `infrastructure/`
@@ -35,7 +36,8 @@ src/features/espacio-protocolo/      ← /protocolos/:id/{resumen|documentos|rec
 | Acción | Archivo | Contenido | Tarea |
 |---|---|---|---|
 | CREAR | `recepcion.mapper.ts` + spec | Estricto con `contract-readers` (`asObject`, `asArray`, `str`, `nullableStr`, `num`, `nullableNum`, `idValue`, `oneOf`). Quita los rellenos del backend: `'TRÁMITE EN PROCESO'` → `ceishCode: null`, `'No asignado'` → `investigador: null`, `'No especificado'` → `tipoEstudio: null` (spec-ui E6; se borra cuando llegue TSK-F02-3). `observations` con `nullableStr` (un objeto lanza). Estado desconocido → `null` (no lanza). `pageCount` `null`/ausente → `null` (nunca `1`) | T02-1 |
-| CREAR | `recepcion-http.adapter.ts` + spec | `GET /reception/protocol/:id/validation-detail`; `POST /reception/document/:id/validate` con `{ statusId: 1 \| 3, observations?, pageCount? }` (E17); `POST /reception/protocol/:id/finalize`; `GET /reception/document/:id/download-url` + `safeHttpUrl`. Quita el envoltorio (`stripTransportEnvelope`/`unwrapData`). **Propaga** el error (sin `catchError(() => of(...))`). **No** llama a `PATCH …/verify` (spec-ui E3) | T02-1 |
+| CREAR | `recepcion-http.adapter.ts` + spec | `GET /reception/protocol/:id/validation-detail`; `POST /reception/document/:id/validate` con `{ statusId: 1 \| 3, observations? }` (E17), **nunca** `pageCount` (E10); `POST /reception/protocol/:id/finalize` sin cuerpo (con `{ <campo de TSK-F02-11>: texto }` solo en T02-10, cuando el backend lo acepte, E14); `GET /reception/document/:id/download-url` + `safeHttpsUrl` (E13). Quita el envoltorio (`stripTransportEnvelope`/`unwrapData`). **Propaga** el error (sin `catchError(() => of(...))`). **No** llama a `PATCH …/verify` (spec-ui E3). En T02-11: `PATCH …/requirement/:reqId` con el cuerpo que defina TSK-F02-12 | T02-1 (T02-10, T02-11) |
+| MODIFICAR | `src/infrastructure/mappers/contract-readers.ts` + spec | Agregar `safeHttpsUrl(valor)`: como `safeHttpUrl` (`:98-106`) pero solo `https:`. `safeHttpUrl` no se cambia (lo usa F01). Se busca antes un equivalente (`git grep safeHttpsUrl`: sin resultados el 06/11/2026) | T02-1 |
 | CREAR | `resumen-http.adapter.ts`, `documentos-http.adapter.ts` + specs | `GET /protocols/:id` (`toResponse`); `GET /reception/protocol/:id/documents` | T02-6 |
 | CREAR | `recorrido-http.adapter.ts` + spec | `GET /audit/protocol/:id`, estricto, **sin** mock ni `integrityHash` | T02-7 (bloqueada por TSK-F02-5) |
 | raíz | CREAR `espacio-protocolo.providers.ts` | `ESPACIO_PROTOCOLO_PROVIDERS = [{ provide: RecepcionPort, useClass: RecepcionHttpAdapter }, …]` | T02-1 |
@@ -46,7 +48,7 @@ Endpoints nuevos en `src/infrastructure/api/endpoints.constant.ts`: ya existen `
 
 | Acción | Archivo | Contenido | Tarea |
 |---|---|---|---|
-| CREAR | `espacio-protocolo.facade.ts` + spec | `@Injectable()` (provista en la página). Signals: `detalle: Bloque<DetalleRecepcion>` (`cargando`/`listo`/`error`), `guardando: ReadonlySet<documentId>`, `errorFila: Map<documentId, string>`, `cierre: Bloque<ResultadoCierre>`, `conflicto: boolean`. `computed`: `contadores`, `progreso`, `accion` (de `recepcion.rules`). Métodos: `cargar(id)`, `aprobar(req, paginas?)`, `observar(req, texto, paginas?)`, `cerrar()`, `reintentar()`. Cada validación es independiente (`mergeMap` por fila, sin `forkJoin`); `cargar` usa `switchMap`. Tras validar, actualiza solo esa fila con la respuesta; tras cerrar, recarga y refresca `PendingCountPort` | T02-3 |
+| CREAR | `espacio-protocolo.facade.ts` + spec | `@Injectable()` (provista en la página). Signals: `detalle: Bloque<DetalleRecepcion>` (`cargando`/`listo`/`error`), `guardando: ReadonlySet<documentId>`, `errorFila: Map<documentId, string>`, `contadas: Map<requisitoId, number>` (solo en memoria, E10), `abriendo: ReadonlySet<documentId>`, `errorApertura: ReadonlySet<documentId>`, `cierre: Bloque<ResultadoCierre>`, `conflicto: boolean`. `computed`: `contadores`, `progreso`, `accion` (de `recepcion.rules`). Métodos: `cargar(id)`, `aprobar(req)`, `observar(req, texto)`, `fijarContadas(req, valor)`, `abrirDocumento(req)` (pide la URL al pulsar, `exhaustMap` por documento, abre con `window.open(url, '_blank', 'noopener,noreferrer')` mediante un puerto/servicio inyectable para poder probarlo; no guarda la URL), `cerrar()` (en T02-10, `cerrar(observacionGeneral)`), `reintentar()`. Cada validación es independiente (`mergeMap` por fila, sin `forkJoin`); `cargar` usa `switchMap`. Tras validar, actualiza solo esa fila con la respuesta; tras cerrar, recarga y refresca `PendingCountPort` | T02-3 |
 
 ### 2.4 `presentation/`
 
@@ -55,7 +57,8 @@ Endpoints nuevos en `src/infrastructure/api/endpoints.constant.ts`: ya existen `
 | CREAR | `espacio-protocolo.page.{ts,html,scss}` + spec | Migas, cabecera, `Tabs` según la URL, `<router-outlet>` de las pestañas; foco al `h1`; `providers: [EspacioProtocoloFacade]` | T02-4 |
 | CREAR | `components/cabecera-protocolo/*` + spec | Chips, título, línea de datos (fechas con `fechaHoraEcuador`), `StageBar`, acción principal con `disabledReason` y la confirmación (`Dialog`) | T02-4 |
 | CREAR | `tabs/recepcion-tab/*` + spec | Cabecera del checklist, contadores, `progressbar`, tabla | T02-5 |
-| CREAR | `components/fila-requisito/*` + spec | Una fila: requisito, documento, páginas, `Aprobar`/`Observar` (`aria-pressed`, 44 px), observación con campo obligatorio, `Guardando…`, error de fila | T02-5 |
+| CREAR | `components/fila-requisito/*` + spec | Una fila: requisito, documento (botón `Abriendo…` y aviso `No se pudo abrir el documento.` + `Reintentar`), páginas (`Declaradas` y `Contadas` sin enviar, aviso si no coinciden), `Aprobar`/`Observar` (`aria-pressed`, 44 px, motivo de `Aprobar` deshabilitado), observación con `textarea` obligatorio de 4 líneas y contador (relleno si las páginas no coinciden), `Guardando…`, error de fila | T02-5 |
+| CREAR | `components/observaciones-generales/*` + spec | `textarea` opcional de 4 líneas, contador `/ 2000`, ayuda del canvas; el texto se pasa a `cerrar()` | T02-10 (bloqueada por TSK-F02-11) |
 | CREAR | `tabs/resumen-tab/*`, `tabs/documentos-tab/*` + specs | Solo lectura | T02-6 |
 | CREAR | `tabs/recorrido-tab/*` + spec | Solo lectura; `Recorrido no disponible todavía.` mientras TSK-F02-5 (P10) | T02-7 |
 
@@ -111,7 +114,9 @@ En `SECRETARIA_ROUTES` (`src/app/app.routes.ts`), una entrada nueva (P2):
 | `ProtocolValidationDetailPage` | `src/features/protocols/presentation/pages/protocol-validation-detail/protocol-validation-detail.page.ts` (1319 líneas) | Checklist con `ngModel` sobre la respuesta (`:214`, `:341`), `catchError` (`:1061`), `window.open` sin `noopener` (`:1042`), páginas `|| 1` (`:1088`, `:1122-1128`) | (b) lo reemplaza; retiro en T02-R1 |
 | `LoadValidationDetailUseCase` | `src/features/protocols/application/use-cases/load-validation-detail.use-case.ts:20` | Pone `pageCount = originalPageCount \|\| 1` (el backend no envía `originalPageCount`) | (b) |
 | `ValidateChecklistItemUseCase` | `…/validate-checklist-item.use-case.ts:24`, `:31` | Páginas `\|\| 1`; observación ≥ 5 caracteres solo con `actionType 2` | (b); la regla de longitud pasa a `recepcion.rules` (P8) |
-| `FinalizeDocumentaryValidationUseCase` | `…/finalize-documentary-validation.use-case.ts:17-18` | `PATCH verify` (el cliente decide `isComplete`) y luego `POST finalize` | (b); F02 solo `finalize` (E3) |
+| `FinalizeDocumentaryValidationUseCase` | `…/finalize-documentary-validation.use-case.ts:17-18` | `PATCH verify` (el cliente decide `isComplete`) con las observaciones generales en `missingItemsList`, y luego `POST finalize`, que las sobrescribe (spec-ui §4 K) | (b); F02 solo `finalize` (E3), con las generales en su cuerpo cuando exista TSK-F02-11 (E14) |
+| `ProtocolValidationDetailPage.verDocumento` | `protocol-validation-detail.page.ts:1038-1049` → `S3StorageService.getDocumentDownloadUrl` (`src/infrastructure/services/s3-storage.service.ts:39-45`) | Pide `download-url` al pulsar y abre con `window.open(res.downloadUrl, '_blank')` dentro del `subscribe` (`:1042`), sin `noopener` ni validar la URL; error → snackbar `No se pudo abrir el documento.` | (b) misma técnica en la fachada, con `safeHttpsUrl`, `noopener,noreferrer`, `Abriendo…` y aviso en la fila (E13). `S3StorageService` no se usa (no propaga un contrato estricto: `res.data \|\| res`, `:44`) |
+| Panel de observaciones generales | `protocol-validation-detail.page.ts:377-408` | `textarea` con `[(ngModel)]="missingItemsList"`, enviado por `verify` | (b) `observaciones-generales` (T02-10) |
 | `ProtocolApiAdapter.getValidationDetail`, `verifyProtocol`, `finalizeReception` | `src/infrastructure/adapters/protocol-api.adapter.ts:262-312` | Sin mapper estricto (`res.data \|\| res`) | (b) adapter propio |
 | `DocumentApiAdapter.validateDocument` | `src/infrastructure/adapters/document-api.adapter.ts:19-33` | `POST …/validate` con `{ statusId, observations, pageCount }` | (b) |
 | `ProtocolWorkspaceComponent` | `src/features/protocols/presentation/pages/protocol-workspace/protocol-workspace.component.ts` (751 líneas) | Pestañas por rol (`:564-611`), acciones `Aprobar Todo` (`:555-557`) y `Asignar Pares` (`:558-560`) | Se mantiene para los demás roles; ASIGNAR de F01 sigue yendo allí (D1 de F01) |
@@ -135,24 +140,27 @@ En `eslint.config.js`, una línea más junto a las de F01 (T01-8):
 
 - Sin `innerHTML`, `outerHTML`, `DomSanitizer` ni `bypassSecurityTrust*`.
 - Observación como texto (`nullableStr`); recortada y limitada antes de enviar.
-- `downloadUrl` por `safeHttpUrl`; apertura con `noopener,noreferrer`.
+- `downloadUrl` por `safeHttpsUrl` (solo `https:`, spec-ui §7.3); se pide al pulsar y no se guarda; apertura con `noopener,noreferrer`. Sin visor incrustado (E13).
 - Los huecos de permisos del backend (§8) no se tapan en el frontend: se reportan como TSK.
 
 ## 8. Lo que necesita el backend (detalle en `tasks.md`, lista TSK)
 
-| TSK | Hueco | Evidencia | Bloquea |
-|---|---|---|---|
-| TSK-F02-1 | Páginas **contadas** guardadas aparte de las **declaradas**, y las dos en `validation-detail` | `validate` sobrescribe `pageCount` del documento y del requisito (`reception.service.ts:736` y `:753`) | E7, columna de páginas |
-| TSK-F02-2 | Observación obligatoria (y longitud) cuando `statusId ≠ 1` | `observations || ''` (`reception.service.ts:752`); DTO sin `IsNotEmpty` y `statusId` sin validar contra `DocumentValidationStatus` (solo `@IsNumber`, `validate-document.dto.ts:4-5`) | No bloquea (el frontend la exige) |
-| TSK-F02-3 | `validation-detail` sin rellenos (`null` en vez de `'TRÁMITE EN PROCESO'`, `'No asignado'`, `'No especificado'`, `version \|\| 1`), con `etapa`, `etapaOrden` y un `estadoActual` legible | `reception.service.ts:155-165`; `GET /protocols/:id` sin `etapa` (`protocol.mapper.ts:45-58`) | Mapper sin la tabla de rellenos; chip de estado y `StageBar` |
-| TSK-F02-4 | Asociar documento ↔ requisito solo por `requirementId` (sin coincidencia por nombre ni "primer documento libre") | `reception.service.ts:96-136` | Riesgo de mostrar el documento equivocado |
-| TSK-F02-5 | `GET /audit/protocol/:id` con `@Permissions` y filtrado por tabla (hoy filtra solo `recordId`, mezcla registros de otras tablas con el mismo id) | `audit.controller.ts:19-26`; `audit.service.ts:84-87` | Pestaña Recorrido |
-| TSK-F02-6 | Concurrencia en `validate` y `finalize` (por ejemplo `versionLock` en el cuerpo o `If-Match`, 409 si cambió) | Sin control (`reception.service.ts:711-771`); `@VersionColumn` en `protocol.entity.orm.ts:30-31` | Estado "conflicto" |
-| TSK-F02-7 | Año del código CEISH en hora de Ecuador | `now.getFullYear()` (`reception.service.ts:281` y `:667`) | No bloquea la UI |
-| TSK-F02-8 | `@Permissions` en `GET /reception/document/:id/view` y `download-url` (y comprobar que el documento es del protocolo que el usuario puede ver) | `reception.controller.ts:185-251`; `permissions.guard.ts:32-39` | No bloquea; riesgo de acceso por id |
-| TSK-F02-9 | `@Permissions` en `GET /protocols/:id` | `protocol.controller.ts:43-44`, `:215-232` | No bloquea |
-| TSK-F02-10 | Exponer el plazo de subsanación antes de cerrar (para la confirmación, P5) | `finalize` lo calcula al cerrar (`reception.service.ts:343-346`) | No bloquea |
-| TSK-F02-11 | Observaciones generales del protocolo al cerrar (solo si P14 las confirma) | `POST …/finalize` no recibe cuerpo (`reception.controller.ts:100-105`) | Bloque de observaciones generales (DC7) |
+En orden de prioridad (0.3):
+
+| Prioridad | TSK | Hueco | Evidencia | Bloquea |
+|---|---|---|---|---|
+| 1 | TSK-F02-11 | Observaciones generales del protocolo al cerrar: texto opcional en `finalize` (máx. 2000, P8), guardado y usado en el correo al investigador junto con la lista calculada. Necesaria: P14 confirmada y hoy no llegan al investigador | `POST …/finalize` sin cuerpo (`reception.controller.ts:100-105`); `finalize` sobrescribe `missingItemsList` y manda el correo solo con la lista calculada (`reception.service.ts:346-347`, `:352-361`); la pantalla anterior las manda por `verify` (`:686`) (spec-ui §4 K) | T02-10 (DC7) |
+| 2 | TSK-F02-12 | Observar un requisito **sin documento** con texto (guardar `observaciones` del requisito; se propone `RECHAZADO`, para que `finalize` lo envíe como `requiere corrección`); de paso, decir en `validation-detail` si el requisito es obligatorio | `PATCH …/requirement/:reqId` solo lee `status` (`reception.controller.ts:300-313`, `:306`) y el servicio solo lo guarda (`reception.service.ts:697-709`); la columna existe (`protocol-requirement.entity.orm.ts:26-27`); `validate` exige `documentId` (`reception.controller.ts:158`); sin `isRequired` en `requirement.mapper.ts:4-14` (spec-ui §4 I) | T02-11; mientras tanto la fila sin documento no se puede observar (E11) |
+| 3 | TSK-F02-8 | `@Permissions` en `GET /reception/document/:id/view` y `download-url` (y comprobar que el documento es del protocolo que el usuario puede ver). El enlace de R2 es temporal, pero hoy cualquiera con sesión lo pide por id | `reception.controller.ts:185-251`; `permissions.guard.ts:32-39` | No bloquea (seguridad) |
+| 4 | TSK-F02-9 | `@Permissions` en `GET /protocols/:id` | `protocol.controller.ts:43-44`, `:215-232` | No bloquea (seguridad) |
+| 5 | TSK-F02-2 | Observación obligatoria (5–1000, P8) cuando `statusId ≠ 1`; `statusId` validado contra `DocumentValidationStatus` | `observations || ''` (`reception.service.ts:752`); DTO sin `IsNotEmpty` y `statusId` sin validar (solo `@IsNumber`, `validate-document.dto.ts:4-5`) | No bloquea (el frontend la exige) |
+| 6 | TSK-F02-3 | `validation-detail` sin rellenos (`null` en vez de `'TRÁMITE EN PROCESO'`, `'No asignado'`, `'No especificado'`, `version \|\| 1`), con `etapa`, `etapaOrden` y un `estadoActual` legible | `reception.service.ts:155-165`; `GET /protocols/:id` sin `etapa` (`protocol.mapper.ts:45-58`) | Mapper sin la tabla de rellenos; chip de estado y `StageBar` |
+| 7 | TSK-F02-4 | Asociar documento ↔ requisito solo por `requirementId` (sin coincidencia por nombre ni "primer documento libre") | `reception.service.ts:96-136` | Riesgo de mostrar el documento equivocado |
+| 8 | TSK-F02-1 | Páginas **contadas** guardadas aparte de las **declaradas**, y las dos en `validation-detail`. Mejora: hoy las contadas viven solo en la pantalla (E10) | `validate` sobrescribe `pageCount` del documento y del requisito (`reception.service.ts:736` y `:753`) | No bloquea (mejora de E10) |
+| 9 | TSK-F02-10 | Exponer el plazo de subsanación (fecha) antes de cerrar. Mejora: la confirmación ya dice `30 días` (E15) | `finalize` lo calcula al cerrar (`reception.service.ts:343-345`) | No bloquea |
+| 10 | TSK-F02-5 | `GET /audit/protocol/:id` con `@Permissions` y filtrado por tabla (hoy filtra solo `recordId`, mezcla registros de otras tablas con el mismo id) | `audit.controller.ts:19-26`; `audit.service.ts:84-87` | T02-7 (pestaña Recorrido) |
+| 11 | TSK-F02-6 | Concurrencia en `validate` y `finalize` (por ejemplo `versionLock` en el cuerpo o `If-Match`, 409 si cambió) | Sin control (`reception.service.ts:711-771`); `@VersionColumn` en `protocol.entity.orm.ts:30-31` | Estado "conflicto" |
+| 12 | TSK-F02-7 | Año del código CEISH en hora de Ecuador | `now.getFullYear()` (`reception.service.ts:281` y `:667`) | No bloquea la UI |
 
 ## 9. Pruebas
 
@@ -162,8 +170,8 @@ Como F01 (`specs/F01-pendientes-protocolos/plan.md` §9): Jasmine + Karma, `npx 
 |---|---|
 | domain (`recepcion.rules`, `pestanas.rules`) | Unitarias puras |
 | mappers | Contrato completo, cada campo con otro tipo (lanza), estado desconocido (`null`), rellenos del backend → `null`, `observations` objeto → lanza, `pageCount` null → `null` |
-| adapters | `HttpTestingController`: URL, cuerpo (`statusId 1/3`, `observations`, `pageCount`), envoltorio, el error llega al suscriptor, `verify` nunca se llama |
-| fachada | Ports sustituidos: estados, validar una fila no toca las otras, error de fila conserva el estado, cierre recarga, 409 → `conflicto` |
+| adapters | `HttpTestingController`: URL, cuerpo (`statusId 1/3`, `observations`, **sin** `pageCount`), envoltorio, el error llega al suscriptor, `verify` nunca se llama, `download-url` con `javascript:`/`http:` → error |
+| fachada | Ports sustituidos: estados, validar una fila no toca las otras, error de fila conserva el estado, cierre recarga, 409 → `conflicto`; `cargar` no pide `download-url`; `abrirDocumento` marca `abriendo`, ignora un segundo clic mientras pide y abre con `noopener,noreferrer` (apertura sustituida) |
 | componentes | `setInput`: textos, `aria-pressed`, `aria-label`, 44 px (clase con `--min-h-action`), observación obligatoria, aviso de páginas con texto, fila observada con borde y chip |
 | página | `Router` real: pestaña desde la URL, migas, foco al `h1` |
 | rutas | `app.routes.spec.ts`: SECRETARIA con `RECEPCION_LISTA` entra; sin él no; INVESTIGADOR vuelve con aviso; `/protocolos` de F01 sin cambios; VALIDAR de Mis pendientes → `/protocolos/:id/recepcion` |
