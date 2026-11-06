@@ -36,6 +36,30 @@ const layers = (files, patterns, extra = {}) => ({
   rules: { "no-restricted-imports": ["error", { patterns }] },
 });
 
+// F01 (T01-8, plan §6): cada sección solo importa su propia carpeta de features.
+const noOtherFeatures = (name) => ({
+  regex: `(^@features/(?!${name}(/|$)))|(^|/)features/(?!${name}(/|$))`,
+  message: `Capas: ${name} no importa otras secciones.`,
+});
+const NO_UPPER_LAYERS = {
+  regex: "(^|/)(application|presentation)(/|$)",
+  message: "Capas: domain no importa application ni presentation.",
+};
+// presentation y application: sin HttpClient ni infrastructure. domain: sin @angular (incluye
+// @angular/common/http), infrastructure, application ni presentation. infrastructure y la raíz de
+// composición (<feature>.providers.ts) sí importan su infrastructure.
+const f01Layers = (f) => [
+  layers(
+    [`src/features/${f}/presentation/**/*.ts`, `src/features/${f}/application/**/*.ts`],
+    [NO_HTTP, NO_INFRASTRUCTURE, noOtherFeatures(f)],
+  ),
+  layers(
+    [`src/features/${f}/domain/**/*.ts`],
+    [NO_ANGULAR, NO_INFRASTRUCTURE, NO_UPPER_LAYERS, noOtherFeatures(f)],
+  ),
+  layers([`src/features/${f}/infrastructure/**/*.ts`, `src/features/${f}/*.ts`], [noOtherFeatures(f)]),
+];
+
 module.exports = tseslint.config(
   {
     files: ["**/*.ts"],
@@ -83,6 +107,11 @@ module.exports = tseslint.config(
     ["src/features/shell/infrastructure/auth-session.adapter.ts"],
     [NO_OTHER_FEATURES_EXCEPT_AUTH],
   ),
+  // F01: pendientes y protocolos
+  ...f01Layers("pendientes"),
+  ...f01Layers("protocolos"),
+  // F01: utilidad compartida de fechas
+  layers(["src/shared/utils/fecha-ecuador.util.ts"], [NO_ANGULAR, NO_HTTP, NO_INFRASTRUCTURE, NO_FEATURES]),
   {
     ignores: [
       "dist/**",
