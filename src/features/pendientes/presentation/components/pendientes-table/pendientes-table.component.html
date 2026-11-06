@@ -1,0 +1,70 @@
+@switch (estado()) {
+  @case ('cargando') {
+    <app-loading-state message="Cargando pendientes…" />
+  }
+  @case ('error') {
+    <app-error-state message="No pudimos cargar sus pendientes." (retry)="reintentar.emit()" />
+  }
+  @default {
+    @if (filas().length === 0) {
+      <div class="pendientes__vacio">
+        <app-empty-state [message]="vacio()" />
+        @if (filtro() !== 'todos') {
+          <button type="button" class="pendientes__ver-todos" (click)="verTodos.emit()">
+            Ver todos
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="pendientes">
+        <div class="pendientes__scroll">
+          <table class="pendientes__tabla">
+            <caption class="visually-hidden">Pendientes de la Secretaría</caption>
+            <thead>
+              <tr>
+                <th scope="col">Plazo</th>
+                <th scope="col">Protocolo</th>
+                <th scope="col">Estado actual</th>
+                <th scope="col">Etapa</th>
+                <th scope="col"><span class="visually-hidden">Acción</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of filas(); track fila.item.protocolId + '-' + fila.item.accion) {
+                <tr>
+                  <td>
+                    <app-status-chip [tone]="fila.plazo.tone" [label]="fila.plazo.texto" />
+                  </td>
+                  <td>
+                    <div class="pendientes__protocolo">
+                      @if (fila.item.ceishCode) {
+                        <span class="pendientes__codigo">{{ fila.item.ceishCode }}</span>
+                      }
+                      <span class="pendientes__titulo">{{ fila.item.title }}</span>
+                    </div>
+                  </td>
+                  <td class="pendientes__estado">{{ fila.item.estadoActual }}</td>
+                  <td>
+                    <app-status-chip tone="gris" [label]="fila.etapa" />
+                  </td>
+                  <td class="pendientes__accion">
+                    @if (fila.destino; as destino) {
+                      <button
+                        type="button"
+                        class="pendientes__boton"
+                        [attr.aria-label]="fila.ariaLabel"
+                        (click)="abrir(destino)"
+                      >
+                        {{ fila.item.accionTexto }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+}

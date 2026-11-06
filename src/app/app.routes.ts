@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { activeRoleIs, redirectToRoleHome } from '@infrastructure/guards/role-home.guard';
+import { PENDIENTES_PROVIDERS } from '@features/pendientes/pendientes.providers';
 
 /**
  * Rutas nuevas de la Secretaría bajo el AppShell (D10, 03/11/2026; spec-ui §7).
@@ -11,11 +12,11 @@ import { activeRoleIs, redirectToRoleHome } from '@infrastructure/guards/role-ho
  */
 export const SECRETARIA_ROUTES: Routes = [
   {
+    // F01 T01-5: Mis pendientes. El port de la sección se registra en la ruta (plan §3).
     path: 'pendientes',
     loadComponent: () =>
-      import('@features/dashboard/presentation/pages/dashboard-secretaria/dashboard-secretaria.page').then(
-        (m) => m.DashboardSecretariaPage,
-      ),
+      import('@features/pendientes/presentation/mis-pendientes.page').then((m) => m.MisPendientesPage),
+    providers: PENDIENTES_PROVIDERS,
     canActivate: [RoleGuard, AuthGuard],
     data: { roles: ['SECRETARIA'] },
   },
