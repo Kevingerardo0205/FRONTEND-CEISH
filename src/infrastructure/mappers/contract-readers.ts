@@ -91,6 +91,21 @@ export function oneOf<T extends string>(
 }
 
 /**
+ * URL segura para un `href` (F01 T01-4, spec-ui §7.3): solo se acepta si `new URL(valor)` la
+ * interpreta con protocolo `http:` o `https:`. Cualquier otro valor (`javascript:`, `data:`,
+ * `ftp:`, texto que no es URL, cadena vacía, no string) → `null`. Sin `bypassSecurityTrust*`.
+ */
+export function safeHttpUrl(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null;
+  try {
+    const url = new URL(valor);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? valor : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Quita SOLO la capa externa que añade el ResponseInterceptor del backend cuando el cuerpo llega
  * envuelto dos veces (`{ statusCode, message, data: { statusCode, message, data } }`). Si no tiene
  * esa forma, se devuelve intacto. Misma regla que `meeting-api.adapter.ts:99-107`.

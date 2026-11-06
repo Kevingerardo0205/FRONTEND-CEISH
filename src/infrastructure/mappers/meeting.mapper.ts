@@ -8,10 +8,13 @@ import {
   MeetingProtocol,
   MeetingSessionType,
   MEETING_SESSION_TYPES,
+  NextMeeting,
+  NextMeetingPlace,
   PaginatedMeetings,
   PaginationMeta,
   PendingProtocol,
 } from '@domain/entities/meeting.entity';
+import { safeHttpUrl } from '@infrastructure/mappers/contract-readers';
 
 type Raw = Record<string, unknown>;
 
@@ -147,6 +150,36 @@ export class MeetingMapper {
     const raw = asObject(MeetingMapper.unwrapData(envelope), 'data');
     return str(raw, 'suggestedEvalSubmissionDeadline', 'data');
   }
+
+  /**
+   * `data` de GET /meetings/next (F01 T01-4, spec-003 RF-ALR.f.7): `null` → `null` (no hay
+   * reunión). `informesATratar` se ignora. `enlaceReunion` debe ser string o null y, además,
+   * solo se conserva si es `http:`/`https:` (`safeHttpUrl`, spec-ui §7.3).
+   */
+  static toNextMeeting(value: unknown, path = 'data'): NextMeeting | null {
+    if (value === null) return null;
+    const raw = asObject(value, path);
+    return {
+      id: str(raw, 'id', path),
+      numeroConvocatoria: str(raw, 'numeroConvocatoria', path),
+      tipoSesion: tipoSesion(raw, path),
+      fechaReunion: str(raw, 'fechaReunion', path),
+      lugar:
+        raw['lugar'] === null
+          ? null
+          : MeetingMapper.toNextMeetingPlace(raw['lugar'], `${path}.lugar`),
+      protocolosATratar: num(raw, 'protocolosATratar', path),
+    };
+  }
+
+  static toNextMeetingPlace(value: unknown, path: string): NextMeetingPlace {
+    const raw = asObject(value, path);
+    return {
+      nombre: str(raw, 'nombre', path),
+      esVirtual: bool(raw, 'esVirtual', path),
+      enlaceReunion: safeHttpUrl(nullableStr(raw, 'enlaceReunion', path)),
+    };
+  }
 }
 
 function asObject(value: unknown, path: string): Raw {
@@ -210,6 +243,15 @@ function sessionType(raw: Raw, path: string): MeetingSessionType {
   const v = raw['sessionType'];
   if (!MEETING_SESSION_TYPES.includes(v as MeetingSessionType)) {
     throw new MeetingContractError(`${path}.sessionType`, "'ORDINARIA' | 'EXTRAORDINARIA'");
+  }
+  return v as MeetingSessionType;
+}
+
+/** `tipoSesion` de GET /meetings/next (claves del contrato en español). */
+function tipoSesion(raw: Raw, path: string): MeetingSessionType {
+  const v = raw['tipoSesion'];
+  if (!MEETING_SESSION_TYPES.includes(v as MeetingSessionType)) {
+    throw new MeetingContractError(`${path}.tipoSesion`, "'ORDINARIA' | 'EXTRAORDINARIA'");
   }
   return v as MeetingSessionType;
 }

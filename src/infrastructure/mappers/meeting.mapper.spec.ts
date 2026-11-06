@@ -317,3 +317,97 @@ describe('MeetingMapper', () => {
     });
   });
 });
+
+// Contrato de GET /api/evaluations/meetings/next (spec-003 RF-ALR.f.7). Datos ficticios.
+const NEXT = {
+  id: '7a1b2c3d-0000-4000-8000-0000000000aa',
+  numeroConvocatoria: '001-2026',
+  tipoSesion: 'ORDINARIA',
+  fechaReunion: '2026-11-10T14:00:00.000Z',
+  lugar: { nombre: 'Sala del CEISH', esVirtual: false, enlaceReunion: null },
+  protocolosATratar: 3,
+  informesATratar: null,
+};
+
+function contractErrorDe(fn: () => unknown): MeetingContractError {
+  try {
+    fn();
+  } catch (e) {
+    if (e instanceof MeetingContractError) return e;
+    throw e;
+  }
+  throw new Error('no lanzó');
+}
+
+describe('MeetingMapper.toNextMeeting (F01 T01-4)', () => {
+  it('mapea el contrato completo con las claves del contrato e ignora informesATratar', () => {
+    const r = MeetingMapper.toNextMeeting(NEXT);
+    expect(r).toEqual({
+      id: '7a1b2c3d-0000-4000-8000-0000000000aa',
+      numeroConvocatoria: '001-2026',
+      tipoSesion: 'ORDINARIA',
+      fechaReunion: '2026-11-10T14:00:00.000Z',
+      lugar: { nombre: 'Sala del CEISH', esVirtual: false, enlaceReunion: null },
+      protocolosATratar: 3,
+    });
+    expect(r !== null && 'informesATratar' in r).toBeFalse();
+  });
+
+  it('data: null → null (no hay reunión)', () => {
+    expect(MeetingMapper.toNextMeeting(null)).toBeNull();
+  });
+
+  it('lugar: null → lugar null', () => {
+    expect(MeetingMapper.toNextMeeting({ ...NEXT, lugar: null })?.lugar).toBeNull();
+  });
+
+  it('lugar virtual con enlace https se conserva', () => {
+    const lugar = {
+      nombre: 'Sala virtual',
+      esVirtual: true,
+      enlaceReunion: 'https://meet.example.test/ceish',
+    };
+    expect(MeetingMapper.toNextMeeting({ ...NEXT, lugar })?.lugar).toEqual(lugar);
+  });
+
+  it('enlaceReunion javascript: → null (no llega al href)', () => {
+    const lugar = { nombre: 'Sala virtual', esVirtual: true, enlaceReunion: 'javascript:alert(1)' };
+    expect(MeetingMapper.toNextMeeting({ ...NEXT, lugar })?.lugar?.enlaceReunion).toBeNull();
+  });
+
+  it('enlaceReunion que no es string ni null → lanza con la ruta del campo', () => {
+    const lugar = { nombre: 'Sala virtual', esVirtual: true, enlaceReunion: 5 };
+    expect(contractErrorDe(() => MeetingMapper.toNextMeeting({ ...NEXT, lugar })).path).toBe(
+      'data.lugar.enlaceReunion',
+    );
+  });
+
+  it('lugar con las claves de MeetingPlace (name) → lanza en data.lugar.nombre', () => {
+    const lugar = { name: 'Sala del CEISH', isVirtual: false, meetingLink: null };
+    expect(contractErrorDe(() => MeetingMapper.toNextMeeting({ ...NEXT, lugar })).path).toBe(
+      'data.lugar.nombre',
+    );
+  });
+
+  it('tipoSesion fuera de ORDINARIA/EXTRAORDINARIA → lanza', () => {
+    expect(
+      contractErrorDe(() => MeetingMapper.toNextMeeting({ ...NEXT, tipoSesion: 'ESPECIAL' })).path,
+    ).toBe('data.tipoSesion');
+  });
+
+  it('numeroConvocatoria no string → lanza', () => {
+    expect(
+      contractErrorDe(() => MeetingMapper.toNextMeeting({ ...NEXT, numeroConvocatoria: 1 })).path,
+    ).toBe('data.numeroConvocatoria');
+  });
+
+  it('protocolosATratar no number → lanza', () => {
+    expect(
+      contractErrorDe(() => MeetingMapper.toNextMeeting({ ...NEXT, protocolosATratar: '3' })).path,
+    ).toBe('data.protocolosATratar');
+  });
+
+  it('data que no es objeto (array) → lanza', () => {
+    expect(contractErrorDe(() => MeetingMapper.toNextMeeting([])).path).toBe('data');
+  });
+});

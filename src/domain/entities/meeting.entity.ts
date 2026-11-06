@@ -21,6 +21,30 @@ export interface MeetingPlaceOption extends MeetingPlace {
   isActive: boolean;
 }
 
+/**
+ * Lugar de GET /meetings/next (F01 T01-4, spec-003 RF-ALR.f.7). Tipo propio con las claves del
+ * contrato: no es `MeetingPlace` (`name`, `isVirtual`, `meetingLink`).
+ * `enlaceReunion` ya viene validado por el mapper: solo `http:`/`https:`; si no, `null`.
+ */
+export interface NextMeetingPlace {
+  nombre: string;
+  esVirtual: boolean;
+  enlaceReunion: string | null;
+}
+
+/**
+ * `data` de GET /meetings/next cuando hay reunión. `informesATratar` (siempre null) no forma
+ * parte del modelo: no se muestra (spec-ui §4 B).
+ */
+export interface NextMeeting {
+  id: string;
+  numeroConvocatoria: string;
+  tipoSesion: MeetingSessionType;
+  fechaReunion: string;
+  lugar: NextMeetingPlace | null;
+  protocolosATratar: number;
+}
+
 /** Elemento de GET /meetings. */
 export interface Meeting {
   id: string;

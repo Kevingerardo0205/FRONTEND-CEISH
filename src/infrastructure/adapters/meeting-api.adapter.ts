@@ -12,6 +12,7 @@ import {
   MeetingErrorCode,
   MeetingListParams,
   MeetingPlaceOption,
+  NextMeeting,
   PaginatedMeetings,
   PendingProtocol,
 } from '@domain/entities/meeting.entity';
@@ -88,6 +89,16 @@ export class MeetingApiAdapter extends IMeetingRepositoryPort {
     return this.http
       .get(`${environment.apiUrl}${ENDPOINTS.MEETINGS.PDF(id)}`, { responseType: 'blob' })
       .pipe(toMeetingError());
+  }
+
+  /** GET /meetings/next (RF-ALR.f.7). `data: null` → `null`. Los errores se normalizan y se propagan. */
+  next(): Observable<NextMeeting | null> {
+    return this.apiClient.get<unknown>(ENDPOINTS.MEETINGS.NEXT).pipe(
+      map((res) =>
+        MeetingMapper.toNextMeeting(MeetingMapper.unwrapData(stripTransportEnvelope(res))),
+      ),
+      toMeetingError(),
+    );
   }
 }
 
