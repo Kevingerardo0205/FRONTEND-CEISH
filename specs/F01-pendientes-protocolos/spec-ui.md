@@ -1,7 +1,7 @@
 # F01 · Mis pendientes y Protocolos — spec-ui
 
-**Versión:** 0.2 · **Fecha:** 05/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
-**Historial:** 0.1 (05/11/2026) primer borrador · 0.2 (05/11/2026) dudas D1–D9 decididas; cotejo con el canvas: "Ver convocatoria" lleva a `/convocatorias`, ASIGNAR abre el espacio del protocolo, `/protocolos` pide `PROTOCOLOS_LISTAR`, columnas y destinos por etapa anotados como pendientes, diferencias con el canvas (§9.2)
+**Versión:** 0.3 · **Fecha:** 05/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
+**Historial:** 0.1 (05/11/2026) primer borrador · 0.2 (05/11/2026) dudas D1–D9 decididas; cotejo con el canvas: "Ver convocatoria" lleva a `/convocatorias`, ASIGNAR abre el espacio del protocolo, `/protocolos` pide `PROTOCOLOS_LISTAR`, columnas y destinos por etapa anotados como pendientes, diferencias con el canvas (§9.2) · 0.3 (05/11/2026, T01-3) criterio 17: con `totales.todos = 0` el contador no se muestra
 **Cubre:** spec-003 v1.5.3 RF-ALR.f (RF-ALR.f.1 a f.7) · spec-001 v3.5.6 RF-EST.1, RF-EST.2 (parcial) y RF-EST.3 (contrato de `GET /protocols`, TSK-001.4)
 **Depende de:** F00 (tokens, AppShell, `shared/ui`, `Stage`, rutas por rol activo)
 **Canvas:** `canvas/01-mis-pendientes.png` y `canvas/02-protocolos.png` (tablero "Pantallas Secretaría — CEISH-ESPOCH", 28/10/2026), con las decisiones C1–C7 del 05/11/2026.
@@ -230,7 +230,7 @@ Los errores nunca se muestran como "sin resultados".
 14. La paginación muestra `Mostrando 21–40 de 57` en la página 2, y Anterior/Siguiente se deshabilitan en los extremos.
 15. Sin resultados con filtros: `Ningún protocolo coincide con la búsqueda.` y `Limpiar filtros` deja la vista en Todos, sin búsqueda ni año, página 1.
 16. Un error de `GET /protocols` muestra `ErrorState` (no "sin resultados").
-17. El contador del menú muestra `totales.todos`; si la petición falla, no se muestra.
+17. El contador del menú muestra `totales.todos` junto a "Mis pendientes", en todas las pantallas de la Secretaría (dentro del enlace, que se resalta cuando está activo). Con `totales.todos = 0` no se muestra el número (decisión del 05/11/2026, T01-3); si la petición falla, tampoco.
 18. Ningún archivo de `presentation` o `application` de F01 importa `@angular/common/http` ni `infrastructure` (regla de eslint).
 19. Ningún archivo de F01 usa `innerHTML` ni `bypassSecurityTrust*`, ni agrega colores hex.
 20. ASIGNAR navega a `/dashboard/protocols/workspace/{protocolId}/info`; VALIDAR, a `…/workspace/{protocolId}/validation`; REASIGNAR, a `/dashboard/evaluations/reassignment/{protocolId}`.

@@ -47,6 +47,8 @@ import {
 import { SessionUserPort } from '@features/shell/domain/session-user.port';
 import { MenuConfigPort } from '@domain/ports/menu-config.port';
 import { StaticMenuConfigAdapter } from '@features/shell/infrastructure/menu.config';
+import { PendingCountPort } from '@features/shell/domain/pending-count.port';
+import { PendingCountHttpAdapter } from '@features/shell/infrastructure/pending-count-http.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -74,5 +76,8 @@ export const appConfig: ApplicationConfig = {
     { provide: SessionUserPort, useClass: AuthSessionUserAdapter },
     // Registro único: GetMenuForRoleUseCase es providedIn 'root' y solo ve el inyector raíz.
     { provide: MenuConfigPort, useClass: StaticMenuConfigAdapter },
+    // F01 T01-3: contador del menú. En root porque lo usa el AppShell (fuera de /pendientes) y
+    // GetPendingCountUseCase es providedIn 'root' (plan F01 §3).
+    { provide: PendingCountPort, useClass: PendingCountHttpAdapter },
   ],
 };

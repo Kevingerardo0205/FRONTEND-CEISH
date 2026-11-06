@@ -194,6 +194,31 @@ describe('AppShellComponent (T13b)', () => {
         .some((el) => el.nativeElement.textContent.includes('0'));
       expect(anyZero).toBeFalse();
     });
+
+    it('F01 T01-3: con totales.todos = 0 no muestra el número', () => {
+      mockPendingCountUseCase.execute.and.returnValue(of(0));
+
+      const testFixture = TestBed.createComponent(AppShellComponent);
+      testFixture.detectChanges();
+
+      expect(testFixture.debugElement.query(By.css('[data-testid="pending-badge"]'))).toBeNull();
+      const anyZero = testFixture.debugElement
+        .queryAll(By.css('.sidebar-nav .nav-link'))
+        .some((el) => el.nativeElement.textContent.includes('0'));
+      expect(anyZero).toBeFalse();
+    });
+
+    it('F01 T01-3: el número va dentro del enlace "Mis pendientes" (canvas)', () => {
+      mockPendingCountUseCase.execute.and.returnValue(of(4));
+
+      const testFixture = TestBed.createComponent(AppShellComponent);
+      testFixture.detectChanges();
+
+      const badges = testFixture.debugElement.queryAll(By.css('[data-testid="pending-badge"]'));
+      expect(badges.length).toBe(1);
+      const link = (badges[0].nativeElement as HTMLElement).closest('.nav-link');
+      expect(link?.querySelector('.nav-label')?.textContent?.trim()).toBe('Mis pendientes');
+    });
   });
 
   describe('Barra superior', () => {

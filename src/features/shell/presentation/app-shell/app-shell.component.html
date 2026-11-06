@@ -22,7 +22,7 @@
               <mat-icon class="nav-icon">{{ getIcon(item.id) }}</mat-icon>
               <span class="nav-label">{{ item.label }}</span>
 
-              @if (item.badge === 'pendientes' && pendingCount() !== null && pendingCount() !== undefined) {
+              @if (item.badge === 'pendientes' && (pendingCount() ?? 0) > 0) {
                 <span class="pending-badge" data-testid="pending-badge">{{ pendingCount() }}</span>
               }
             </a>

@@ -78,7 +78,7 @@ export const ENDPOINTS = {
     PDF: (id: string) => `/evaluations/meetings/${id}/pdf`,
   },
   SECRETARIA: {
-    PENDIENTES: '/secretaria/pendientes', // FALTA en backend (spec-003 RF-ALR.f)
+    PENDIENTES: '/secretaria/pendientes', // spec-003 v1.5.2, RF-ALR.f.5 (?filtro=todos|vencidos|hoy|semana)
   },
   AI_ASSISTANT: '/ai-assistant/chat',
   AI_ASSISTANT_ALLOWED_ROLES: '/ai-assistant/allowed-roles',
