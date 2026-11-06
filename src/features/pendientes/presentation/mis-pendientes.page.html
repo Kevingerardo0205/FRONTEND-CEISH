@@ -1,0 +1,27 @@
+<section class="mis-pendientes">
+  <app-page-header [heading]="titulo()" [subtitle]="subtitulo()" />
+
+  <app-proxima-reunion-card
+    class="mis-pendientes__reunion"
+    [estado]="facade.reunion().estado"
+    [reunion]="facade.reunion().datos"
+    (reintentar)="facade.reintentarReunion()"
+  />
+
+  <div class="mis-pendientes__filtros" aria-live="polite">
+    <app-button-group
+      label="Filtrar pendientes por plazo"
+      [options]="opciones()"
+      [active]="facade.filtro()"
+      (activeChange)="cambiarFiltro($event)"
+    />
+  </div>
+
+  <app-pendientes-table
+    [estado]="facade.pendientes().estado"
+    [items]="facade.pendientes().datos"
+    [filtro]="facade.filtro()"
+    (reintentar)="facade.reintentarPendientes()"
+    (verTodos)="cambiarFiltro('todos')"
+  />
+</section>

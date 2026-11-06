@@ -1,7 +1,7 @@
 # F01 · Mis pendientes y Protocolos — spec-ui
 
-**Versión:** 0.4 · **Fecha:** 05/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
-**Historial:** 0.1 (05/11/2026) primer borrador · 0.2 (05/11/2026) dudas D1–D9 decididas; cotejo con el canvas: "Ver convocatoria" lleva a `/convocatorias`, ASIGNAR abre el espacio del protocolo, `/protocolos` pide `PROTOCOLOS_LISTAR`, columnas y destinos por etapa anotados como pendientes, diferencias con el canvas (§9.2) · 0.3 (05/11/2026, T01-3) criterio 17: con `totales.todos = 0` el contador no se muestra · 0.4 (05/11/2026, T01-6) D10: `year` de la URL se valida de 2000 al año en curso (antes 2000–2100); `search` de más de 100 caracteres se descarta
+**Versión:** 0.5 · **Fecha:** 06/11/2026 · **Rama:** `docs/f01-pendientes-protocolos`
+**Historial:** 0.1 (05/11/2026) primer borrador · 0.2 (05/11/2026) dudas D1–D9 decididas; cotejo con el canvas: "Ver convocatoria" lleva a `/convocatorias`, ASIGNAR abre el espacio del protocolo, `/protocolos` pide `PROTOCOLOS_LISTAR`, columnas y destinos por etapa anotados como pendientes, diferencias con el canvas (§9.2) · 0.3 (05/11/2026, T01-3) criterio 17: con `totales.todos = 0` el contador no se muestra · 0.4 (05/11/2026, T01-6) D10: `year` de la URL se valida de 2000 al año en curso (antes 2000–2100); `search` de más de 100 caracteres se descarta · 0.5 (06/11/2026, T01-5) nota de §9: tres decisiones implementadas y por validar con la Secretaría en la reunión del 06/11/2026, y tres precisiones de la implementación
 **Cubre:** spec-003 v1.5.3 RF-ALR.f (RF-ALR.f.1 a f.7) · spec-001 v3.5.6 RF-EST.1, RF-EST.2 (parcial) y RF-EST.3 (contrato de `GET /protocols`, TSK-001.4)
 **Depende de:** F00 (tokens, AppShell, `shared/ui`, `Stage`, rutas por rol activo)
 **Canvas:** `canvas/01-mis-pendientes.png` y `canvas/02-protocolos.png` (tablero "Pantallas Secretaría — CEISH-ESPOCH", 28/10/2026), con las decisiones C1–C7 del 05/11/2026.
@@ -240,6 +240,14 @@ Los errores nunca se muestran como "sin resultados".
 
 - **C8 no aprobado:** el menú lateral sigue fijo (260 px, `app-shell.component.scss:9-10`, sin `@media`). En pantallas angostas las tablas se desplazan en horizontal (F00 §5). Sin tarea en F01.
 - **Hoy y Esta semana siempre dan 0** con las filas actuales: solo REASIGNAR tiene plazo y siempre está vencido (RF-ALR.f.2). Se muestran con su 0 real. Pendiente de validar con la Secretaría (spec-003, pregunta 6).
+- **Nota de T01-5 (06/11/2026). Por validar con la Secretaría en la reunión del 06/11/2026; implementado así:**
+  1. Validar y Asignar se muestran con `Sin plazo` (DC2): el backend los entrega como `SIN_PLAZO`.
+  2. Hoy y Esta semana se muestran con su conteo real, aunque hoy den 0.
+  3. Solo hay filas VALIDAR, ASIGNAR y REASIGNAR (C6); una acción desconocida se muestra sin botón y se registra con `console.warn`.
+  Precisiones de la implementación (sin cambio de regla):
+  - Mientras cargan los totales, o si fallan, los filtros van sin conteo pero **no se deshabilitan**: `ButtonGroup` de `shared/ui` no admite `disabled` y F01 no lo modifica (manda el repo).
+  - `Enlace no disponible` solo aparece si el lugar es virtual y el enlace no es válido; en un lugar presencial no se muestra ni el enlace ni ese texto.
+  - Con `fechaPlazo` null y un `estadoPlazo` distinto de `SIN_PLAZO`, el chip es `Sin plazo` con tono `gris` (el mismo de `SIN_PLAZO`).
 - **Informes en la tarjeta:** `informesATratar` es null hasta RF-15 (spec-003 RF-ALR.f.7). No hay línea de informes.
 - **Columna Estado en Protocolos:** no se muestra en F01. El contrato C trae `receptionStatus` (código de recepción) y `statusId` (estado del protocolo, null en Recepción y Asignación). El código tiene etiquetas por código (`protocol-ui.util.ts:11-24`, `ProtocolUI.label`), pero:
   - `receptionStatus` puede traer `PENDIENTE_SUBSANACION`, `EVALUACION_SUBSANACIONES` o `ARCHIVADO`, que no están en `EstadoCatalog` (`estado.catalog.ts:7-24`); `ProtocolUI.label` devolvería el código crudo (`protocol-ui.util.ts:28-30`);

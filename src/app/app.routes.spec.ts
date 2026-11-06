@@ -6,7 +6,11 @@ import { By } from '@angular/platform-browser';
 import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
 import { AppShellComponent } from '@features/shell/presentation/app-shell/app-shell.component';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { environment } from 'src/environments/environment';
+import { PENDIENTES_PROVIDERS } from '@features/pendientes/pendientes.providers';
+import { AuthGuard } from '@infrastructure/guards/auth.guard';
+import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { RoleCode } from '@domain/value-objects/role.vo';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { LoginPage } from '@features/auth/presentation/pages/login.page';
@@ -118,6 +122,54 @@ describe('Rutas por rol activo (T13d)', () => {
       expect(has('app-shell')).toBeTrue();
       expect(has('app-dashboard')).toBeFalse();
       expect(notify).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('F01 T01-5: /pendientes muestra Mis pendientes', () => {
+    const pendientes = () => SECRETARIA_ROUTES.find((r) => r.path === 'pendientes');
+    const urlPendientes = `${environment.apiUrl}/secretaria/pendientes`;
+
+    it('SECRETARIA en /pendientes ve MisPendientesPage dentro del AppShell', async () => {
+      await start(['SECRETARIA']);
+
+      await harness.navigateByUrl('/pendientes');
+
+      expect(router.url).toBe('/pendientes');
+      expect(has('app-shell app-mis-pendientes-page')).toBeTrue();
+      expect(has('app-dashboard-secretaria')).toBeFalse();
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('path, canActivate y data no cambian; se agregan los providers de la sección', () => {
+      const ruta = pendientes();
+      expect(ruta?.path).toBe('pendientes');
+      expect(ruta?.canActivate).toEqual([RoleGuard, AuthGuard]);
+      expect(ruta?.data).toEqual({ roles: ['SECRETARIA'] });
+      expect(ruta?.providers).toBe(PENDIENTES_PROVIDERS);
+    });
+
+    it('ROLE_HOME.SECRETARIA sigue siendo /pendientes', () => {
+      expect(ROLE_HOME['SECRETARIA']).toBe('/pendientes');
+    });
+
+    it('un 403 de GET /secretaria/pendientes no deja la navegación en bucle', async () => {
+      await start(['SECRETARIA']);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      await harness.navigateByUrl('/pendientes');
+      // La página y el contador del menú piden el mismo endpoint.
+      const primeras = httpMock.match((r) => r.url === urlPendientes);
+      expect(primeras.length).toBeGreaterThan(0);
+      for (const req of primeras) {
+        req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+      }
+      await harness.fixture.whenStable();
+      harness.fixture.detectChanges();
+
+      expect(router.url).toBe('/pendientes');
+      expect(httpMock.match((r) => r.url === urlPendientes).length).toBe(0);
+      expect(has('app-mis-pendientes-page')).toBeTrue();
+      expect(harness.fixture.nativeElement.textContent).toContain('No pudimos cargar sus pendientes.');
     });
   });
 
