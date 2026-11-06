@@ -28,14 +28,14 @@ src/features/espacio-protocolo/      ← /protocolos/:id/{resumen|documentos|rec
 | CREAR | `recepcion.port.ts` | `abstract class RecepcionPort { detalle(protocolId); validar(documentId, { decision: 'APROBAR' \| 'OBSERVAR', observacion?, paginasContadas? }); cerrar(protocolId): Observable<ResultadoCierre>; urlDocumento(documentId): Observable<string> }` | T02-1 |
 | CREAR | `resumen.port.ts` | `abstract class ResumenProtocoloPort { obtener(id) }` y `DocumentosPort { listar(protocolId) }` | T02-6 |
 | CREAR | `recepcion.rules.ts` + spec | `contadores(requisitos) → { aprobados, observados, sinRevisar, sinDocumento, total }` (spec-ui §5.1); `accionPrincipal(contadores, cerrada, puedeValidar) → { texto, habilitada, motivo } \| null` (§3.2); `paginas(declaradas, contadas) → { valida, coinciden }` (§5.2); `observacionValida(texto, min, max)` | T02-2 |
-| CREAR | `pestanas.rules.ts` + spec | `pestanaDesdeUrl(segmento) → 'resumen' \| 'documentos' \| 'recepcion' \| 'recorrido'` (desconocida → `resumen`) | T02-4 |
+| CREAR | `pestanas.rules.ts` + spec | `pestanaDesdeUrl(segmento) → 'resumen' \| 'documentos' \| 'recepcion' \| 'recorrido'` (desconocida → `recepcion`, la pestaña por defecto) | T02-4 |
 
 ### 2.2 `infrastructure/`
 
 | Acción | Archivo | Contenido | Tarea |
 |---|---|---|---|
 | CREAR | `recepcion.mapper.ts` + spec | Estricto con `contract-readers` (`asObject`, `asArray`, `str`, `nullableStr`, `num`, `nullableNum`, `idValue`, `oneOf`). Quita los rellenos del backend: `'TRÁMITE EN PROCESO'` → `ceishCode: null`, `'No asignado'` → `investigador: null`, `'No especificado'` → `tipoEstudio: null` (spec-ui E6; se borra cuando llegue TSK-F02-3). `observations` con `nullableStr` (un objeto lanza). Estado desconocido → `null` (no lanza). `pageCount` `null`/ausente → `null` (nunca `1`) | T02-1 |
-| CREAR | `recepcion-http.adapter.ts` + spec | `GET /reception/protocol/:id/validation-detail`; `POST /reception/document/:id/validate` con `{ statusId: 1 \| 3, observations?, pageCount? }` (P9); `POST /reception/protocol/:id/finalize`; `GET /reception/document/:id/download-url` + `safeHttpUrl`. Quita el envoltorio (`stripTransportEnvelope`/`unwrapData`). **Propaga** el error (sin `catchError(() => of(...))`). **No** llama a `PATCH …/verify` (spec-ui E3) | T02-1 |
+| CREAR | `recepcion-http.adapter.ts` + spec | `GET /reception/protocol/:id/validation-detail`; `POST /reception/document/:id/validate` con `{ statusId: 1 \| 3, observations?, pageCount? }` (E17); `POST /reception/protocol/:id/finalize`; `GET /reception/document/:id/download-url` + `safeHttpUrl`. Quita el envoltorio (`stripTransportEnvelope`/`unwrapData`). **Propaga** el error (sin `catchError(() => of(...))`). **No** llama a `PATCH …/verify` (spec-ui E3) | T02-1 |
 | CREAR | `resumen-http.adapter.ts`, `documentos-http.adapter.ts` + specs | `GET /protocols/:id` (`toResponse`); `GET /reception/protocol/:id/documents` | T02-6 |
 | CREAR | `recorrido-http.adapter.ts` + spec | `GET /audit/protocol/:id`, estricto, **sin** mock ni `integrityHash` | T02-7 (bloqueada por TSK-F02-5) |
 | raíz | CREAR `espacio-protocolo.providers.ts` | `ESPACIO_PROTOCOLO_PROVIDERS = [{ provide: RecepcionPort, useClass: RecepcionHttpAdapter }, …]` | T02-1 |
@@ -94,7 +94,7 @@ En `SECRETARIA_ROUTES` (`src/app/app.routes.ts`), una entrada nueva (P2):
   children: [
     { path: '', pathMatch: 'full', redirectTo: 'recepcion' },   // P2
     { path: 'resumen' | 'documentos' | 'recepcion' | 'recorrido', loadComponent: … },
-    { path: '**', redirectTo: 'resumen' },
+    { path: '**', redirectTo: 'recepcion' },               // desconocida → por defecto (spec-ui criterio 5)
   ],
 }
 ```
@@ -142,8 +142,8 @@ En `eslint.config.js`, una línea más junto a las de F01 (T01-8):
 
 | TSK | Hueco | Evidencia | Bloquea |
 |---|---|---|---|
-| TSK-F02-1 | Páginas **contadas** guardadas aparte de las **declaradas**, y las dos en `validation-detail` | `validate` sobrescribe `pageCount` del documento y del requisito (`reception.service.ts:732-755`) | E7, columna de páginas |
-| TSK-F02-2 | Observación obligatoria (y longitud) cuando `statusId ≠ 1` | `observations || ''` (`reception.service.ts:752`); DTO sin `IsNotEmpty` (`validate-document.dto.ts`) | No bloquea (el frontend la exige) |
+| TSK-F02-1 | Páginas **contadas** guardadas aparte de las **declaradas**, y las dos en `validation-detail` | `validate` sobrescribe `pageCount` del documento y del requisito (`reception.service.ts:736` y `:753`) | E7, columna de páginas |
+| TSK-F02-2 | Observación obligatoria (y longitud) cuando `statusId ≠ 1` | `observations || ''` (`reception.service.ts:752`); DTO sin `IsNotEmpty` y `statusId` sin validar contra `DocumentValidationStatus` (solo `@IsNumber`, `validate-document.dto.ts:4-5`) | No bloquea (el frontend la exige) |
 | TSK-F02-3 | `validation-detail` sin rellenos (`null` en vez de `'TRÁMITE EN PROCESO'`, `'No asignado'`, `'No especificado'`, `version \|\| 1`), con `etapa`, `etapaOrden` y un `estadoActual` legible | `reception.service.ts:155-165`; `GET /protocols/:id` sin `etapa` (`protocol.mapper.ts:45-58`) | Mapper sin la tabla de rellenos; chip de estado y `StageBar` |
 | TSK-F02-4 | Asociar documento ↔ requisito solo por `requirementId` (sin coincidencia por nombre ni "primer documento libre") | `reception.service.ts:96-136` | Riesgo de mostrar el documento equivocado |
 | TSK-F02-5 | `GET /audit/protocol/:id` con `@Permissions` y filtrado por tabla (hoy filtra solo `recordId`, mezcla registros de otras tablas con el mismo id) | `audit.controller.ts:19-26`; `audit.service.ts:84-87` | Pestaña Recorrido |
@@ -152,6 +152,7 @@ En `eslint.config.js`, una línea más junto a las de F01 (T01-8):
 | TSK-F02-8 | `@Permissions` en `GET /reception/document/:id/view` y `download-url` (y comprobar que el documento es del protocolo que el usuario puede ver) | `reception.controller.ts:185-251`; `permissions.guard.ts:32-39` | No bloquea; riesgo de acceso por id |
 | TSK-F02-9 | `@Permissions` en `GET /protocols/:id` | `protocol.controller.ts:43-44`, `:215-232` | No bloquea |
 | TSK-F02-10 | Exponer el plazo de subsanación antes de cerrar (para la confirmación, P5) | `finalize` lo calcula al cerrar (`reception.service.ts:343-346`) | No bloquea |
+| TSK-F02-11 | Observaciones generales del protocolo al cerrar (solo si P14 las confirma) | `POST …/finalize` no recibe cuerpo (`reception.controller.ts:100-105`) | Bloque de observaciones generales (DC7) |
 
 ## 9. Pruebas
 

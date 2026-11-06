@@ -1,10 +1,12 @@
 # F02 · Espacio del protocolo + Recepción (validar documentos) — spec-ui
 
-**Versión:** 0.1 · **Fecha:** 06/11/2026 · **Rama:** `feat/f02-spec-recepcion`
-**Historial:** 0.1 (06/11/2026) primer borrador desde el canvas y el Paso 0 (backend y frontend en solo lectura)
+**Versión:** 0.2 · **Fecha:** 06/11/2026 · **Rama:** `feat/f02-spec-recepcion`
+**Historial:**
+- 0.1 (06/11/2026) primer borrador desde el canvas y el Paso 0 (backend y frontend en solo lectura).
+- 0.2 (06/11/2026) cotejo con las 4 imágenes de `canvas/` (§9.1, DC3–DC7; cierra P12); P9 resuelta con el enum del backend (E17); un segmento de pestaña desconocido vuelve a `recepcion`; citas de `validate` precisadas (`:724-730`, `:736`, `:744-748`, `:750-754`); nuevas preguntas P13 (visor) y P14 (observaciones generales).
 **Cubre:** spec-001 v3.5.6 RF-04.2, RF-05.1, RF-05.2, RF-06.1, RF-07.1, RF-08.1 (`specs/001-flujo-mvp/spec.md:409-427` del backend)
 **Depende de:** F00 (tokens, AppShell, `shared/ui`, `Stage`, rutas por rol activo) y F01 (`contract-readers`, `fecha-ecuador.util`, `Pager`, patrón de fachada con estados por bloque, regla de capas `f01Layers`)
-**Canvas:** `canvas/03-validar-recepcion.png` (tablero `ValidarDocumentos.dc.html`). **La imagen todavía no está en el repo** y el tablero no se encontró en disco durante el Paso 0: esta versión se escribió con la descripción de la captura que dio la usuaria (06/11/2026). Se coteja con la imagen cuando se agregue (pregunta P12).
+**Canvas:** `canvas/03-validar-recepcion.png` (tabla de Recepción) y `canvas/0301-…`, `0302-…`, `0303-…` (visor del documento: normal, pantalla completa y parte inferior). El tablero `ValidarDocumentos.dc.html` no se encontró en disco. La 0.1 se escribió con la descripción de la captura; la 0.2 se cotejó con las imágenes (§9.1).
 
 ---
 
@@ -38,6 +40,7 @@ Dar a la Secretaría el **espacio de un protocolo** dentro del AppShell, con la 
 | E6 | Nada inventado: los textos de relleno del backend (`'TRÁMITE EN PROCESO'`, `'No asignado'`, `'No especificado'`) no se muestran como si fueran datos; `pageCount` ausente no se reemplaza por `1` | Decidida (regla del prompt) |
 | E7 | Páginas contadas: campo propio por documento; se envía con la validación. **Bloqueado** hasta que el backend guarde las contadas aparte de las declaradas (TSK-F02-1) | Bloqueado |
 | E8 | Recorrido: se muestra solo lo que devuelve el backend; nunca un recorrido simulado | Decidida |
+| E17 | `Observar` envía `statusId 3` (`OBSERVADO`); F02 no usa `2 RECHAZADO`. Evidencia: `DocumentValidationStatus { APROBADO = 1, RECHAZADO = 2, OBSERVADO = 3, PENDIENTE = 4 }` (`reception/domain/enums/document-validation-status.enum.ts:1-6`); el servicio solo compara con `APROBADO` y cualquier otro valor deja el requisito en `RECHAZADO` (`reception.service.ts:744-748`), pero el historial guarda el `statusId` tal como llega (`:724-730`), así que `3` deja constancia de que fue una observación. Es el único uso del enum en el backend (`git grep DocumentValidationStatus`: `reception.service.ts:30`, `:744`). El DTO acepta cualquier número (`validate-document.dto.ts:4-5`, solo `@IsNumber`): se agrega a TSK-F02-2. El frontend actual envía `2` (`protocol-validation-detail.page.ts:1133` → `document-api.adapter.ts:25-31`) | Decidida (backend, 06/11/2026; antes P9) |
 
 ## 3. Pantalla — `/protocolos/:id/recepcion` (canvas `03-validar-recepcion.png`)
 
@@ -130,8 +133,8 @@ Hallazgos que afectan a la UI:
 ### B) `validate` — cuerpo y efecto
 
 - DTO `ValidateDocumentDto { statusId: number; observations?: string; pageCount?: number }` (`reception/application/dtos/validate-document.dto.ts`). `statusId`: `1 APROBADO`, `2 RECHAZADO`, `3 OBSERVADO`, `4 PENDIENTE` (`reception/domain/enums/document-validation-status.enum.ts`).
-- Guarda un registro en el historial de validaciones, marca el documento como validado y **sobrescribe `pageCount` del documento y del requisito** con el valor enviado (`reception.service.ts:724-755`): las páginas declaradas se pierden (TSK-F02-1).
-- Cualquier `statusId` distinto de `1` deja el requisito en `RECHAZADO` con `observations || ''` (`:744-755`): **la observación no es obligatoria en el backend** (TSK-F02-2).
+- Guarda un registro en el historial de validaciones (`reception.service.ts:724-730`), marca el documento como validado y **sobrescribe `pageCount` del documento** (`:736`) **y del requisito** (`:753`) con el valor enviado: las páginas declaradas se pierden (TSK-F02-1).
+- Cualquier `statusId` distinto de `1` deja el requisito en `RECHAZADO` (`:744-748`) con `observations || ''` (`:750-754`): **la observación no es obligatoria en el backend** (TSK-F02-2). F02 envía `3` al observar (E17).
 - No hay control de concurrencia: dos usuarios pueden validar el mismo documento y gana el último (TSK-F02-6). El protocolo tiene `@VersionColumn` `versionLock` (`protocols/infrastructure/database/protocol.entity.orm.ts:30-31`), que `toResponse` expone, pero ningún endpoint de recepción lo pide.
 - Respuesta: `DocumentValidationMapper.toResponse(validation)`.
 
@@ -203,11 +206,11 @@ Los errores nunca se muestran como "sin documentos".
 ## 6. Interacciones
 
 - **Aprobar:** un clic envía `POST …/validate` con `statusId 1` y las páginas contadas (cuando E7 se desbloquee). La fila pasa a `Guardando…` y luego a `Aprobado`.
-- **Observar:** abre el campo de texto; `Guardar observación` exige texto (recortado, ≥ 1 carácter; mínimo definitivo en P8) y envía `statusId` de observación (P9) con `observations`. `Cancelar` vuelve al estado anterior sin llamar al backend.
+- **Observar:** abre el campo de texto; `Guardar observación` exige texto (recortado, ≥ 1 carácter; mínimo definitivo en P8) y envía `statusId 3` (E17) con `observations`. `Cancelar` vuelve al estado anterior sin llamar al backend.
 - **Cambiar de opinión:** pulsar el otro botón de una fila ya revisada vuelve a validar (el backend guarda el historial).
 - **Acción final:** confirmación → `POST …/finalize` → se recarga la cabecera y la pestaña; el contador del menú (`PendingCountPort`) se refresca.
 - **Pestañas:** cambian el segmento de la URL; recargar o volver atrás reproduce la pestaña.
-- **Ver documento:** pide `download-url` y abre la URL validada en otra pestaña (§7).
+- **Ver documento:** pide `download-url` y abre la URL validada en otra pestaña (§7). El canvas lo abre en un visor dentro de la pantalla (DC4): pendiente de P13.
 
 ## 7. Seguridad (angular-security)
 
@@ -223,7 +226,7 @@ Los errores nunca se muestran como "sin documentos".
 2. La fila `VALIDAR` de Mis pendientes navega a `/protocolos/{protocolId}/recepcion` (P2).
 3. Las migas dicen `Por validar › {ceishCode}`; sin código, `Sin código`.
 4. La cabecera muestra los chips, el título, `Investigador: … · Enviado el dd/MM/yyyy, HH:mm · n documentos` en hora de Ecuador y la barra de etapas; los rellenos del backend no se muestran como datos.
-5. La pestaña activa sale de la URL; `/protocolos/:id` abre la pestaña por defecto (propuesta P2: `recepcion`); un segmento desconocido vuelve a `resumen`.
+5. La pestaña activa sale de la URL; `/protocolos/:id` abre la pestaña por defecto (propuesta P2: `recepcion`); un segmento desconocido vuelve a la pestaña por defecto (`recepcion`), con `replaceUrl`.
 6. La pestaña Recepción muestra los contadores, `Progreso de validación · r de n` y el porcentaje, y una fila por requisito con nombre y código.
 7. `Aprobar` envía `statusId 1`; `Observar` no envía nada hasta escribir la observación; con texto vacío muestra el error y no envía.
 8. Una observación que llega como objeto produce `ContractError` y `ErrorState` (nunca `[object Object]`).
@@ -252,8 +255,11 @@ Los errores nunca se muestran como "sin documentos".
 |---|---|---|---|---|
 | DC1 | Observación como "[object Object]" | Texto | Error del mock (E1) | Decidido |
 | DC2 | Una sola acción `Enviar observaciones` | `Enviar observaciones` o `Aprobar recepción` según los contadores | RF-05.2 del backend | Pendiente (P1) |
-| DC3 | Páginas contadas editables desde ya | Solo declaradas hasta TSK-F02-1 | El backend sobrescribe las declaradas al guardar | Bloqueado |
-| DC4 | (Por cotejar con la imagen) | — | La imagen aún no está en el repo | P12 |
+| DC3 | Páginas contadas editables desde ya, en la fila (`03`) y en el visor (`Páginas contadas`, `0301`/`0303`) | Solo declaradas hasta TSK-F02-1, en los dos lugares | El backend sobrescribe las declaradas al guardar (`reception.service.ts:736`, `:753`) | Bloqueado |
+| DC4 | Clic en el documento (`Documento (clic para revisar)`) abre un **visor** en diálogo (`0301`): nombre del archivo, `{requisito} · {c} páginas (declaradas {d})`, botones pantalla completa (`0302`) y cerrar, vista previa del PDF, `Aprobar`/`Observar`, `Páginas contadas`, `Observación para el investigador` y `Guardar y cerrar` | Enlace que abre el documento en otra pestaña (§3.1, §7) | Incrustar el PDF necesita `download-url` (sin permisos hoy, TSK-F02-8) y una URL de recurso confiable en un `iframe`/`object`, que choca con el criterio 18 (sin `bypassSecurityTrust*`); `Guardar y cerrar` junta validación y páginas en un solo guardado | Pendiente (P13) |
+| DC5 | La fila con páginas distintas se marca solo con fondo y borde ámbar (fila `Instrumentos…`, `03`) | Además del color, aviso con icono y texto `Las páginas no coinciden (declaradas d, contadas c)` (§5.2) | Color nunca solo (§5.6.7) | Decidido |
+| DC6 | Campo de observación visible en **todas** las filas, también en las aprobadas; `Aprobar`/`Observar` en la tabla como iconos ✓/✗ sin texto | El campo se abre solo al pulsar `Observar` y la fila muestra la observación guardada (§3.1); botones con texto visible `Aprobar`/`Observar` (como en el visor del canvas) y `aria-label` con el requisito | Un campo vacío en filas aprobadas sugiere que falta algo; un icono solo no dice la acción (§5.6.3) | Propuesta |
+| DC7 | Bajo la tabla (`0303`, parcialmente tapado por el visor) un bloque con el texto `Se envían junto con las observaciones de cada documento.`: parece un campo de **observaciones generales** | No incluido | `POST …/finalize` no recibe cuerpo (`reception.controller.ts:100-105`, solo `@Param('protocolId')`): **falta en el backend** (TSK-F02-11) | Pendiente (P14) |
 
 ## 10. Preguntas abiertas
 
@@ -267,7 +273,9 @@ Los errores nunca se muestran como "sin documentos".
 | P6 | Si las páginas no coinciden, ¿se puede aprobar igual, o la diferencia obliga a observar? | Secretaría y Presidenta | Aviso que no bloquea |
 | P7 | Textos del chip de estado (§5.3) | Secretaría | Los de §5.3, hasta que el backend entregue el texto (TSK-F02-3) |
 | P8 | ¿Mínimo y máximo de la observación? Hoy el frontend exige 5 caracteres (`validate-checklist-item.use-case.ts:31`) y el backend nada | Secretaría / backend | Mínimo 5, máximo 1000, validado en los dos lados (TSK-F02-2) |
-| P9 | `Observar` = `statusId 3 OBSERVADO` o `2 RECHAZADO`? El backend trata igual a los dos (`reception.service.ts:744-750`); el frontend actual envía 2 | Backend | `3 OBSERVADO` (coincide con el texto del botón) |
 | P10 | Mientras el Recorrido esté bloqueado, ¿se oculta la pestaña o se muestra con un aviso? | Usuaria | Se muestra con `Recorrido no disponible todavía.` (sin datos) |
 | P11 | ¿PRESIDENTE también valida en F02? | Presidenta | No en F02 (solo SECRETARIA, como F01) |
-| P12 | Cotejo con la imagen `canvas/03-validar-recepcion.png` | Usuaria | Al agregarla, revisar §3 y §9.1 |
+| P13 | ¿Ver el documento en un visor dentro de la pantalla (canvas `0301`–`0303`, con `Guardar y cerrar`) o en otra pestaña? | Secretaría / usuaria (equipo) | Otra pestaña en la primera versión; el visor como tarea aparte (T02-9) cuando TSK-F02-8 dé permisos a `download-url` y se acuerde cómo incrustar el PDF sin `bypassSecurityTrust*` |
+| P14 | ¿Hay observaciones generales del protocolo, además de las de cada documento (canvas `0303`)? | Secretaría / backend | Si se confirman, TSK-F02-11 (cuerpo en `finalize`) antes de mostrarlas; mientras tanto no se muestran |
+
+P9 se resolvió con el enum del backend (E17) y P12 con el cotejo de §9.1.
