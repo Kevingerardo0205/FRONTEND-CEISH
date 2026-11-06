@@ -140,7 +140,7 @@ En `eslint.config.js`, una línea más junto a las de F01 (T01-8):
 
 - Sin `innerHTML`, `outerHTML`, `DomSanitizer` ni `bypassSecurityTrust*`.
 - Observación como texto (`nullableStr`); recortada y limitada antes de enviar.
-- `downloadUrl` por `safeHttpsUrl` (solo `https:`, spec-ui §7.3); se pide al pulsar y no se guarda; apertura con `noopener,noreferrer`. Sin visor incrustado (E13).
+- `downloadUrl` por `safeHttpsUrl` (solo `https:`, spec-ui §7.3); se pide al pulsar y no se guarda; apertura con `noopener,noreferrer` en otra pestaña (E13).
 - Los huecos de permisos del backend (§8) no se tapan en el frontend: se reportan como TSK.
 
 ## 8. Lo que necesita el backend (detalle en `tasks.md`, lista TSK)
