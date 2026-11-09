@@ -38,6 +38,45 @@ const CAMPOS_CREATE_PROTOCOL_DTO = [
   'institutions',
 ];
 
+describe('NuevoProtocoloPage — template del título', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [NuevoProtocoloPage, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ProtocoloService,
+          useValue: { guardarProtocoloInicial: () => NEVER, getStudyTypes: () => NEVER },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+      ],
+    }).compileComponents();
+  });
+
+  function render(titulo: string) {
+    const fixture = TestBed.createComponent(NuevoProtocoloPage);
+    fixture.detectChanges();
+    const control = fixture.componentInstance.generalForm.controls.titulo;
+    control.setValue(titulo);
+    control.markAsTouched();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    return { control, el, textarea: el.querySelector('textarea') as HTMLTextAreaElement };
+  }
+
+  it('con 201 caracteres reales muestra "Máximo 200 caracteres"', () => {
+    const { el } = render('a'.repeat(201));
+    expect(el.textContent).toContain('Máximo 200 caracteres');
+  });
+
+  it('el textarea limita a 200 en el navegador sin contar los espacios alrededor como error', () => {
+    const { control, el, textarea } = render(`  ${'a'.repeat(200)}  `);
+    expect(textarea.getAttribute('maxlength')).toBe('200');
+    expect(control.valid).toBeTrue();
+    expect(el.textContent).not.toContain('Máximo 200 caracteres');
+  });
+});
+
 describe('NuevoProtocoloPage — cuerpo de POST /protocols', () => {
   let guardarSpy: jasmine.Spy;
 

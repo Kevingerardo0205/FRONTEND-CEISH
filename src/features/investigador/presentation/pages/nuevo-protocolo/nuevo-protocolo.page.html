@@ -41,6 +41,7 @@
                     matInput
                     formControlName="titulo"
                     rows="3"
+                    [attr.maxlength]="200"
                     placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
                   ></textarea>
                   <mat-hint align="end"
@@ -51,6 +52,9 @@
                   >
                   <mat-error *ngIf="generalForm.get('titulo')?.hasError('minlength')"
                     >El título debe tener al menos 20 caracteres</mat-error
+                  >
+                  <mat-error *ngIf="generalForm.get('titulo')?.hasError('maxlength')"
+                    >Máximo 200 caracteres</mat-error
                   >
                 </mat-form-field>
               </div>
