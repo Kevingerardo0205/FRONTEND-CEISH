@@ -162,7 +162,6 @@ export class NuevoProtocoloPage implements OnInit {
       title: formVal.titulo!,
       principalInvestigatorId: Number(user?.id),
       studyTypeId: Number(formVal.tipoEstudio),
-      riskLevelId: null as unknown as number,
       geographicCoverage: null as unknown as string,
       studyDurationMonths: null as unknown as number,
 
