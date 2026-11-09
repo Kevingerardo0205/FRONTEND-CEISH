@@ -44,7 +44,7 @@
                     placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
                   ></textarea>
                   <mat-hint align="end"
-                    >{{ generalForm.get('titulo')?.value?.length || 0 }}/200</mat-hint
+                    >{{ generalForm.get('titulo')?.value?.trim()?.length || 0 }}/200</mat-hint
                   >
                   <mat-error *ngIf="generalForm.get('titulo')?.hasError('required')"
                     >El título es requerido</mat-error

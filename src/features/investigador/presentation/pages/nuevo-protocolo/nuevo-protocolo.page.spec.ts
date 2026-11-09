@@ -83,6 +83,55 @@ describe('NuevoProtocoloPage — cuerpo de POST /protocols', () => {
     expect(sobrantes).toEqual([]);
   });
 
+  describe('título recortado', () => {
+    const VEINTE = 'Anemia en Riobamba 1'; // 20 caracteres
+    const DIECINUEVE = VEINTE.slice(0, 19);
+
+    function control() {
+      return TestBed.createComponent(NuevoProtocoloPage).componentInstance.generalForm.controls
+        .titulo;
+    }
+
+    it('el control arranca en vacío', () => {
+      expect(control().value).toBe('');
+    });
+
+    it('un título de solo espacios no es válido', () => {
+      const c = control();
+      c.setValue('   ');
+      expect(c.valid).toBeFalse();
+      expect(c.hasError('required')).toBeTrue();
+    });
+
+    it('19 caracteres reales con espacios alrededor no es válido', () => {
+      const c = control();
+      c.setValue(`      ${DIECINUEVE}      `);
+      expect(c.valid).toBeFalse();
+      expect(c.hasError('minlength')).toBeTrue();
+    });
+
+    it('más de 200 caracteres reales no es válido; 200 con espacios alrededor sí', () => {
+      const c = control();
+      c.setValue('a'.repeat(201));
+      expect(c.hasError('maxlength')).toBeTrue();
+      c.setValue(`  ${'a'.repeat(200)}  `);
+      expect(c.valid).toBeTrue();
+    });
+
+    it('20 caracteres con espacios alrededor es válido y se envía sin espacios', () => {
+      const page = TestBed.createComponent(NuevoProtocoloPage).componentInstance;
+      page.generalForm.patchValue({
+        titulo: `   ${VEINTE}  \n`,
+        tipoEstudio: '2',
+        isAffidavitAccepted: true,
+      });
+      expect(page.generalForm.controls.titulo.valid).toBeTrue();
+      page.guardarInicial();
+      expect(guardarSpy).toHaveBeenCalledTimes(1);
+      expect((guardarSpy.calls.mostRecent().args[0] as { title: string }).title).toBe(VEINTE);
+    });
+  });
+
   it('envía los campos obligatorios del DTO con sus tipos', () => {
     const body = enviarFormularioValido();
     expect(body['title']).toBe('ZZ_TEST_ Protocolo de prueba sin nivel de riesgo');
