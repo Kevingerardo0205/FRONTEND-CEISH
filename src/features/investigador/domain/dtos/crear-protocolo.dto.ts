@@ -56,7 +56,6 @@ export interface CrearProtocoloDto {
   title: string;
   principalInvestigatorId: number;
   studyTypeId: number;
-  riskLevelId: number;
   geographicCoverage: string;
   studyDurationMonths: number;
 

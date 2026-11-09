@@ -66,6 +66,20 @@ export function ecuadorianPhoneValidator(control: AbstractControl): ValidationEr
   return valid ? null : { invalidPhone: true };
 }
 
+/**
+ * Largo de min a max contado sobre el texto recortado. Devuelve las mismas claves que Validators
+ * (required, minlength, maxlength) para reutilizar los mensajes del template.
+ */
+export function trimmedLengthValidator(min: number, max: number) {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const length = String(control.value ?? '').trim().length;
+    if (length === 0) return { required: true };
+    if (length < min) return { minlength: { requiredLength: min, actualLength: length } };
+    if (length > max) return { maxlength: { requiredLength: max, actualLength: length } };
+    return null;
+  };
+}
+
 export function ecuadorianIdValidator(control: AbstractControl): ValidationErrors | null {
   const val = control.value;
   if (!val) return null;
@@ -118,7 +132,7 @@ export class NuevoProtocoloPage implements OnInit {
   archivosCargados: { [key: string]: string } = {};
 
   generalForm = this.fb.group({
-    titulo: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(200)]],
+    titulo: ['', trimmedLengthValidator(20, 200)],
     tipoEstudio: ['', Validators.required],
     isAffidavitAccepted: [false, Validators.requiredTrue],
 
@@ -159,10 +173,9 @@ export class NuevoProtocoloPage implements OnInit {
     const formVal = this.generalForm.getRawValue();
 
     const payload: CrearProtocoloDto = {
-      title: formVal.titulo!,
+      title: (formVal.titulo ?? '').trim(),
       principalInvestigatorId: Number(user?.id),
       studyTypeId: Number(formVal.tipoEstudio),
-      riskLevelId: null as unknown as number,
       geographicCoverage: null as unknown as string,
       studyDurationMonths: null as unknown as number,
 
