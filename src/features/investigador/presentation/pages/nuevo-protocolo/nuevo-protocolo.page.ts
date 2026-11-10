@@ -33,6 +33,7 @@ import {
   ChecklistRequirement,
 } from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { finalize } from 'rxjs/operators';
 
 interface StudyType {
@@ -500,22 +501,15 @@ export class NuevoProtocoloPage implements OnInit {
 
     this.isLoading = true;
     this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
-      next: (res) => {
+      next: () => {
         this.isLoading = false;
-        const raw = res as Record<string, unknown>;
-        const codigo =
-          (raw?.['code'] as string) ||
-          ((raw?.['data'] as Record<string, unknown>)?.['code'] as string) ||
-          'CEISH-GEN-001';
-        this.snackBar.open(`✅ Protocolo ${codigo} enviado exitosamente.`, 'Cerrar', {
-          duration: 5000,
-        });
-        this.router.navigate(['/investigador/mis-protocolos']);
+        this.snackBar.open('Protocolo enviado a la Secretaría.', 'Cerrar', { duration: 5000 });
+        this.router.navigate(['/dashboard/investigador/mis-protocolos']);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         this.isLoading = false;
         this.snackBar.open(
-          'Error final: ' + (err.message || 'No se pudo completar el registro'),
+          extractApiErrorMessage(err, 'No se pudo enviar el protocolo a la Secretaría.'),
           'Cerrar',
         );
       },
