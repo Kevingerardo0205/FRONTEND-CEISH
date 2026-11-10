@@ -91,6 +91,17 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
           </div>
 
           <div class="card-footer">
+            <a
+              mat-flat-button
+              class="workspace-btn"
+              *ngIf="p.estado === 'BORRADOR'"
+              [routerLink]="['/dashboard/investigador/nuevo-protocolo']"
+              [queryParams]="{ borrador: p.id }"
+              [attr.aria-label]="'Continuar borrador: ' + p.titulo"
+            >
+              <mat-icon>arrow_forward</mat-icon>
+              Continuar
+            </a>
             <button
               mat-flat-button
               class="workspace-btn"

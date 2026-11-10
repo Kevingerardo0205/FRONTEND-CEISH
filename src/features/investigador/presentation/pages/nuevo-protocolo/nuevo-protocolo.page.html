@@ -27,7 +27,7 @@
     <mat-card class="register-stepper-card shadow-soft animate-fade-in">
       <mat-stepper [linear]="true" #stepper class="custom-stepper">
         <!-- PASO 1: INFORMACIÓN GENERAL -->
-        <mat-step [stepControl]="generalForm">
+        <mat-step [stepControl]="generalForm" [editable]="!isDraftContinuation">
           <ng-template matStepLabel>Información General</ng-template>
           <div class="step-content">
             <form [formGroup]="generalForm" class="row g-4">

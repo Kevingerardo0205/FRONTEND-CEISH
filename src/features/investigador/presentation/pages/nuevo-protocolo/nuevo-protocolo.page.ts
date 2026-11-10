@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ViewChild } from '@angular/core';
+import { afterNextRender, Component, inject, Injector, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -8,7 +8,7 @@ import {
   ValidationErrors,
   FormsModule,
 } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
 // Angular Material
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
@@ -122,9 +122,12 @@ export class NuevoProtocoloPage implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly injector = inject(Injector);
 
   isLoading = false;
   isRequirementsLoading = false;
+  isDraftContinuation = false;
   protocolId: number | null = null;
 
   tiposEstudio: StudyType[] = [];
@@ -146,7 +149,69 @@ export class NuevoProtocoloPage implements OnInit {
   });
 
   ngOnInit(): void {
+    const borrador = this.route.snapshot.queryParamMap.get('borrador');
+    const borradorId = Number(borrador);
+
+    if (borrador !== null && Number.isInteger(borradorId) && borradorId > 0) {
+      this.continuarBorrador(borradorId);
+    }
+
     this.loadStudyTypes();
+  }
+
+  private continuarBorrador(id: number): void {
+    // Bloquea "Guardar" del paso 1 mientras se comprueba el borrador: evita crear otro protocolo.
+    this.isLoading = true;
+    this.protocoloService.misProtocolos().subscribe({
+      next: (protocolos) => {
+        const borrador = protocolos.find((protocolo) => protocolo.id === id);
+        if (!borrador || borrador.estado !== 'BORRADOR') {
+          this.rechazarContinuacionBorrador();
+          return;
+        }
+
+        this.protocolId = id;
+        this.isDraftContinuation = true;
+        this.isRequirementsLoading = true;
+        this.protocoloService.getChecklist(id).subscribe({
+          next: (res) => {
+            this.processRequirements(this.extractList(res));
+            this.isRequirementsLoading = false;
+            this.isLoading = false;
+            this.abrirPasoRequisitos();
+          },
+          error: () => {
+            this.processRequirements([]);
+            this.isRequirementsLoading = false;
+            this.isLoading = false;
+            this.abrirPasoRequisitos();
+          },
+        });
+      },
+      error: () => this.rechazarContinuacionBorrador(),
+    });
+  }
+
+  private rechazarContinuacionBorrador(): void {
+    this.isLoading = false;
+    this.snackBar.open(
+      'No se puede continuar: este protocolo ya no es un borrador o no está disponible.',
+      'Cerrar',
+      { duration: 5000 },
+    );
+    this.router.navigate(['/dashboard/investigador/mis-protocolos']);
+  }
+
+  private abrirPasoRequisitos(): void {
+    // Solo en el borrador: el paso 1 se marca completado (sus datos ya están en el backend) y el
+    // stepper lineal deja pasar al paso 2 sin el formulario. El flujo normal sigue con generalForm.
+    afterNextRender(
+      () => {
+        this.stepper.steps.first.completed = true;
+        this.stepper.next();
+      },
+      { injector: this.injector },
+    );
   }
 
   private loadStudyTypes() {

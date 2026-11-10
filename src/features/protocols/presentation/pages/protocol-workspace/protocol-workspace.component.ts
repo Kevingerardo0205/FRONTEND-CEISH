@@ -547,6 +547,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
 
     if (
       isInvestigador &&
+      status?.toUpperCase() !== 'BORRADOR' &&
       (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')
     ) {
       actions.push({ id: 'EDIT_PROTOCOL', label: 'Completar / Editar', icon: 'edit' });

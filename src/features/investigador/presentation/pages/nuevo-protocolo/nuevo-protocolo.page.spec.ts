@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { NEVER, of, throwError } from 'rxjs';
+import { NEVER, Observable, of, throwError } from 'rxjs';
 
 import { NuevoProtocoloPage } from './nuevo-protocolo.page';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ProtocoloResumen, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
 
 /**
  * Campos que acepta CreateProtocolDto del backend
@@ -293,5 +294,184 @@ describe('NuevoProtocoloPage — botón del paso 2 (D6)', () => {
     expect(boton).not.toBeNull();
     expect(boton?.textContent).toContain('Enviar a la Secretaría');
     expect(boton?.textContent).not.toContain('FIRMAR Y ENVIAR AL CEISH');
+  });
+});
+
+describe('NuevoProtocoloPage - continuar borrador', () => {
+  const mensajeNoDisponible =
+    'No se puede continuar: este protocolo ya no es un borrador o no está disponible.';
+  let routeSnapshot: { queryParamMap: ParamMap };
+  let misProtocolosSpy: jasmine.Spy;
+  let getChecklistSpy: jasmine.Spy;
+  let guardarSpy: jasmine.Spy;
+  let navigateSpy: jasmine.Spy;
+
+  beforeEach(async () => {
+    routeSnapshot = { queryParamMap: convertToParamMap({}) };
+    misProtocolosSpy = jasmine.createSpy('misProtocolos').and.returnValue(of([]));
+    getChecklistSpy = jasmine.createSpy('getChecklist').and.returnValue(
+      of([
+        {
+          id: 1,
+          requirementCode: 'DOCUMENTO_TEST',
+          requirementName: 'Documento de prueba del protocolo',
+          status: 'NO_PRESENTADO',
+        },
+      ]),
+    );
+    guardarSpy = jasmine.createSpy('guardarProtocoloInicial').and.returnValue(NEVER);
+
+    await TestBed.configureTestingModule({
+      imports: [NuevoProtocoloPage, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { get snapshot() { return routeSnapshot; } },
+        },
+        {
+          provide: ProtocoloService,
+          useValue: {
+            misProtocolos: misProtocolosSpy,
+            getChecklist: getChecklistSpy,
+            guardarProtocoloInicial: guardarSpy,
+            getStudyTypes: () => of([]),
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+      ],
+    }).compileComponents();
+
+    navigateSpy = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+  });
+
+  function render(
+    borrador: string | null,
+    respuesta?: Observable<ProtocoloResumen[]>,
+  ) {
+    routeSnapshot.queryParamMap = convertToParamMap(
+      borrador === null ? {} : { borrador },
+    );
+    if (respuesta) misProtocolosSpy.and.returnValue(respuesta);
+    const fixture = TestBed.createComponent(NuevoProtocoloPage);
+    const snackSpy = spyOn(fixture.debugElement.injector.get(MatSnackBar), 'open');
+    fixture.detectChanges();
+    return { fixture, page: fixture.componentInstance, snackSpy };
+  }
+
+  function protocolo(id: number, estado: EstadoProtocolo): ProtocoloResumen {
+    return {
+      id,
+      codigoCeish: 'CEISH-TEST-' + id,
+      titulo: 'Estudio de prueba del investigador',
+      estado,
+      fechaCreacion: '2026-01-01',
+    };
+  }
+
+  async function expectRechazado(
+    borrador: string,
+    respuesta: Observable<ProtocoloResumen[]>,
+  ): Promise<void> {
+    const { fixture, page, snackSpy } = render(borrador, respuesta);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(page.stepper.selectedIndex).toBe(0);
+    expect(getChecklistSpy).not.toHaveBeenCalled();
+    expect(snackSpy).toHaveBeenCalledWith(mensajeNoDisponible, 'Cerrar', {
+      duration: 5000,
+    });
+    expect(navigateSpy).toHaveBeenCalledOnceWith([
+      '/dashboard/investigador/mis-protocolos',
+    ]);
+  }
+
+  it('?borrador=5 y estado BORRADOR carga checklist sin crear otro protocolo y abre el paso 2', async () => {
+    const { fixture, page } = render(
+      '5',
+      of([protocolo(5, EstadoProtocolo.BORRADOR)]),
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(guardarSpy).not.toHaveBeenCalled();
+    expect(getChecklistSpy).toHaveBeenCalledOnceWith(5);
+    expect(page.protocolId).toBe(5);
+    expect(page.stepper.selectedIndex).toBe(1);
+    expect(page.stepper.steps.first.completed).toBeTrue();
+    expect(page.stepper.steps.first.editable).toBeFalse();
+  });
+
+  it('?borrador=5 rechaza EN_REVISION_SECRETARIA y regresa a Mis protocolos', async () => {
+    await expectRechazado(
+      '5',
+      of([protocolo(5, EstadoProtocolo.EN_REVISION_SECRETARIA)]),
+    );
+  });
+
+  it('?borrador=5 sin coincidencia en Mis protocolos rechaza la continuacion', async () => {
+    await expectRechazado('5', of([protocolo(6, EstadoProtocolo.BORRADOR)]));
+  });
+
+  it('?borrador=5 cuando falla Mis protocolos rechaza la continuacion', async () => {
+    await expectRechazado('5', throwError(() => new Error('fallo de consulta')));
+  });
+
+  it('mientras comprueba ?borrador=5 el boton de guardar del paso 1 queda deshabilitado', () => {
+    const { fixture, page } = render('5', NEVER);
+    page.generalForm.patchValue({
+      titulo: 'Estudio de prueba del investigador',
+      tipoEstudio: 'OBSERVACIONAL',
+      isAffidavitAccepted: true,
+    });
+    fixture.detectChanges();
+
+    const guardar = (fixture.nativeElement as HTMLElement).querySelector(
+      'button.next-btn',
+    ) as HTMLButtonElement;
+    expect(page.generalForm.valid).toBeTrue();
+    expect(guardar.disabled).toBeTrue();
+    expect(guardarSpy).not.toHaveBeenCalled();
+  });
+
+  for (const borrador of [null, 'abc', '0', '-1', '1.5']) {
+    it(`?borrador=${borrador} conserva el flujo normal sin abrir el paso 2`, async () => {
+      const { fixture, page } = render(borrador);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(misProtocolosSpy).not.toHaveBeenCalled();
+      expect(getChecklistSpy).not.toHaveBeenCalled();
+      expect(guardarSpy).not.toHaveBeenCalled();
+      expect(page.stepper.selectedIndex).toBe(0);
+      expect(page.stepper.steps.first.editable).toBeTrue();
+    });
+  }
+
+  it('el formulario vacio mantiene bloqueado el avance lineal en el flujo normal', () => {
+    const { page } = render(null);
+
+    page.stepper.next();
+
+    expect(page.stepper.selectedIndex).toBe(0);
+    expect(page.generalForm.invalid).toBeTrue();
+  });
+
+  it('con el formulario valido el flujo normal avanza y marca el paso 1 como completado', () => {
+    const { fixture, page } = render(null);
+    page.generalForm.patchValue({
+      titulo: 'Estudio de prueba del investigador',
+      tipoEstudio: 'OBSERVACIONAL',
+      isAffidavitAccepted: true,
+    });
+    fixture.detectChanges();
+
+    page.stepper.next();
+    fixture.detectChanges();
+
+    expect(page.generalForm.valid).toBeTrue();
+    expect(page.stepper.selectedIndex).toBe(1);
+    expect(page.stepper.steps.first.completed).toBeTrue();
   });
 });

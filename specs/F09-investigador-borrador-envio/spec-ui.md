@@ -1,12 +1,15 @@
 # F09 · Investigador: borrador y envío a la Secretaría — spec-ui
 
-**Versión:** 0.1 · **Fecha:** 10/11/2026 · **Rama:** `docs/f09-spec`
+**Versión:** 0.2 · **Fecha:** 10/11/2026 · **Rama:** `feat/f09-t09-4-continuar-borrador`
 **Historial:**
 - 0.1 (10/11/2026) primer borrador desde el Paso 0 del flujo del investigador (frontend en `dev` `99c2a74`; backend en solo lectura, `dev` `446d41d`) y las decisiones de la usuaria del 10/11/2026 (D1–D5).
+- 0.2 (10/11/2026) Paso 0 de T09-4 (frontend `dev` `4bed0ea`; backend en solo lectura, `dev` `fe4c63d`): D7 (el borrador se confirma con `GET /protocols/mis-protocolos`, no con `GET /protocols/:id`) y D8 (texto fijo del aviso cuando no se puede continuar); §4 corregido (el error de `?borrador` ya no muestra un mensaje del backend); P1 resuelto con las dos capturas de `canvas/` y lo que de ellas **no** es alcance.
 
 **Cubre:** spec-001 v3.7.2 (`specs/001-flujo-mvp/spec.md` del backend): RF-02.2, RF-02.3 a–f, RF-02.5, RF-02.7 a–d (bloqueado), RF-02.8 (bloqueado) y HU-002 puntos 1, 3, 4 y 5.
 **Depende de:** F00 (rutas por rol activo, `RoleGuard`). No depende de F01 ni de F02.
-**Canvas:** pantalla `MisProtocolosInvestigador` del canvas del proyecto (claude.ai): chip `Borrador` con texto y botón `Continuar`. La captura todavía no está en `canvas/` (pendiente P1).
+**Canvas:** `canvas/mis-protocolos-investigador.png` (pantalla `MisProtocolosInvestigador`) y `canvas/crear-protocolo-documentos.png` (paso de documentos de un borrador). De ellas entra en F09 ahora **solo**: el chip `Borrador` con texto (T09-2) y el botón `Continuar` en la tarjeta del borrador, que abre el paso de documentos de ese protocolo (T09-4). **No son alcance** (las pantallas actuales se conservan tal como están):
+- de `mis-protocolos-investigador.png`: `Se elimina el martes 17 nov si no lo envías`, `Nuevo protocolo` deshabilitado con `Ya tienes un borrador abierto…` (T09-8, TSK-001.11); el contador `7 de 12 documentos subidos · sin código…`; la tarjeta `Recepción completa · acepta los tiempos` con casilla y `Aceptar tiempos`, `Ver constancia`, `Con observaciones` con plazo y `Ver y corregir`, y la sección `En el comité`; el orden "lo que necesita algo de ti aparece primero"; los colores ámbar del chip y del borde (tarea de estilo aparte, ver Notas de `tasks.md`); el menú lateral;
+- de `crear-protocolo-documentos.png`: la miga `Mis protocolos › Borrador`, el título y los datos del estudio en la cabecera, la barra de tres pasos (`1 · Datos`, `2 · Documentos`, `3 · Enviar a la Secretaría`), el aviso `Borrador · se elimina…` con `Descartar borrador` (T09-8), `Documentos · 7 de 12 subidos` con barra de progreso, `Descargar formatos oficiales (.zip)`, la lista con `Descargar formato`/`Cambiar`/`Subir` por documento y el número de páginas, y el botón de envío deshabilitado con `Faltan 5 documentos`. El paso 2 de `nuevo-protocolo` se reutiliza tal cual (D4).
 
 ---
 
@@ -36,6 +39,8 @@ Que el investigador vea su protocolo como **borrador** mientras no lo envía, lo
 | D4 | `Completar / Editar` se oculta en un borrador hasta TSK-001.14. `Continuar borrador` lleva directo al paso de documentos y envío, sin editar los datos del paso 1 | Decidida (usuaria, 10/11/2026) |
 | D5 | Referencia visual de T09-2 y T09-4: canvas `MisProtocolosInvestigador` (chip `Borrador` con texto, botón `Continuar`). El aviso `Se elimina el…` y `Nuevo protocolo` deshabilitado **no** entran ahora: esperan TSK-001.11 (T09-8) | Decidida (usuaria, 10/11/2026) |
 | D6 | El botón de envío del paso 2 dice `Enviar a la Secretaría` (decisión del 09/11/2026 recogida en el Paso 0); hoy dice `FIRMAR Y ENVIAR AL CEISH` (`nuevo-protocolo.page.html:330`) | Decidida (usuaria, 09/11/2026) |
+| D7 | `?borrador={id}` se confirma buscando el id en `ProtocoloService.misProtocolos()` (`GET /protocols/mis-protocolos`, que el backend filtra por el investigador del JWT, `protocol.controller.ts:90-101`), y solo se abre el paso 2 si su estado es `BORRADOR`. No se usa `obtenerProtocolo` (`GET /protocols/:id`): el backend no comprueba la propiedad en ese endpoint (`protocol.controller.ts:228-245`) y el método devuelve un protocolo inventado cuando falla (`protocolo.service.ts:402-410`) | Decidida (usuaria, 10/11/2026) |
+| D8 | Si el id no está en la lista, su estado no es `BORRADOR` o la lista falla: aviso `No se puede continuar: este protocolo ya no es un borrador o no está disponible.`, no se abre el paso 2 y se vuelve a `/dashboard/investigador/mis-protocolos`. Texto fijo del frontend: con D7 no hay mensaje del backend para un protocolo ajeno o inexistente | Decidida (usuaria, 10/11/2026) |
 
 ## 3. Pantallas y navegación
 
@@ -54,7 +59,7 @@ Que el investigador vea su protocolo como **borrador** mientras no lo envía, lo
 ### 3.2 Nuevo protocolo (`nuevo-protocolo.page.ts` y `.html`)
 - Paso 1 (datos) sin cambios: `POST /protocols` crea el borrador (RF-02.3 a).
 - Paso 2 (documentos): botón `Enviar a la Secretaría` (D6) → `POST /protocols/:id/submit` (`protocolo.service.ts:270-279`, `nuevo-protocolo.page.ts:502`).
-- Con `?borrador={id}` (F09-4): no se crea otro protocolo; se carga el checklist de ese protocolo (`getChecklist(id)`), el stepper abre en el paso 2 y el paso 1 queda completado y no editable.
+- Con `?borrador={id}` (F09-4; `id` entero > 0, si no, flujo normal): no se crea otro protocolo; se confirma que es un borrador del investigador (D7); se carga el checklist de ese protocolo (`getChecklist(id)`), el stepper abre en el paso 2 y el paso 1 queda completado y no editable. Sin `?borrador`, el paso 1 sigue exigiendo el formulario válido para avanzar (stepper lineal, `nuevo-protocolo.page.html:28-30`).
 - Después del envío: `/dashboard/investigador/mis-protocolos` (hoy navega a `/investigador/mis-protocolos`, `nuevo-protocolo.page.ts:513`, que no es una ruta y termina en el inicio por `**`, `app.routes.ts:133-136`).
 
 ### 3.3 Espacio actual del protocolo
@@ -70,7 +75,7 @@ Que el investigador vea su protocolo como **borrador** mientras no lo envía, lo
 |---|---|---|---|---|
 | Mis protocolos | sin cambios | sin cambios (`Listo para investigar`) | sin cambios | chips de §3.1 |
 | Nuevo protocolo, envío | botón deshabilitado con spinner (`nuevo-protocolo.page.html:327-336`, sin cambios) | — | aviso con el mensaje del backend; se queda en el paso 2 y el botón se vuelve a habilitar (F09-3) | aviso `Protocolo enviado a la Secretaría.` y paso a Mis protocolos (F09-2) |
-| Nuevo protocolo con `?borrador` | spinner mientras carga el checklist | checklist vacío: mismo comportamiento que hoy (`processRequirements([])`) | id inválido o protocolo ajeno: aviso con el mensaje del backend y vuelta a Mis protocolos | paso 2 con los documentos ya subidos marcados |
+| Nuevo protocolo con `?borrador` | spinner mientras carga el checklist | checklist vacío: mismo comportamiento que hoy (`processRequirements([])`) | protocolo que no está en Mis protocolos (ajeno o inexistente), que no es `BORRADOR` o lista que falla: aviso de D8 y vuelta a Mis protocolos. Id no numérico o ≤ 0: flujo normal de creación | paso 2 con los documentos ya subidos marcados |
 | Subsanación, envío | sin cambios | — | aviso con el mensaje del backend (F09-3) | sin cambios |
 
 ## 5. Interacciones y acción principal
@@ -108,7 +113,7 @@ Forma de los errores del backend: `{ statusCode, timestamp, path, error: { messa
 
 | # | Pendiente | Estado |
 |---|---|---|
-| P1 | Agregar la captura de `MisProtocolosInvestigador` a `canvas/` | Abierto |
+| P1 | Agregar la captura de `MisProtocolosInvestigador` a `canvas/` | Resuelto (10/11/2026): `canvas/mis-protocolos-investigador.png` y `canvas/crear-protocolo-documentos.png`; lo que no es alcance está en la cabecera (**Canvas**) |
 | P2 | Texto del motivo de `Nuevo protocolo` deshabilitado y formato del aviso `Se elimina el…` | Abierto, con T09-8 (TSK-001.11) |
 | P3 | Código muerto visto en el Paso 0, para la tarea de retiro (D1): rama de quien no es investigador en `subsanacion.page.ts:1121-1146` (filtra `EVALUADO`/`EVALUACION_SUBSANACIONES` sobre una lista que ya los descartó, `load-reception-protocols.use-case.ts:15-22`; siempre vacía); `ProtocolCreatePage` (`protocols/components/protocol-create.page.ts`, sin ruta), `ProtocolFormComponent` y `SubmitProtocolUseCase` (único llamador de `protocol-api.adapter.ts:171-179`, `PUT`) | Abierto, tarea de retiro aparte |
 | P4 | `protocol-validation-detail.page.ts:1311-1316` lee `err.error?.message`, que nunca existe en un `Error` (`base-api.service.ts:52`). Esa página la retira F02 (`specs/F02-espacio-recepcion/spec-ui.md` §1); no entra en T09-5 | Anotado |
