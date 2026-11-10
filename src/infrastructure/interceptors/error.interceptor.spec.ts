@@ -183,6 +183,70 @@ describe('ErrorInterceptor', () => {
     req.flush({ message: 'Conflicto de versiones' }, { status: 409, statusText: 'Conflict' });
   });
 
+  describe('409 con cuerpos reales del backend', () => {
+    const backendMessage =
+      'El protocolo no se puede enviar en su estado actual: solo se envía un borrador o un protocolo con documentación incompleta o por subsanar.';
+
+    it('muestra el mensaje en español anidado y conserva el tipo de concurrencia', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error.type).toBe('CONCURRENCY_ERROR');
+          expect(error.status).toBe(409);
+          expect(error.message).toBe(backendMessage);
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        {
+          statusCode: 409,
+          timestamp: '...',
+          path: '/api/protocols/1/submit',
+          error: { message: backendMessage, error: 'Conflict', statusCode: 409 },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+    });
+
+    it('une el mensaje anidado cuando el backend lo devuelve como arreglo', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error.message).toBe('a; b');
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        {
+          statusCode: 409,
+          timestamp: '...',
+          path: '/api/protocols/1/submit',
+          error: { message: ['a', 'b'], error: 'Conflict', statusCode: 409 },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+    });
+
+    it('usa el mensaje genérico cuando el cuerpo no contiene un mensaje anidado', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error.message).toBe(
+            'Este trámite ha sido actualizado por otro usuario. Por favor, recargue el expediente.',
+          );
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        { statusCode: 409 },
+        { status: 409, statusText: 'Conflict' },
+      );
+    });
+  });
+
   describe('mensaje anidado en body.error.message (cuerpos reales del backend)', () => {
     function expectMessage(
       body: object,

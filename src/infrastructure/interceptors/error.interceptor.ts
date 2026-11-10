@@ -132,6 +132,7 @@ export class ErrorInterceptor implements HttpInterceptor {
             status: 409,
             message:
               error.error?.message ||
+              this.nestedErrorMessage(error.error) ||
               'Este trámite ha sido actualizado por otro usuario. Por favor, recargue el expediente.',
           }));
         }
