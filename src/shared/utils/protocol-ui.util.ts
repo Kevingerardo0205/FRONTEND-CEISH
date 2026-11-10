@@ -24,13 +24,21 @@ export const EstadoUIMap: Record<EstadoCatalogKey, EstadoUIMetadata> = {
   EN_CONTROL_DOCUMENTAL: { label: 'Control Documental', cssClass: 'review' },
 };
 
+const BackendEstadoUIMap: Readonly<Record<string, EstadoUIMetadata>> = {
+  BORRADOR: { label: 'Borrador', cssClass: 'pending' },
+  EVALUACION_SUBSANACIONES: { label: 'Correcciones sin enviar', cssClass: 'pending' },
+};
 export const ProtocolUI = {
   label: (status: string | undefined): string => {
+    const backendMetadata = BackendEstadoUIMap[status?.toUpperCase() ?? ''];
+    if (backendMetadata) return backendMetadata.label;
     const core = resolveEstado(status);
     if (!core) return status || 'Desconocido';
     return EstadoUIMap[core.code as EstadoCatalogKey]?.label || core.code.replace(/_/g, ' ');
   },
   class: (status: string | undefined): string => {
+    const backendMetadata = BackendEstadoUIMap[status?.toUpperCase() ?? ''];
+    if (backendMetadata) return backendMetadata.cssClass;
     const core = resolveEstado(status);
     if (!core) return 'pending';
     return EstadoUIMap[core.code as EstadoCatalogKey]?.cssClass || 'pending';
