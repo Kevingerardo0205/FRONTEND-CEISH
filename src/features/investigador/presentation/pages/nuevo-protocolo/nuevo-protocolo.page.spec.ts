@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { provideRouter } from '@angular/router';
-import { NEVER } from 'rxjs';
+import { Router, provideRouter } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { NEVER, of, throwError } from 'rxjs';
 
 import { NuevoProtocoloPage } from './nuevo-protocolo.page';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
@@ -180,5 +181,117 @@ describe('NuevoProtocoloPage — cuerpo de POST /protocols', () => {
     expect(body['usesBiologicalSamples']).toBeTrue();
     expect(body['investigators']).toEqual([]);
     expect(body['institutions']).toEqual([]);
+  });
+});
+
+describe('NuevoProtocoloPage — envío a la Secretaría (F09-2, F09-3)', () => {
+  const MENSAJE_ESTADO =
+    'El protocolo no se puede enviar en su estado actual: solo se envía un borrador o un protocolo con documentación incompleta o por subsanar.';
+
+  let finalizarSpy: jasmine.Spy;
+  let snackSpy: jasmine.Spy;
+  let navigateSpy: jasmine.Spy;
+
+  beforeEach(async () => {
+    finalizarSpy = jasmine.createSpy('finalizarProtocolo');
+
+    await TestBed.configureTestingModule({
+      imports: [NuevoProtocoloPage, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ProtocoloService,
+          useValue: {
+            guardarProtocoloInicial: () => NEVER,
+            getStudyTypes: () => NEVER,
+            finalizarProtocolo: finalizarSpy,
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+      ],
+    })
+      .overrideComponent(NuevoProtocoloPage, { set: { template: '' } })
+      .compileComponents();
+
+    navigateSpy = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+  });
+
+  function paginaListaParaEnviar(): NuevoProtocoloPage {
+    const fixture = TestBed.createComponent(NuevoProtocoloPage);
+    // MatSnackBarModule (importado por el componente) da su propia instancia: se espía esa.
+    snackSpy = spyOn(fixture.debugElement.injector.get(MatSnackBar), 'open');
+    const page = fixture.componentInstance;
+    page.protocolId = 7;
+    page.documentosRequeridos = [];
+    page.archivosCargados = { 'zz-test-documento.pdf': 'zz-test-documento.pdf' };
+    return page;
+  }
+
+  it('201 → aviso "Protocolo enviado a la Secretaría." sin código CEISH y va a Mis protocolos', () => {
+    finalizarSpy.and.returnValue(of({}));
+    const page = paginaListaParaEnviar();
+
+    page.onEnviarFinal();
+
+    expect(finalizarSpy).toHaveBeenCalledOnceWith(7);
+    expect(snackSpy).toHaveBeenCalledTimes(1);
+    const texto = snackSpy.calls.mostRecent().args[0] as string;
+    expect(texto).toBe('Protocolo enviado a la Secretaría.');
+    expect(texto).not.toContain('CEISH-GEN-001');
+    expect(navigateSpy).toHaveBeenCalledOnceWith(['/dashboard/investigador/mis-protocolos']);
+    expect(page.isLoading).toBeFalse();
+  });
+
+  it('error con mensaje del backend → aviso con ese texto exacto, no navega y libera el botón', () => {
+    finalizarSpy.and.returnValue(throwError(() => new Error(MENSAJE_ESTADO)));
+    const page = paginaListaParaEnviar();
+
+    page.onEnviarFinal();
+
+    expect(snackSpy).toHaveBeenCalledTimes(1);
+    expect(snackSpy.calls.mostRecent().args[0]).toBe(MENSAJE_ESTADO);
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(page.isLoading).toBeFalse();
+  });
+
+  it('error sin mensaje → aviso "No se pudo enviar el protocolo a la Secretaría."', () => {
+    finalizarSpy.and.returnValue(throwError(() => new Error('')));
+    const page = paginaListaParaEnviar();
+
+    page.onEnviarFinal();
+
+    expect(snackSpy.calls.mostRecent().args[0]).toBe(
+      'No se pudo enviar el protocolo a la Secretaría.',
+    );
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(page.isLoading).toBeFalse();
+  });
+});
+
+describe('NuevoProtocoloPage — botón del paso 2 (D6)', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [NuevoProtocoloPage, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ProtocoloService,
+          useValue: { guardarProtocoloInicial: () => NEVER, getStudyTypes: () => NEVER },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+      ],
+    }).compileComponents();
+  });
+
+  it('dice "Enviar a la Secretaría" y no "FIRMAR Y ENVIAR AL CEISH"', () => {
+    const fixture = TestBed.createComponent(NuevoProtocoloPage);
+    fixture.detectChanges();
+    const boton = (fixture.nativeElement as HTMLElement).querySelector(
+      'button.submit-btn',
+    ) as HTMLButtonElement | null;
+
+    expect(boton).not.toBeNull();
+    expect(boton?.textContent).toContain('Enviar a la Secretaría');
+    expect(boton?.textContent).not.toContain('FIRMAR Y ENVIAR AL CEISH');
   });
 });
