@@ -110,6 +110,8 @@ module.exports = tseslint.config(
   // F01: pendientes y protocolos
   ...f01Layers("pendientes"),
   ...f01Layers("protocolos"),
+  // F02: espacio del protocolo (plan §6)
+  ...f01Layers("espacio-protocolo"),
   // F01: utilidad compartida de fechas
   layers(["src/shared/utils/fecha-ecuador.util.ts"], [NO_ANGULAR, NO_HTTP, NO_INFRASTRUCTURE, NO_FEATURES]),
   {
