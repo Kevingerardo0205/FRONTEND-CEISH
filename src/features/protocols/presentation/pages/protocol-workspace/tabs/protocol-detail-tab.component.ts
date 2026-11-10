@@ -575,6 +575,7 @@ export class ProtocolDetailTabPage {
     const code = core?.code || status;
     return (
       role === 'INVESTIGADOR' &&
+      status?.toUpperCase() !== 'BORRADOR' &&
       (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')
     );
   }
