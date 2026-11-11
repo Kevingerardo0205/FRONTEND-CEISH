@@ -9,8 +9,14 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
-import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { Stage } from '@domain/value-objects/stage.vo';
+import { StageBarComponent } from '@shared/ui/stage-bar/stage-bar.component';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
+import {
+  workspaceStageCode,
+  workspaceStatusCode,
+  workspaceStatusLabel,
+} from '../../../domain/workspace-status';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
@@ -18,7 +24,6 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AssignPeersModalComponent } from '../../../../dashboard/presentation/components/assign-peers-modal/assign-peers-modal.component';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
-import { resolveEstado } from '@shared/utils/estado.resolver';
 
 @Component({
   selector: 'app-protocol-workspace',
@@ -38,6 +43,7 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
     MatSnackBarModule,
     TimelineAcceptanceModalComponent,
     MatDialogModule,
+    StageBarComponent,
   ],
   template: `
     <div class="workspace-shell" *ngIf="protocol(); else loading">
@@ -56,8 +62,8 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
           <div class="identity-block">
             <div class="meta-row">
               <span class="protocol-id">{{ protocol()?.code | protocolCode }}</span>
-              <span class="status-indicator" [attr.data-status]="protocol()!.status">
-                {{ getFriendlyStatusLabel(protocol()!.status) }}
+              <span class="status-indicator" [attr.data-status]="statusCode()">
+                {{ statusLabel() }}
               </span>
             </div>
             <h1 class="protocol-title" [matTooltip]="protocol()?.title">
@@ -82,52 +88,12 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
           </div>
         </div>
 
-        <!-- 2. Timeline Evolucionado: Visualización de Progreso -->
-        <div class="progress-scaffold">
-          <div class="stepper-line">
-            <div
-              class="step"
-              [class.completed]="isStepCompleted('RECEPCION')"
-              [class.active]="isStepActive('RECEPCION')"
-            >
-              <div class="dot"><mat-icon *ngIf="isStepCompleted('RECEPCION')">check</mat-icon></div>
-              <span class="label">Recepción</span>
-            </div>
-            <div class="connector" [class.filled]="isStepCompleted('VALIDACION')"></div>
-            <div
-              class="step"
-              [class.completed]="isStepCompleted('VALIDACION')"
-              [class.active]="isStepActive('VALIDACION')"
-            >
-              <div class="dot">
-                <mat-icon *ngIf="isStepCompleted('VALIDACION')">check</mat-icon>
-              </div>
-              <span class="label">Validación</span>
-            </div>
-            <div class="connector" [class.filled]="isStepCompleted('EVALUACION')"></div>
-            <div
-              class="step"
-              [class.completed]="isStepCompleted('EVALUACION')"
-              [class.active]="isStepActive('EVALUACION')"
-            >
-              <div class="dot">
-                <mat-icon *ngIf="isStepCompleted('EVALUACION')">check</mat-icon>
-              </div>
-              <span class="label">Evaluación</span>
-            </div>
-            <div class="connector" [class.filled]="isStepCompleted('RESOLUCION')"></div>
-            <div
-              class="step"
-              [class.completed]="isStepCompleted('RESOLUCION')"
-              [class.active]="isStepActive('RESOLUCION')"
-            >
-              <div class="dot">
-                <mat-icon *ngIf="isStepCompleted('RESOLUCION')">check</mat-icon>
-              </div>
-              <span class="label">Resolución</span>
-            </div>
+        <!-- 2. Etapas del protocolo (F10 D13): sin estado reconocido no hay barra (F02 §5.3) -->
+        @if (workspaceStage(); as stage) {
+          <div class="progress-scaffold">
+            <app-stage-bar [stage]="stage"></app-stage-bar>
           </div>
-        </div>
+        }
       </header>
 
       <!-- 3. Navegación Tabular Estilizada -->
@@ -220,11 +186,11 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
           padding: 2px 8px;
           border-radius: 4px;
           text-transform: uppercase;
-          &[data-status='DRAFT'] {
+          &[data-status='INICIADO'] {
             background: #f1f5f9;
             color: #475569;
           }
-          &[data-status='SUBMITTED'] {
+          &[data-status='EN_REVISION_SECRETARIA'] {
             background: #ecfdf5;
             color: #065f46;
           }
@@ -232,8 +198,7 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
             background: #eff6ff;
             color: #1e40af;
           }
-          &[data-status='DISCREPANCIA_RIESGO'],
-          &[data-status='DISCREPANCIA_DE_RIESGO'] {
+          &[data-status='DISCREPANCIA_RIESGO'] {
             background: #fff7ed;
             color: #c2410c;
           }
@@ -300,74 +265,10 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
         }
       }
 
-      /* Progress Scaffold (Timeline) */
+      /* Etapas del protocolo (app-stage-bar) */
       .progress-scaffold {
         padding: 0 1rem 1.5rem;
-        .stepper-line {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          max-width: 900px;
-        }
-        .step {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.6rem;
-          position: relative;
-          z-index: 2;
-          .dot {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: white;
-            border: 2px solid #cbd5e1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            mat-icon {
-              font-size: 14px;
-              width: 14px;
-              height: 14px;
-              color: white;
-              font-weight: 800;
-            }
-          }
-          .label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            transition: all 0.3s ease;
-          }
-          &.active .dot {
-            border-color: var(--accent);
-            border-width: 3px;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-          }
-          &.active .label {
-            color: var(--primary);
-          }
-          &.completed .dot {
-            background: var(--success);
-            border-color: var(--success);
-          }
-          &.completed .label {
-            color: #64748b;
-          }
-        }
-        .connector {
-          flex: 1;
-          height: 3px;
-          background: #e2e8f0;
-          margin: 0 -12px 24px;
-          border-radius: 2px;
-          &.filled {
-            background: var(--success);
-          }
-        }
+        max-width: 900px;
       }
 
       /* Navigation Aesthetic */
@@ -482,13 +383,33 @@ export class ProtocolWorkspaceComponent implements OnInit {
 
   protocolIdNumber = computed(() => Number(this.protocol()?.id || 0));
 
+  /**
+   * Estado canónico (F10 D13): el del protocolo y, si es NULL, el de la recepción. Pestañas,
+   * acciones, ventana de aceptación, etapa y etiqueta leen solo de aquí.
+   */
+  statusCode = computed(() => {
+    const p = this.protocol();
+    return p ? workspaceStatusCode(p.statusId, p.status) : null;
+  });
+
+  /** Borrador: la recepción en BORRADOR (D13). */
+  private isDraft = computed(() => this.protocol()?.status?.toUpperCase() === 'BORRADOR');
+
+  /** Etapa de la barra (temporal, D13). */
+  workspaceStage = computed(() => {
+    const code = workspaceStageCode(this.statusCode());
+    return code ? Stage.fromBackend(code) : null;
+  });
+
+  statusLabel = computed(() => workspaceStatusLabel(this.statusCode(), this.isDraft()));
+
   showAcceptanceModal = computed(() => {
     const p = this.protocol();
     const user = this.authFacade.currentUser();
     if (!p || !user) return false;
 
     const isIp = this.activeRoleFacade.activeRole() === 'INVESTIGADOR';
-    const isComplete = p.status?.toUpperCase() === 'COMPLETO';
+    const isComplete = this.statusCode() === 'COMPLETO';
     const isNotSigned = !p.isTimelineTermsAccepted;
 
     return isIp && isComplete && isNotSigned;
@@ -515,14 +436,12 @@ export class ProtocolWorkspaceComponent implements OnInit {
 
     const actions = [];
     const activeRole = this.activeRoleFacade.activeRole();
-    const status = p.status as string;
-    const core = resolveEstado(status);
-    const code = core?.code || status;
+    const code = this.statusCode();
 
     if (
       activeRole &&
       WORKSPACE_ACTION_ROLES.EDIT_PROTOCOL.includes(activeRole) &&
-      status?.toUpperCase() !== 'BORRADOR' &&
+      !this.isDraft() &&
       (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')
     ) {
       actions.push({ id: 'EDIT_PROTOCOL', label: 'Completar / Editar', icon: 'edit' });
@@ -538,7 +457,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (
       activeRole &&
       WORKSPACE_ACTION_ROLES.ASSIGN_EVALUATORS.includes(activeRole) &&
-      (code === 'COMPLETO' || code === 'INCOMPLETO')
+      workspaceStageCode(code) === 'ASIGNACION'
     ) {
       actions.push({ id: 'ASSIGN_EVALUATORS', label: 'Asignar Pares', icon: 'person_add' });
     }
@@ -550,6 +469,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (!p) return [];
 
     const activeRole = this.activeRoleFacade.activeRole();
+    const code = this.statusCode();
     const tabs: { label: string; icon: string; path: string }[] = [];
 
     if (activeRole && WORKSPACE_TAB_ROLES.info.includes(activeRole)) {
@@ -557,7 +477,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     }
 
     if (
-      p.status !== ProtocolStatus.DRAFT &&
+      !this.isDraft() &&
       activeRole &&
       WORKSPACE_TAB_ROLES.validation.includes(activeRole)
     ) {
@@ -565,7 +485,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     }
 
     if (
-      p.status === ProtocolStatus.APPROVED &&
+      (code === 'APROBADO' || code === 'APROBADO_CON_CONDICION') &&
       activeRole &&
       WORKSPACE_TAB_ROLES['follow-up'].includes(activeRole)
     ) {
@@ -634,82 +554,5 @@ export class ProtocolWorkspaceComponent implements OnInit {
         }
       });
     }
-  }
-
-  isStepActive(step: string): boolean {
-    const p = this.protocol();
-    if (!p) return false;
-    switch (step) {
-      case 'RECEPCION':
-        return p.status === ProtocolStatus.SUBMITTED;
-      case 'VALIDACION':
-        return p.status === ProtocolStatus.VALIDATED;
-      case 'EVALUACION':
-        return (
-          p.status === ProtocolStatus.EN_EVALUACION ||
-          p.status === ProtocolStatus.DISCREPANCIA_RIESGO ||
-          p.status === ProtocolStatus.DISCREPANCIA_DE_RIESGO
-        );
-      case 'RESOLUCION':
-        return p.status === ProtocolStatus.APPROVED;
-      default:
-        return false;
-    }
-  }
-
-  isStepCompleted(step: string): boolean {
-    const p = this.protocol();
-    if (!p) return false;
-    const statusOrder = [
-      ProtocolStatus.DRAFT,
-      ProtocolStatus.SUBMITTED,
-      ProtocolStatus.VALIDATED,
-      ProtocolStatus.EN_EVALUACION,
-      ProtocolStatus.APPROVED,
-    ];
-    let currentIdx = statusOrder.indexOf(p.status);
-    if (
-      p.status === ProtocolStatus.DISCREPANCIA_RIESGO ||
-      p.status === ProtocolStatus.DISCREPANCIA_DE_RIESGO
-    ) {
-      currentIdx = statusOrder.indexOf(ProtocolStatus.EN_EVALUACION);
-    }
-
-    switch (step) {
-      case 'RECEPCION':
-        return currentIdx > 1;
-      case 'VALIDACION':
-        return currentIdx > 2;
-      case 'EVALUACION':
-        return currentIdx > 3;
-      case 'RESOLUCION':
-        return currentIdx >= 4;
-      default:
-        return false;
-    }
-  }
-
-  getFriendlyStatusLabel(status: string): string {
-    if (!status) return '';
-    const labels: { [key: string]: string } = {
-      DRAFT: 'Borrador',
-      BORRADOR: 'Borrador',
-      SUBMITTED: 'Recibido',
-      PRESENTADO: 'Recibido',
-      EN_REVISION_SECRETARIA: 'Revisión Técnica',
-      EN_REVISION_DOCUMENTAL: 'Revisión Técnica',
-      VALIDATED: 'Validado',
-      VALIDADO: 'Validado',
-      COMPLETO: 'Validado',
-      EN_EVALUACION: 'En Evaluación',
-      DISCREPANCIA_RIESGO: 'Discrepancia de Riesgo',
-      DISCREPANCIA_DE_RIESGO: 'Discrepancia de Riesgo',
-      APPROVED: 'Aprobado',
-      APROBADO: 'Aprobado',
-      REJECTED: 'Rechazado',
-      OBSERVED: 'Observado',
-      OBSERVADO: 'Observado',
-    };
-    return labels[status.toUpperCase()] || status.replace(/_/g, ' ');
   }
 }

@@ -288,13 +288,13 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
     });
   }
 
-  it('EVALUADOR en workspace/1/evaluation llega a info y rebota con aviso (S-1c, D11 y EARS 10)', async () => {
+  it('EVALUADOR en workspace/1/evaluation va a Mis evaluaciones, sin aviso (D11 actualizada en S-1f, EARS 16)', async () => {
     await start(['EVALUADOR'], 'EVALUADOR', ROLE_PERMISSIONS.EVALUADOR);
 
     await harness.navigateByUrl(WORKSPACE_ROOT + '/evaluation');
 
-    expect(router.url.startsWith(WORKSPACE_ROOT)).toBeFalse();
-    expect(notify).toHaveBeenCalledOnceWith(ACCESS_DENIED_MESSAGE, 'info');
+    expect(router.url).toBe(EVALUATOR_LIST);
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it('EVALUADOR en workspace/1 sin pestaña va a Mis evaluaciones del menú, sin aviso (S-1c, D11)', async () => {

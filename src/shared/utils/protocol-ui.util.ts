@@ -22,6 +22,7 @@ export const EstadoUIMap: Record<EstadoCatalogKey, EstadoUIMetadata> = {
   REQUIERE_SUBSANACION_VERSION: { label: 'Subsanación Científica', cssClass: 'rejected' },
   REQUIERE_SUBSANACION_DOC: { label: 'Subsanación Documental', cssClass: 'rejected' },
   EN_CONTROL_DOCUMENTAL: { label: 'Control Documental', cssClass: 'review' },
+  APROBADO_CON_CONDICION: { label: 'Aprobado con condiciones', cssClass: 'approved' },
 };
 
 const BackendEstadoUIMap: Readonly<Record<string, EstadoUIMetadata>> = {

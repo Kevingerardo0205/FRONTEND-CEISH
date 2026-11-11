@@ -22,4 +22,6 @@ export const EstadoCatalog = {
   },
   REQUIERE_SUBSANACION_DOC: { id: 20, code: 'REQUIERE_SUBSANACION_DOC', categoria: 'RECEPCION' },
   EN_CONTROL_DOCUMENTAL: { id: 21, code: 'EN_CONTROL_DOCUMENTAL', categoria: 'PROTOCOLO' },
+  // F10 D13 (S-1f): estado del protocolo del backend (migración 1796000000000-AddCallsAndSessions).
+  APROBADO_CON_CONDICION: { id: 25, code: 'APROBADO_CON_CONDICION', categoria: 'PROTOCOLO' },
 } as const satisfies Record<string, EstadoCore>;
