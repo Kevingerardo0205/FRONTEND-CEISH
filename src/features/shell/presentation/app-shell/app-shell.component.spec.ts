@@ -133,8 +133,10 @@ describe('AppShellComponent (T13b)', () => {
       mockActiveRoleFacade.activeRole.set('INVESTIGADOR');
       fixture.detectChanges();
 
+      // F10 T10-1: el rol activo INVESTIGADOR tiene su propio menú (spec-ui F10 §3).
       const items = component.menuItems();
-      expect(items).toEqual([]);
+      expect(items.map((i) => i.label)).toEqual(['Mis protocolos', 'Nuevo protocolo']);
+      expect(items.some((i) => i.roles.includes('SECRETARIA'))).toBeFalse();
     });
 
     it('no muestra el menú de Secretaría a un usuario con varios roles si el rol activo es EVALUADOR', () => {
@@ -142,7 +144,8 @@ describe('AppShellComponent (T13b)', () => {
       fixture.detectChanges();
 
       const items = component.menuItems();
-      expect(items).toEqual([]);
+      expect(items.map((i) => i.label)).toEqual(['Mis evaluaciones']);
+      expect(items.some((i) => i.roles.includes('SECRETARIA'))).toBeFalse();
     });
   });
 
