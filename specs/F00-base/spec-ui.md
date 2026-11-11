@@ -27,7 +27,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 | SECRETARIA (incluye administración) | Todo el menú de la Secretaría |
 | PRESIDENTE | Menú en F10 (spec-ui §3): Sesiones del pleno · Reportes |
 | EVALUADOR (+ perfil) | Menú en F10 (spec-ui §3): Mis evaluaciones |
-| INVESTIGADOR | Menú en F10 (spec-ui §3): Mis protocolos · Nuevo protocolo |
+| INVESTIGADOR | Menú en F10 (spec-ui §3): Mis protocolos · Nuevo protocolo · Subsanaciones |
 
 **Varios roles a la vez:** cuando la persona tiene más de un rol, el avatar muestra un **selector de rol activo**. El menú y las rutas corresponden al rol elegido. — Confirmado (spec-001 v3.5.3, HU-001 resuelto por backend TSK-001.1c, 31/10/2026).
 
