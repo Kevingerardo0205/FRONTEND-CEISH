@@ -82,6 +82,10 @@ describe('Route role codes (T13a)', () => {
       'protocols|list': ['SECRETARIA'],
       'protocols|validation/list': ['SECRETARIA'],
       'protocols|reception/new': ['SECRETARIA'],
+      // F10 D10 (S-1a): pestañas del espacio del protocolo por rol activo.
+      'protocols|workspace/:id/info': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+      'protocols|workspace/:id/validation': ['SECRETARIA', 'INVESTIGADOR'],
+      'protocols|workspace/:id/follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
       'dashboard|admin/users': ['SECRETARIA'],
       'dashboard|admin/templates': ['SECRETARIA'],
       'dashboard|admin/ai-assistant': ['SECRETARIA'],
