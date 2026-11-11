@@ -31,9 +31,27 @@ describe('GetMenuForRoleUseCase', () => {
     expect(withBadge.map((i) => i.id)).toEqual(['pendientes']);
   });
 
+  // F10 T10-1: menú de los otros roles (spec-ui F10 §3, D2–D4).
+  const otherRoles = {
+    PRESIDENTE: [
+      ['Sesiones del pleno', '/dashboard/resolutions/calls'],
+      ['Reportes', '/dashboard/reports/stats'],
+    ],
+    EVALUADOR: [['Mis evaluaciones', '/dashboard/evaluations/list']],
+    INVESTIGADOR: [
+      ['Mis protocolos', '/dashboard/investigador/mis-protocolos'],
+      ['Nuevo protocolo', '/dashboard/investigador/nuevo-protocolo'],
+    ],
+  } as const;
+
   (['PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'] as const).forEach((role) => {
-    it(`${role} tiene el menú vacío por ahora`, () => {
-      expect(useCase.execute(role)).toEqual([]);
+    it(`${role} ve solo sus entradas de F10, en orden`, () => {
+      const menu = useCase.execute(role);
+
+      expect(menu.map((i) => [i.label, i.route])).toEqual(
+        otherRoles[role].map(([label, route]) => [label, route]),
+      );
+      expect(menu.every((i) => !i.roles.includes('SECRETARIA'))).toBeTrue();
     });
   });
 
