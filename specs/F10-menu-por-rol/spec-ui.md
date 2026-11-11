@@ -1,8 +1,9 @@
 # F10 · Menú lateral por rol activo — spec-ui
 
-**Versión:** 0.1 · **Fecha:** 10/11/2026 · **Rama:** `docs/f10-menu-por-rol`
+**Versión:** 0.2 · **Fecha:** 10/11/2026 · **Rama:** `feat/f10-t10-1b-subsanaciones-investigador`
 **Historial:**
 - 0.1 (10/11/2026) primer borrador desde el Paso 0 del menú (frontend `dev` `663d2cd`; backend en solo lectura, `dev`) y las decisiones de la usuaria del 10/11/2026 (D1–D8).
+- 0.2 (10/11/2026) cambio de decisión de la usuaria: D4 pasa a 3 opciones para INVESTIGADOR, con Subsanaciones (bandeja que ya existe); el rediseño de esa bandeja y de Corregir queda fuera de F10 (T10-1b).
 
 **Cubre:** spec-001 HU-001 (roles fijos; una persona puede tener más de un rol y trabaja con un rol activo) · spec-003 RF-ALR.f (solo el contador de "Mis pendientes" de la Secretaría, que ya existe).
 **Depende de:** F00 (rol activo, `ROLE_HOME`, `RoleGuard`, AppShell). Actualiza F00 D1, §2, §4 y §10 (F00 v0.3).
@@ -24,6 +25,7 @@ Que cada rol activo vea en el menú lateral **solo sus opciones**, que cada opci
 - pantallas nuevas (las opciones sin pantalla van a §8, Pendientes);
 - contadores sin endpoint (los de Presidencia);
 - pasar PRESIDENTE, EVALUADOR e INVESTIGADOR al AppShell y retirar `DashboardPage` (T10-5, igual que T14 de F00);
+- el rediseño de la bandeja de Subsanaciones y de Corregir del investigador (canvas "Investigador · Subsanaciones"): spec aparte después de la reunión del 12/11/2026; tampoco entra en T10-2;
 - corregir los guards de las rutas que no están en el menú (S-1 a S-3, después del menú).
 
 ## 2. Decisiones de esta spec (usuaria, 10/11/2026)
@@ -33,7 +35,7 @@ Que cada rol activo vea en el menú lateral **solo sus opciones**, que cada opci
 | D1 | **SECRETARIA: 5 opciones**, sin cambios (F00 §4): Mis pendientes · Protocolos · Convocatorias · Reportes · Configuración. Seguimiento y Renovaciones van a Pendientes hasta que existan (F06/F07). |
 | D2 | **PRESIDENTE: 2 opciones:** Sesiones del pleno (`/dashboard/resolutions/calls`) · Reportes (`/dashboard/reports/stats`). Se ocultan "Mis pendientes" (el inicio tiene números inventados, S-3) y "Generar resoluciones" (no está en el canvas; la Presidenta firma, no genera). "Por firmar" y "Asignar evaluadores" (reunión del 06/11/2026) van a Pendientes. |
 | D3 | **EVALUADOR: 1 opción:** Mis evaluaciones (`/dashboard/evaluations/list`). No está en el canvas; se usa la pantalla que ya existe. |
-| D4 | **INVESTIGADOR: 2 opciones:** Mis protocolos · Nuevo protocolo. Se quita "Subsanaciones" del menú (se llega desde "Subir correcciones" en Mis protocolos). "Informes de seguimiento" va a Pendientes (no existe). |
+| D4 | **INVESTIGADOR: 3 opciones:** Mis protocolos · Nuevo protocolo · Subsanaciones (`/dashboard/evaluacion-etica/subsanaciones`, la bandeja que ya existe). "Informes de seguimiento" va a Pendientes (no existe). *Cambio de decisión del 10/11/2026 (v0.2): reemplaza la versión 0.1, que quitaba Subsanaciones del menú.* |
 | D5 | **Íconos:** se mantienen como en el AppShell, decorativos (`aria-hidden="true"`), con el texto siempre visible. |
 | D6 | **"Cerrar sesión" en gris**, como en el canvas, con contraste ≥ 4.5:1 (`--c-text-2` `#475569` sobre blanco: 7,58:1). |
 | D7 | **Regla a:** ninguna opción lleva a una página que no existe ni a `/dashboard/home` como relleno. Si la pantalla no existe, la opción no se muestra y queda en §8. **Regla b:** el menú se define en un solo lugar (`MENU_ITEMS`), no repartido por componentes ni calculado con permisos. |
@@ -53,6 +55,7 @@ Que cada rol activo vea en el menú lateral **solo sus opciones**, que cada opci
 | EVALUADOR | Mis evaluaciones | `/dashboard/evaluations/list` | `EvaluationListPage` | `AuthGuard` con permisos `any` (`evaluations/routes.ts:42-56`; EVALUADOR tiene `EVALUACION_RIESGO`) |
 | INVESTIGADOR | Mis protocolos | `/dashboard/investigador/mis-protocolos` | `MisProtocolosPage` | `VerificadoGuard` + `RoleGuard` [INV, SEC] (`investigador.routes.ts:20-26`) |
 | | Nuevo protocolo | `/dashboard/investigador/nuevo-protocolo` | `NuevoProtocoloPage` | `VerificadoGuard` + `RoleGuard` [INV, SEC] (`:11-17`) |
+| | Subsanaciones | `/dashboard/evaluacion-etica/subsanaciones` | `SubsanacionPage` | `AuthGuard` con permiso `EVALUACION_SUBSANACIONES` (`evaluations/routes.ts:104-115`; INVESTIGADOR lo tiene en la matriz, `1880000000000-FixedRolesMatrix.ts:159` del backend); sin `RoleGuard` (S-2) |
 
 En todos los roles: "Cerrar sesión" abajo, separado de las opciones, en gris (D6).
 

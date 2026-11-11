@@ -14,7 +14,7 @@ describe('StaticMenuConfigAdapter', () => {
   it('conserva las etiquetas y el orden de cada rol', () => {
     const expectedLabels: Record<RoleCode, string[]> = {
       SECRETARIA: ['Mis pendientes', 'Protocolos', 'Convocatorias', 'Reportes', 'Configuración'],
-      INVESTIGADOR: ['Mis protocolos', 'Nuevo protocolo'],
+      INVESTIGADOR: ['Mis protocolos', 'Nuevo protocolo', 'Subsanaciones'],
       PRESIDENTE: ['Sesiones del pleno', 'Reportes'],
       EVALUADOR: ['Mis evaluaciones'],
     };

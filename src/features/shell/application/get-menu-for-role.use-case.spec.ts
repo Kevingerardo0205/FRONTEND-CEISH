@@ -41,6 +41,7 @@ describe('GetMenuForRoleUseCase', () => {
     INVESTIGADOR: [
       ['Mis protocolos', '/dashboard/investigador/mis-protocolos'],
       ['Nuevo protocolo', '/dashboard/investigador/nuevo-protocolo'],
+      ['Subsanaciones', '/dashboard/evaluacion-etica/subsanaciones'],
     ],
   } as const;
 

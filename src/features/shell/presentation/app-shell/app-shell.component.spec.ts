@@ -135,7 +135,7 @@ describe('AppShellComponent (T13b)', () => {
 
       // F10 T10-1: el rol activo INVESTIGADOR tiene su propio menú (spec-ui F10 §3).
       const items = component.menuItems();
-      expect(items.map((i) => i.label)).toEqual(['Mis protocolos', 'Nuevo protocolo']);
+      expect(items.map((i) => i.label)).toEqual(['Mis protocolos', 'Nuevo protocolo', 'Subsanaciones']);
       expect(items.some((i) => i.roles.includes('SECRETARIA'))).toBeFalse();
     });
 
