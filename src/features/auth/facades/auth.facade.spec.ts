@@ -3,7 +3,7 @@ import { of } from 'rxjs';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { User } from '@domain/entities/user.entity';
-import { AuthFacade } from './auth.facade';
+import { AuthFacade, canEnterInvestigatorAreaRule } from './auth.facade';
 
 describe('AuthFacade (Multi-Role & PBAC)', () => {
   let facade: AuthFacade;
@@ -125,6 +125,54 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
       expect(paths).toEqual(['/dashboard/follow-up']);
       expect(codes).not.toContain('PERMISOS_GESTIONAR');
       expect(codes).not.toContain('SEGUIMIENTO_ENMIENDAS');
+    });
+  });
+
+  describe('canEnterInvestigatorArea() (F10 D9)', () => {
+    const createUser = (overrides: Partial<User> = {}): User => ({
+      nombre: 'Usuario Prueba',
+      email: 'usuario.prueba@example.test',
+      rol: 'INVESTIGADOR',
+      activo: true,
+      emailVerificado: false,
+      ...overrides,
+    });
+
+    it('permite al investigador con correo verificado', () => {
+      facade.setUser(createUser({ emailVerificado: true }));
+
+      expect(facade.canEnterInvestigatorArea()).toBeTrue();
+    });
+
+    it('rechaza al investigador con correo sin verificar', () => {
+      facade.setUser(createUser());
+
+      expect(facade.canEnterInvestigatorArea()).toBeFalse();
+    });
+
+    it('permite al investigador que también tiene el rol EVALUADOR sin verificar', () => {
+      facade.setUser(
+        createUser({
+          roles: ['INVESTIGADOR', 'EVALUADOR'],
+          emailVerificado: false,
+        }),
+      );
+
+      expect(facade.canEnterInvestigatorArea()).toBeTrue();
+    });
+
+    it('rechaza el acceso cuando no hay usuario', () => {
+      facade.logout();
+
+      expect(facade.canEnterInvestigatorArea()).toBeFalse();
+    });
+
+    it('consulta los roles del comité antes de aceptar la regla pura', () => {
+      const hasAnyRole = jasmine.createSpy().and.returnValue(true);
+
+      expect(canEnterInvestigatorAreaRule(createUser(), hasAnyRole)).toBeTrue();
+      expect(hasAnyRole).toHaveBeenCalledTimes(1);
+      expect(hasAnyRole).toHaveBeenCalledWith(['SECRETARIA', 'PRESIDENTE', 'EVALUADOR']);
     });
   });
 });

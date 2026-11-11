@@ -9,48 +9,33 @@
     </div>
   </div>
 
-  <div class="nav-section-title">MENÚ PRINCIPAL</div>
-
-  <div class="menu-container">
-    <mat-accordion [multi]="false" class="sidebar-accordion">
-      @for (group of authFacade.menuConfig(); track group.code) {
-        <mat-expansion-panel
-          [expanded]="activeModule() === group.code"
-          class="module-panel"
-          hideToggle="false"
-        >
-          <mat-expansion-panel-header class="module-header">
-            <mat-panel-title>
-              <mat-icon class="module-icon">{{ group.icon }}</mat-icon>
-              <span class="module-label">{{ group.label }}</span>
-            </mat-panel-title>
-          </mat-expansion-panel-header>
-
-          <mat-nav-list class="sub-menu-list">
-            @for (sub of group.subItems; track sub.path) {
-              <a
-                mat-list-item
-                [routerLink]="sub.path"
-                routerLinkActive="active-link"
-                (click)="onNavClick()"
-                class="menu-item"
-              >
-                <mat-icon matListItemIcon class="item-icon">{{ sub.icon }}</mat-icon>
-                <span matListItemTitle class="item-label">{{ sub.label }}</span>
-              </a>
-            }
-          </mat-nav-list>
-        </mat-expansion-panel>
-      }
-    </mat-accordion>
-  </div>
-
-  <div class="sidebar-spacer"></div>
+  <nav class="sidebar-nav" aria-label="Menú principal">
+    @if (needsVerification()) {
+      <p class="nav-notice" data-testid="verify-email-notice">Verifica tu correo para crear y ver tus protocolos.</p>
+    } @else {
+      <ul class="nav-list">
+        @for (item of menuItems(); track item.id) {
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              #rla="routerLinkActive"
+              [attr.aria-current]="rla.isActive ? 'page' : null"
+              (click)="onNavClick()"
+            >
+              <span class="nav-label">{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </nav>
 
   <div class="sidenav-footer">
-    <button mat-button class="logout-button" (click)="onLogout()">
-      <mat-icon>logout</mat-icon>
-      <span>Cerrar Sesión</span>
+    <button type="button" class="nav-link logout-link" (click)="onLogout()">
+      <mat-icon aria-hidden="true">logout</mat-icon>
+      <span class="nav-label">Cerrar sesión</span>
     </button>
   </div>
 </div>

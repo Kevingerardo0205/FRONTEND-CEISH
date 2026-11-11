@@ -1,61 +1,41 @@
-import { Component, inject, input, output, computed } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatExpansionModule } from '@angular/material/expansion';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import { GetMenuForRoleUseCase } from '@features/shell/application/get-menu-for-role.use-case';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    RouterLinkActive,
-    MatListModule,
-    MatIconModule,
-    MatButtonModule,
-    MatExpansionModule,
-  ],
+  imports: [RouterLink, RouterLinkActive, MatIconModule],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss'],
 })
 export class SidebarComponent {
-  public readonly authFacade = inject(AuthFacade);
+  private readonly activeRoleFacade = inject(ActiveRoleFacade);
+  private readonly getMenuForRoleUseCase = inject(GetMenuForRoleUseCase);
+  private readonly authFacade = inject(AuthFacade);
   private readonly router = inject(Router);
 
   isMobile = input<boolean>(false);
   navClick = output<void>();
 
-  /**
-   * Determina qué módulo debe estar expandido basándose en la ruta activa.
-   */
-  public activeModule = computed(() => {
-    try {
-      const currentUrl = this.router.url;
-      const menu = this.authFacade.menuConfig();
-
-      for (const group of menu) {
-        // Resiliencia: Verificar que subItems exista y sea un array
-        const subItems = group.subItems || [];
-        if (subItems.some((item: any) => item.path && currentUrl.includes(item.path))) {
-          return group.code;
-        }
-      }
-      return null;
-    } catch (err) {
-      console.error('[SidebarComponent] Error en activeModule:', err);
-      return null;
-    }
+  readonly activeRole = this.activeRoleFacade.activeRole;
+  readonly needsVerification = computed(
+    () => this.activeRole() === 'INVESTIGADOR' && !this.authFacade.canEnterInvestigatorArea(),
+  );
+  readonly menuItems = computed(() => {
+    const role = this.activeRole();
+    if (!role || this.needsVerification()) return [];
+    return this.getMenuForRoleUseCase.execute(role);
   });
 
-  onNavClick() {
+  onNavClick(): void {
     this.navClick.emit();
   }
 
-  onLogout() {
+  onLogout(): void {
     this.authFacade.logout();
     this.router.navigate(['/auth/login']);
   }
