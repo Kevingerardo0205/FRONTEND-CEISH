@@ -1,8 +1,9 @@
 # F00 · Base del rediseño — spec-ui
 
-**Versión:** 0.2 · **Fecha:** 31/10/2026 · **Rama:** `feat/f00b-shell`
+**Versión:** 0.3 · **Fecha:** 10/11/2026 · **Rama:** `docs/f10-menu-por-rol`
 **Cubre:** spec-001 RF-EST.1, RF-EST.2, RF-EST.3 y HU-001 (roles fijos) · spec-003 RF-ALR.f (solo la entrada del menú)
 **Actualización 31/10/2026:** F00b se limita al módulo de la SECRETARIA (decisiones D1, D3, D4, D6 y D7).
+**Actualización 10/11/2026 (v0.3):** el menú lateral de los 4 roles se define en F10 (`specs/F10-menu-por-rol/`). D1, §2, §4 y §10 remiten a F10.
 
 ---
 
@@ -24,22 +25,22 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 | Rol | Entra a |
 |---|---|
 | SECRETARIA (incluye administración) | Todo el menú de la Secretaría |
-| PRESIDENTE | Se define en su sección (fuera de F00) |
-| EVALUADOR (+ perfil) | Se define en su sección (fuera de F00) |
-| INVESTIGADOR | Se define en su sección (fuera de F00) |
+| PRESIDENTE | Menú en F10 (spec-ui §3): Sesiones del pleno · Reportes |
+| EVALUADOR (+ perfil) | Menú en F10 (spec-ui §3): Mis evaluaciones |
+| INVESTIGADOR | Menú en F10 (spec-ui §3): Mis protocolos · Nuevo protocolo |
 
 **Varios roles a la vez:** cuando la persona tiene más de un rol, el avatar muestra un **selector de rol activo**. El menú y las rutas corresponden al rol elegido. — Confirmado (spec-001 v3.5.3, HU-001 resuelto por backend TSK-001.1c, 31/10/2026).
 
 **Selector de rol activo:**
 - Solo aparece si la persona tiene más de un rol.
-- Al cambiar de rol, se recarga el menú y se navega al inicio de ese rol.
+- Al cambiar de rol, se recarga el menú y se navega al inicio de ese rol. **Nota (10/11/2026):** hoy solo el menú del AppShell cambia con el rol activo; el de `DashboardPage` se arma con los permisos de todos los roles y no cambia. Se corrige en F10 (T10-2).
 - Mientras existan los dos layouts (D1), el selector vive en el avatar del AppShell y también en el menú de avatar de `DashboardPage`, para que quien cambie a PRESIDENTE, EVALUADOR o INVESTIGADOR pueda volver a SECRETARIA (T13c, 02/11/2026).
 - El rol inicial sigue la regla de `plan.md` §2 (application — rol activo): el último elegido si sigue siendo válido; si no, el de mayor prioridad (SECRETARIA > PRESIDENTE > EVALUADOR > INVESTIGADOR).
 - Implementado. Caso real confirmado por el usuario (03/11/2026): la Presidenta tiene PRESIDENTE + EVALUADOR (preside y también evalúa protocolos). Pendiente de validar con ella y con la Secretaría: si prefiere cambiar de rol con el selector o ver todo junto, con qué rol entra primero, y si hay otras personas del comité con dos roles. Se define al diseñar la sección de Presidencia.
 
 ### Alcance de F00b (31/10/2026)
 
-- **D1 — AppShell solo para SECRETARIA.** El `AppShell` (menú lateral y barra superior) se monta únicamente para el rol activo `SECRETARIA`. `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` siguen con `DashboardPage` y su menú actual, sin cambios, hasta que se defina su sección.
+- **D1 — AppShell solo para SECRETARIA.** El `AppShell` (menú lateral y barra superior) se monta únicamente para el rol activo `SECRETARIA`. `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` siguen con `DashboardPage` y su menú actual, sin cambios, hasta que se defina su sección. **Actualización 10/11/2026:** el layout sigue así, pero su menú pasa a la configuración por rol activo de F10 (D8 de F10, T10-2); el layout único es T10-5.
 - **D3 — Inicio por rol.** `SECRETARIA` entra a `/pendientes` dentro del AppShell (hasta F01, la pantalla actual de la Secretaría de forma temporal). `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` entran a `/dashboard/home`, como hoy. Al cambiar de rol activo, cada uno va a su inicio. Se implementa en T13c y T13d.
 
 ### Inicio por rol activo (T13d, 03/11/2026)
@@ -74,6 +75,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - El elemento activo del menú se resalta con `--c-primary-soft`.
 - El menú sale de una **configuración por rol**. No va escrito en el HTML.
 - **D1 (31/10/2026):** este armazón aplica solo al rol activo `SECRETARIA`. Los otros tres roles conservan `DashboardPage` y su menú actual hasta su sección.
+- **F10 (10/11/2026):** las opciones de los 4 roles, la regla "ninguna opción lleva a una página que no existe", los íconos decorativos y "Cerrar sesión" en gris están en `specs/F10-menu-por-rol/spec-ui.md`. La Secretaría conserva estas 5 entradas (D1 de F10).
 - **D7 (31/10/2026):** la búsqueda global se oculta hasta que exista el endpoint; la campana lleva a `notifications/center`, y el contador de no leídas solo se muestra cuando ya exista una fuente. Se implementa en T13b.
 
 ## 5. Componentes compartidos
@@ -161,4 +163,4 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 
 - Selector de rol activo para usuarios con varios roles: **confirmado** (spec-001 v3.5.3, HU-001 resuelto, 31/10/2026; ver §2).
 - **ADMIN_TI y PRESIDENTA: resuelto (31/10/2026).** `ADMIN_TI` fue absorbido por `SECRETARIA` y retirado del backend; `PRESIDENTA` no existe. Solo hay 4 roles (ver §2). Las cadenas sueltas se retiran de las rutas en T13a.
-- Menús de Presidencia, Evaluador e Investigador: se mantienen como están hoy (`DashboardPage` y su menú actual) hasta que se definan en sus secciones. F00b solo cubre el AppShell de la Secretaría (D1).
+- Menús de Presidencia, Evaluador e Investigador: se mantienen como están hoy (`DashboardPage` y su menú actual) hasta que se definan en sus secciones. F00b solo cubre el AppShell de la Secretaría (D1). **Resuelto (10/11/2026):** se definen en F10 (`specs/F10-menu-por-rol/`).

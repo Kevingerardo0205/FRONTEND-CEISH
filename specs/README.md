@@ -84,6 +84,7 @@ infrastructure → adapters HTTP (*-http.repository.ts), mappers DTO↔entidad
 | F07-renovacion | Etapa 7: solicitud, pares, pleno, resolución | F00, F06 |
 | F08-configuracion-y-reportes | Plazos, usuarios (roles fijos), reportes | F00 |
 | F09-investigador-borrador-envio | Investigador: borrador, envío a la Secretaría, continuar borrador, mensajes del envío (spec-001 v3.7.2 RF-02.3, RF-02.5) | F00 |
+| F10-menu-por-rol | Menú lateral por rol activo de los 4 roles, desde una sola configuración (spec-001 HU-001) | F00 |
 
 ---
 
