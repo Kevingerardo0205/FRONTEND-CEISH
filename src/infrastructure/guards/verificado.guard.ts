@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { AuthFacade, canEnterInvestigatorAreaRule } from '@features/auth/facades/auth.facade';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RoleHome } from './role-home.guard';
 
@@ -21,15 +21,7 @@ export class VerificadoGuard implements CanActivate {
       return this.router.createUrlTree(['/auth/login']);
     }
 
-    // Los roles del comité no requieren verificación de email para gestionar el sistema
-    const committeeRoles = ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR'];
-    if (this.authFacade.hasAnyRole(committeeRoles)) {
-      return true;
-    }
-
-    if (user.emailVerificado) {
-      return true;
-    }
+    if (canEnterInvestigatorAreaRule(user, (roles) => this.authFacade.hasAnyRole(roles))) return true;
 
     console.warn('[VerificadoGuard] Usuario no verificado:', user.email);
 

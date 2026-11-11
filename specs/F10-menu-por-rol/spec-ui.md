@@ -1,9 +1,10 @@
 # F10 · Menú lateral por rol activo — spec-ui
 
-**Versión:** 0.2 · **Fecha:** 10/11/2026 · **Rama:** `feat/f10-t10-1b-subsanaciones-investigador`
+**Versión:** 0.3 · **Fecha:** 11/11/2026 · **Rama:** `feat/f10-t10-2-sidebar-por-rol`
 **Historial:**
 - 0.1 (10/11/2026) primer borrador desde el Paso 0 del menú (frontend `dev` `663d2cd`; backend en solo lectura, `dev`) y las decisiones de la usuaria del 10/11/2026 (D1–D8).
 - 0.2 (10/11/2026) cambio de decisión de la usuaria: D4 pasa a 3 opciones para INVESTIGADOR, con Subsanaciones (bandeja que ya existe); el rediseño de esa bandeja y de Corregir queda fuera de F10 (T10-1b).
+- 0.3 (11/11/2026) Paso 0 de T10-2 (frontend `dev` `64287c8`): D9 (investigador sin verificar) y su regla única en `AuthFacade`, aprobadas por la usuaria; EARS 9.
 
 **Cubre:** spec-001 HU-001 (roles fijos; una persona puede tener más de un rol y trabaja con un rol activo) · spec-003 RF-ALR.f (solo el contador de "Mis pendientes" de la Secretaría, que ya existe).
 **Depende de:** F00 (rol activo, `ROLE_HOME`, `RoleGuard`, AppShell). Actualiza F00 D1, §2, §4 y §10 (F00 v0.3).
@@ -40,6 +41,7 @@ Que cada rol activo vea en el menú lateral **solo sus opciones**, que cada opci
 | D6 | **"Cerrar sesión" en gris**, como en el canvas, con contraste ≥ 4.5:1 (`--c-text-2` `#475569` sobre blanco: 7,58:1). |
 | D7 | **Regla a:** ninguna opción lleva a una página que no existe ni a `/dashboard/home` como relleno. Si la pantalla no existe, la opción no se muestra y queda en §8. **Regla b:** el menú se define en un solo lugar (`MENU_ITEMS`), no repartido por componentes ni calculado con permisos. |
 | D8 | Mientras existan los dos layouts, el menú de `DashboardPage` lee la misma configuración por rol activo que el AppShell (T10-2). Pasar a un solo layout es T10-5. |
+| D9 | **INVESTIGADOR sin verificar** (11/11/2026): con el rol activo INVESTIGADOR, si no puede entrar al área del investigador, el menú no muestra sus 3 opciones y en su lugar muestra el texto "Verifica tu correo para crear y ver tus protocolos." (texto, no enlace). La regla es **una sola** para el menú y para `VerificadoGuard`: se extrae de `verificado.guard.ts:25-33` a `AuthFacade.canEnterInvestigatorArea()`, con el mismo comportamiento de hoy (tiene SECRETARIA, PRESIDENTE o EVALUADOR entre **todos** sus roles vigentes, o `emailVerificado`). Consecuencia aceptada: un usuario INVESTIGADOR + EVALUADOR sin verificar ve sus opciones con INVESTIGADOR activo, igual que el guard lo deja pasar; revisarla es parte de S-2. |
 
 ## 3. Menú por rol activo
 
@@ -62,6 +64,7 @@ En todos los roles: "Cerrar sesión" abajo, separado de las opciones, en gris (D
 ## 4. Estados
 
 - **Sin rol activo:** no hay menú; `RoleHome` lleva a `/auth/login` con "Su cuenta no tiene un rol vigente." (F00 D12).
+- **INVESTIGADOR sin verificar (D9):** en lugar de sus opciones, el texto "Verifica tu correo para crear y ver tus protocolos."; "Cerrar sesión" sigue abajo.
 - **Contador de "Mis pendientes":** con `totales.todos = 0` o si la petición falla, no se muestra número (F01 criterio 17). Los demás roles no tienen contador.
 
 ## 5. Interacciones
@@ -88,6 +91,7 @@ En todos los roles: "Cerrar sesión" abajo, separado de las opciones, en gris (D
 6. Mientras una opción corresponda a la ruta actual, su enlace debe llevar `aria-current="page"` y el fondo `--c-primary-soft`.
 7. El menú debe estar dentro de un `<nav>` con `aria-label`, usarse con Tab y Enter, tener foco visible y un alto mínimo de 44 px por opción; los íconos deben llevar `aria-hidden="true"` y el texto debe estar siempre visible.
 8. Donde exista un endpoint de contador para la opción, el sistema debe mostrar el número; donde no exista, no debe mostrar ninguno.
+9. Mientras el rol activo sea INVESTIGADOR y `AuthFacade.canEnterInvestigatorArea()` sea falso, el menú no debe mostrar las opciones del investigador y debe mostrar el texto "Verifica tu correo para crear y ver tus protocolos." (D9).
 
 ## 8. Pendientes
 

@@ -20,6 +20,17 @@ interface SubMenuItem {
   path: string;
 }
 
+export const COMMITTEE_ROLES: readonly string[] = ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR'];
+
+export function canEnterInvestigatorAreaRule(
+  user: User | null,
+  hasAnyRole: (roles: string[]) => boolean,
+): boolean {
+  if (!user) return false;
+  if (hasAnyRole([...COMMITTEE_ROLES])) return true;
+  return !!user.emailVerificado;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -249,6 +260,10 @@ export class AuthFacade {
     if (!roleCodes || roleCodes.length === 0) return false;
     const activeRoles = this.getActiveRoles();
     return roleCodes.some((r) => activeRoles.includes(r.toUpperCase()));
+  }
+
+  canEnterInvestigatorArea(): boolean {
+    return canEnterInvestigatorAreaRule(this.currentUser(), (r) => this.hasAnyRole(r));
   }
 
   /**
