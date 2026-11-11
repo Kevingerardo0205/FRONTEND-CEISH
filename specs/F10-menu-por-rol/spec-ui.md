@@ -1,10 +1,11 @@
 # F10 · Menú lateral por rol activo — spec-ui
 
-**Versión:** 0.3 · **Fecha:** 11/11/2026 · **Rama:** `feat/f10-t10-2-sidebar-por-rol`
+**Versión:** 0.4 · **Fecha:** 11/11/2026 · **Rama:** `feat/f10-s-1a-workspace-por-rol`
 **Historial:**
 - 0.1 (10/11/2026) primer borrador desde el Paso 0 del menú (frontend `dev` `663d2cd`; backend en solo lectura, `dev`) y las decisiones de la usuaria del 10/11/2026 (D1–D8).
 - 0.2 (10/11/2026) cambio de decisión de la usuaria: D4 pasa a 3 opciones para INVESTIGADOR, con Subsanaciones (bandeja que ya existe); el rediseño de esa bandeja y de Corregir queda fuera de F10 (T10-1b).
 - 0.3 (11/11/2026) Paso 0 de T10-2 (frontend `dev` `64287c8`): D9 (investigador sin verificar) y su regla única en `AuthFacade`, aprobadas por la usuaria; EARS 9.
+- 0.4 (11/11/2026) Paso 0 de S-1 (frontend `dev` `f93323d`): D10 (pestañas del espacio del protocolo por rol activo, `WORKSPACE_TAB_ROLES`) y D11 (la pestaña de evaluación sale del espacio, S-1c), aprobadas por la usuaria; EARS 10 a 12.
 
 **Cubre:** spec-001 HU-001 (roles fijos; una persona puede tener más de un rol y trabaja con un rol activo) · spec-003 RF-ALR.f (solo el contador de "Mis pendientes" de la Secretaría, que ya existe).
 **Depende de:** F00 (rol activo, `ROLE_HOME`, `RoleGuard`, AppShell). Actualiza F00 D1, §2, §4 y §10 (F00 v0.3).
@@ -42,6 +43,8 @@ Que cada rol activo vea en el menú lateral **solo sus opciones**, que cada opci
 | D7 | **Regla a:** ninguna opción lleva a una página que no existe ni a `/dashboard/home` como relleno. Si la pantalla no existe, la opción no se muestra y queda en §8. **Regla b:** el menú se define en un solo lugar (`MENU_ITEMS`), no repartido por componentes ni calculado con permisos. |
 | D8 | Mientras existan los dos layouts, el menú de `DashboardPage` lee la misma configuración por rol activo que el AppShell (T10-2). Pasar a un solo layout es T10-5. |
 | D9 | **INVESTIGADOR sin verificar** (11/11/2026): con el rol activo INVESTIGADOR, si no puede entrar al área del investigador, el menú no muestra sus 3 opciones y en su lugar muestra el texto "Verifica tu correo para crear y ver tus protocolos." (texto, no enlace). La regla es **una sola** para el menú y para `VerificadoGuard`: se extrae de `verificado.guard.ts:25-33` a `AuthFacade.canEnterInvestigatorArea()`, con el mismo comportamiento de hoy (tiene SECRETARIA, PRESIDENTE o EVALUADOR entre **todos** sus roles vigentes, o `emailVerificado`). Consecuencia aceptada: un usuario INVESTIGADOR + EVALUADOR sin verificar ve sus opciones con INVESTIGADOR activo, igual que el guard lo deja pasar; revisarla es parte de S-2. |
+| D10 | **Pestañas del espacio del protocolo por rol activo** (11/11/2026, S-1a). Una sola tabla, `WORKSPACE_TAB_ROLES`, decide qué rol activo abre cada pestaña de `/dashboard/protocols/workspace/:id`: `info` → SECRETARIA, PRESIDENTE, INVESTIGADOR; `validation` → SECRETARIA, INVESTIGADOR (PRESIDENTE fuera: F02 E16, solo la Secretaría valida); `follow-up` → SECRETARIA, PRESIDENTE, INVESTIGADOR. Cada pestaña lleva `RoleGuard` con su fila; las redirecciones antiguas (`detail/:id`, `validation/detail/:id`, `investigador/protocolo/:id`) llegan a esas pestañas y quedan cubiertas. S-1 **solo agrega guards** a las rutas del espacio actual: no cambia sus pantallas (la frase de F02 §1 «que no se toca» sigue valiendo para ellas). Un guard del frontend filtra por rol, no por dueño del protocolo: el control de datos ajenos es del backend (§8). |
+| D11 | **La pestaña de evaluación sale del espacio** (11/11/2026, S-1c): `workspace/:id/evaluation` redirige a `info` para no romper enlaces viejos, y donde el espacio ofrecía evaluar se enlaza a `/dashboard/evaluations/evaluate/:id` solo para EVALUADOR. Hoy la pestaña no funciona dentro del espacio (el `:id` no llega a la pestaña y se busca como id de asignación, `evaluation-form.page.ts:1427-1437`). Hasta S-1c la ruta queda como está. |
 
 ## 3. Menú por rol activo
 
@@ -92,6 +95,9 @@ En todos los roles: "Cerrar sesión" abajo, separado de las opciones, en gris (D
 7. El menú debe estar dentro de un `<nav>` con `aria-label`, usarse con Tab y Enter, tener foco visible y un alto mínimo de 44 px por opción; los íconos deben llevar `aria-hidden="true"` y el texto debe estar siempre visible.
 8. Donde exista un endpoint de contador para la opción, el sistema debe mostrar el número; donde no exista, no debe mostrar ninguno.
 9. Mientras el rol activo sea INVESTIGADOR y `AuthFacade.canEnterInvestigatorArea()` sea falso, el menú no debe mostrar las opciones del investigador y debe mostrar el texto "Verifica tu correo para crear y ver tus protocolos." (D9).
+10. Mientras el rol activo no esté en la fila de `WORKSPACE_TAB_ROLES` de una pestaña del espacio del protocolo, si el usuario abre esa pestaña (por enlace, por URL o por una redirección antigua), entonces el sistema debe mostrar "No tiene acceso a esta sección con el rol activo." y llevarlo a `ROLE_HOME` de su rol activo (D10).
+11. Mientras el rol activo esté en la fila de una pestaña, cuando el usuario la abra, el sistema debe mostrarla sin ese aviso; en particular, las entradas que hoy funcionan deben seguir abriendo: Gestionar y Subir correcciones (versión 1) del investigador, VALIDAR y ASIGNAR de Mis pendientes, la lista de validación y las redirecciones `detail/:id`, `validation/detail/:id` e `investigador/protocolo/:id` (D10).
+12. Cuando una persona tenga varios roles, el sistema debe decidir el acceso a cada pestaña con el rol activo y no con la suma de sus roles (D10).
 
 ## 8. Pendientes
 
