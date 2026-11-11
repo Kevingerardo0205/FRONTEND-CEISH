@@ -109,6 +109,19 @@ describe('F10: cada opción del menú abre su pantalla con su rol activo', () =>
     });
   }
 
+  it('INVESTIGADOR, con los permisos de la matriz, abre Subsanaciones desde su menú sin aviso (D4 v0.2)', async () => {
+    const item = MENU_ITEMS.find(
+      (entry) => entry.roles.includes('INVESTIGADOR') && entry.label === 'Subsanaciones',
+    );
+    expect(item?.route).toBe('/dashboard/evaluacion-etica/subsanaciones');
+    await start(['INVESTIGADOR'], 'INVESTIGADOR', ROLE_PERMISSIONS.INVESTIGADOR);
+
+    await harness.navigateByUrl('/dashboard/evaluacion-etica/subsanaciones');
+
+    expect(router.url).toBe('/dashboard/evaluacion-etica/subsanaciones');
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   it('INVESTIGADOR que abre /dashboard/resolutions/calls vuelve a /dashboard/home con aviso', async () => {
     // Control: con el permiso de la ruta, AuthGuard deja pasar y es RoleGuard quien rebota con aviso.
     await start(['INVESTIGADOR'], 'INVESTIGADOR', ['RESOLUCION_CONVOCATORIAS']);

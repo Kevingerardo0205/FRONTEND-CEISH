@@ -31,6 +31,12 @@ export const MENU_ITEMS: readonly MenuItem[] = [
     roles: ['INVESTIGADOR'],
   },
   {
+    id: 'investigador-subsanaciones',
+    label: 'Subsanaciones',
+    route: '/dashboard/evaluacion-etica/subsanaciones',
+    roles: ['INVESTIGADOR'],
+  },
+  {
     id: 'presidente-sesiones',
     label: 'Sesiones del pleno',
     route: '/dashboard/resolutions/calls',
