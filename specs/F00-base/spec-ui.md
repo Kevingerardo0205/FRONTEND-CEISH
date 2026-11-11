@@ -1,9 +1,10 @@
 # F00 · Base del rediseño — spec-ui
 
-**Versión:** 0.3 · **Fecha:** 10/11/2026 · **Rama:** `docs/f10-menu-por-rol`
+**Versión:** 0.4 · **Fecha:** 11/11/2026 · **Rama:** `feat/f10-s-1f-estado-canonico`
 **Cubre:** spec-001 RF-EST.1, RF-EST.2, RF-EST.3 y HU-001 (roles fijos) · spec-003 RF-ALR.f (solo la entrada del menú)
 **Actualización 31/10/2026:** F00b se limita al módulo de la SECRETARIA (decisiones D1, D3, D4, D6 y D7).
 **Actualización 10/11/2026 (v0.3):** el menú lateral de los 4 roles se define en F10 (`specs/F10-menu-por-rol/`). D1, §2, §4 y §10 remiten a F10.
+**Actualización 11/11/2026 (v0.4):** excepción temporal en §5: en el espacio del protocolo, `StageBar` recibe una etapa calculada en el frontend hasta que `GET /protocols/:id` traiga `etapa` (F10 D13).
 
 ---
 
@@ -82,7 +83,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 
 | Componente | Qué hace | Reglas |
 |---|---|---|
-| `StageBar` | Barra de 6 etapas: Recepción → Asignación → Evaluación (incluye riesgo) → Resolución → Seguimiento → Renovación | Recibe la etapa actual tal como la devuelve el backend (RF-EST.2). Marca ✓ las anteriores. **No calcula la etapa.** |
+| `StageBar` | Barra de 6 etapas: Recepción → Asignación → Evaluación (incluye riesgo) → Resolución → Seguimiento → Renovación | Recibe la etapa actual tal como la devuelve el backend (RF-EST.2). Marca ✓ las anteriores. **No calcula la etapa.** **Excepción temporal (F10 D13, 11/11/2026):** en el espacio del protocolo (`/dashboard/protocols/workspace/:id`) la etapa la calcula una función pura del dominio desde el estado del protocolo (o el de la recepción si es NULL), con la tabla de la migración `1890000000000-AddEtapaOrdenToEstados`, porque `GET /protocols/:id` no trae `etapa`. Se retira cuando el backend la entregue (TSK-F02-3); sin estado reconocido no se muestra la barra. |
 | `PageHeader` | Título, subtítulo y **una sola acción principal** con su texto de ayuda | La acción se deshabilita mostrando el motivo (por ejemplo, "Falta revisar 1 documento"). |
 | `ButtonGroup` | Fila de botones rellenos para cambiar de vista dentro de un módulo (etapas, secciones de Configuración, reportes) | Sin contadores. Un solo botón activo. |
 | `Tabs` | Pestañas subrayadas | **Solo dentro del espacio de un protocolo.** |
