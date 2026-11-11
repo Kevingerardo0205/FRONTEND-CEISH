@@ -7,6 +7,7 @@ import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
 
 import { ProtocolWorkspaceComponent } from './presentation/pages/protocol-workspace/protocol-workspace.component';
+import { WORKSPACE_TAB_ROLES } from './domain/workspace-tab-roles';
 
 export const PROTOCOL_ROUTES: Routes = [
   {
@@ -29,10 +30,14 @@ export const PROTOCOL_ROUTES: Routes = [
               import('./presentation/pages/protocol-workspace/tabs/protocol-detail-tab.component').then(
                 (m) => m.ProtocolDetailTabPage,
               ),
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info] },
           },
           {
             path: 'validation',
             component: ProtocolValidationDetailPage,
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.validation] },
           },
           {
             path: 'evaluation',
@@ -47,6 +52,8 @@ export const PROTOCOL_ROUTES: Routes = [
               import('../follow-up/presentation/pages/adverse-events/adverse-events-list.page').then(
                 (m) => m.AdverseEventsListPage,
               ),
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES['follow-up']] },
           },
           {
             path: '',

@@ -236,8 +236,9 @@ describe('Rutas por rol activo (T13d)', () => {
       expect(has('app-dashboard')).toBeFalse();
     });
 
-    it('EVALUADOR en /dashboard/protocols/workspace/1/info ve DashboardPage', async () => {
-      await start(['EVALUADOR']);
+    // F10 D10 (S-1a): EVALUADOR ya no abre info; PRESIDENTE sí, y no es SECRETARIA.
+    it('PRESIDENTE en /dashboard/protocols/workspace/1/info ve DashboardPage', async () => {
+      await start(['PRESIDENTE']);
 
       await harness.navigateByUrl('/dashboard/protocols/workspace/1/info');
 
