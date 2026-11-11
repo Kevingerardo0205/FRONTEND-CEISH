@@ -11,7 +11,7 @@ import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
-import { RoleCode } from '@domain/value-objects/role.vo';
+import { Role, RoleCode } from '@domain/value-objects/role.vo';
 
 const PROTOCOL_TITLE = 'Estudio de prueba del investigador';
 
@@ -129,19 +129,19 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(actionIds()).toEqual(['ASSIGN_EVALUATORS']);
 
     setStatus(ProtocolStatus.EN_EVALUACION);
-    expect(tabPaths()).toEqual(['info', 'validation', 'evaluation']);
+    expect(tabPaths()).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual([]);
 
     setStatus(ProtocolStatus.APPROVED);
-    expect(tabPaths()).toEqual(['info', 'validation', 'evaluation', 'follow-up']);
+    expect(tabPaths()).toEqual(['info', 'validation', 'follow-up']);
     expect(actionIds()).toEqual([]);
   });
 
-  it('PRESIDENTE ve Resumen, Evaluación y Seguimiento aprobado, sin acciones', () => {
+  it('PRESIDENTE ve Resumen y Seguimiento aprobado, sin Evaluación ni acciones', () => {
     activeRoleSignal.set('PRESIDENTE');
 
     setStatus(ProtocolStatus.APPROVED);
-    expect(tabPaths()).toEqual(['info', 'evaluation', 'follow-up']);
+    expect(tabPaths()).toEqual(['info', 'follow-up']);
     expect(actionIds()).toEqual([]);
 
     for (const status of [
@@ -155,15 +155,15 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     }
   });
 
-  it('EVALUADOR ve solo Evaluación durante evaluación y aprobación, sin acciones ni ventana de aceptación', () => {
+  it('EVALUADOR no ve ninguna pestaña del espacio, ni acciones ni ventana de aceptación', () => {
     activeRoleSignal.set('EVALUADOR');
 
     setStatus(ProtocolStatus.EN_EVALUACION);
-    expect(tabPaths()).toEqual(['evaluation']);
+    expect(tabPaths()).toEqual([]);
     expect(actionIds()).toEqual([]);
 
     setStatus(ProtocolStatus.APPROVED);
-    expect(tabPaths()).toEqual(['evaluation']);
+    expect(tabPaths()).toEqual([]);
     expect(actionIds()).toEqual([]);
 
     for (const status of ACTION_STATUSES) {
@@ -195,13 +195,13 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(actionIds()).toEqual([]);
   });
 
-  it('PRESIDENTE y EVALUADOR con EVALUADOR activo no ven Validación, Seguimiento ni acciones', () => {
+  it('PRESIDENTE y EVALUADOR con EVALUADOR activo no ven ninguna pestaña ni acciones', () => {
     currentUserRoles = ['PRESIDENTE', 'EVALUADOR'];
     currentUserRol = 'PRESIDENTE';
     activeRoleSignal.set('EVALUADOR');
 
     setStatus(ProtocolStatus.APPROVED);
-    expect(tabPaths()).toEqual(['evaluation']);
+    expect(tabPaths()).toEqual([]);
     expect(actionIds()).toEqual([]);
 
     for (const status of ACTION_STATUSES) {
@@ -228,6 +228,45 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
 
     setStatus(ProtocolStatus.COMPLETO);
     expect(page.showAcceptanceModal()).toBeTrue();
+  });
+});
+
+describe('ProtocolWorkspaceComponent - sin pestaña Evaluación (F10 D11, S-1c)', () => {
+  it('ningún rol activo ve la pestaña Evaluación en ningún estado', async () => {
+    const protocolSignal = signal<ProtocolEntity | null>(null);
+    const activeRoleSignal = signal<RoleCode | null>(null);
+    const workspace = {
+      protocol: protocolSignal,
+      evaluations: signal([]),
+      loadProtocol: jasmine.createSpy('loadProtocol').and.returnValue(of(null)),
+      updateProtocol: jasmine.createSpy('updateProtocol'),
+    };
+    await TestBed.configureTestingModule({
+      imports: [ProtocolWorkspaceComponent],
+      providers: [
+        { provide: AuthFacade, useValue: { currentUser: () => ({ rol: activeRoleSignal(), roles: [] }) } },
+        { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
+        { provide: ActivatedRoute, useValue: { params: of({}) } },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
+        { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
+        { provide: MatDialog, useValue: { open: jasmine.createSpy('open') } },
+      ],
+    })
+      .overrideComponent(ProtocolWorkspaceComponent, {
+        set: { template: '', providers: [{ provide: ProtocolWorkspaceService, useValue: workspace }] },
+      })
+      .compileComponents();
+    const page = TestBed.createComponent(ProtocolWorkspaceComponent).componentInstance;
+
+    for (const role of Role.all()) {
+      activeRoleSignal.set(role.code);
+      for (const status of Object.values(ProtocolStatus)) {
+        protocolSignal.set(createProtocol(status));
+        expect(page.tabConfig().map((tab) => tab.path))
+          .withContext(role.code + ' con ' + status)
+          .not.toContain('evaluation');
+      }
+    }
   });
 });
 

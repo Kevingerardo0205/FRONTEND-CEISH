@@ -9,6 +9,16 @@ export const WORKSPACE_TAB_ROLES: Readonly<Record<WorkspaceTab, readonly RoleCod
   'follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
 };
 
+/**
+ * F10 D11 (S-1c): primera pestaña que abre el rol, en el orden de `WORKSPACE_TAB_ROLES`.
+ * Sin ninguna (hoy EVALUADOR) o sin rol activo: null.
+ */
+export function firstWorkspaceTab(role: RoleCode | null): WorkspaceTab | null {
+  if (!role) return null;
+  const tabs = Object.keys(WORKSPACE_TAB_ROLES) as WorkspaceTab[];
+  return tabs.find((tab) => WORKSPACE_TAB_ROLES[tab].includes(role)) ?? null;
+}
+
 export type WorkspaceAction = 'EDIT_PROTOCOL' | 'VALIDATE_ALL' | 'ASSIGN_EVALUATORS';
 
 export const WORKSPACE_ACTION_ROLES: Readonly<Record<WorkspaceAction, readonly RoleCode[]>> = {
@@ -16,10 +26,3 @@ export const WORKSPACE_ACTION_ROLES: Readonly<Record<WorkspaceAction, readonly R
   VALIDATE_ALL: ['SECRETARIA'],
   ASSIGN_EVALUATORS: ['SECRETARIA'],
 };
-
-// Hasta S-1c (F10 D11/D12): la pestaña Evaluación sale del espacio.
-export const EVALUATION_TAB_ROLES_UNTIL_S1C: readonly RoleCode[] = [
-  'SECRETARIA',
-  'PRESIDENTE',
-  'EVALUADOR',
-];
