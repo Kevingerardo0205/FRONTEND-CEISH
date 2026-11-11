@@ -8,7 +8,13 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import {
+  EVALUATION_TAB_ROLES_UNTIL_S1C,
+  WORKSPACE_ACTION_ROLES,
+  WORKSPACE_TAB_ROLES,
+} from '../../../domain/workspace-tab-roles';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
@@ -68,11 +74,6 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
           </div>
 
           <div class="action-registry">
-            <button class="action-btn secondary" matRipple matTooltip="Ver bitácora de auditoría">
-              <mat-icon>history</mat-icon>
-              <span>Historial</span>
-            </button>
-            <div class="divider"></div>
             <button
               class="action-btn primary"
               *ngFor="let action of contextualActions()"
@@ -81,10 +82,6 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
             >
               <mat-icon>{{ action.icon }}</mat-icon>
               <span>{{ action.label }}</span>
-            </button>
-            <button class="action-btn success" matRipple>
-              <mat-icon>check_circle</mat-icon>
-              <span>Finalizar</span>
             </button>
           </div>
         </div>
@@ -279,12 +276,6 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
         background: #f1f5f9;
         padding: 0.5rem;
         border-radius: 12px;
-        .divider {
-          width: 1px;
-          height: 24px;
-          background: #cbd5e1;
-          margin: 0 0.25rem;
-        }
         .action-btn {
           display: flex;
           align-items: center;
@@ -301,13 +292,6 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
             width: 18px;
             height: 18px;
           }
-          &.secondary {
-            background: transparent;
-            color: #475569;
-            &:hover {
-              background: #e2e8f0;
-            }
-          }
           &.primary {
             background: var(--primary);
             color: white;
@@ -315,13 +299,6 @@ import { resolveEstado } from '@shared/utils/estado.resolver';
             &:hover {
               transform: translateY(-1px);
               box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-            }
-          }
-          &.success {
-            background: var(--success);
-            color: white;
-            &:hover {
-              background: #059669;
             }
           }
         }
@@ -501,6 +478,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private router = inject(Router);
   private workspaceService = inject(ProtocolWorkspaceService);
   private authFacade = inject(AuthFacade);
+  private activeRoleFacade = inject(ActiveRoleFacade);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
@@ -513,7 +491,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const user = this.authFacade.currentUser();
     if (!p || !user) return false;
 
-    const isIp = this.authFacade.hasRole('INVESTIGADOR');
+    const isIp = this.activeRoleFacade.activeRole() === 'INVESTIGADOR';
     const isComplete = p.status?.toUpperCase() === 'COMPLETO';
     const isNotSigned = !p.isTimelineTermsAccepted;
 
@@ -540,23 +518,32 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (!p) return [];
 
     const actions = [];
-    const isInvestigador = this.authFacade.hasRole('INVESTIGADOR');
+    const activeRole = this.activeRoleFacade.activeRole();
     const status = p.status as string;
     const core = resolveEstado(status);
     const code = core?.code || status;
 
     if (
-      isInvestigador &&
+      activeRole &&
+      WORKSPACE_ACTION_ROLES.EDIT_PROTOCOL.includes(activeRole) &&
       status?.toUpperCase() !== 'BORRADOR' &&
       (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')
     ) {
       actions.push({ id: 'EDIT_PROTOCOL', label: 'Completar / Editar', icon: 'edit' });
     }
 
-    if (code === 'EN_REVISION_SECRETARIA') {
+    if (
+      activeRole &&
+      WORKSPACE_ACTION_ROLES.VALIDATE_ALL.includes(activeRole) &&
+      code === 'EN_REVISION_SECRETARIA'
+    ) {
       actions.push({ id: 'VALIDATE_ALL', label: 'Aprobar Todo', icon: 'done_all' });
     }
-    if (code === 'COMPLETO' || code === 'INCOMPLETO') {
+    if (
+      activeRole &&
+      WORKSPACE_ACTION_ROLES.ASSIGN_EVALUATORS.includes(activeRole) &&
+      (code === 'COMPLETO' || code === 'INCOMPLETO')
+    ) {
       actions.push({ id: 'ASSIGN_EVALUATORS', label: 'Asignar Pares', icon: 'person_add' });
     }
     return actions;
@@ -566,46 +553,39 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const p = this.protocol();
     if (!p) return [];
 
-    const tabs = [{ label: 'Resumen', icon: 'dashboard', path: 'info' }];
+    const activeRole = this.activeRoleFacade.activeRole();
+    const tabs: { label: string; icon: string; path: string }[] = [];
 
-    // Pestaña de Validación Documental: Para admins, secretaría, presidencia y el propio investigador (después de borrador)
-    if (p.status !== ProtocolStatus.DRAFT) {
-      const canValidate = this.authFacade.hasAnyRole([
-        'ADMIN',
-        'SECRETARIA',
-        'PRESIDENTA',
-        'PRESIDENTE',
-        'ADMIN_TI',
-      ]);
-      if (canValidate || this.authFacade.hasRole('INVESTIGADOR')) {
-        tabs.push({ label: 'Validación Técnica', icon: 'fact_check', path: 'validation' });
-      }
+    if (activeRole && WORKSPACE_TAB_ROLES.info.includes(activeRole)) {
+      tabs.push({ label: 'Resumen', icon: 'dashboard', path: 'info' });
     }
 
-    // Pestaña de Evaluación Ética: Para admins, secretaría, presidencia y evaluadores asignados
+    if (
+      p.status !== ProtocolStatus.DRAFT &&
+      activeRole &&
+      WORKSPACE_TAB_ROLES.validation.includes(activeRole)
+    ) {
+      tabs.push({ label: 'Validación Técnica', icon: 'fact_check', path: 'validation' });
+    }
+
     if (
       [
         ProtocolStatus.EN_EVALUACION,
         ProtocolStatus.APPROVED,
         ProtocolStatus.DISCREPANCIA_RIESGO,
         ProtocolStatus.DISCREPANCIA_DE_RIESGO,
-      ].includes(p.status)
+      ].includes(p.status) &&
+      activeRole &&
+      EVALUATION_TAB_ROLES_UNTIL_S1C.includes(activeRole)
     ) {
-      const canEvaluate = this.authFacade.hasAnyRole([
-        'ADMIN',
-        'SECRETARIA',
-        'PRESIDENTA',
-        'PRESIDENTE',
-        'EVALUADOR',
-        'ADMIN_TI',
-      ]);
-      if (canEvaluate) {
-        tabs.push({ label: 'Evaluación Ética', icon: 'rate_review', path: 'evaluation' });
-      }
+      tabs.push({ label: 'Evaluación Ética', icon: 'rate_review', path: 'evaluation' });
     }
 
-    // Pestaña de Seguimiento (Eventos Adversos, etc.): Se activa tras ser Aprobado
-    if (p.status === ProtocolStatus.APPROVED) {
+    if (
+      p.status === ProtocolStatus.APPROVED &&
+      activeRole &&
+      WORKSPACE_TAB_ROLES['follow-up'].includes(activeRole)
+    ) {
       tabs.push({ label: 'Seguimiento', icon: 'history', path: 'follow-up' });
     }
 
