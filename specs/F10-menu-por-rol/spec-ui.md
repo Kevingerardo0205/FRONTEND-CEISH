@@ -1,11 +1,12 @@
 # F10 · Menú lateral por rol activo — spec-ui
 
-**Versión:** 0.4 · **Fecha:** 11/11/2026 · **Rama:** `feat/f10-s-1a-workspace-por-rol`
+**Versión:** 0.5 · **Fecha:** 11/11/2026 · **Rama:** `feat/f10-s-1b-workspace-componente`
 **Historial:**
 - 0.1 (10/11/2026) primer borrador desde el Paso 0 del menú (frontend `dev` `663d2cd`; backend en solo lectura, `dev`) y las decisiones de la usuaria del 10/11/2026 (D1–D8).
 - 0.2 (10/11/2026) cambio de decisión de la usuaria: D4 pasa a 3 opciones para INVESTIGADOR, con Subsanaciones (bandeja que ya existe); el rediseño de esa bandeja y de Corregir queda fuera de F10 (T10-1b).
 - 0.3 (11/11/2026) Paso 0 de T10-2 (frontend `dev` `64287c8`): D9 (investigador sin verificar) y su regla única en `AuthFacade`, aprobadas por la usuaria; EARS 9.
 - 0.4 (11/11/2026) Paso 0 de S-1 (frontend `dev` `f93323d`): D10 (pestañas del espacio del protocolo por rol activo, `WORKSPACE_TAB_ROLES`) y D11 (la pestaña de evaluación sale del espacio, S-1c), aprobadas por la usuaria; EARS 10 a 12.
+- 0.5 (11/11/2026) Paso 0 de S-1b (frontend `dev` `de21014`): D12 (pestañas y acciones del espacio del protocolo por rol activo, con `WORKSPACE_TAB_ROLES` y `WORKSPACE_ACTION_ROLES`; "Historial" y "Finalizar" ocultos), aprobada por la usuaria; EARS 13 a 15; botones sin función en §8.
 
 **Cubre:** spec-001 HU-001 (roles fijos; una persona puede tener más de un rol y trabaja con un rol activo) · spec-003 RF-ALR.f (solo el contador de "Mis pendientes" de la Secretaría, que ya existe).
 **Depende de:** F00 (rol activo, `ROLE_HOME`, `RoleGuard`, AppShell). Actualiza F00 D1, §2, §4 y §10 (F00 v0.3).
@@ -45,6 +46,7 @@ Que cada rol activo vea en el menú lateral **solo sus opciones**, que cada opci
 | D9 | **INVESTIGADOR sin verificar** (11/11/2026): con el rol activo INVESTIGADOR, si no puede entrar al área del investigador, el menú no muestra sus 3 opciones y en su lugar muestra el texto "Verifica tu correo para crear y ver tus protocolos." (texto, no enlace). La regla es **una sola** para el menú y para `VerificadoGuard`: se extrae de `verificado.guard.ts:25-33` a `AuthFacade.canEnterInvestigatorArea()`, con el mismo comportamiento de hoy (tiene SECRETARIA, PRESIDENTE o EVALUADOR entre **todos** sus roles vigentes, o `emailVerificado`). Consecuencia aceptada: un usuario INVESTIGADOR + EVALUADOR sin verificar ve sus opciones con INVESTIGADOR activo, igual que el guard lo deja pasar; revisarla es parte de S-2. |
 | D10 | **Pestañas del espacio del protocolo por rol activo** (11/11/2026, S-1a). Una sola tabla, `WORKSPACE_TAB_ROLES`, decide qué rol activo abre cada pestaña de `/dashboard/protocols/workspace/:id`: `info` → SECRETARIA, PRESIDENTE, INVESTIGADOR; `validation` → SECRETARIA, INVESTIGADOR (PRESIDENTE fuera: F02 E16, solo la Secretaría valida); `follow-up` → SECRETARIA, PRESIDENTE, INVESTIGADOR. Cada pestaña lleva `RoleGuard` con su fila; las redirecciones antiguas (`detail/:id`, `validation/detail/:id`, `investigador/protocolo/:id`) llegan a esas pestañas y quedan cubiertas. S-1 **solo agrega guards** a las rutas del espacio actual: no cambia sus pantallas (la frase de F02 §1 «que no se toca» sigue valiendo para ellas). Un guard del frontend filtra por rol, no por dueño del protocolo: el control de datos ajenos es del backend (§8). |
 | D11 | **La pestaña de evaluación sale del espacio** (11/11/2026, S-1c): `workspace/:id/evaluation` redirige a `info` para no romper enlaces viejos, y donde el espacio ofrecía evaluar se enlaza a `/dashboard/evaluations/evaluate/:id` solo para EVALUADOR. Hoy la pestaña no funciona dentro del espacio (el `:id` no llega a la pestaña y se busca como id de asignación, `evaluation-form.page.ts:1427-1437`). Hasta S-1c la ruta queda como está. |
+| D12 | **Pestañas y acciones del espacio del protocolo por rol activo** (11/11/2026, S-1b). `protocol-workspace.component.ts` decide con el rol activo (`ActiveRoleFacade`), nunca con la suma de roles (`hasRole`/`hasAnyRole`), y sin los roles que ya no existen (ADMIN, ADMIN_TI, PRESIDENTA). (1) **Pestañas:** una pestaña se muestra solo si el rol activo está en su fila de `WORKSPACE_TAB_ROLES` (D10), la misma regla que el guard; la pestaña Evaluación usa una constante del dominio marcada "hasta S-1c" con SECRETARIA, PRESIDENTE y EVALUADOR; la ruta y la pantalla de Evaluación no se tocan. (2) **Acciones:** `WORKSPACE_ACTION_ROLES`: `EDIT_PROTOCOL` (Completar / Editar) → INVESTIGADOR; `VALIDATE_ALL` (Aprobar Todo) y `ASSIGN_EVALUATORS` (Asignar Pares) → SECRETARIA. Es lo que acepta el backend: `assign-peer-evaluators` pide `@Roles('SECRETARIA','PRESIDENTE')` y `@Permissions(EVALUATORS_ASSIGN)` (`evaluations.controller.ts:153-155`), y `EVALUACION_ASIGNAR` solo lo tiene SECRETARIA (`1880000000000-FixedRolesMatrix.ts:99`); validar pide `@Permissions(DOCUMENTS_VALIDATE)` = `RECEPCION_VALIDAR` (`reception.controller.ts:86-87`, `:100-101`, `:157-158`), solo de SECRETARIA (`FixedRolesMatrix.ts:95`); coincide con F02 E16. (3) La **ventana de aceptación de tiempos** sale con el rol activo INVESTIGADOR. (4) **"Historial" y "Finalizar"** se ocultan: no tienen acción (`protocol-workspace.component.ts:71-74` y `:85-88`, sin `(click)`); misma regla que D7; quedan en §8. Las condiciones de estado de pestañas y acciones no cambian. Resultado por rol activo: SECRETARIA, sin cambios (Resumen, Validación, Evaluación, Seguimiento según el estado; Aprobar Todo y Asignar Pares); PRESIDENTE: Resumen, Evaluación y Seguimiento, sin acciones; EVALUADOR: Evaluación, sin acciones; INVESTIGADOR: Resumen, Validación y Seguimiento, Completar / Editar y la ventana de aceptación. |
 
 ## 3. Menú por rol activo
 
@@ -98,6 +100,9 @@ En todos los roles: "Cerrar sesión" abajo, separado de las opciones, en gris (D
 10. Mientras el rol activo no esté en la fila de `WORKSPACE_TAB_ROLES` de una pestaña del espacio del protocolo, si el usuario abre esa pestaña (por enlace, por URL o por una redirección antigua), entonces el sistema debe mostrar "No tiene acceso a esta sección con el rol activo." y llevarlo a `ROLE_HOME` de su rol activo (D10).
 11. Mientras el rol activo esté en la fila de una pestaña, cuando el usuario la abra, el sistema debe mostrarla sin ese aviso; en particular, las entradas que hoy funcionan deben seguir abriendo: Gestionar y Subir correcciones (versión 1) del investigador, VALIDAR y ASIGNAR de Mis pendientes, la lista de validación y las redirecciones `detail/:id`, `validation/detail/:id` e `investigador/protocolo/:id` (D10).
 12. Cuando una persona tenga varios roles, el sistema debe decidir el acceso a cada pestaña con el rol activo y no con la suma de sus roles (D10).
+13. Mientras el rol activo sea R, el espacio del protocolo debe mostrar solo las pestañas cuya fila de `WORKSPACE_TAB_ROLES` incluye R (Evaluación: la constante "hasta S-1c"), con las mismas condiciones de estado de antes (D12).
+14. Mientras el rol activo no esté en la fila de `WORKSPACE_ACTION_ROLES` de una acción, el espacio del protocolo no debe mostrar esa acción, aunque la persona tenga ese rol entre sus otros roles; la ventana de aceptación de tiempos solo debe salir con el rol activo INVESTIGADOR (D12).
+15. El espacio del protocolo no debe mostrar botones sin acción ("Historial", "Finalizar") (D12, D7).
 
 ## 8. Pendientes
 
@@ -112,6 +117,13 @@ En todos los roles: "Cerrar sesión" abajo, separado de las opciones, en gris (D
 | PRESIDENTE | Asignar evaluadores | Reunión del 06/11/2026. `/dashboard/evaluations/assignment` no tiene `RoleGuard` y PRESIDENTE no tiene `EVALUACION_ASIGNAR` en la matriz | Sección de Presidencia (decidir con F03) |
 | PRESIDENTE | Protocolos | `/protocolos` y `protocols/list` son solo de SECRETARIA | Sección de Presidencia |
 | INVESTIGADOR | Informes de seguimiento | No existe pantalla | F06 |
+
+**Botones del espacio del protocolo sin función (D12):**
+
+| Botón | Dónde estaba | Por qué se oculta | Cuándo |
+|---|---|---|---|
+| Historial | `protocol-workspace.component.ts:71-74` (cabecera, `matTooltip="Ver bitácora de auditoría"`) | Sin `(click)`; la trazabilidad ya está en el Resumen. Depende de TSK-F02-5 (`GET /audit/protocol/:id`) | Pestaña Recorrido (F02 T02-7) |
+| Finalizar | `protocol-workspace.component.ts:85-88` (cabecera) | Sin `(click)` y sin un endpoint definido para "finalizar" desde el espacio | Cuando se defina qué finaliza y quién |
 
 **Hallazgos del menú viejo (se resuelven al retirarlo, T10-2 y T10-3):**
 - "Recepción Nueva" del investigador lleva a `/dashboard/protocols/reception/new`, que es solo SECRETARIA: rebota con aviso (`menu-ui.config.ts:51-55`, `protocols/routes.ts:77-85`).
