@@ -10,11 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
-import {
-  EVALUATION_TAB_ROLES_UNTIL_S1C,
-  WORKSPACE_ACTION_ROLES,
-  WORKSPACE_TAB_ROLES,
-} from '../../../domain/workspace-tab-roles';
+import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
@@ -566,19 +562,6 @@ export class ProtocolWorkspaceComponent implements OnInit {
       WORKSPACE_TAB_ROLES.validation.includes(activeRole)
     ) {
       tabs.push({ label: 'Validación Técnica', icon: 'fact_check', path: 'validation' });
-    }
-
-    if (
-      [
-        ProtocolStatus.EN_EVALUACION,
-        ProtocolStatus.APPROVED,
-        ProtocolStatus.DISCREPANCIA_RIESGO,
-        ProtocolStatus.DISCREPANCIA_DE_RIESGO,
-      ].includes(p.status) &&
-      activeRole &&
-      EVALUATION_TAB_ROLES_UNTIL_S1C.includes(activeRole)
-    ) {
-      tabs.push({ label: 'Evaluación Ética', icon: 'rate_review', path: 'evaluation' });
     }
 
     if (

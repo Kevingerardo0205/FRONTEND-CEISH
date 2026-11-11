@@ -8,6 +8,7 @@ import { ActiveRoleFacade } from '@features/shell/application/active-role.facade
 import { destinoAccion } from '@features/pendientes/domain/accion.rules';
 import { WORKSPACE_TAB_ROLES, WorkspaceTab } from '@features/protocols/domain/workspace-tab-roles';
 import { PROTOCOL_ROUTES } from '@features/protocols/routes';
+import { MENU_ITEMS } from '@features/shell/infrastructure/menu.config';
 import { appConfig } from './app.config';
 import { NotificationService } from '@infrastructure/services/notification.service';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
@@ -16,6 +17,8 @@ import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 const ROLE_KEY = 'ceish.activeRole';
 const ACCESS_DENIED_MESSAGE = 'No tiene acceso a esta sección con el rol activo.';
 const WORKSPACE_ROOT = '/dashboard/protocols/workspace/1';
+/** Ruta de "Mis evaluaciones" aprobada en F10 D11 (11/11/2026); la prueba comprueba que es la de MENU_ITEMS. */
+const EVALUATOR_LIST = '/dashboard/evaluations/list';
 
 /** Tabla aprobada por la usuaria (F10 spec-ui D10, 11/11/2026). Es la referencia de la prueba: no se deriva del código. */
 const EXPECTED_TAB_ROLES: Record<WorkspaceTab, RoleCode[]> = {
@@ -261,6 +264,64 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
 
     expect(router.url).toBe(WORKSPACE_ROOT + '/info');
     expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
+  });
+
+  for (const role of ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'] as RoleCode[]) {
+    it(role + ' en workspace/1/evaluation llega a info (S-1c, D11)', async () => {
+      await start([role], role, ROLE_PERMISSIONS[role]);
+
+      await harness.navigateByUrl(WORKSPACE_ROOT + '/evaluation');
+
+      expect(router.url).toBe(WORKSPACE_ROOT + '/info');
+      expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
+    });
+  }
+
+  for (const role of ['PRESIDENTE', 'INVESTIGADOR'] as RoleCode[]) {
+    it(role + ' en workspace/1 sin pestaña llega a info (S-1c, D11)', async () => {
+      await start([role], role, ROLE_PERMISSIONS[role]);
+
+      await harness.navigateByUrl(WORKSPACE_ROOT);
+
+      expect(router.url).toBe(WORKSPACE_ROOT + '/info');
+      expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
+    });
+  }
+
+  it('EVALUADOR en workspace/1/evaluation llega a info y rebota con aviso (S-1c, D11 y EARS 10)', async () => {
+    await start(['EVALUADOR'], 'EVALUADOR', ROLE_PERMISSIONS.EVALUADOR);
+
+    await harness.navigateByUrl(WORKSPACE_ROOT + '/evaluation');
+
+    expect(router.url.startsWith(WORKSPACE_ROOT)).toBeFalse();
+    expect(notify).toHaveBeenCalledOnceWith(ACCESS_DENIED_MESSAGE, 'info');
+  });
+
+  it('EVALUADOR en workspace/1 sin pestaña va a Mis evaluaciones del menú, sin aviso (S-1c, D11)', async () => {
+    const menuRoute = MENU_ITEMS.find((item) => item.id === 'evaluador-evaluaciones')?.route;
+    expect(menuRoute).toBe(EVALUATOR_LIST);
+    await start(['EVALUADOR'], 'EVALUADOR', ROLE_PERMISSIONS.EVALUADOR);
+
+    await harness.navigateByUrl(WORKSPACE_ROOT);
+
+    expect(router.url).toBe(EVALUATOR_LIST);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('PRESIDENTE y EVALUADOR: workspace/1 sin pestaña sigue el rol activo (S-1c, D11)', async () => {
+    await start(
+      ['PRESIDENTE', 'EVALUADOR'],
+      'EVALUADOR',
+      [...ROLE_PERMISSIONS.PRESIDENTE, ...ROLE_PERMISSIONS.EVALUADOR],
+    );
+
+    await harness.navigateByUrl(WORKSPACE_ROOT);
+    expect(router.url).toBe(EVALUATOR_LIST);
+
+    TestBed.inject(ActiveRoleFacade).switchRole('PRESIDENTE');
+    await harness.navigateByUrl(WORKSPACE_ROOT);
+    expect(router.url).toBe(WORKSPACE_ROOT + '/info');
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it('EVALUADOR rebota desde /dashboard/protocols/detail/1 con aviso', async () => {

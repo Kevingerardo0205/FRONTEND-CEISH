@@ -5,6 +5,7 @@ import { ProtocolValidationDetailPage } from './presentation/pages/protocol-vali
 import { ProtocolReceptionNewPage } from './presentation/pages/protocol-reception-new/protocol-reception-new.page';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
+import { redirectToFirstWorkspaceTab } from '@infrastructure/guards/workspace-entry.redirect';
 
 import { ProtocolWorkspaceComponent } from './presentation/pages/protocol-workspace/protocol-workspace.component';
 import { WORKSPACE_TAB_ROLES } from './domain/workspace-tab-roles';
@@ -40,11 +41,10 @@ export const PROTOCOL_ROUTES: Routes = [
             data: { roles: [...WORKSPACE_TAB_ROLES.validation] },
           },
           {
+            // F10 D11 (S-1c): la evaluación ya no está en el espacio; los enlaces viejos van a info.
             path: 'evaluation',
-            loadComponent: () =>
-              import('../evaluations/presentation/pages/evaluation-form/evaluation-form.page').then(
-                (m) => m.EvaluationFormPage,
-              ),
+            redirectTo: 'info',
+            pathMatch: 'full',
           },
           {
             path: 'follow-up',
@@ -57,7 +57,7 @@ export const PROTOCOL_ROUTES: Routes = [
           },
           {
             path: '',
-            redirectTo: 'info',
+            redirectTo: redirectToFirstWorkspaceTab,
             pathMatch: 'full',
           },
         ],
