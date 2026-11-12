@@ -41,9 +41,10 @@ export const PROTOCOL_ROUTES: Routes = [
             data: { roles: [...WORKSPACE_TAB_ROLES.validation] },
           },
           {
-            // F10 D11 (S-1c): la evaluación ya no está en el espacio; los enlaces viejos van a info.
+            // F10 D11 (S-1c, actualizada en S-1f): la evaluación ya no está en el espacio; los enlaces
+            // viejos van al mismo destino que la ruta sin pestaña (EVALUADOR: Mis evaluaciones).
             path: 'evaluation',
-            redirectTo: 'info',
+            redirectTo: redirectToFirstWorkspaceTab,
             pathMatch: 'full',
           },
           {

@@ -10,6 +10,13 @@ export function resolveEstado(code: string | undefined): EstadoCore | null {
   return catalog[normalized] || aliases[normalized] || null;
 }
 
+/** Estado del catálogo por id (F10 D13). Un id desconocido, NULL o undefined: null. */
+export function estadoById(id: number | null | undefined): EstadoCore | null {
+  if (id === null || id === undefined) return null;
+  const catalog = Object.values(EstadoCatalog) as readonly EstadoCore[];
+  return catalog.find((estado) => estado.id === id) ?? null;
+}
+
 /** Resolver específico para agrupaciones de categorías de estados */
 export function isEstadoCategoria(
   code: string | undefined,
