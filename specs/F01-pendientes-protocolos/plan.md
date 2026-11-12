@@ -201,7 +201,7 @@ layers(["src/shared/utils/fecha-ecuador.util.ts"], [NO_ANGULAR, NO_HTTP, NO_INFR
 
 - `DashboardSecretariaPage` sigue viva para `DashboardHomePage` (`dashboard-home.page.ts:12,49,52`). Su retiro es de T14 de F00 ("la rama SECRETARIA de DashboardHomePage, cuando /pendientes tenga su pantalla de F01", `specs/F00-base/tasks.md:26`).
 - `getAll()` de `ProtocolApiAdapter` no se toca.
-- Deuda sin tarea en F01: 18 `window.open(...downloadUrl, '_blank')` sin validar ni `noopener`; `BaseApiService.handleError` (`base-api.service.ts:41-53`); `ErrorInterceptor` pierde el código de estado (`error.interceptor.ts:153-155`); colores ESPOCH de `_variables.scss:3-6` sin unificar con los tokens.
+- Deuda sin tarea en F01: 18 `window.open(...downloadUrl, '_blank')` sin validar ni `noopener`; `BaseApiService.handleError` (`base-api.service.ts:41-53`); `ErrorInterceptor` pierde el código de estado (`error.interceptor.ts:153-155`; **cerrada en F10 S-1g**: el `Error` relanzado conserva `status`, leído con `apiErrorStatus`); colores ESPOCH de `_variables.scss:3-6` sin unificar con los tokens.
 - Un 403 de `GET /secretaria/pendientes` hace que el interceptor navegue a `RoleHome` (`error.interceptor.ts:123-126`), que para SECRETARIA es la misma `/pendientes`. Se espera que el router ignore la navegación a la misma URL; lo cubre una prueba de T01-5.
 
 ## 9. Pruebas
