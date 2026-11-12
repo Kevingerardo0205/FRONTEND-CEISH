@@ -1,16 +1,27 @@
-import { Component, inject, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  computed,
+  OnInit,
+  ChangeDetectionStrategy,
+  DestroyRef,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, Subject, combineLatest } from 'rxjs';
+import { catchError, distinctUntilChanged, filter, map, startWith, switchMap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { Stage } from '@domain/value-objects/stage.vo';
 import { StageBarComponent } from '@shared/ui/stage-bar/stage-bar.component';
+import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/states.component';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
 import {
   workspaceStageCode,
@@ -37,16 +48,19 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
     MatIconModule,
     MatButtonModule,
     MatChipsModule,
-    MatProgressBarModule,
     MatTooltipModule,
     ProtocolCodePipe,
     MatSnackBarModule,
     TimelineAcceptanceModalComponent,
     MatDialogModule,
     StageBarComponent,
+    LoadingStateComponent,
+    ErrorStateComponent,
   ],
   template: `
-    <div class="workspace-shell" *ngIf="protocol(); else loading">
+    <!-- Carga y errores (F10 D14): el contenido solo con datos del :id actual -->
+    @if (protocol()) {
+    <div class="workspace-shell">
       <!-- MODAL DE ACEPTACIÓN OBLIGATORIO DE TIEMPOS -->
       <app-timeline-acceptance-modal
         *ngIf="showAcceptanceModal()"
@@ -69,10 +83,12 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
             <h1 class="protocol-title" [matTooltip]="protocol()?.title">
               {{ protocol()?.title }}
             </h1>
-            <div class="owner-chip">
-              <mat-icon>account_circle</mat-icon>
-              <span>{{ protocol()?.principalInvestigator || 'Cargando...' }}</span>
-            </div>
+            @if (protocol()?.principalInvestigator; as investigator) {
+              <div class="owner-chip">
+                <mat-icon>account_circle</mat-icon>
+                <span>{{ investigator }}</span>
+              </div>
+            }
           </div>
 
           <div class="action-registry">
@@ -120,15 +136,23 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         </div>
       </main>
     </div>
-
-    <ng-template #loading>
-      <div class="loading-viewport">
-        <div class="loader-card">
-          <mat-progress-bar mode="indeterminate" color="primary"></mat-progress-bar>
-          <p>Sincronizando Workspace del Protocolo...</p>
-        </div>
+    } @else if (loadError() === 'not-found') {
+      <div class="state-viewport">
+        <app-error-state
+          message="No encontramos este protocolo. Revise el enlace."
+          retryLabel="Volver al inicio"
+          (retry)="goHome()"
+        ></app-error-state>
       </div>
-    </ng-template>
+    } @else if (loadError()) {
+      <div class="state-viewport">
+        <app-error-state message="No pudimos cargar el protocolo." (retry)="reload()"></app-error-state>
+      </div>
+    } @else {
+      <div class="state-viewport">
+        <app-loading-state message="Cargando el protocolo…"></app-loading-state>
+      </div>
+    }
   `,
   styles: [
     `
@@ -327,26 +351,11 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         padding: 2.5rem;
       }
 
-      /* Loader Aesthetic */
-      .loading-viewport {
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f1f5f9;
-        .loader-card {
-          background: white;
-          padding: 3rem;
-          border-radius: 20px;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-          width: 400px;
-          text-align: center;
-          p {
-            margin-top: 1.5rem;
-            font-weight: 600;
-            color: #475569;
-          }
-        }
+      /* Cargando y errores (F10 D14) */
+      .state-viewport {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 2.5rem 1rem;
       }
 
       @keyframes scaleIn {
@@ -378,8 +387,14 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private activeRoleFacade = inject(ActiveRoleFacade);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private roleHome = inject(RoleHome);
+  private destroyRef = inject(DestroyRef);
+
+  /** Recarga del mismo `:id` (Reintentar y después de Asignar Pares, D14). */
+  private reload$ = new Subject<void>();
 
   protocol = this.workspaceService.protocol;
+  loadError = this.workspaceService.error;
 
   protocolIdNumber = computed(() => Number(this.protocol()?.id || 0));
 
@@ -495,12 +510,31 @@ export class ProtocolWorkspaceComponent implements OnInit {
     return tabs;
   });
 
+  /**
+   * D14: una sola carga a la vez. Con otro `:id` o una recarga, `switchMap` cancela la anterior,
+   * así que gana la última respuesta. El error queda en el servicio (`loadError`).
+   */
   ngOnInit() {
-    this.route.params.subscribe((params) => {
-      if (params['id']) {
-        this.workspaceService.loadProtocol(params['id']).subscribe();
-      }
-    });
+    const id$ = this.route.params.pipe(
+      map((params) => params['id'] as string | undefined),
+      filter((id): id is string => !!id),
+      distinctUntilChanged(),
+    );
+    combineLatest([id$, this.reload$.pipe(startWith(undefined))])
+      .pipe(
+        switchMap(([id]) => this.workspaceService.loadProtocol(id).pipe(catchError(() => EMPTY))),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe();
+  }
+
+  reload(): void {
+    this.reload$.next();
+  }
+
+  /** "Volver al inicio" del no encontrado: inicio del rol activo (F00 D12). */
+  goHome(): void {
+    this.router.navigateByUrl(this.roleHome.urlTree());
   }
 
   onExecuteAction(actionId: string) {
@@ -550,7 +584,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
           this.snackBar.open('✅ Evaluadores asignados correctamente.', 'Cerrar', {
             duration: 4000,
           });
-          this.workspaceService.loadProtocol(p.id).subscribe();
+          this.reload();
         }
       });
     }

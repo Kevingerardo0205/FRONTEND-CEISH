@@ -24,6 +24,18 @@ export function extractApiErrorMessage(
   return readMessage(err) ?? fallback;
 }
 
+/**
+ * Código HTTP de un error de API (F10 S-1g): HttpErrorResponse crudo o Error relanzado por
+ * ErrorInterceptor, que conserva `status`. null si el error no trae un número.
+ */
+export function apiErrorStatus(err: unknown): number | null {
+  if (typeof err === 'object' && err !== null && 'status' in err) {
+    const status = (err as { status: unknown }).status;
+    return typeof status === 'number' ? status : null;
+  }
+  return null;
+}
+
 function readMessage(value: unknown): string | null {
   if (typeof value === 'string') return value.trim() || null;
   if (Array.isArray(value)) {
