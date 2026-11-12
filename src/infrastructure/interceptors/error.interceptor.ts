@@ -153,7 +153,9 @@ export class ErrorInterceptor implements HttpInterceptor {
 
         const errorMessage =
           error.error?.message || this.nestedErrorMessage(error.error) || error.statusText;
-        return throwError(() => new Error(errorMessage));
+        // F10 S-1g (D14): el Error conserva el status para que la pantalla distinga, por ejemplo,
+        // un 404 (se lee con apiErrorStatus). El mensaje y `instanceof Error` no cambian.
+        return throwError(() => Object.assign(new Error(errorMessage), { status: error.status }));
       }),
     );
   }

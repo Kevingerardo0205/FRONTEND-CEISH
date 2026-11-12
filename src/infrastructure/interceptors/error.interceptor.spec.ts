@@ -14,6 +14,7 @@ import {
   ERROR_400_BODY,
   ERROR_404_BODY,
 } from '@features/evaluations/testing/reassignment.fixtures';
+import { apiErrorStatus } from '@shared/utils/api-error-message.util';
 
 describe('ErrorInterceptor', () => {
   let httpMock: HttpTestingController;
@@ -316,5 +317,53 @@ describe('ErrorInterceptor', () => {
 
     const req = httpMock.expectOne('/api/auth/refresh');
     req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+  });
+
+  describe('F10 S-1g (D14): el Error relanzado conserva el status', () => {
+    it('un 404 con el cuerpo real conserva status 404 y el mensaje', (done) => {
+      httpClient.get('/api/protocols/0').subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(error.status).toBe(404);
+          expect(error.message).toBe('El protocolo con ID 0 no existe.');
+          expect(apiErrorStatus(error)).toBe(404);
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/0').flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    });
+
+    it('un 500 conserva status 500', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(apiErrorStatus(error)).toBe(500);
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        { statusCode: 500, timestamp: '...', path: '/api/protocols/1/submit', error: { message: 'Internal server error' } },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
+    });
+
+    it('sin conexión conserva status 0', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(apiErrorStatus(error)).toBe(0);
+          done();
+        },
+      });
+
+      httpMock
+        .expectOne('/api/protocols/1/submit')
+        .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, effect } from '@angular/core';
+import { Component, inject, computed, signal, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -12,6 +12,7 @@ import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pip
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
 import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity';
+import { ErrorStateComponent } from '@shared/ui/states/states.component';
 
 @Component({
   selector: 'app-protocol-detail-tab',
@@ -25,6 +26,7 @@ import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity
     RouterModule,
     ProtocolStatusLabelPipe,
     ProtocolStatusClassPipe,
+    ErrorStateComponent,
   ],
   template: `
     <div class="tab-container animate-fade-in" *ngIf="protocol()">
@@ -80,9 +82,18 @@ import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity
       <div class="evaluators-section mt-4" *ngIf="showEvaluators()">
         <div class="header-row d-flex justify-content-between align-items-center mb-3">
           <h3 class="section-title mb-0">Cuerpo Evaluador Asignado</h3>
-          <span class="badge-count">{{ evaluations().length }} Miembros</span>
+          <span class="badge-count" *ngIf="!evaluationsError() && !evaluationsLoading()"
+            >{{ evaluations().length }} Miembros</span
+          >
         </div>
 
+        <!-- F10 D14: un error nunca se muestra como "sin evaluadores" -->
+        @if (evaluationsError()) {
+          <app-error-state
+            message="No pudimos cargar el cuerpo evaluador."
+            (retry)="retryEvaluations()"
+          ></app-error-state>
+        } @else {
         <div class="eval-list">
           <div class="eval-card" *ngFor="let ev of evaluations()">
             <div class="eval-identity">
@@ -101,10 +112,11 @@ import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity
           </div>
         </div>
 
-        <div class="empty-evals" *ngIf="evaluations().length === 0">
+        <div class="empty-evals" *ngIf="!evaluationsLoading() && evaluations().length === 0">
           <mat-icon>group_off</mat-icon>
           <p>No se han asignado evaluadores a este protocolo aún.</p>
         </div>
+        }
       </div>
 
       <div class="docs-section mt-4">
@@ -541,8 +553,24 @@ export class ProtocolDetailTabPage {
         });
       }
     });
+
+    // F10 D14 (EARS 28): las evaluaciones las pide el Resumen y solo si muestra el cuerpo
+    // evaluador. Lee el objeto `protocol`, así que también se vuelven a pedir al recargar
+    // el mismo :id después de Asignar Pares, como antes.
+    effect(() => {
+      const p = this.protocol();
+      if (p?.id && this.showEvaluators()) {
+        untracked(() => this.workspaceService.loadEvaluations(p.id));
+      }
+    });
   }
   evaluations = this.workspaceService.evaluations;
+  evaluationsLoading = this.workspaceService.evaluationsLoading;
+  evaluationsError = this.workspaceService.evaluationsError;
+
+  retryEvaluations(): void {
+    this.workspaceService.refreshEvaluations();
+  }
 
   showEvaluators(): boolean {
     const role = this.authFacade.currentUser()?.rol?.toUpperCase();

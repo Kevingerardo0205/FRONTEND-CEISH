@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { signal, WritableSignal } from '@angular/core';
-import { ActivatedRoute, provideRouter, Router } from '@angular/router';
+import { Component, signal, WritableSignal } from '@angular/core';
+import { ActivatedRoute, provideRouter, Router, UrlTree } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { ProtocolWorkspaceComponent } from './protocol-workspace.component';
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
@@ -11,6 +12,9 @@ import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { Role, RoleCode } from '@domain/value-objects/role.vo';
+import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
 
 const PROTOCOL_TITLE = 'Estudio de prueba del investigador';
 
@@ -436,5 +440,213 @@ describe('ProtocolWorkspaceComponent - template real', () => {
 
     expect(root.querySelector('app-stage-bar')).toBeNull();
     expect(root.querySelector('.status-indicator')?.textContent?.trim()).toBe('Estado no reconocido');
+  });
+});
+
+/** Pestaña de prueba: cuenta cuántas veces se crea, para saber si el outlet se volvió a montar. */
+@Component({
+  selector: 'app-tab-prueba',
+  standalone: true,
+  template: '<p class="tab-prueba">Pestaña de prueba</p>',
+})
+class TabPruebaComponent {
+  static created = 0;
+  constructor() {
+    TabPruebaComponent.created++;
+  }
+}
+
+/**
+ * F10 S-1g (D14): carga y errores con el router real y el ProtocolWorkspaceService real. El
+ * repositorio devuelve un Subject por petición para decidir cuándo y en qué orden responde. Los
+ * textos son los de D14 y F02 §6; los errores imitan el Error que relanza ErrorInterceptor
+ * (mensaje del backend y `status`).
+ */
+describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
+  const LOADING_TEXT = 'Cargando el protocolo…';
+  const FAILED_TEXT = 'No pudimos cargar el protocolo.';
+  const NOT_FOUND_TEXT = 'No encontramos este protocolo. Revise el enlace.';
+  const BACKEND_404_TEXT = 'Protocol with ID 5 not found';
+  const HOME_TREE = 'inicio-del-rol-activo';
+
+  let requests: { id: string; response: Subject<ProtocolEntity> }[];
+  let harness: RouterTestingHarness;
+  let router: Router;
+
+  function protocolWith(id: string, title: string, principalInvestigator = 'Investigador Prueba'): ProtocolEntity {
+    return { ...createProtocol(STATE.RECEPCION_APROBADA), id, title, principalInvestigator };
+  }
+
+  function respond(index: number, protocol: ProtocolEntity): void {
+    requests[index].response.next(protocol);
+    requests[index].response.complete();
+    harness.detectChanges();
+  }
+
+  function fail(index: number, message: string, status: number): void {
+    requests[index].response.error(Object.assign(new Error(message), { status }));
+    harness.detectChanges();
+  }
+
+  function root(): HTMLElement {
+    return harness.fixture.nativeElement as HTMLElement;
+  }
+
+  function button(label: string): HTMLButtonElement | undefined {
+    return Array.from(root().querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === label,
+    );
+  }
+
+  beforeEach(async () => {
+    TabPruebaComponent.created = 0;
+    requests = [];
+    const getById = jasmine.createSpy('getById').and.callFake((id: string) => {
+      const response = new Subject<ProtocolEntity>();
+      requests.push({ id, response });
+      return response;
+    });
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            path: 'workspace/:id',
+            component: ProtocolWorkspaceComponent,
+            children: [{ path: 'info', component: TabPruebaComponent }],
+          },
+        ]),
+        { provide: IProtocolRepositoryPort, useValue: { getById } },
+        {
+          provide: IEvaluationRepositoryPort,
+          useValue: { getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])) },
+        },
+        {
+          provide: AuthFacade,
+          useValue: { currentUser: () => ({ rol: 'SECRETARIA', roles: ['SECRETARIA'] }) },
+        },
+        { provide: ActiveRoleFacade, useValue: { activeRole: signal<RoleCode | null>('SECRETARIA') } },
+        { provide: RoleHome, useValue: { urlTree: () => HOME_TREE } },
+      ],
+    });
+    TestBed.overrideComponent(ProtocolWorkspaceComponent, {
+      add: {
+        providers: [
+          { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
+          {
+            provide: MatDialog,
+            useValue: { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(true) }) },
+          },
+        ],
+      },
+    });
+    harness = await RouterTestingHarness.create();
+    router = TestBed.inject(Router);
+  });
+
+  it('mientras carga muestra "Cargando el protocolo…" sin cabecera ni pestañas', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+
+    expect(root().textContent).toContain(LOADING_TEXT);
+    expect(root().textContent).not.toContain('Sincronizando');
+    expect(root().querySelector('header')).toBeNull();
+    expect(root().querySelector('.tab-strip')).toBeNull();
+    expect(root().querySelector('.tab-prueba')).toBeNull();
+  });
+
+  it('un error de carga muestra "No pudimos cargar el protocolo." y Reintentar vuelve a pedir el mismo :id', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    fail(0, 'Internal server error', 500);
+
+    expect(root().textContent).toContain(FAILED_TEXT);
+    expect(root().textContent).not.toContain(LOADING_TEXT);
+    expect(root().querySelector('.tab-strip')).toBeNull();
+
+    button('Reintentar')?.click();
+    harness.detectChanges();
+
+    expect(requests.map((r) => r.id)).toEqual(['5', '5']);
+    expect(root().textContent).toContain(LOADING_TEXT);
+    respond(1, protocolWith('5', 'Estudio de prueba cinco'));
+    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
+  });
+
+  it('un 404 muestra "No encontramos este protocolo." sin el texto del backend, y Volver al inicio usa RoleHome', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    fail(0, BACKEND_404_TEXT, 404);
+    const navigateByUrl = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+
+    expect(root().textContent).toContain(NOT_FOUND_TEXT);
+    expect(root().textContent).not.toContain(BACKEND_404_TEXT);
+    expect(button('Reintentar')).toBeUndefined();
+
+    button('Volver al inicio')?.click();
+
+    expect(navigateByUrl).toHaveBeenCalledOnceWith(HOME_TREE as unknown as UrlTree);
+    expect(requests.length).toBe(1);
+  });
+
+  it('un 400 de id no numérico también es "no encontrado"', async () => {
+    await harness.navigateByUrl('/workspace/abc/info');
+    fail(0, 'ID de protocolo debe ser un número', 400);
+
+    expect(root().textContent).toContain(NOT_FOUND_TEXT);
+    expect(root().textContent).not.toContain('ID de protocolo debe ser un número');
+  });
+
+  it('al cambiar de :id no se ven datos del anterior y la pestaña se vuelve a montar', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, protocolWith('5', 'Estudio de prueba cinco'));
+    expect(TabPruebaComponent.created).toBe(1);
+
+    await harness.navigateByUrl('/workspace/6/info');
+
+    expect(root().textContent).not.toContain('Estudio de prueba cinco');
+    expect(root().textContent).toContain(LOADING_TEXT);
+    respond(1, protocolWith('6', 'Estudio de prueba seis'));
+    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba seis');
+    expect(TabPruebaComponent.created).toBe(2);
+  });
+
+  it('la respuesta tardía del :id anterior no se muestra: gana el último :id', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    await harness.navigateByUrl('/workspace/6/info');
+    respond(1, protocolWith('6', 'Estudio de prueba seis'));
+
+    respond(0, protocolWith('5', 'Estudio de prueba cinco'));
+
+    expect(requests.map((r) => r.id)).toEqual(['5', '6']);
+    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba seis');
+  });
+
+  it('al recargar el mismo :id después de Asignar Pares conserva cabecera, pestañas y pestaña abierta, sin "Cargando"', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, protocolWith('5', 'Estudio de prueba cinco'));
+
+    button('person_addAsignar Pares')?.click();
+    harness.detectChanges();
+
+    expect(requests.map((r) => r.id)).toEqual(['5', '5']);
+    expect(root().textContent).not.toContain(LOADING_TEXT);
+    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
+    expect(root().querySelectorAll('.tab-strip .tab-item').length).toBeGreaterThan(0);
+    expect(root().querySelector('.tab-prueba')).not.toBeNull();
+    expect(router.url).toBe('/workspace/5/info');
+    expect(TabPruebaComponent.created).toBe(1);
+
+    respond(1, protocolWith('5', 'Estudio de prueba cinco'));
+    expect(TabPruebaComponent.created).toBe(1);
+  });
+
+  it('sin investigador principal no muestra el chip; con investigador, sí', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, protocolWith('5', 'Estudio de prueba cinco', ''));
+
+    expect(root().querySelector('.owner-chip')).toBeNull();
+    expect(root().textContent).not.toContain('Cargando...');
+
+    await harness.navigateByUrl('/workspace/6/info');
+    respond(1, protocolWith('6', 'Estudio de prueba seis'));
+    expect(root().querySelector('.owner-chip')?.textContent).toContain('Investigador Prueba');
   });
 });
