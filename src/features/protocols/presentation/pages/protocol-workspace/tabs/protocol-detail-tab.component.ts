@@ -12,7 +12,7 @@ import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pip
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
 import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity';
-import { ErrorStateComponent } from '@shared/ui/states/states.component';
+import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/states.component';
 
 @Component({
   selector: 'app-protocol-detail-tab',
@@ -27,6 +27,7 @@ import { ErrorStateComponent } from '@shared/ui/states/states.component';
     ProtocolStatusLabelPipe,
     ProtocolStatusClassPipe,
     ErrorStateComponent,
+    LoadingStateComponent,
   ],
   template: `
     <div class="tab-container animate-fade-in" *ngIf="protocol()">
@@ -93,6 +94,8 @@ import { ErrorStateComponent } from '@shared/ui/states/states.component';
             message="No pudimos cargar el cuerpo evaluador."
             (retry)="retryEvaluations()"
           ></app-error-state>
+        } @else if (evaluationsLoading()) {
+          <app-loading-state message="Cargando el cuerpo evaluador…"></app-loading-state>
         } @else {
         <div class="eval-list">
           <div class="eval-card" *ngFor="let ev of evaluations()">

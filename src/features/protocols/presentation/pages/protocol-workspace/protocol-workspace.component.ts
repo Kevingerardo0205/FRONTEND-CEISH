@@ -33,6 +33,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AssignPeersModalComponent } from '../../../../dashboard/presentation/components/assign-peers-modal/assign-peers-modal.component';
+import { PendingPeerAssignmentProtocol } from '@domain/entities/peer-evaluation.entity';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
 
@@ -61,6 +62,16 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
     <!-- Carga y errores (F10 D14): el contenido solo con datos del :id actual -->
     @if (protocol()) {
     <div class="workspace-shell">
+      <!-- F10 D15: la recarga del mismo :id falló; los datos siguen a la vista -->
+      @if (loadError()) {
+        <div class="refresh-error">
+          <app-error-state
+            message="No pudimos actualizar el protocolo."
+            (retry)="reload()"
+          ></app-error-state>
+        </div>
+      }
+
       <!-- MODAL DE ACEPTACIÓN OBLIGATORIO DE TIEMPOS -->
       <app-timeline-acceptance-modal
         *ngIf="showAcceptanceModal()"
@@ -103,6 +114,13 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
             </button>
           </div>
         </div>
+
+        <!-- F10 D15: Asignar Pares espera la aceptación de tiempos del investigador -->
+        @if (awaitingTimelineAcceptance()) {
+          <p class="header-notice" role="status">
+            El investigador aún no acepta los tiempos del comité.
+          </p>
+        }
 
         <!-- 2. Etapas del protocolo (F10 D13): sin estado reconocido no hay barra (F02 §5.3) -->
         @if (workspaceStage(); as stage) {
@@ -289,6 +307,18 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         }
       }
 
+      /* Avisos de la cabecera (F10 D15) */
+      .refresh-error {
+        padding: 1rem 2.5rem 0;
+        background: white;
+      }
+      .header-notice {
+        margin: -1rem 0 1.5rem;
+        color: #92400e;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
       /* Etapas del protocolo (app-stage-bar) */
       .progress-scaffold {
         padding: 0 1rem 1.5rem;
@@ -434,8 +464,9 @@ export class ProtocolWorkspaceComponent implements OnInit {
     this.workspaceService.updateProtocol({
       isTimelineTermsAccepted: true,
     });
+    // F10 D15: aceptar no cambia el estado del protocolo (protocols.service.ts:242-277 del backend).
     this.snackBar.open(
-      '📋 Conformidad aceptada con éxito. Su protocolo ha sido sometido formalmente a evaluación.',
+      'Su aceptación quedó registrada.',
       'Entendido',
       {
         duration: 5000,
@@ -472,11 +503,28 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (
       activeRole &&
       WORKSPACE_ACTION_ROLES.ASSIGN_EVALUATORS.includes(activeRole) &&
-      workspaceStageCode(code) === 'ASIGNACION'
+      workspaceStageCode(code) === 'ASIGNACION' &&
+      p.isTimelineTermsAccepted === true
     ) {
       actions.push({ id: 'ASSIGN_EVALUATORS', label: 'Asignar Pares', icon: 'person_add' });
     }
     return actions;
+  });
+
+  /**
+   * D15: quien puede asignar pares ve, en la etapa ASIGNACION, que falta la aceptación de tiempos
+   * del investigador (por eso aún no sale "Asignar Pares").
+   */
+  awaitingTimelineAcceptance = computed(() => {
+    const p = this.protocol();
+    const activeRole = this.activeRoleFacade.activeRole();
+    return (
+      !!p &&
+      !!activeRole &&
+      WORKSPACE_ACTION_ROLES.ASSIGN_EVALUATORS.includes(activeRole) &&
+      workspaceStageCode(this.statusCode()) === 'ASIGNACION' &&
+      p.isTimelineTermsAccepted !== true
+    );
   });
 
   tabConfig = computed(() => {
@@ -546,31 +594,22 @@ export class ProtocolWorkspaceComponent implements OnInit {
       const p = this.protocol();
       if (!p) return;
 
-      const mappedProtocol: any = {
+      // F10 D15: solo datos reales, sin rellenos ('General', 'Investigador Principal'). El modal
+      // usa id, ceishCode, title, studyType.nombre y principalInvestigatorRecord.fullName; los
+      // demás campos los exige el tipo y el modal no los lee. `GET /protocols/:id` manda
+      // `studyType` como texto (`protocol.mapper.ts:52` del backend), aunque la entidad diga objeto.
+      const rawStudyType: unknown = p.studyType;
+      const studyTypeName =
+        typeof rawStudyType === 'string' ? rawStudyType : (p.studyType?.nombre ?? '');
+      const mappedProtocol: PendingPeerAssignmentProtocol = {
         id: Number(p.id),
         ceishCode: p.code || '',
         title: p.title,
         receptionStatus: p.status,
         isRiskLevelDesignated: false,
-        createdAt: p.submissionDate
-          ? new Date(p.submissionDate).toISOString()
-          : new Date().toISOString(),
-        studyType: p.studyType
-          ? {
-              id: p.studyType.id || 0,
-              codigo: p.studyType.codigo || '',
-              nombre: p.studyType.nombre || 'General',
-            }
-          : {
-              id: 0,
-              codigo: p.studyTypeCode || '',
-              nombre: p.type || 'General',
-            },
-        principalInvestigatorRecord: {
-          id: 0,
-          fullName: p.principalInvestigator || 'Investigador Principal',
-          email: '',
-        },
+        createdAt: p.submissionDate ? new Date(p.submissionDate).toISOString() : '',
+        studyType: { id: p.studyType?.id ?? 0, codigo: p.studyTypeCode || '', nombre: studyTypeName },
+        principalInvestigatorRecord: { id: 0, fullName: p.principalInvestigator || '', email: '' },
       };
 
       const dialogRef = this.dialog.open(AssignPeersModalComponent, {
