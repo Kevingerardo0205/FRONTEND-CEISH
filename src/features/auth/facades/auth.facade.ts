@@ -1,24 +1,9 @@
-import { Injectable, signal, inject, computed } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, tap, catchError } from 'rxjs';
 import { User, AuthResponse, LoginCredentials } from '@domain/entities/user.entity';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
-import {
-  MODULE_UI_MAP,
-  OUT_OF_SCOPE_MENU_PERMISSIONS,
-  PERMISSION_UI_MAP,
-  toSentenceCase,
-  MenuUIItem,
-} from '@shared/constants/menu-ui.config';
-import { Permission, Module } from '@domain/entities/user.entity';
-
-interface SubMenuItem {
-  code: string;
-  label: string;
-  icon: string;
-  path: string;
-}
 
 export const COMMITTEE_ROLES: readonly string[] = ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR'];
 
@@ -40,89 +25,6 @@ export class AuthFacade {
 
   private currentUserSignal = signal<User | null>(null);
   public currentUser = this.currentUserSignal.asReadonly();
-
-  /**
-   * Genera la configuración del menú enriquecida con metadata de UI.
-   * Aplica un "Mapeo Híbrido": Usa nombres amigables si existen, de lo contrario formatea el nombre del backend.
-   */
-  public menuConfig = computed(() => {
-    try {
-      const user = this.currentUser();
-      if (!user) return [];
-
-      const perms = user.fullPermissions || [];
-      if (perms.length === 0) {
-        console.warn(
-          '[AuthFacade] El usuario no tiene permisos detallados (fullPermissions vacíos).',
-        );
-        return [];
-      }
-
-      const modulesMap = new Map<
-        string,
-        {
-          code: string;
-          label: string;
-          icon: string;
-          order: number;
-          subItems: SubMenuItem[];
-        }
-      >();
-
-      const addMenuItem = (item: MenuUIItem, code: string, mod: Module | undefined) => {
-        const modCode = mod?.code || 'MOD_DASHBOARD';
-        const modUI = MODULE_UI_MAP[modCode];
-
-        if (!modulesMap.has(modCode)) {
-          modulesMap.set(modCode, {
-            code: modCode,
-            label: modUI?.label || toSentenceCase(mod?.name || modCode),
-            icon: modUI?.icon || mod?.icon || 'folder',
-            order: mod?.order || 1,
-            subItems: [],
-          });
-        }
-
-        const path = item.path || '/dashboard/home';
-        const subItems = modulesMap.get(modCode)!.subItems;
-
-        if (!subItems.some((sub) => sub.path === path)) {
-          subItems.push({
-            code: code,
-            label: item.label,
-            icon: item.icon || 'chevron_right',
-            path: path,
-          });
-        }
-      };
-
-      perms.forEach((p) => {
-        if (OUT_OF_SCOPE_MENU_PERMISSIONS.has(p.code)) return;
-        const mod = p.module;
-        const permUI = PERMISSION_UI_MAP[p.code];
-
-        if (!permUI && !mod) return;
-
-        if (permUI) {
-          const items = Array.isArray(permUI) ? permUI : [permUI];
-          items.forEach((item) => addMenuItem(item, p.code, mod));
-        } else {
-          const defaultItem: MenuUIItem = {
-            label: toSentenceCase(p.code),
-            icon: 'chevron_right',
-            path: '/dashboard/home',
-          };
-          addMenuItem(defaultItem, p.code, mod);
-        }
-      });
-
-      const finalMenu = Array.from(modulesMap.values()).sort((a, b) => a.order - b.order);
-      return finalMenu;
-    } catch (err) {
-      console.error('[AuthFacade] Error crítico al generar configuración del menú:', err);
-      return [];
-    }
-  });
 
   // Gestión de intentos de login
   private readonly MAX_ATTEMPTS = 3;
