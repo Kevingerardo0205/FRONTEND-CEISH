@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { Component, signal } from '@angular/core';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { Component, NgZone, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { BehaviorSubject, Observable, Subject, map, of, throwError } from 'rxjs';
 import { AppShellComponent } from './app-shell.component';
 import { ActiveRoleFacade } from '../../application/active-role.facade';
 import { GetMenuForRoleUseCase } from '../../application/get-menu-for-role.use-case';
@@ -13,18 +15,38 @@ import { MenuConfigPort } from '@domain/ports/menu-config.port';
 import { MENU_ITEMS, StaticMenuConfigAdapter } from '../../infrastructure/menu.config';
 import { RoleCode } from '@domain/value-objects/role.vo';
 import { appConfig } from 'src/app/app.config';
+import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
+import { MatSidenav } from '@angular/material/sidenav';
+import { formatDate, registerLocaleData } from '@angular/common';
+import localeEs from '@angular/common/locales/es';
+
+// La barra muestra la fecha con locale 'es': la prueba no depende de que otro spec lo registre.
+registerLocaleData(localeEs);
 
 @Component({ standalone: true, template: '' })
 class DummyComponent {}
+
+// F10 D16 (7): el corte escrito a mano. El simulado solo responde a esta consulta, así que
+// otro corte en el componente deja la ventana "ancha" y fallan las pruebas de ventana angosta.
+const NARROW_QUERY = '(max-width: 1023.98px)';
 
 describe('AppShellComponent (T13b)', () => {
   let component: AppShellComponent;
   let fixture: ComponentFixture<AppShellComponent>;
   let router: Router;
+  let narrow$: BehaviorSubject<boolean>;
+
+  const breakpointObserverMock = {
+    observe: (query: string | readonly string[]): Observable<BreakpointState> =>
+      query === NARROW_QUERY
+        ? narrow$.pipe(map((matches) => ({ matches, breakpoints: { [NARROW_QUERY]: matches } })))
+        : of({ matches: false, breakpoints: {} }),
+  };
 
   let mockSessionUser: {
     user$: BehaviorSubject<SessionUser | null>;
     logout: jasmine.Spy;
+    canEnterInvestigatorArea: jasmine.Spy;
   };
 
   let mockActiveRoleFacade: {
@@ -48,7 +70,9 @@ describe('AppShellComponent (T13b)', () => {
         email: 'usuario.prueba@example.test',
       }),
       logout: jasmine.createSpy('logout'),
+      canEnterInvestigatorArea: jasmine.createSpy('canEnterInvestigatorArea').and.returnValue(true),
     };
+    narrow$ = new BehaviorSubject<boolean>(false);
 
     mockActiveRoleFacade = {
       availableRoles: signal<RoleCode[]>(['SECRETARIA', 'EVALUADOR']),
@@ -79,6 +103,8 @@ describe('AppShellComponent (T13b)', () => {
           { path: 'dashboard/profile', component: DummyComponent },
           { path: 'dashboard/notifications/center', component: DummyComponent },
         ]),
+        provideNoopAnimations(),
+        { provide: BreakpointObserver, useValue: breakpointObserverMock },
         { provide: SessionUserPort, useValue: mockSessionUser },
         { provide: ActiveRoleFacade, useValue: mockActiveRoleFacade },
         { provide: MenuConfigPort, useClass: StaticMenuConfigAdapter },
@@ -241,12 +267,65 @@ describe('AppShellComponent (T13b)', () => {
       expect(badge).toBeNull();
     });
 
-    it('el avatar muestra las iniciales del usuario y su nombre', () => {
-      const avatarCircle = fixture.debugElement.query(By.css('.avatar-circle'));
-      const avatarName = fixture.debugElement.query(By.css('.avatar-name'));
+    // F10 D16 (6): reemplaza "el avatar muestra las iniciales del usuario y su nombre" (F00 T13b).
+    it('el avatar es un cuadrado de 40 px con --c-brand, con las iniciales y sin el nombre', () => {
+      const root = document.documentElement;
+      root.style.setProperty('--c-brand', 'rgb(1, 2, 3)');
+      try {
+        const button: HTMLElement = fixture.debugElement.query(By.css('[data-testid="avatar-button"]')).nativeElement;
+        const square = button.querySelector('.avatar-square') as HTMLElement;
+        const style = getComputedStyle(square);
 
-      expect(avatarCircle.nativeElement.textContent.trim()).toBe('UP');
-      expect(avatarName.nativeElement.textContent.trim()).toBe('Usuario Prueba');
+        expect(square.textContent?.trim()).toBe('UP');
+        expect(style.width).toBe('40px');
+        expect(style.height).toBe('40px');
+        expect(style.borderRadius).not.toBe('50%');
+        expect(style.backgroundColor).toBe('rgb(1, 2, 3)');
+        expect(button.textContent).not.toContain('Usuario Prueba');
+        expect(button.querySelector('.status-indicator')).toBeNull();
+      } finally {
+        root.style.removeProperty('--c-brand');
+      }
+    });
+
+    it('muestra "Panel de Gestión" con la fecha de hoy (F10 D16 (3))', () => {
+      const topbar: HTMLElement = fixture.debugElement.query(By.css('.shell-topbar')).nativeElement;
+      expect(topbar.querySelector('.topbar-title')?.textContent?.trim()).toBe('Panel de Gestión');
+      expect(topbar.querySelector('[data-testid="topbar-date"]')?.textContent?.trim()).toBe(
+        formatDate(new Date(), 'EEEE, d MMMM', 'es'),
+      );
+      expect(topbar.textContent).not.toContain('Comité de Ética de Investigación en Seres Humanos');
+    });
+
+    it('la barra mide 64 px y el menú lateral 280 px (F10 D16 (2), (3))', () => {
+      const topbar: HTMLElement = fixture.debugElement.query(By.css('.shell-topbar')).nativeElement;
+      const sidebar: HTMLElement = fixture.debugElement.query(By.css('mat-sidenav.shell-sidebar')).nativeElement;
+      const header: HTMLElement = fixture.debugElement.query(By.css('.sidebar-header')).nativeElement;
+      const content: HTMLElement = fixture.debugElement.query(By.css('.shell-content')).nativeElement;
+
+      expect(getComputedStyle(topbar).height).toBe('64px');
+      expect(getComputedStyle(sidebar).width).toBe('280px');
+      expect(getComputedStyle(header).minHeight).toBe('64px');
+      expect(getComputedStyle(content).paddingTop).toBe('40px');
+      expect(getComputedStyle(content).maxWidth).toBe('1600px');
+    });
+
+    it('la campana no tiene punto rojo ni hay contadores sin fuente en la barra (F00 D7)', () => {
+      const topbar: HTMLElement = fixture.debugElement.query(By.css('.shell-topbar')).nativeElement;
+      expect(topbar.querySelector('.notification-badge')).toBeNull();
+    });
+
+    it('el menú de usuario no tiene "Configuración" y muestra la etiqueta del rol activo (F10 D16 (6), F00 D14)', () => {
+      mockActiveRoleFacade.activeRole.set('EVALUADOR');
+      fixture.detectChanges();
+      fixture.debugElement.query(By.css('[data-testid="avatar-button"]')).nativeElement.click();
+      fixture.detectChanges();
+
+      const panel = document.querySelector('.user-dropdown-panel') as HTMLElement;
+      const items = Array.from(panel.querySelectorAll('[mat-menu-item]')).map((el) => el.textContent?.trim());
+      expect(items.some((text) => text?.includes('Configuración'))).toBeFalse();
+      expect(items.some((text) => text?.includes('Mi perfil'))).toBeTrue();
+      expect(panel.querySelector('[data-testid="role-badge"]')?.textContent?.trim()).toBe('Evaluador');
     });
 
     it('el menú de usuario muestra el selector de rol (T13c) con los roles disponibles', () => {
@@ -337,14 +416,16 @@ describe('AppShellComponent (T13b)', () => {
 
     it('Cerrar sesión toma el gris de --c-text-2 (F10 D6) y su ícono va oculto', () => {
       const root = document.documentElement;
+      const logout: HTMLElement = fixture.debugElement.query(
+        By.css('.sidebar-footer button.logout-link'),
+      ).nativeElement;
+      const icon = logout.querySelector('mat-icon') as HTMLElement;
+      // Sin la transición de color: el estilo computado daría el color anterior (T10-5a, ya pintado
+      // dentro de MatSidenav cuando cambia el token).
+      logout.style.transition = 'none';
       // Color testigo: si el botón lo toma, el gris sale del token y no de un color escrito a mano.
       root.style.setProperty('--c-text-2', 'rgb(1, 2, 3)');
       try {
-        const logout: HTMLElement = fixture.debugElement.query(
-          By.css('.sidebar-footer button.logout-link'),
-        ).nativeElement;
-        const icon = logout.querySelector('mat-icon') as HTMLElement;
-
         expect(getComputedStyle(logout).color).toBe('rgb(1, 2, 3)');
         expect(getComputedStyle(icon).color).toBe('rgb(1, 2, 3)');
         expect(icon.getAttribute('aria-hidden')).toBe('true');
@@ -391,6 +472,37 @@ describe('AppShellComponent (T13b)', () => {
       expect(assistant).toBeNull();
     });
 
+    it('el asistente va fuera del contenedor del menú, para que el menú en modo over no lo tape (T10-5a)', () => {
+      mockActiveRoleFacade.activeRole.set('SECRETARIA');
+      component.allowedAssistantRoles.set(['SECRETARIA']);
+      fixture.detectChanges();
+
+      const assistant: HTMLElement = fixture.debugElement.query(By.css('app-ai-assistant')).nativeElement;
+      expect(assistant.closest('mat-sidenav-container')).toBeNull();
+    });
+
+    // Trasladadas de dashboard.page.spec.ts (F00 D14): el asistente decide con el rol activo.
+    it('D14: con EVALUADOR activo y asistente solo de SECRETARIA, no se muestra; al volver a SECRETARIA, sí', () => {
+      mockAiAssistantRepo.getAllowedRoles.and.returnValue(of({ allowedRoles: ['SECRETARIA'] }));
+      const testFixture = TestBed.createComponent(AppShellComponent);
+      mockActiveRoleFacade.activeRole.set('EVALUADOR');
+      testFixture.detectChanges();
+      expect(testFixture.debugElement.query(By.css('app-ai-assistant'))).toBeNull();
+
+      mockActiveRoleFacade.activeRole.set('SECRETARIA');
+      testFixture.detectChanges();
+      expect(testFixture.debugElement.query(By.css('app-ai-assistant'))).not.toBeNull();
+    });
+
+    it('D14: la etiqueta del rol del menú de usuario sigue al rol activo', () => {
+      mockActiveRoleFacade.activeRole.set('SECRETARIA');
+      fixture.detectChanges();
+      expect(component.activeRoleLabel()).toBe('Secretaría');
+      mockActiveRoleFacade.activeRole.set('PRESIDENTE');
+      fixture.detectChanges();
+      expect(component.activeRoleLabel()).toBe('Presidente');
+    });
+
     it('la lista de roles de respaldo es la del backend (sin ADMIN_TI ni INVESTIGADOR)', () => {
       mockAiAssistantRepo.getAllowedRoles.and.returnValue(
         throwError(() => new Error('Error al cargar roles')),
@@ -413,6 +525,227 @@ describe('AppShellComponent (T13b)', () => {
     it('el botón de cerrar sesión tiene aria-label="Cerrar sesión"', () => {
       const logoutBtn = fixture.debugElement.query(By.css('button.logout-link'));
       expect(logoutBtn.nativeElement.getAttribute('aria-label')).toBe('Cerrar sesión');
+    });
+  });
+
+  describe('Marca (F10 D16 (5))', () => {
+    it('la marca es exactamente "CEISH Espoch", sin ícono, y "comité de ética" no aparece en el marco', () => {
+      const shell: HTMLElement = fixture.nativeElement;
+      const header = shell.querySelector('.sidebar-header') as HTMLElement;
+
+      expect(shell.querySelector('[data-testid="brand"]')?.textContent?.trim()).toBe('CEISH Espoch');
+      expect(header.textContent?.trim()).toBe('CEISH Espoch');
+      expect(header.querySelector('mat-icon')).toBeNull();
+      expect((shell.textContent ?? '').toLowerCase()).not.toContain('comité de ética');
+    });
+
+    for (const role of ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`con ${role} activo la marca sigue siendo "CEISH Espoch" y sin "comité de ética"`, () => {
+        mockActiveRoleFacade.activeRole.set(role);
+        fixture.detectChanges();
+        const shell: HTMLElement = fixture.nativeElement;
+        expect(shell.querySelector('.sidebar-header')?.textContent?.trim()).toBe('CEISH Espoch');
+        expect((shell.textContent ?? '').toLowerCase()).not.toContain('comité de ética');
+      });
+    }
+  });
+
+  describe('Botón del menú (F10 D16 (4))', () => {
+    const toggle = (): HTMLButtonElement =>
+      fixture.debugElement.query(By.css('[data-testid="menu-toggle"]')).nativeElement;
+    const sidenav = (): MatSidenav => fixture.debugElement.query(By.directive(MatSidenav)).componentInstance;
+
+    it('con el menú abierto dice "Ocultar menú", aria-expanded="true", controla el menú y muestra first_page', () => {
+      const button = toggle();
+      expect(button.getAttribute('aria-label')).toBe('Ocultar menú');
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(button.getAttribute('aria-controls')).toBe('shell-menu');
+      expect(fixture.nativeElement.querySelector('#shell-menu')?.tagName.toLowerCase()).toBe('mat-sidenav');
+      expect(button.querySelector('mat-icon')?.textContent?.trim()).toBe('first_page');
+      expect(button.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('al pulsarlo pliega el menú: "Mostrar menú", aria-expanded="false" y last_page; al pulsarlo otra vez lo abre', () => {
+      toggle().click();
+      fixture.detectChanges();
+      expect(sidenav().opened).toBeFalse();
+      expect(toggle().getAttribute('aria-label')).toBe('Mostrar menú');
+      expect(toggle().getAttribute('aria-expanded')).toBe('false');
+      expect(toggle().querySelector('mat-icon')?.textContent?.trim()).toBe('last_page');
+
+      toggle().click();
+      fixture.detectChanges();
+      expect(sidenav().opened).toBeTrue();
+      expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('mide 40×40, con fondo --c-brand e ícono blanco', () => {
+      const root = document.documentElement;
+      // Sin la transición del hover: el estilo computado daría el color anterior.
+      toggle().style.transition = 'none';
+      root.style.setProperty('--c-brand', 'rgb(1, 2, 3)');
+      try {
+        const style = getComputedStyle(toggle());
+        expect(style.width).toBe('40px');
+        expect(style.height).toBe('40px');
+        expect(style.backgroundColor).toBe('rgb(1, 2, 3)');
+        expect(style.borderTopWidth).toBe('1px');
+        expect(style.color).toBe('rgb(255, 255, 255)');
+      } finally {
+        root.style.removeProperty('--c-brand');
+      }
+    });
+
+    it('en hover pasa a --c-primary-dark y el foco visible es de 2 px --c-primary', () => {
+      const rules = Array.from(document.styleSheets)
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+      const hover = rules.find((rule) => /\.menu-toggle-btn[^,\s]*:hover/.test(rule.selectorText));
+      const focus = rules.find((rule) => /\.menu-toggle-btn[^,\s]*:focus-visible/.test(rule.selectorText));
+      expect(hover?.style.getPropertyValue('background-color')).toContain('--c-primary-dark');
+      expect(focus?.style.getPropertyValue('outline')).toContain('2px solid');
+      expect(focus?.style.getPropertyValue('outline')).toContain('--c-primary');
+    });
+  });
+
+  describe('Ventana angosta (F10 D16 (7))', () => {
+    const sidenav = (f = fixture): MatSidenav => f.debugElement.query(By.directive(MatSidenav)).componentInstance;
+    const backdropShown = (f = fixture): boolean =>
+      !!f.nativeElement.querySelector('.mat-drawer-backdrop.mat-drawer-shown');
+
+    it('desde 1024 px el menú va al lado del contenido, abierto, sin fondo oscuro', () => {
+      expect(sidenav().mode).toBe('side');
+      expect(sidenav().opened).toBeTrue();
+      expect(backdropShown()).toBeFalse();
+    });
+
+    it('desde 1024 px, elegir una opción no cierra el menú', () => {
+      fixture.debugElement.query(By.css('.sidebar-nav .nav-link')).nativeElement.click();
+      fixture.detectChanges();
+      expect(sidenav().opened).toBeTrue();
+    });
+
+    it('por debajo de 1024 px el menú va encima del contenido y cerrado al cargar', () => {
+      narrow$.next(true);
+      const narrowFixture = TestBed.createComponent(AppShellComponent);
+      narrowFixture.detectChanges();
+
+      expect(sidenav(narrowFixture).mode).toBe('over');
+      expect(sidenav(narrowFixture).opened).toBeFalse();
+      expect(narrowFixture.nativeElement.querySelector('[data-testid="menu-toggle"]').getAttribute('aria-expanded')).toBe(
+        'false',
+      );
+    });
+
+    it('por debajo de 1024 px, abierto con el botón muestra el fondo oscuro y se cierra al elegir una opción', async () => {
+      narrow$.next(true);
+      const narrowFixture = TestBed.createComponent(AppShellComponent);
+      narrowFixture.detectChanges();
+
+      narrowFixture.nativeElement.querySelector('[data-testid="menu-toggle"]').click();
+      narrowFixture.detectChanges();
+      await narrowFixture.whenStable();
+      narrowFixture.detectChanges();
+      expect(sidenav(narrowFixture).opened).toBeTrue();
+      expect(backdropShown(narrowFixture)).toBeTrue();
+
+      narrowFixture.nativeElement.querySelector('.sidebar-nav .nav-link').click();
+      narrowFixture.detectChanges();
+      expect(sidenav(narrowFixture).opened).toBeFalse();
+    });
+
+    it('al pasar de ancha a angosta el menú se cierra y al volver a ancha se abre', () => {
+      narrow$.next(true);
+      fixture.detectChanges();
+      expect(sidenav().mode).toBe('over');
+      expect(sidenav().opened).toBeFalse();
+
+      narrow$.next(false);
+      fixture.detectChanges();
+      expect(sidenav().mode).toBe('side');
+      expect(sidenav().opened).toBeTrue();
+    });
+  });
+
+  describe('INVESTIGADOR sin verificar (F10 D9, trasladado del sidebar de DashboardPage)', () => {
+    it('muestra el aviso en lugar de sus opciones y conserva Cerrar sesión', () => {
+      mockSessionUser.canEnterInvestigatorArea.and.returnValue(false);
+      mockActiveRoleFacade.activeRole.set('INVESTIGADOR');
+      fixture.detectChanges();
+
+      const nav: HTMLElement = fixture.debugElement.query(By.css('nav[aria-label="Menú principal"]')).nativeElement;
+      expect(nav.querySelector('[data-testid="verify-email-notice"]')?.textContent?.trim()).toBe(
+        'Verifica tu correo para crear y ver tus protocolos.',
+      );
+      expect(nav.querySelectorAll('.nav-link').length).toBe(0);
+      expect(fixture.nativeElement.querySelector('.sidebar-footer .logout-link .nav-label')?.textContent?.trim()).toBe(
+        'Cerrar sesión',
+      );
+    });
+
+    it('con el correo verificado ve sus 3 opciones y no el aviso', () => {
+      mockSessionUser.canEnterInvestigatorArea.and.returnValue(true);
+      mockActiveRoleFacade.activeRole.set('INVESTIGADOR');
+      fixture.detectChanges();
+
+      const labels = fixture.debugElement
+        .queryAll(By.css('.sidebar-nav .nav-label'))
+        .map((el) => el.nativeElement.textContent.trim());
+      expect(labels).toEqual(['Mis protocolos', 'Nuevo protocolo', 'Subsanaciones']);
+      expect(fixture.nativeElement.querySelector('[data-testid="verify-email-notice"]')).toBeNull();
+    });
+
+    it('el aviso es solo del rol activo INVESTIGADOR: SECRETARIA ve sus opciones aunque la regla diga que no', () => {
+      mockSessionUser.canEnterInvestigatorArea.and.returnValue(false);
+      mockActiveRoleFacade.activeRole.set('SECRETARIA');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="verify-email-notice"]')).toBeNull();
+      expect(fixture.debugElement.queryAll(By.css('.sidebar-nav .nav-link')).length).toBe(5);
+    });
+  });
+
+  describe('Riesgo OnPush (F10 T10-5a): pantallas con detección por defecto dentro del AppShell', () => {
+    it('una pantalla que cambia un campo dentro de un subscribe se ve actualizada dentro del AppShell', async () => {
+      const datos$ = new Subject<string>();
+
+      // Como las pantallas de /dashboard/...: detección por defecto y un campo simple (sin signal
+      // ni async pipe) que cambia cuando llega la respuesta.
+      @Component({ standalone: true, template: '<p data-testid="valor">{{ valor }}</p>' })
+      class PantallaPorDefecto {
+        valor = 'inicial';
+        constructor() {
+          datos$.subscribe((v) => (this.valor = v));
+        }
+      }
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([
+            { path: '', component: AppShellComponent, children: [{ path: 'pantalla', component: PantallaPorDefecto }] },
+          ]),
+          provideNoopAnimations(),
+          { provide: SessionUserPort, useValue: mockSessionUser },
+          { provide: ActiveRoleFacade, useValue: mockActiveRoleFacade },
+          { provide: MenuConfigPort, useClass: StaticMenuConfigAdapter },
+          { provide: GetPendingCountUseCase, useValue: mockPendingCountUseCase },
+          { provide: IAiAssistantRepositoryPort, useValue: mockAiAssistantRepo },
+        ],
+      });
+      const harness = await RouterTestingHarness.create('/pantalla');
+      const valor = () =>
+        (harness.routeNativeElement?.ownerDocument.querySelector('[data-testid="valor"]') as HTMLElement)
+          ?.textContent?.trim();
+      expect(valor()).toBe('inicial');
+
+      // La respuesta llega dentro de la zona, como un HttpClient; luego corre la detección desde la
+      // raíz, como ApplicationRef.tick() en la app (el fixture del harness no está en ApplicationRef).
+      TestBed.inject(NgZone).run(() => datos$.next('actualizado'));
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+
+      expect(valor()).toBe('actualizado');
     });
   });
 

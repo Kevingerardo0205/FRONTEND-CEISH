@@ -26,7 +26,7 @@ No se crea una sección nueva en `src/features/`: el menú por rol ya existe en 
 
 ## 2. Rutas
 
-No cambia ninguna ruta en T10-1 a T10-4. Las rutas del menú y sus guards están en spec-ui §3. T10-5 (un solo layout) cambia `app.routes.ts:104-131` y `dashboard/routes.ts:122-129`.
+No cambia ninguna ruta en T10-1 a T10-4. Las rutas del menú y sus guards están en spec-ui §3. T10-5 (un solo layout) cambia `app.routes.ts:104-131` y `dashboard/routes.ts:122-129`; T10-5a no cambia rutas (solo el aspecto del AppShell), las cambian T10-5b a T10-5d.
 
 ## 3. Mapa de equivalencias (Paso 0, 10/11/2026)
 
@@ -78,4 +78,4 @@ Con cada rol (la usuaria, sin contraseñas en los prompts): el menú que sale, q
 |---|---|---|
 | `MENU_ITEMS` y el menú viejo (`AuthFacade.menuConfig()` + `menu-ui.config.ts`) | Hasta T10-2 el sidebar de `DashboardPage` sigue con el viejo | T10-3 |
 | `getIcon` del AppShell y el campo `icon` | Hasta T10-4 | T10-4 |
-| Dos layouts (AppShell y `DashboardPage`) | F00 D1 | T10-5 (igual que T14 de F00) |
+| Dos layouts (AppShell y `DashboardPage`) | F00 D1 | T10-5a a T10-5d (D16): T10-5a aspecto, T10-5b PRESIDENTE y EVALUADOR, T10-5c INVESTIGADOR, T10-5d retiro (igual que T14 de F00) |
