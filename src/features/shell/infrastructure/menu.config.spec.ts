@@ -25,6 +25,26 @@ describe('StaticMenuConfigAdapter', () => {
     }
   });
 
+  it('cada opción tiene el ícono acordado; los de SECRETARIA son los que ya veía (F10 D5, T10-4)', () => {
+    // Copia escrita a mano de la tabla de T10-4; los de SECRETARIA, de getIcon antes de T10-4.
+    const expectedIcons: Record<string, string> = {
+      pendientes: 'assignment_late',
+      protocolos: 'description',
+      convocatorias: 'event_note',
+      reportes: 'bar_chart',
+      configuracion: 'settings',
+      'investigador-mis-protocolos': 'description',
+      'investigador-nuevo-protocolo': 'note_add',
+      'investigador-subsanaciones': 'edit_note',
+      'presidente-sesiones': 'groups',
+      'presidente-reportes': 'bar_chart',
+      'evaluador-evaluaciones': 'fact_check',
+    };
+
+    const icons = Object.fromEntries(MENU_ITEMS.map((item) => [item.id, item.icon]));
+    expect(icons).toEqual(expectedIcons);
+  });
+
   it('asigna exactamente un rol a cada entrada y no incluye la ruta /dashboard/home', () => {
     expect(MENU_ITEMS.every((item) => item.roles.length === 1)).toBeTrue();
     expect(MENU_ITEMS.some((item) => item.route === '/dashboard/home')).toBeFalse();

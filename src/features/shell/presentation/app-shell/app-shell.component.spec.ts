@@ -10,7 +10,7 @@ import { GetPendingCountUseCase } from '../../application/get-pending-count.use-
 import { SessionUser, SessionUserPort } from '../../domain/session-user.port';
 import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
 import { MenuConfigPort } from '@domain/ports/menu-config.port';
-import { StaticMenuConfigAdapter } from '../../infrastructure/menu.config';
+import { MENU_ITEMS, StaticMenuConfigAdapter } from '../../infrastructure/menu.config';
 import { RoleCode } from '@domain/value-objects/role.vo';
 import { appConfig } from 'src/app/app.config';
 
@@ -276,6 +276,99 @@ describe('AppShellComponent (T13b)', () => {
 
       expect(mockSessionUser.logout).toHaveBeenCalledTimes(1);
       expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
+    });
+  });
+
+  describe('Íconos y Cerrar sesión (F10 T10-4)', () => {
+    // Texto que queda para el nombre accesible: sin los nodos con aria-hidden="true".
+    const accessibleText = (el: Element): string => {
+      const clone = el.cloneNode(true) as Element;
+      clone.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+      return (clone.textContent ?? '').replace(/\s+/g, ' ').trim();
+    };
+
+    it('cada opción pinta el ícono de su configuración, no uno elegido por id', () => {
+      const useCase = TestBed.inject(GetMenuForRoleUseCase);
+      spyOn(useCase, 'execute').and.returnValue([
+        {
+          id: 'pendientes',
+          label: 'Mis pendientes',
+          route: '/pendientes',
+          roles: ['SECRETARIA'],
+          icon: 'star',
+        },
+        {
+          id: 'protocolos',
+          label: 'Protocolos',
+          route: '/protocolos',
+          roles: ['SECRETARIA'],
+          icon: 'insights',
+        },
+      ]);
+      // Otro rol activo para que el menú se vuelva a calcular con el caso de uso espiado.
+      mockActiveRoleFacade.activeRole.set('PRESIDENTE');
+      fixture.detectChanges();
+
+      const icons = fixture.debugElement
+        .queryAll(By.css('.sidebar-nav .nav-link mat-icon'))
+        .map((el) => el.nativeElement.textContent.trim());
+      expect(icons).toEqual(['star', 'insights']);
+    });
+
+    it('ya no elige los íconos con getIcon', () => {
+      expect('getIcon' in component).toBeFalse();
+    });
+
+    it('los íconos de SECRETARIA son los de MENU_ITEMS, ocultos para lectores de pantalla, y el nombre accesible es el texto', () => {
+      const expected = MENU_ITEMS.filter((item) => item.roles.includes('SECRETARIA'));
+      const links: HTMLElement[] = fixture.debugElement
+        .queryAll(By.css('.sidebar-nav .nav-link'))
+        .map((el) => el.nativeElement);
+      expect(links.length).toBe(expected.length);
+
+      links.forEach((link, index) => {
+        const icon = link.querySelector('mat-icon');
+        const context = expected[index].label;
+        expect(icon?.textContent?.trim()).withContext(context).toBe(expected[index].icon);
+        expect(icon?.getAttribute('aria-hidden')).withContext(context).toBe('true');
+        expect(accessibleText(link)).withContext(context).toBe(expected[index].label);
+      });
+    });
+
+    it('Cerrar sesión toma el gris de --c-text-2 (F10 D6) y su ícono va oculto', () => {
+      const root = document.documentElement;
+      // Color testigo: si el botón lo toma, el gris sale del token y no de un color escrito a mano.
+      root.style.setProperty('--c-text-2', 'rgb(1, 2, 3)');
+      try {
+        const logout: HTMLElement = fixture.debugElement.query(
+          By.css('.sidebar-footer button.logout-link'),
+        ).nativeElement;
+        const icon = logout.querySelector('mat-icon') as HTMLElement;
+
+        expect(getComputedStyle(logout).color).toBe('rgb(1, 2, 3)');
+        expect(getComputedStyle(icon).color).toBe('rgb(1, 2, 3)');
+        expect(icon.getAttribute('aria-hidden')).toBe('true');
+        expect(accessibleText(logout)).toBe('Cerrar sesión');
+      } finally {
+        root.style.removeProperty('--c-text-2');
+      }
+    });
+
+    it('en hover, Cerrar sesión sigue en --c-text-2 sobre --c-primary-soft (F10 D6; sin el índigo de .nav-link:hover)', () => {
+      // :hover no se puede forzar desde la prueba: se leen las reglas de hover de los estilos del componente.
+      const hoverRules = Array.from(document.styleSheets)
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule)
+        // Solo las del AppShell (.sidebar-footer); el sidebar de DashboardPage usa .sidenav-footer.
+        .filter((rule) =>
+          /\.sidebar-footer[^,]*\.logout-link[^,\s]*:hover/.test(rule.selectorText),
+        );
+
+      const linkHover = hoverRules.find((rule) => !rule.selectorText.includes('nav-icon'));
+      const iconHover = hoverRules.find((rule) => rule.selectorText.includes('nav-icon'));
+      expect(linkHover?.style.getPropertyValue('color')).toContain('--c-text-2');
+      expect(linkHover?.style.getPropertyValue('background-color')).toContain('--c-primary-soft');
+      expect(iconHover?.style.getPropertyValue('color')).toContain('--c-text-2');
     });
   });
 

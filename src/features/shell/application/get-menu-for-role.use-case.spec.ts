@@ -64,8 +64,14 @@ describe('GetMenuForRoleUseCase', () => {
           provide: MenuConfigPort,
           useValue: {
             getItems: () => [
-              { id: 'a', label: 'A', route: '/a', roles: ['EVALUADOR'] },
-              { id: 'b', label: 'B', route: '/b', roles: ['EVALUADOR', 'SECRETARIA'] },
+              { id: 'a', label: 'A', route: '/a', roles: ['EVALUADOR'], icon: 'star' },
+              {
+                id: 'b',
+                label: 'B',
+                route: '/b',
+                roles: ['EVALUADOR', 'SECRETARIA'],
+                icon: 'star',
+              },
             ],
           },
         },
