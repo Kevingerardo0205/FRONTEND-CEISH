@@ -14,4 +14,10 @@ export interface SessionUser {
 export abstract class SessionUserPort {
   abstract readonly user$: Observable<SessionUser | null>;
   abstract logout(): void;
+  /**
+   * F10 D9: la misma regla que VerificadoGuard (roles del comité o correo verificado).
+   * El AppShell la llama dentro de un computed: la implementación debe leer signals (como
+   * AuthFacade.currentUser) para que el aviso cambie sin recargar al verificar el correo.
+   */
+  abstract canEnterInvestigatorArea(): boolean;
 }

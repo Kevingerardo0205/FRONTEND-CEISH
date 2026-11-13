@@ -34,4 +34,8 @@ export class AuthSessionUserAdapter extends SessionUserPort {
   logout(): void {
     this.authFacade.logout();
   }
+
+  canEnterInvestigatorArea(): boolean {
+    return this.authFacade.canEnterInvestigatorArea();
+  }
 }

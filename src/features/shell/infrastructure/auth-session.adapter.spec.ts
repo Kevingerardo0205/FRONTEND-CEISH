@@ -29,10 +29,14 @@ describe('AuthSessionUserAdapter', () => {
   const setup = (initial: { nombre: string; email: string } | null) => {
     const user = signal(initial);
     const logout = jasmine.createSpy('logout');
+    const canEnterInvestigatorArea = jasmine.createSpy('canEnterInvestigatorArea').and.returnValue(false);
     TestBed.configureTestingModule({
-      providers: [AuthSessionUserAdapter, { provide: AuthFacade, useValue: { currentUser: user, logout } }],
+      providers: [
+        AuthSessionUserAdapter,
+        { provide: AuthFacade, useValue: { currentUser: user, logout, canEnterInvestigatorArea } },
+      ],
     });
-    return { user, logout, adapter: TestBed.inject(AuthSessionUserAdapter) };
+    return { user, logout, canEnterInvestigatorArea, adapter: TestBed.inject(AuthSessionUserAdapter) };
   };
 
   it('emite nombre y correo del usuario de la sesión, y null sin sesión', () => {
@@ -51,5 +55,13 @@ describe('AuthSessionUserAdapter', () => {
     const { logout, adapter } = setup(null);
     adapter.logout();
     expect(logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('canEnterInvestigatorArea delega en la regla única de AuthFacade (F10 D9)', () => {
+    const { canEnterInvestigatorArea, adapter } = setup(null);
+    expect(adapter.canEnterInvestigatorArea()).toBeFalse();
+    canEnterInvestigatorArea.and.returnValue(true);
+    expect(adapter.canEnterInvestigatorArea()).toBeTrue();
+    expect(canEnterInvestigatorArea).toHaveBeenCalledTimes(2);
   });
 });
