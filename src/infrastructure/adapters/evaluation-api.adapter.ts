@@ -32,6 +32,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Asignación tal como la devuelve el backend (`EvaluationAssignmentEntity`). */
+interface RawPeerAssignment {
+  id?: number | string | null;
+  evaluatorId: number | string;
+  evaluatorProfile: string;
+  isAssignedForAnnex10?: boolean;
+  deadlineDate?: string | null;
+}
+
 interface RawProtocolInfo {
   id?: number;
   ceishCode?: string;
@@ -265,12 +274,28 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     protocolId: string,
     evaluatorIds: number[],
   ): Observable<AssignEvaluatorsResponse> {
+    // F10 D15: el backend responde { data: EvaluationAssignmentEntity[] }; se traduce aquí.
     return this.apiClient
-      .post<ApiEnvelope<AssignEvaluatorsResponse>>(
+      .post<ApiEnvelope<RawPeerAssignment[]>>(
         ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ASSIGN_PEERS(protocolId),
         { evaluatorIds },
       )
-      .pipe(map((res) => res.data || (res as unknown as AssignEvaluatorsResponse)));
+      .pipe(
+        map((res) => {
+          if (!Array.isArray(res?.data)) {
+            throw new Error('Respuesta inesperada del servidor al asignar los evaluadores.');
+          }
+          return {
+            assignments: res.data.map((a) => ({
+              assignmentId: a.id ?? null,
+              evaluatorId: Number(a.evaluatorId),
+              profile: a.evaluatorProfile,
+              isRiskPeer: a.isAssignedForAnnex10 === true,
+              deadlineDate: a.deadlineDate ?? null,
+            })),
+          };
+        }),
+      );
   }
 
   getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]> {

@@ -155,6 +155,8 @@ describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14, S-1g)', () => {
     workspace.evaluationsLoading.set(true);
     TestBed.tick();
     expect(el.textContent).not.toContain(EMPTY_TEXT);
+    // F10 D15: mientras carga lo dice.
+    expect(el.querySelector('app-loading-state')?.textContent).toContain('Cargando el cuerpo evaluador…');
   });
 });
 

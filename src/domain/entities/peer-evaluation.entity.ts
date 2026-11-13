@@ -38,14 +38,23 @@ export interface PeerAssignmentEntity {
   };
 }
 
+/**
+ * Una asignación creada por POST /evaluations/protocols/:id/assign-peer-evaluators (F10 D15). El
+ * backend devuelve un arreglo de `EvaluationAssignmentEntity` (`assign-evaluators.use-case.ts`).
+ */
+export interface PeerAssignmentResult {
+  assignmentId: number | string | null;
+  evaluatorId: number;
+  /** Código del perfil (JURIDICO, SOCIEDAD_CIVIL, METODOLOGICO, SALUD). */
+  profile: string;
+  /** Par de riesgo: elegido al azar para el Anexo 10 (`isAssignedForAnnex10`). */
+  isRiskPeer: boolean;
+  /** 'YYYY-MM-DD', o null hasta que el protocolo entre en una convocatoria (RF-12.7(a)). */
+  deadlineDate: string | null;
+}
+
 export interface AssignEvaluatorsResponse {
-  message: string;
-  totalEvaluators: number;
-  riskEvaluators: number[];
-  allEvaluators: number[];
-  versionId?: number;
-  evaluationAssignmentIds?: number[];
-  deadline: string;
+  assignments: PeerAssignmentResult[];
 }
 
 export interface RiskLevelInfo {
@@ -94,6 +103,24 @@ export const PEER_EVALUATOR_PROFILES = [
   'SALUD',
 ] as const;
 export type PeerEvaluatorProfile = (typeof PEER_EVALUATOR_PROFILES)[number];
+
+/**
+ * Cuota de la asignación de pares (F10 D15). Única fuente de la instrucción, la etiqueta y la
+ * validación del modal de pares. Copia lo que exige hoy el backend `dev`:
+ * `evaluator-assignment-adapter.service.ts:56-64` (exactamente 4 evaluadores) y `:109-114` (uno por
+ * cada perfil: JURIDICO, SOCIEDAD_CIVIL, METODOLOGICO, SALUD), y `random-risk-selector.service.ts`
+ * (2 pares de riesgo al azar, nunca SOCIEDAD_CIVIL).
+ * Pendiente de alinear: la reunión del 06/11/2026 decidió 5 perfiles (con Bioético), mínimo 2 pares
+ * y que asigna la Presidenta.
+ */
+const PEERS_PER_PROFILE = 1;
+export const PEER_ASSIGNMENT_QUOTA = {
+  profiles: PEER_EVALUATOR_PROFILES,
+  perProfile: PEERS_PER_PROFILE,
+  total: PEER_EVALUATOR_PROFILES.length * PEERS_PER_PROFILE,
+  riskPeers: 2,
+  riskExcludedProfile: 'SOCIEDAD_CIVIL' as PeerEvaluatorProfile,
+} as const;
 
 export type ActiveAssignmentStatus = 'SUGGESTED' | 'ASSIGNED' | 'COMPLETED';
 

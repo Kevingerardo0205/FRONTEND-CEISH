@@ -11,7 +11,38 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 import {
   PendingPeerAssignmentProtocol,
   AssignEvaluatorsResponse,
+  PEER_ASSIGNMENT_QUOTA,
 } from '@domain/entities/peer-evaluation.entity';
+import { ErrorStateComponent } from '@shared/ui/states/states.component';
+import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
+import {
+  NO_PROFILE_LABEL,
+  formatDeadlineDate,
+  peerEvaluatorProfileLabel,
+} from '@features/evaluations/presentation/utils/active-assignment-view.util';
+
+/** "a, b, c y d" (F10 D15). */
+function joinSpanish(items: readonly string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
+}
+
+const QUOTA_TOTAL = PEER_ASSIGNMENT_QUOTA.total;
+
+/** Textos del modal armados desde PEER_ASSIGNMENT_QUOTA (F10 D15): nada escrito a mano. */
+export const PEER_QUOTA_TEXT = {
+  instruction:
+    `Seleccione exactamente ${QUOTA_TOTAL} evaluadores, ` +
+    `${PEER_ASSIGNMENT_QUOTA.perProfile === 1 ? 'uno' : PEER_ASSIGNMENT_QUOTA.perProfile} por cada perfil: ` +
+    `${joinSpanish(PEER_ASSIGNMENT_QUOTA.profiles.map((p) => peerEvaluatorProfileLabel(p)))}. ` +
+    `El sistema elegirá al azar a ${PEER_ASSIGNMENT_QUOTA.riskPeers}, sin contar ` +
+    `${peerEvaluatorProfileLabel(PEER_ASSIGNMENT_QUOTA.riskExcludedProfile)}, para la estratificación de riesgo.`,
+  selectLabel: `Evaluadores (exactamente ${QUOTA_TOTAL})`,
+  tooMany: `Seleccione solo ${QUOTA_TOTAL} evaluadores.`,
+} as const;
+
+export const NO_DEADLINE_TEXT =
+  'La fecha límite del dictamen se fija cuando el protocolo entre en una convocatoria.';
 
 @Component({
   selector: 'app-assign-peers-modal',
@@ -25,6 +56,7 @@ import {
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+    ErrorStateComponent,
   ],
   template: `
     <div class="modal-container">
@@ -39,35 +71,39 @@ import {
       </div>
 
       <div mat-dialog-content class="modal-content">
+        <!-- F10 D15: solo los datos que existen, sin rellenos -->
         <div class="protocol-card">
-          <span class="code">{{ data.protocol.ceishCode }}</span>
+          @if (data.protocol.ceishCode) {
+            <span class="code">{{ data.protocol.ceishCode }}</span>
+          }
           <h3 class="title">{{ data.protocol.title }}</h3>
           <div class="metadata">
-            <span><strong>Investigador:</strong> {{ getInvestigatorName() }}</span>
-            <span><strong>Tipo:</strong> {{ data.protocol.studyType.nombre }}</span>
+            @if (getInvestigatorName(); as investigator) {
+              <span class="meta-investigator"><strong>Investigador:</strong> {{ investigator }}</span>
+            }
+            @if (data.protocol.studyType.nombre; as studyType) {
+              <span class="meta-type"><strong>Tipo:</strong> {{ studyType }}</span>
+            }
           </div>
         </div>
 
         <div class="instruction-box">
           <mat-icon>info</mat-icon>
           <div class="text">
-            <p>
-              <strong>Normativa PET 2026:</strong> Debe seleccionar un
-              <strong>mínimo de 4 evaluadores</strong>.
-            </p>
-            <ul>
-              <li>Todos realizarán el dictamen ético.</li>
-              <li>
-                El sistema elegirá <strong>2 aleatoriamente</strong> para la estratificación de
-                riesgo.
-              </li>
-            </ul>
+            <p class="quota-instruction">{{ quotaText.instruction }}</p>
           </div>
         </div>
 
+        @if (loadError()) {
+          <app-error-state
+            message="No pudimos cargar la lista de evaluadores."
+            (retry)="loadEvaluators()"
+          ></app-error-state>
+        }
+
         <form class="assign-form">
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Seleccionar Evaluadores (Mínimo 4)</mat-label>
+            <mat-label>{{ quotaText.selectLabel }}</mat-label>
             <mat-select
               [formControl]="evaluatorsControl"
               multiple
@@ -98,13 +134,12 @@ import {
             </div>
           </div>
 
-          <div
-            *ngIf="getSelectedUniqueCount() < 4 && evaluatorsControl.touched"
-            class="error-banner animate-fade-in"
-          >
-            <mat-icon>warning</mat-icon>
-            <span>Se requieren al menos 4 evaluadores distintos para continuar.</span>
-          </div>
+          @if (getSelectedUniqueCount() > quota.total) {
+            <div class="error-banner animate-fade-in quota-too-many" role="alert">
+              <mat-icon>warning</mat-icon>
+              <span>{{ quotaText.tooMany }}</span>
+            </div>
+          }
         </form>
 
         <!-- Feedback de éxito detallado -->
@@ -114,51 +149,31 @@ import {
             <h3>Asignación Exitosa</h3>
           </div>
           <div class="result-body">
-            <p>{{ successData()?.message }}</p>
+            <!-- F10 D15: lo que devolvió el backend, sin datos inventados -->
+            <p class="success-count">Se asignaron {{ successData()?.assignments?.length }} evaluadores.</p>
 
-            <div class="risk-random-box">
-              <span class="label">🎲 Pares de Riesgo Seleccionados:</span>
-              <div class="names">
-                <span *ngFor="let id of successData()?.riskEvaluators" class="risk-name">
-                  {{ getEvaluatorName(id) }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Cuerpo de evaluadores éticos -->
-            <div class="all-evaluators-box mt-3" *ngIf="successData()?.allEvaluators?.length">
-              <span class="label-all"
-                >✍️ Cuerpo Evaluador Ético Asignado ({{
-                  successData()?.allEvaluators?.length
-                }}):</span
-              >
+            <div class="all-evaluators-box mt-3">
               <div class="eval-list-small">
-                <div
-                  *ngFor="let id of successData()?.allEvaluators; let idx = index"
-                  class="eval-item-small"
-                  [class.is-risk-peer]="isRiskEvaluator(id)"
-                >
-                  <div class="eval-info-row">
-                    <span class="name">{{ getEvaluatorName(id) }}</span>
-                    <span
-                      class="assignment-id"
-                      *ngIf="successData()?.evaluationAssignmentIds?.length"
-                      >Asignación: #{{ successData()?.evaluationAssignmentIds?.[idx] }}</span
-                    >
+                @for (a of successData()?.assignments; track a.evaluatorId) {
+                  <div class="eval-item-small" [class.is-risk-peer]="a.isRiskPeer">
+                    <div class="eval-info-row">
+                      <span class="name">{{ getEvaluatorName(a.evaluatorId) }}</span>
+                      <span class="assignment-profile">{{ profileLabel(a.profile) }}</span>
+                      @if (a.assignmentId !== null) {
+                        <span class="assignment-id">Asignación: #{{ a.assignmentId }}</span>
+                      }
+                    </div>
+                    @if (a.isRiskPeer) {
+                      <span class="risk-badge"><mat-icon>security</mat-icon> Par de riesgo</span>
+                    }
                   </div>
-                  <span class="risk-badge" *ngIf="isRiskEvaluator(id)">
-                    <mat-icon>security</mat-icon> Par de Riesgo
-                  </span>
-                </div>
+                }
               </div>
             </div>
 
             <div class="deadline-info mt-3">
               <mat-icon>event</mat-icon>
-              <span
-                >Fecha límite de dictamen:
-                <strong>{{ successData()?.deadline | date: 'fullDate' }}</strong></span
-              >
+              <span class="deadline-text">{{ deadlineText() }}</span>
             </div>
           </div>
           <button mat-flat-button color="primary" class="w-100 mt-3" (click)="close(true)">
@@ -172,7 +187,7 @@ import {
         <button
           mat-flat-button
           color="primary"
-          [disabled]="getSelectedUniqueCount() < 4 || isSubmitting()"
+          [disabled]="getSelectedUniqueCount() !== quota.total || isSubmitting()"
           (click)="onSubmit()"
         >
           <mat-icon>{{ isSubmitting() ? 'hourglass_empty' : 'how_to_reg' }}</mat-icon>
@@ -540,6 +555,10 @@ export class AssignPeersModalComponent implements OnInit {
   >([]);
   isSubmitting = signal<boolean>(false);
   successData = signal<AssignEvaluatorsResponse | null>(null);
+  loadError = signal<boolean>(false);
+
+  readonly quota = PEER_ASSIGNMENT_QUOTA;
+  readonly quotaText = PEER_QUOTA_TEXT;
 
   constructor(
     public dialogRef: MatDialogRef<AssignPeersModalComponent>,
@@ -550,16 +569,22 @@ export class AssignPeersModalComponent implements OnInit {
     this.loadEvaluators();
   }
 
+  /** Nombre del investigador o '' si no viene (F10 D15: sin "Investigador Principal" inventado). */
   getInvestigatorName(): string {
     const inv = this.data?.protocol?.principalInvestigatorRecord as any;
-    if (!inv) return 'Investigador Principal';
+    if (!inv) return '';
     if (typeof inv === 'string') return inv;
-    return (
-      inv.fullName ||
-      inv.nombre ||
-      inv.principalInvestigatorRecord?.fullName ||
-      'Investigador Principal'
-    );
+    return inv.fullName || inv.nombre || inv.principalInvestigatorRecord?.fullName || '';
+  }
+
+  profileLabel(profile: string): string {
+    return peerEvaluatorProfileLabel(profile);
+  }
+
+  /** Fecha límite del dictamen, o el texto de la convocatoria si el backend no la envía (D15). */
+  deadlineText(): string {
+    const deadline = this.successData()?.assignments.find((a) => a.deadlineDate)?.deadlineDate;
+    return deadline ? `Fecha límite del dictamen: ${formatDeadlineDate(deadline)}` : NO_DEADLINE_TEXT;
   }
 
   getSelectedUniqueCount(): number {
@@ -570,12 +595,6 @@ export class AssignPeersModalComponent implements OnInit {
   getEvaluatorName(id: string | number): string {
     const ev = this.evaluators().find((e) => e.id === id.toString());
     return ev ? ev.nombre : 'Evaluador desconocido';
-  }
-
-  isRiskEvaluator(id: string | number): boolean {
-    const success = this.successData();
-    if (!success || !success.riskEvaluators) return false;
-    return success.riskEvaluators.some((riskId) => riskId.toString() === id.toString());
   }
 
   removeEvaluator(id: string | number) {
@@ -589,7 +608,8 @@ export class AssignPeersModalComponent implements OnInit {
     return 'high';
   }
 
-  private loadEvaluators() {
+  loadEvaluators() {
+    this.loadError.set(false);
     this.evaluationRepo.getEvaluatorsDashboard().subscribe({
       next: (data) => {
         const rawList = Array.isArray(data.evaluators) ? data.evaluators : [];
@@ -614,10 +634,11 @@ export class AssignPeersModalComponent implements OnInit {
               id,
               nombre: u.fullName || u.nombre || 'Evaluador',
               email: u.email || '',
+              // F10 D15: todos sus perfiles; sin perfil, "Sin perfil" (no "Evaluador").
               perfil:
                 Array.isArray(u.profiles) && u.profiles.length
-                  ? u.profiles[0].name
-                  : u.perfil || 'Evaluador',
+                  ? u.profiles.map((p: { name: string }) => p.name).join(', ')
+                  : u.perfil || NO_PROFILE_LABEL,
               cargaActiva: u.currentLoad ?? u.assignedCount ?? 0,
               completadasMes: u.completedThisMonth ?? u.completedCount ?? 0,
             });
@@ -629,9 +650,7 @@ export class AssignPeersModalComponent implements OnInit {
         );
         this.evaluators.set(mapped);
       },
-      error: () => {
-        this.snack.open('Error al cargar catálogo de evaluadores.', 'Cerrar', { duration: 3000 });
-      },
+      error: () => this.loadError.set(true),
     });
   }
 
@@ -643,12 +662,7 @@ export class AssignPeersModalComponent implements OnInit {
     const rawValues = this.evaluatorsControl.value || [];
     const uniqueEvaluatorIds = Array.from(new Set(rawValues.map((id) => Number(id))));
 
-    if (uniqueEvaluatorIds.length < 4) {
-      this.snack.open('Se requieren al menos 4 evaluadores distintos.', 'Cerrar', {
-        duration: 4000,
-      });
-      return;
-    }
+    if (uniqueEvaluatorIds.length !== this.quota.total) return;
 
     this.isSubmitting.set(true);
 
@@ -661,8 +675,9 @@ export class AssignPeersModalComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error asignando evaluadores:', err);
-          const msg = err.error?.message || 'Error al asignar los evaluadores.';
-          this.snack.open(Array.isArray(msg) ? msg[0] : msg, 'Cerrar', { duration: 5000 });
+          // F10 D15: el mensaje del backend (el interceptor lo deja en err.message).
+          const msg = extractApiErrorMessage(err, 'No se pudieron asignar los evaluadores.');
+          this.snack.open(msg, 'Cerrar', { duration: 5000 });
           this.isSubmitting.set(false);
         },
       });

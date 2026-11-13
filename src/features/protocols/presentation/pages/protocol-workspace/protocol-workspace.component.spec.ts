@@ -98,6 +98,7 @@ function workspaceMock(protocolSignal: WritableSignal<ProtocolEntity | null>) {
   return {
     protocol: protocolSignal,
     evaluations: signal([]),
+    error: signal<string | null>(null),
     loadProtocol: jasmine.createSpy('loadProtocol').and.returnValue(of(null)),
     updateProtocol: jasmine.createSpy('updateProtocol'),
   };
@@ -185,14 +186,16 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
         ...(expected.followUp ? ['follow-up'] : []),
       ];
 
+      // SECRETARIA con los tiempos aceptados: "Asignar Pares" los exige desde S-1h (D15).
       activeRoleSignal.set('SECRETARIA');
-      setState(name);
+      setState(name, true);
       expect(page.statusLabel()).toBe(expected.label);
       expect((page.workspaceStage()?.code ?? null) as string | null).toBe(expected.stage);
       expect(tabPaths()).toEqual(['info', ...stateTabs]);
       expect(actionIds()).toEqual(expected.secretaria);
 
       activeRoleSignal.set('INVESTIGADOR');
+      setState(name);
       expect(tabPaths()).toEqual(['info', ...stateTabs]);
       expect(actionIds()).toEqual(expected.investigador);
       expect(page.showAcceptanceModal()).toBe(expected.modal);
@@ -205,11 +208,26 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
   it('Asignar Pares sale solo en la etapa ASIGNACION', () => {
     activeRoleSignal.set('SECRETARIA');
     for (const name of Object.keys(STATE) as StateName[]) {
-      setState(name);
+      setState(name, true);
       expect(actionIds().includes('ASSIGN_EVALUATORS'))
         .withContext(name)
         .toBe(name === 'RECEPCION_APROBADA');
     }
+  });
+
+  it('Asignar Pares exige la aceptación de tiempos; sin ella, SECRETARIA ve el aviso (F10 D15)', () => {
+    activeRoleSignal.set('SECRETARIA');
+    setState('RECEPCION_APROBADA');
+    expect(actionIds()).not.toContain('ASSIGN_EVALUATORS');
+    expect(page.awaitingTimelineAcceptance()).toBeTrue();
+
+    setState('RECEPCION_APROBADA', true);
+    expect(actionIds()).toContain('ASSIGN_EVALUATORS');
+    expect(page.awaitingTimelineAcceptance()).toBeFalse();
+
+    activeRoleSignal.set('INVESTIGADOR');
+    setState('RECEPCION_APROBADA');
+    expect(page.awaitingTimelineAcceptance()).toBeFalse();
   });
 
   it('statusId 25 nunca cae a la recepción: sin Asignar Pares y en Resolución', () => {
@@ -238,7 +256,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(tabPaths()).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual(['VALIDATE_ALL']);
 
-    setState('RECEPCION_APROBADA');
+    setState('RECEPCION_APROBADA', true);
     expect(tabPaths()).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual(['ASSIGN_EVALUATORS']);
 
@@ -378,7 +396,7 @@ describe('ProtocolWorkspaceComponent - template real', () => {
   let activeRoleSignal: WritableSignal<RoleCode | null>;
 
   beforeEach(async () => {
-    protocolSignal = signal<ProtocolEntity | null>(createProtocol(STATE.RECEPCION_APROBADA));
+    protocolSignal = signal<ProtocolEntity | null>(createProtocol(STATE.RECEPCION_APROBADA, true));
     activeRoleSignal = signal<RoleCode | null>('SECRETARIA');
     const workspace = workspaceMock(protocolSignal);
 
@@ -472,9 +490,10 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
   let requests: { id: string; response: Subject<ProtocolEntity> }[];
   let harness: RouterTestingHarness;
   let router: Router;
+  let dialogOpen: jasmine.Spy;
 
   function protocolWith(id: string, title: string, principalInvestigator = 'Investigador Prueba'): ProtocolEntity {
-    return { ...createProtocol(STATE.RECEPCION_APROBADA), id, title, principalInvestigator };
+    return { ...createProtocol(STATE.RECEPCION_APROBADA, true), id, title, principalInvestigator };
   }
 
   function respond(index: number, protocol: ProtocolEntity): void {
@@ -501,6 +520,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
   beforeEach(async () => {
     TabPruebaComponent.created = 0;
     requests = [];
+    dialogOpen = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(true) });
     const getById = jasmine.createSpy('getById').and.callFake((id: string) => {
       const response = new Subject<ProtocolEntity>();
       requests.push({ id, response });
@@ -533,10 +553,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
       add: {
         providers: [
           { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-          {
-            provide: MatDialog,
-            useValue: { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(true) }) },
-          },
+          { provide: MatDialog, useValue: { open: dialogOpen } },
         ],
       },
     });
@@ -636,6 +653,76 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
 
     respond(1, protocolWith('5', 'Estudio de prueba cinco'));
     expect(TabPruebaComponent.created).toBe(1);
+  });
+
+  it('sin aceptación de tiempos no sale Asignar Pares y la cabecera dice que falta (F10 D15)', async () => {
+    const notice = 'El investigador aún no acepta los tiempos del comité.';
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, { ...protocolWith('5', 'Estudio de prueba cinco'), isTimelineTermsAccepted: false });
+
+    expect(button('person_addAsignar Pares')).toBeUndefined();
+    expect(root().querySelector('.header-notice')?.textContent?.trim()).toBe(notice);
+
+    await harness.navigateByUrl('/workspace/6/info');
+    respond(1, protocolWith('6', 'Estudio de prueba seis'));
+    expect(button('person_addAsignar Pares')).toBeDefined();
+    expect(root().querySelector('.header-notice')).toBeNull();
+  });
+
+  it('si falla la recarga del mismo :id conserva los datos y avisa "No pudimos actualizar el protocolo."; Reintentar vuelve a pedirlo (F10 D15)', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, protocolWith('5', 'Estudio de prueba cinco'));
+    button('person_addAsignar Pares')?.click();
+    harness.detectChanges();
+    spyOn(console, 'error');
+    fail(1, 'fallo de red', 500);
+
+    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
+    expect(root().querySelector('.tab-prueba')).not.toBeNull();
+    expect(root().querySelector('.refresh-error')?.textContent).toContain('No pudimos actualizar el protocolo.');
+    expect(root().textContent).not.toContain(FAILED_TEXT);
+
+    (root().querySelector('.refresh-error button') as HTMLButtonElement).click();
+    harness.detectChanges();
+    expect(requests.map((r) => r.id)).toEqual(['5', '5', '5']);
+    expect(root().querySelector('.refresh-error')).toBeNull();
+
+    respond(2, protocolWith('5', 'Estudio de prueba cinco'));
+    expect(root().querySelector('.refresh-error')).toBeNull();
+    expect(TabPruebaComponent.created).toBe(1);
+  });
+
+  it('Asignar Pares abre el modal solo con datos reales, sin "General" ni "Investigador Principal" (F10 D15)', async () => {
+    // Se cierra sin asignar: sin recarga, cada respuesta es del :id navegado.
+    dialogOpen.and.returnValue({ afterClosed: () => of(false) });
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, protocolWith('5', 'Estudio de prueba cinco', ''));
+    button('person_addAsignar Pares')?.click();
+
+    expect(dialogOpen.calls.mostRecent().args[1].data.protocol).toEqual({
+      id: 5,
+      ceishCode: '',
+      title: 'Estudio de prueba cinco',
+      receptionStatus: 'COMPLETO',
+      isRiskLevelDesignated: false,
+      createdAt: '',
+      studyType: { id: 0, codigo: '', nombre: '' },
+      principalInvestigatorRecord: { id: 0, fullName: '', email: '' },
+    });
+
+    // `GET /protocols/:id` manda studyType como texto (protocol.mapper.ts:52-53 del backend).
+    await harness.navigateByUrl('/workspace/6/info');
+    respond(1, {
+      ...protocolWith('6', 'Estudio de prueba seis'),
+      code: 'CEISH-PRUEBA-006',
+      studyType: 'Investigación de prueba',
+    } as unknown as ProtocolEntity);
+    button('person_addAsignar Pares')?.click();
+
+    const data = dialogOpen.calls.mostRecent().args[1].data.protocol;
+    expect(data.ceishCode).toBe('CEISH-PRUEBA-006');
+    expect(data.studyType.nombre).toBe('Investigación de prueba');
+    expect(data.principalInvestigatorRecord.fullName).toBe('Investigador Prueba');
   });
 
   it('sin investigador principal no muestra el chip; con investigador, sí', async () => {

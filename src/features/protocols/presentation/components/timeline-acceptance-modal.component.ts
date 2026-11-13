@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
+import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
+
+/** Error de la aceptación sin mensaje del backend (F10 D15). */
+export const ACCEPT_TIMELINE_ERROR = 'No pudimos registrar su aceptación. Intente de nuevo.';
 
 @Component({
   selector: 'app-timeline-acceptance-modal',
@@ -18,42 +22,33 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
             <div class="header-icon-container">
               <mat-icon class="legal-icon">gavel</mat-icon>
             </div>
-            <h3>Sometimiento Obligatorio a Tiempos y Reglamentos (CEISH)</h3>
-            <p class="subtitle">Aceptación de conformidad del Investigador Principal</p>
+            <h3>Aceptación de los tiempos del comité</h3>
           </header>
 
           <!-- BODY -->
           <div class="modal-body">
-            <div class="protocol-badge">
-              <mat-icon>science</mat-icon>
-              <span
-                >Protocolo: <strong>{{ ceishCode() || 'En trámite' }}</strong></span
-              >
-            </div>
+            <!-- F10 D15: sin plazos que el backend no envía y sin código inventado -->
+            @if (ceishCode()) {
+              <div class="protocol-badge">
+                <mat-icon>science</mat-icon>
+                <span
+                  >Protocolo: <strong>{{ ceishCode() }}</strong></span
+                >
+              </div>
+            }
 
             <p class="intro-text">
-              Estimado(a) Investigador(a), la Secretaría de la CEISH-ESPOCH ha completado y validado
-              satisfactoriamente los requisitos documentales de su proyecto.
+              La Secretaría aprobó la documentación de su protocolo. Para continuar con la
+              asignación de evaluadores, acepte someterse a los tiempos y al reglamento del
+              CEISH-ESPOCH.
             </p>
 
             <div class="warning-banner">
               <mat-icon>warning</mat-icon>
               <div class="warning-content">
-                <strong>Plazos Reglamentarios de Evaluación</strong>
-                <p>
-                  El ciclo formal de evaluación por el comité de ética se somete a metodologías
-                  vigentes con plazos de resolución de hasta 45 o 60 días (según nivel de riesgo
-                  asignado).
-                </p>
+                <p class="archive-rule">Si no acepta en 20 días, el proceso se archivará.</p>
               </div>
             </div>
-
-            <p class="terms-text">
-              Al aceptar esta declaración, usted declara formalmente su conformidad y se compromete
-              a someterse a los plazos, cronogramas, requerimientos de corrección y decisiones
-              dictaminadas por el Comité de Ética en Investigación con Seres Humanos de la Escuela
-              Superior Politécnica de Chimborazo (CEISH-ESPOCH).
-            </p>
 
             <label class="checkbox-container" [class.checked]="isAccepted()">
               <input type="checkbox" (change)="toggleCheckbox()" [disabled]="isLoading()" />
@@ -63,10 +58,13 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
                 }
               </span>
               <span class="checkbox-label"
-                >Declaro solemnemente estar de acuerdo y someterme a los tiempos reglamentarios de
-                la CEISH-ESPOCH.</span
+                >Acepto someterme a los tiempos y al reglamento del CEISH-ESPOCH.</span
               >
             </label>
+
+            @if (errorMessage(); as message) {
+              <p class="accept-error" role="alert">{{ message }}</p>
+            }
           </div>
 
           <!-- FOOTER -->
@@ -82,10 +80,10 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
                   mode="indeterminate"
                   class="btn-spinner"
                 ></mat-progress-spinner>
-                <span>Enviando aceptación...</span>
+                <span>Enviando…</span>
               } @else {
                 <mat-icon>assignment_turned_in</mat-icon>
-                <span>Aceptar Conformidad y Someter a Evaluación</span>
+                <span>Aceptar los tiempos</span>
               }
             </button>
           </footer>
@@ -95,6 +93,11 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
   `,
   styles: [
     `
+      .accept-error {
+        margin: 1rem 0 0;
+        color: #b91c1c;
+        font-weight: 600;
+      }
       .modal-overlay {
         position: fixed;
         top: 0;
@@ -386,6 +389,7 @@ export class TimelineAcceptanceModalComponent {
   // Reactive State (Signals)
   isAccepted = signal<boolean>(false);
   isLoading = signal<boolean>(false);
+  errorMessage = signal<string | null>(null);
 
   toggleCheckbox() {
     this.isAccepted.update((val) => !val);
@@ -393,6 +397,7 @@ export class TimelineAcceptanceModalComponent {
 
   onConfirm() {
     this.isLoading.set(true);
+    this.errorMessage.set(null);
     this.protocolRepo.acceptTimeline(this.protocolId().toString()).subscribe({
       next: () => {
         this.isLoading.set(false);
@@ -401,7 +406,8 @@ export class TimelineAcceptanceModalComponent {
       error: (err) => {
         this.isLoading.set(false);
         console.error('Error al aceptar tiempos:', err);
-        alert(err?.error?.message || 'Hubo un error al procesar su solicitud. Intente nuevamente.');
+        // F10 D15: el mensaje del backend dentro del aviso (el interceptor lo deja en err.message).
+        this.errorMessage.set(extractApiErrorMessage(err, ACCEPT_TIMELINE_ERROR));
       },
     });
   }
