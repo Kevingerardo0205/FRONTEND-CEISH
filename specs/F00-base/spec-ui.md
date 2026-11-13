@@ -1,10 +1,11 @@
 # F00 · Base del rediseño — spec-ui
 
-**Versión:** 0.4 · **Fecha:** 11/11/2026 · **Rama:** `feat/f10-s-1f-estado-canonico`
+**Versión:** 0.5 · **Fecha:** 13/11/2026 · **Rama:** `feat/f10-t10-5a-marco-apariencia`
 **Cubre:** spec-001 RF-EST.1, RF-EST.2, RF-EST.3 y HU-001 (roles fijos) · spec-003 RF-ALR.f (solo la entrada del menú)
 **Actualización 31/10/2026:** F00b se limita al módulo de la SECRETARIA (decisiones D1, D3, D4, D6 y D7).
 **Actualización 10/11/2026 (v0.3):** el menú lateral de los 4 roles se define en F10 (`specs/F10-menu-por-rol/`). D1, §2, §4 y §10 remiten a F10.
 **Actualización 11/11/2026 (v0.4):** excepción temporal en §5: en el espacio del protocolo, `StageBar` recibe una etapa calculada en el frontend hasta que `GET /protocols/:id` traiga `etapa` (F10 D13).
+**Actualización 13/11/2026 (v0.5):** un solo marco para los 4 roles (F10 D16): el `AppShell` toma el aspecto del marco del Investigador (`DashboardPage`) y, al terminar T10-5 (T10-5a a T10-5d), lo usan todos los roles y se retira `DashboardPage`. Cambian D1, D9 (rutas), D14, §2 (selector) y §4 (armazón).
 
 ---
 
@@ -35,20 +36,20 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 **Selector de rol activo:**
 - Solo aparece si la persona tiene más de un rol.
 - Al cambiar de rol, se recarga el menú y se navega al inicio de ese rol. **Nota (10/11/2026):** hoy solo el menú del AppShell cambia con el rol activo; el de `DashboardPage` se arma con los permisos de todos los roles y no cambia. Se corrige en F10 (T10-2).
-- Mientras existan los dos layouts (D1), el selector vive en el avatar del AppShell y también en el menú de avatar de `DashboardPage`, para que quien cambie a PRESIDENTE, EVALUADOR o INVESTIGADOR pueda volver a SECRETARIA (T13c, 02/11/2026).
+- Mientras existan los dos layouts (D1), el selector vive en el avatar del AppShell y también en el menú de avatar de `DashboardPage`, para que quien cambie a PRESIDENTE, EVALUADOR o INVESTIGADOR pueda volver a SECRETARIA (T13c, 02/11/2026). **Actualización 13/11/2026 (F10 D16):** al retirar `DashboardPage` (T10-5d) queda un solo selector, el del avatar del AppShell.
 - El rol inicial sigue la regla de `plan.md` §2 (application — rol activo): el último elegido si sigue siendo válido; si no, el de mayor prioridad (SECRETARIA > PRESIDENTE > EVALUADOR > INVESTIGADOR).
 - Implementado. Caso real confirmado por el usuario (03/11/2026): la Presidenta tiene PRESIDENTE + EVALUADOR (preside y también evalúa protocolos). Pendiente de validar con ella y con la Secretaría: si prefiere cambiar de rol con el selector o ver todo junto, con qué rol entra primero, y si hay otras personas del comité con dos roles. Se define al diseñar la sección de Presidencia.
 
 ### Alcance de F00b (31/10/2026)
 
-- **D1 — AppShell solo para SECRETARIA.** El `AppShell` (menú lateral y barra superior) se monta únicamente para el rol activo `SECRETARIA`. `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` siguen con `DashboardPage` y su menú actual, sin cambios, hasta que se defina su sección. **Actualización 10/11/2026:** el layout sigue así, pero su menú pasa a la configuración por rol activo de F10 (D8 de F10, T10-2); el layout único es T10-5.
+- **D1 — AppShell solo para SECRETARIA.** El `AppShell` (menú lateral y barra superior) se monta únicamente para el rol activo `SECRETARIA`. `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` siguen con `DashboardPage` y su menú actual, sin cambios, hasta que se defina su sección. **Actualización 10/11/2026:** el layout sigue así, pero su menú pasa a la configuración por rol activo de F10 (D8 de F10, T10-2); el layout único es T10-5. **Actualización 13/11/2026 (F10 D16):** D1 se retira por partes. Un solo `AppShell` para los 4 roles, con el aspecto del marco del Investigador: T10-5a cambia el aspecto (sigue solo para SECRETARIA), T10-5b pasa PRESIDENTE y EVALUADOR, T10-5c pasa INVESTIGADOR y T10-5d retira `DashboardPage`.
 - **D3 — Inicio por rol.** `SECRETARIA` entra a `/pendientes` dentro del AppShell (hasta F01, la pantalla actual de la Secretaría de forma temporal). `PRESIDENTE`, `EVALUADOR` e `INVESTIGADOR` entran a `/dashboard/home`, como hoy. Al cambiar de rol activo, cada uno va a su inicio. Se implementa en T13c y T13d.
 
 ### Inicio por rol activo (T13d, 03/11/2026)
 
 - **D12 — Sin acceso, vuelve al inicio del rol activo.** `RoleGuard`, `AuthGuard`, `VerificadoGuard` y el 403 de `error.interceptor` mandan a `ROLE_HOME[rol activo]`. Sin rol activo (sesión sin un rol reconocido): `/auth/login` con el aviso "Su cuenta no tiene un rol vigente."
 - **D13 — Login y ruta raíz.** El login lleva a `ROLE_HOME[rol activo]`. Las rutas `''` y `**`: con sesión, `ROLE_HOME[rol activo]`; sin sesión, `/auth/login`.
-- **D14 — Layout actual con el rol activo.** En `DashboardPage`, la etiqueta del avatar y el asistente usan el rol activo (etiqueta del VO `Role`). `DashboardHomePage` elige su contenido con el rol activo, no con `user.rol`. El retiro sigue en T14.
+- **D14 — Layout actual con el rol activo.** En `DashboardPage`, la etiqueta del avatar y el asistente usan el rol activo (etiqueta del VO `Role`). `DashboardHomePage` elige su contenido con el rol activo, no con `user.rol`. El retiro sigue en T14. **Actualización 13/11/2026 (F10 D16):** la etiqueta del rol activo y el asistente pasan al AppShell en T10-5a; la parte de `DashboardPage` se retira en T10-5d.
 - **D15 — El rol activo existe en la primera navegación.** Al recargar y justo después del login, los guards ven el rol activo correcto. Se confirmó que llegaba tarde y se corrigió en el puerto de roles y en el facade (T13d-0).
 
 ## 3. Tokens de diseño
@@ -75,9 +76,10 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - **Barra superior:** búsqueda global de protocolos (código o título), notificaciones y avatar con el selector de rol.
 - El elemento activo del menú se resalta con `--c-primary-soft`.
 - El menú sale de una **configuración por rol**. No va escrito en el HTML.
-- **D1 (31/10/2026):** este armazón aplica solo al rol activo `SECRETARIA`. Los otros tres roles conservan `DashboardPage` y su menú actual hasta su sección.
+- **D1 (31/10/2026):** este armazón aplica solo al rol activo `SECRETARIA`. Los otros tres roles conservan `DashboardPage` y su menú actual hasta su sección. **Actualización 13/11/2026 (F10 D16):** los 4 roles pasan a este armazón en T10-5b y T10-5c.
 - **F10 (10/11/2026):** las opciones de los 4 roles, la regla "ninguna opción lleva a una página que no existe", los íconos decorativos y "Cerrar sesión" en gris están en `specs/F10-menu-por-rol/spec-ui.md`. La Secretaría conserva estas 5 entradas (D1 de F10).
 - **D7 (31/10/2026):** la búsqueda global se oculta hasta que exista el endpoint; la campana lleva a `notifications/center`, y el contador de no leídas solo se muestra cuando ya exista una fuente. Se implementa en T13b.
+- **Aspecto (13/11/2026, F10 D16):** el armazón toma el aspecto del marco del Investigador: menú de 280 px, barra superior de 64 px con el botón del menú, "Panel de Gestión" con la fecha, la campana (D7) y el avatar cuadrado sin nombre; la marca es solo el texto "CEISH Espoch". El detalle está en F10 D16. Sigue sin búsqueda (D7).
 
 ## 5. Componentes compartidos
 
@@ -123,7 +125,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - **D9 — `/dashboard/...` dentro del AppShell para la Secretaría.** Así, los enlaces a `/dashboard/...` de las pantallas de la Secretaría no la sacan del AppShell. Estructura desde T13d-3 (03/11/2026), un solo AppShell:
   - En `app.routes.ts`, un único padre `''` con `AppShellComponent`, `canMatch` por rol activo `SECRETARIA` y `AuthGuard`. Sus hijos son las rutas nuevas (D10) y `dashboard`, que carga `DASHBOARD_CHILDREN` con los redirects de D11. Al ir de `/pendientes` a `/dashboard/...` y volver, la instancia del AppShell es la misma.
   - Después, un padre `''` sin layout con las mismas rutas nuevas: con otro rol activo, su `RoleGuard` da el aviso y lleva al inicio (criterio 4).
-  - Después, `dashboard` con `DashboardPage` y `AuthGuard`, para los otros roles.
+  - Después, `dashboard` con `DashboardPage` y `AuthGuard`, para los otros roles. **Actualización 13/11/2026 (F10 D16):** PRESIDENTE y EVALUADOR pasan al AppShell en T10-5b e INVESTIGADOR en T10-5c; este padre se retira en T10-5d.
 - **D10 — Rutas nuevas, solo SECRETARIA.** Van bajo el AppShell, son lazy y llevan `RoleGuard` (`data.roles: ['SECRETARIA']`) más los permisos de la ruta de origen:
   - `/pendientes` → `DashboardSecretariaPage`;
   - `/protocolos` → `ProtocolValidationListPage` (temporal hasta F01);
