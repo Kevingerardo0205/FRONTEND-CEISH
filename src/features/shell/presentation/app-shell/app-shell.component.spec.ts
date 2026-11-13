@@ -250,6 +250,56 @@ describe('AppShellComponent (T13b)', () => {
     });
   });
 
+  // F10 T10-5b: GET /secretaria/pendientes es de la Secretaría; con otro rol el 403 haría
+  // navegar al interceptor. El contador se pide solo con SECRETARIA activa.
+  describe('Contador solo con SECRETARIA activa (F10 T10-5b)', () => {
+    function createWith(role: RoleCode): ComponentFixture<AppShellComponent> {
+      mockActiveRoleFacade.activeRole.set(role);
+      mockPendingCountUseCase.execute.calls.reset();
+      mockPendingCountUseCase.execute.and.returnValue(of(3));
+      const testFixture = TestBed.createComponent(AppShellComponent);
+      testFixture.detectChanges();
+      return testFixture;
+    }
+    const badge = (f: ComponentFixture<AppShellComponent>) =>
+      f.debugElement.query(By.css('[data-testid="pending-badge"]'));
+
+    it('con PRESIDENTE activo no se pide el contador ni se muestra', () => {
+      const testFixture = createWith('PRESIDENTE');
+
+      expect(mockPendingCountUseCase.execute).not.toHaveBeenCalled();
+      expect(testFixture.componentInstance.pendingCount()).toBeNull();
+      expect(badge(testFixture)).toBeNull();
+    });
+
+    it('al pasar de PRESIDENTE a SECRETARIA se pide el contador y se muestra', () => {
+      const testFixture = createWith('PRESIDENTE');
+
+      mockActiveRoleFacade.activeRole.set('SECRETARIA');
+      testFixture.detectChanges();
+
+      expect(mockPendingCountUseCase.execute).toHaveBeenCalledTimes(1);
+      expect(badge(testFixture)?.nativeElement.textContent.trim()).toBe('3');
+    });
+
+    it('al volver de EVALUADOR a SECRETARIA se pide otra vez', () => {
+      const testFixture = createWith('SECRETARIA');
+      expect(mockPendingCountUseCase.execute).toHaveBeenCalledTimes(1);
+
+      mockActiveRoleFacade.activeRole.set('EVALUADOR');
+      testFixture.detectChanges();
+      expect(mockPendingCountUseCase.execute).toHaveBeenCalledTimes(1);
+      expect(testFixture.componentInstance.pendingCount()).toBeNull();
+
+      mockPendingCountUseCase.execute.and.returnValue(of(5));
+      mockActiveRoleFacade.activeRole.set('SECRETARIA');
+      testFixture.detectChanges();
+
+      expect(mockPendingCountUseCase.execute).toHaveBeenCalledTimes(2);
+      expect(badge(testFixture)?.nativeElement.textContent.trim()).toBe('5');
+    });
+  });
+
   describe('Barra superior', () => {
     it('no contiene ningún elemento de búsqueda global (D7: oculta hasta que exista el endpoint)', () => {
       const search = fixture.debugElement.queryAll(
@@ -291,10 +341,18 @@ describe('AppShellComponent (T13b)', () => {
     it('muestra "Panel de Gestión" con la fecha de hoy (F10 D16 (3))', () => {
       const topbar: HTMLElement = fixture.debugElement.query(By.css('.shell-topbar')).nativeElement;
       expect(topbar.querySelector('.topbar-title')?.textContent?.trim()).toBe('Panel de Gestión');
-      expect(topbar.querySelector('[data-testid="topbar-date"]')?.textContent?.trim()).toBe(
-        formatDate(new Date(), 'EEEE, d MMMM', 'es'),
-      );
       expect(topbar.textContent).not.toContain('Comité de Ética de Investigación en Seres Humanos');
+    });
+
+    it('la fecha sale en español, en minúsculas y con "de": "jueves, 12 de noviembre" (F10 D16 (12))', () => {
+      const date = fixture.debugElement.query(By.css('[data-testid="topbar-date"]')).nativeElement as HTMLElement;
+      const text = date.textContent?.trim() ?? '';
+
+      expect(text).toBe(formatDate(new Date(), "EEEE, d 'de' MMMM", 'es'));
+      expect(text).toMatch(/^[a-záéíóúñ]+, \d{1,2} de [a-záéíóúñ]+$/);
+      // El 12/11/2026 es jueves (el ejemplo de D16 (12) muestra el formato, no un día concreto).
+      expect(formatDate(new Date(2026, 10, 12), "EEEE, d 'de' MMMM", 'es')).toBe('jueves, 12 de noviembre');
+      expect(getComputedStyle(date).textTransform).toBe('none');
     });
 
     it('la barra mide 64 px y el menú lateral 280 px (F10 D16 (2), (3))', () => {
@@ -440,7 +498,7 @@ describe('AppShellComponent (T13b)', () => {
       const hoverRules = Array.from(document.styleSheets)
         .flatMap((sheet) => Array.from(sheet.cssRules))
         .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule)
-        // Solo las del AppShell (.sidebar-footer); el sidebar de DashboardPage usa .sidenav-footer.
+        // Solo las del pie del menú del AppShell (.sidebar-footer).
         .filter((rule) =>
           /\.sidebar-footer[^,]*\.logout-link[^,\s]*:hover/.test(rule.selectorText),
         );
@@ -481,7 +539,7 @@ describe('AppShellComponent (T13b)', () => {
       expect(assistant.closest('mat-sidenav-container')).toBeNull();
     });
 
-    // Trasladadas de dashboard.page.spec.ts (F00 D14): el asistente decide con el rol activo.
+    // Trasladadas del antiguo marco (F00 D14, T10-5a): el asistente decide con el rol activo.
     it('D14: con EVALUADOR activo y asistente solo de SECRETARIA, no se muestra; al volver a SECRETARIA, sí', () => {
       mockAiAssistantRepo.getAllowedRoles.and.returnValue(of({ allowedRoles: ['SECRETARIA'] }));
       const testFixture = TestBed.createComponent(AppShellComponent);
@@ -513,6 +571,91 @@ describe('AppShellComponent (T13b)', () => {
 
       const roles = testFixture.componentInstance.allowedAssistantRoles();
       expect(roles).toEqual(['SECRETARIA', 'EVALUADOR', 'PRESIDENTE']);
+    });
+  });
+
+  // Trasladadas del sidebar del antiguo marco (F10 T10-2 y T10-4) al retirarlo en T10-5b.
+  describe('Menú de PRESIDENTE, EVALUADOR e INVESTIGADOR (trasladadas en T10-5b)', () => {
+    const accessibleText = (el: Element): string => {
+      const clone = el.cloneNode(true) as Element;
+      clone.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+      return (clone.textContent ?? '').replace(/\s+/g, ' ').trim();
+    };
+    const labels = (): string[] =>
+      fixture.debugElement
+        .queryAll(By.css('.sidebar-nav .nav-label'))
+        .map((el) => el.nativeElement.textContent.trim());
+
+    it('cada opción de los 3 roles pinta el ícono de MENU_ITEMS, oculto, y su nombre accesible es el texto', () => {
+      for (const role of ['PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'] as RoleCode[]) {
+        mockActiveRoleFacade.activeRole.set(role);
+        fixture.detectChanges();
+        const expected = MENU_ITEMS.filter((item) => item.roles.includes(role));
+        const links: HTMLElement[] = fixture.debugElement
+          .queryAll(By.css('.sidebar-nav .nav-link'))
+          .map((el) => el.nativeElement);
+        expect(links.length).withContext(role).toBe(expected.length);
+        links.forEach((link, index) => {
+          const icon = link.querySelector('mat-icon');
+          const context = role + ' · ' + expected[index].label;
+          expect(icon?.textContent?.trim()).withContext(context).toBe(expected[index].icon);
+          expect(icon?.getAttribute('aria-hidden')).withContext(context).toBe('true');
+          expect(accessibleText(link)).withContext(context).toBe(expected[index].label);
+        });
+      }
+    });
+
+    it('al cambiar de PRESIDENTE a EVALUADOR el menú cambia sin recrear el componente', () => {
+      mockActiveRoleFacade.activeRole.set('PRESIDENTE');
+      fixture.detectChanges();
+      const instance = fixture.componentInstance;
+      expect(labels()).toEqual(['Sesiones del pleno', 'Reportes']);
+
+      mockActiveRoleFacade.activeRole.set('EVALUADOR');
+      fixture.detectChanges();
+      expect(fixture.componentInstance).toBe(instance);
+      expect(labels()).toEqual(['Mis evaluaciones']);
+    });
+
+    it('con PRESIDENTE no salen opciones de SECRETARIA', () => {
+      mockActiveRoleFacade.activeRole.set('PRESIDENTE');
+      fixture.detectChanges();
+      const secretaria = MENU_ITEMS.filter((item) => item.roles.includes('SECRETARIA')).map((item) => item.route);
+      const routes = fixture.debugElement
+        .queryAll(By.css('.sidebar-nav .nav-link'))
+        .map((el) => el.nativeElement.getAttribute('href'));
+      expect(routes).toEqual(['/dashboard/resolutions/calls', '/dashboard/reports/stats']);
+      expect(routes.some((route) => secretaria.includes(route))).toBeFalse();
+    });
+
+    it('marca solo Sesiones del pleno como página actual en su ruta', async () => {
+      router.resetConfig([
+        ...router.config,
+        { path: 'dashboard/resolutions/calls', component: DummyComponent },
+        { path: 'dashboard/reports/stats', component: DummyComponent },
+      ]);
+      // Los enlaces existen antes de navegar, como en el menú real (RouterLinkActive se
+      // actualiza con la navegación).
+      mockActiveRoleFacade.activeRole.set('PRESIDENTE');
+      fixture.detectChanges();
+      await router.navigateByUrl('/dashboard/resolutions/calls');
+      fixture.detectChanges();
+
+      const current = fixture.debugElement
+        .queryAll(By.css('.sidebar-nav .nav-link[aria-current="page"]'))
+        .map((el) => el.query(By.css('.nav-label')).nativeElement.textContent.trim());
+      expect(current).toEqual(['Sesiones del pleno']);
+    });
+
+    it('con un solo rol el menú del avatar no muestra el selector de rol', () => {
+      mockActiveRoleFacade.availableRoles.set(['EVALUADOR']);
+      mockActiveRoleFacade.activeRole.set('EVALUADOR');
+      fixture.detectChanges();
+      fixture.debugElement.query(By.css('[data-testid="avatar-button"]')).nativeElement.click();
+      fixture.detectChanges();
+
+      expect(document.querySelector('.user-dropdown-panel')).not.toBeNull();
+      expect(document.querySelector('.user-dropdown-panel [data-testid="role-selector"]')).toBeNull();
     });
   });
 
@@ -667,7 +810,7 @@ describe('AppShellComponent (T13b)', () => {
     });
   });
 
-  describe('INVESTIGADOR sin verificar (F10 D9, trasladado del sidebar de DashboardPage)', () => {
+  describe('INVESTIGADOR sin verificar (F10 D9, trasladado del antiguo marco en T10-5a)', () => {
     it('muestra el aviso en lugar de sus opciones y conserva Cerrar sesión', () => {
       mockSessionUser.canEnterInvestigatorArea.and.returnValue(false);
       mockActiveRoleFacade.activeRole.set('INVESTIGADOR');

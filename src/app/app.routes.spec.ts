@@ -121,7 +121,6 @@ describe('Rutas por rol activo (T13d)', () => {
 
       expect(router.url).toBe('/pendientes');
       expect(has('app-shell')).toBeTrue();
-      expect(has('app-dashboard')).toBeFalse();
       expect(notify).not.toHaveBeenCalled();
     });
   });
@@ -225,7 +224,7 @@ describe('Rutas por rol activo (T13d)', () => {
     });
   });
 
-  describe('D9: layout de /dashboard/... según el rol activo', () => {
+  describe('D9 y F10 D16 (11): /dashboard/... dentro del AppShell con cualquier rol activo', () => {
     it('SECRETARIA en /dashboard/protocols/workspace/1/info ve el AppShell', async () => {
       await start(['SECRETARIA']);
 
@@ -233,19 +232,21 @@ describe('Rutas por rol activo (T13d)', () => {
 
       expect(router.url).toBe('/dashboard/protocols/workspace/1/info');
       expect(has('app-shell')).toBeTrue();
-      expect(has('app-dashboard')).toBeFalse();
     });
 
-    // F10 D10 (S-1a): EVALUADOR ya no abre info; PRESIDENTE sí, y no es SECRETARIA.
-    it('PRESIDENTE en /dashboard/protocols/workspace/1/info ve DashboardPage', async () => {
-      await start(['PRESIDENTE']);
+    // F10 D10 (S-1a): EVALUADOR no abre info; PRESIDENTE e INVESTIGADOR sí.
+    for (const role of ['PRESIDENTE', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`${role} en /dashboard/protocols/workspace/1/info ve el espacio dentro del AppShell`, async () => {
+        await start([role]);
 
-      await harness.navigateByUrl('/dashboard/protocols/workspace/1/info');
+        await harness.navigateByUrl('/dashboard/protocols/workspace/1/info');
 
-      expect(router.url).toBe('/dashboard/protocols/workspace/1/info');
-      expect(has('app-dashboard')).toBeTrue();
-      expect(has('app-shell')).toBeFalse();
-    });
+        expect(router.url).toBe('/dashboard/protocols/workspace/1/info');
+        expect(has('app-shell')).toBeTrue();
+        expect(has('app-protocol-workspace')).toBeTrue();
+        expect(notify).not.toHaveBeenCalled();
+      });
+    }
 
     it('T13d-3: /pendientes ↔ /dashboard/protocols/workspace/1/info conserva la misma instancia del AppShell', async () => {
       const getAllowedRoles = jasmine
@@ -272,10 +273,16 @@ describe('Rutas por rol activo (T13d)', () => {
       expect(getAllowedRoles).toHaveBeenCalledTimes(1);
     });
 
-    it('al cambiar de rol con el selector, la navegación al inicio del rol cambia de layout', async () => {
+    it('al cambiar de rol con el selector se va al inicio del rol con la misma instancia del AppShell (F10 D16 (11))', async () => {
       await start(['SECRETARIA', 'EVALUADOR'], 'SECRETARIA');
       await harness.navigateByUrl('/pendientes');
-      expect(has('app-shell')).toBeTrue();
+      const shell = () => harness.fixture.debugElement.query(By.directive(AppShellComponent));
+      const labels = () =>
+        Array.from(harness.fixture.nativeElement.querySelectorAll('.sidebar-nav .nav-label')).map((el) =>
+          (el as HTMLElement).textContent?.trim(),
+        );
+      const first = shell().componentInstance;
+      expect(labels().length).toBe(5);
 
       const selector = TestBed.createComponent(RoleSelectorComponent).componentInstance;
       selector.select('EVALUADOR');
@@ -283,16 +290,16 @@ describe('Rutas por rol activo (T13d)', () => {
       harness.fixture.detectChanges();
 
       expect(router.url).toBe('/dashboard/home');
-      expect(has('app-dashboard')).toBeTrue();
-      expect(has('app-shell')).toBeFalse();
+      expect(shell().componentInstance).toBe(first);
+      expect(labels()).toEqual(['Mis evaluaciones']);
 
       selector.select('SECRETARIA');
       await harness.fixture.whenStable();
       harness.fixture.detectChanges();
 
       expect(router.url).toBe('/pendientes');
-      expect(has('app-shell')).toBeTrue();
-      expect(has('app-dashboard')).toBeFalse();
+      expect(shell().componentInstance).toBe(first);
+      expect(labels().length).toBe(5);
     });
   });
 
@@ -397,7 +404,8 @@ describe('Rutas por rol activo (T13d)', () => {
       await harness.navigateByUrl('/dashboard/home?tab=peers');
 
       expect(router.url).toBe('/dashboard/home?tab=peers');
-      expect(has('app-dashboard')).toBeTrue();
+      expect(has('app-shell')).toBeTrue();
+      expect(has('app-dashboard-home')).toBeTrue();
     });
 
     it('SECRETARIA+EVALUADOR con EVALUADOR activo se queda en /dashboard/home', async () => {
@@ -407,7 +415,7 @@ describe('Rutas por rol activo (T13d)', () => {
 
       expect(TestBed.inject(ActiveRoleFacade).activeRole()).toBe('EVALUADOR');
       expect(router.url).toBe('/dashboard/home');
-      expect(has('app-dashboard')).toBeTrue();
+      expect(has('app-shell')).toBeTrue();
       // D14: user.rol es SECRETARIA, pero DashboardHomePage elige con el rol activo.
       expect(has('app-dashboard-home')).toBeTrue();
       expect(has('app-dashboard-secretaria')).toBeFalse();
@@ -455,7 +463,7 @@ describe('Rutas por rol activo (T13d)', () => {
     it('login de EVALUADOR → /dashboard/home', async () => {
       await loginAs(['EVALUADOR']);
       expect(router.url).toBe('/dashboard/home');
-      expect(has('app-dashboard')).toBeTrue();
+      expect(has('app-shell')).toBeTrue();
     });
 
     it('login sin rol reconocido → /auth/login con aviso', async () => {
@@ -496,6 +504,53 @@ describe('Rutas por rol activo (T13d)', () => {
     }
   });
 
+  describe('F10 D16 (11): un solo marco para los 4 roles', () => {
+    for (const role of ['PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`${role}: /dashboard/home carga DashboardHomePage dentro del AppShell, sin ir a /pendientes`, async () => {
+        await start([role]);
+
+        await harness.navigateByUrl('/dashboard/home');
+
+        expect(router.url).toBe('/dashboard/home');
+        expect(has('app-shell')).toBeTrue();
+        expect(has('app-dashboard-home')).toBeTrue();
+        expect(notify).not.toHaveBeenCalled();
+      });
+    }
+
+    it('INVESTIGADOR sin verificar ve el aviso D9 en el AppShell y Mis protocolos rebota a /dashboard/home', async () => {
+      await start(['INVESTIGADOR']);
+
+      await harness.navigateByUrl('/dashboard/home');
+      expect(has('app-shell')).toBeTrue();
+      const notice = harness.fixture.nativeElement.querySelector('[data-testid="verify-email-notice"]');
+      expect(notice?.textContent?.trim()).toBe('Verifica tu correo para crear y ver tus protocolos.');
+
+      await harness.navigateByUrl('/dashboard/investigador/mis-protocolos');
+      expect(router.url).toBe('/dashboard/home');
+      expect(has('app-shell')).toBeTrue();
+    });
+
+    it('/dashboard/home sin sesión va a /auth/login', async () => {
+      await start(null);
+
+      await harness.navigateByUrl('/dashboard/home');
+
+      expect(router.url).toBe('/auth/login');
+      expect(has('app-shell')).toBeFalse();
+    });
+
+    it('sesión sin rol reconocido en /dashboard/home va a /auth/login con el aviso (F00 D12)', async () => {
+      await start(['ADMIN_TI']);
+
+      await harness.navigateByUrl('/dashboard/home');
+
+      expect(router.url).toBe('/auth/login');
+      expect(has('app-shell')).toBeFalse();
+      expect(notify).toHaveBeenCalledOnceWith(NO_ACTIVE_ROLE_MESSAGE, 'info');
+    });
+  });
+
   describe('D10: rutas nuevas lazy', () => {
     const leaves = (list: Route[]): Route[] =>
       list.flatMap((r) => (r.children ? leaves(r.children) : r.redirectTo ? [] : [r]));
@@ -524,7 +579,15 @@ describe('Rutas por rol activo (T13d)', () => {
       const shell = routes.find((r) => r.canMatch && r.children?.includes(SECRETARIA_ROUTES[0]));
       expect(shell?.loadComponent).toBeDefined();
       expect(shell?.component).toBeUndefined();
-      expect(shell?.children?.find((r) => r.path === 'dashboard')?.loadChildren).toBeDefined();
+      // F10 D16 (11): dos hijos 'dashboard', el primero solo con SECRETARIA (D11).
+      const dashboards = shell?.children?.filter((r) => r.path === 'dashboard') ?? [];
+      expect(dashboards.length).toBe(2);
+      expect(dashboards[0].canMatch?.length).toBe(1);
+      expect(dashboards[1].canMatch).toBeUndefined();
+      expect(dashboards.every((r) => !!r.loadChildren)).toBeTrue();
+      expect(routes.some((r) => r.path === 'dashboard'))
+        .withContext('sin padre dashboard fuera del AppShell')
+        .toBeFalse();
       const fallback = routes.find((r) => r.children === SECRETARIA_ROUTES);
       expect(fallback?.component).toBeUndefined();
       expect(fallback?.loadComponent).toBeUndefined();

@@ -1,7 +1,11 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
-import { activeRoleIs, redirectToRoleHome } from '@infrastructure/guards/role-home.guard';
+import {
+  activeRoleIn,
+  activeRoleIs,
+  redirectToRoleHome,
+} from '@infrastructure/guards/role-home.guard';
 import { PENDIENTES_PROVIDERS } from '@features/pendientes/pendientes.providers';
 import { PROTOCOLOS_PROVIDERS } from '@features/protocolos/protocolos.providers';
 
@@ -9,7 +13,7 @@ import { PROTOCOLOS_PROVIDERS } from '@features/protocolos/protocolos.providers'
  * Rutas nuevas de la Secretaría bajo el AppShell (D10, 03/11/2026; spec-ui §7).
  * Solo SECRETARIA: RoleGuard va primero para que otro rol vuelva a su inicio con aviso
  * (criterio 4); AuthGuard revisa los mismos permisos que la ruta /dashboard/... de origen.
- * PRESIDENTE sigue entrando a convocatorias y reportes por /dashboard/....
+ * PRESIDENTE sigue entrando a convocatorias y reportes por /dashboard/... (en el mismo AppShell).
  */
 export const SECRETARIA_ROUTES: Routes = [
   {
@@ -99,35 +103,39 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
-    // D9 (T13d-3): un solo AppShell para la Secretaría, con las rutas nuevas y /dashboard/...
-    // como hijos: la instancia se conserva al pasar de /pendientes a /dashboard/... y volver.
+    // F10 D16 (11): un solo AppShell para los 4 roles, con las rutas nuevas y /dashboard/...
+    // como hijos: la instancia se conserva al pasar de /pendientes a /dashboard/... y al
+    // cambiar de rol (D9, T13d-3). Las rutas nuevas siguen con RoleGuard [SECRETARIA]: otro
+    // rol que las abre vuelve a su inicio con aviso (criterio 4).
     path: '',
     loadComponent: () =>
       import('@features/shell/presentation/app-shell/app-shell.component').then(
         (m) => m.AppShellComponent,
       ),
-    canMatch: [activeRoleIs('SECRETARIA')],
+    canMatch: [activeRoleIn(['SECRETARIA', 'PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'])],
     canActivate: [AuthGuard],
     children: [
       ...SECRETARIA_ROUTES,
       {
+        // D11: /dashboard y /dashboard/home → /pendientes, solo con SECRETARIA activa.
         path: 'dashboard',
+        canMatch: [activeRoleIs('SECRETARIA')],
         loadChildren: () =>
           import('@features/dashboard/routes').then((m) => m.SECRETARIA_DASHBOARD_ROUTES),
+      },
+      {
+        // Los otros roles: /dashboard/home es su inicio (DashboardHomePage), sin redirect.
+        path: 'dashboard',
+        loadChildren: () => import('@features/dashboard/routes').then((m) => m.DASHBOARD_ROUTES),
       },
     ],
   },
   {
-    // Criterio 4: con otro rol activo, el canMatch de arriba no coincide. Sin este respaldo
-    // (sin layout) la URL caería en ** y llegaría al inicio sin aviso; aquí el RoleGuard de
-    // cada ruta nueva avisa y lleva al inicio del rol activo (D12).
+    // Sesión sin rol activo: el canMatch de arriba no coincide. Sin este respaldo (sin layout)
+    // la URL caería en ** y llegaría a /auth/login sin aviso; aquí el RoleGuard de cada ruta
+    // nueva da un solo aviso (D12).
     path: '',
     children: SECRETARIA_ROUTES,
-  },
-  {
-    // Otros roles: /dashboard/... con DashboardPage (D1).
-    path: 'dashboard',
-    loadChildren: () => import('@features/dashboard/routes').then((m) => m.DASHBOARD_ROUTES),
   },
   {
     // D13: igual que ''.
