@@ -161,6 +161,39 @@ describe('SidebarComponent (F10 T10-2)', () => {
     }
   });
 
+  it('cada opción pinta el ícono de su configuración, oculto para lectores de pantalla, y su nombre accesible es el texto (F10 D5, T10-4)', () => {
+    // Texto que queda para el nombre accesible: sin los nodos con aria-hidden="true".
+    const accessibleText = (el: Element): string => {
+      const clone = el.cloneNode(true) as Element;
+      clone.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+      return (clone.textContent ?? '').replace(/\s+/g, ' ').trim();
+    };
+
+    for (const role of ['INVESTIGADOR', 'PRESIDENTE', 'EVALUADOR'] as const) {
+      mockActiveRoleFacade.activeRole.set(role);
+      fixture.detectChanges();
+
+      const expected = MENU_ITEMS.filter((item) => item.roles.includes(role));
+      const links = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>(
+          'nav[aria-label="Menú principal"] .nav-link',
+        ),
+      );
+      expect(links.length)
+        .withContext('Rol activo: ' + role)
+        .toBe(expected.length);
+
+      links.forEach((link, index) => {
+        const icon = link.querySelector('mat-icon');
+        const context = role + ' · ' + expected[index].label;
+        expect(icon).withContext(context).not.toBeNull();
+        expect(icon?.textContent?.trim()).withContext(context).toBe(expected[index].icon);
+        expect(icon?.getAttribute('aria-hidden')).withContext(context).toBe('true');
+        expect(accessibleText(link)).withContext(context).toBe(expected[index].label);
+      });
+    }
+  });
+
   it('cierra sesión y navega a /auth/login al pulsar Cerrar sesión', () => {
     spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
     const logoutButton = (fixture.nativeElement as HTMLElement).querySelector(

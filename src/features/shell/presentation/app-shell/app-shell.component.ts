@@ -115,23 +115,6 @@ export class AppShellComponent implements OnInit {
     }
   }
 
-  getIcon(id: string): string {
-    switch (id) {
-      case 'pendientes':
-        return 'assignment_late';
-      case 'protocolos':
-        return 'description';
-      case 'convocatorias':
-        return 'event_note';
-      case 'reportes':
-        return 'bar_chart';
-      case 'configuracion':
-        return 'settings';
-      default:
-        return 'folder';
-    }
-  }
-
   onLogout(): void {
     this.sessionUser.logout();
     this.router.navigate(['/auth/login']);

@@ -134,19 +134,15 @@
     padding: 0.75rem;
     border-top: 1px solid var(--c-border, #e2e8f0);
 
+    // F10 D6: gris como .nav-link y también en hover (sin el índigo de .nav-link:hover).
+    // Contraste: 7,58:1 sobre --c-surface y 6,33:1 sobre --c-primary-soft.
     .logout-link {
-      color: #dc2626;
-
-      .nav-icon {
-        color: #dc2626;
-      }
-
       &:hover {
-        background-color: #fee2e2;
-        color: #991b1b;
+        background-color: var(--c-primary-soft, #e8eaf6);
+        color: var(--c-text-2, #475569);
 
         .nav-icon {
-          color: #991b1b;
+          color: var(--c-text-2, #475569);
         }
       }
     }
