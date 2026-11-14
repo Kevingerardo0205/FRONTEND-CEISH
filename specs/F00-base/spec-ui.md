@@ -1,12 +1,13 @@
 # F00 · Base del rediseño — spec-ui
 
-**Versión:** 0.6 · **Fecha:** 13/11/2026 · **Rama:** `feat/f10-t10-5b-marco-unico`
+**Versión:** 0.7 · **Fecha:** 14/11/2026 · **Rama:** `feat/f10-s-1e-pestanas-rol-activo`
 **Cubre:** spec-001 RF-EST.1, RF-EST.2, RF-EST.3 y HU-001 (roles fijos) · spec-003 RF-ALR.f (solo la entrada del menú)
 **Actualización 31/10/2026:** F00b se limita al módulo de la SECRETARIA (decisiones D1, D3, D4, D6 y D7).
 **Actualización 10/11/2026 (v0.3):** el menú lateral de los 4 roles se define en F10 (`specs/F10-menu-por-rol/`). D1, §2, §4 y §10 remiten a F10.
 **Actualización 11/11/2026 (v0.4):** excepción temporal en §5: en el espacio del protocolo, `StageBar` recibe una etapa calculada en el frontend hasta que `GET /protocols/:id` traiga `etapa` (F10 D13).
 **Actualización 13/11/2026 (v0.5):** un solo marco para los 4 roles (F10 D16): el `AppShell` toma el aspecto del marco del Investigador (`DashboardPage`) y, al terminar T10-5 (T10-5a a T10-5d), lo usan todos los roles y se retira `DashboardPage`.
 **Actualización 13/11/2026 (v0.6):** las partes T10-5b, T10-5c y T10-5d se unen en una sola tarea, T10-5b (F10 D16 (11)): PRESIDENTE, EVALUADOR e INVESTIGADOR pasan al AppShell y se borra `DashboardPage` en la misma tarea. Cambian D1, D9 (rutas), D14, §2 y §4. Cambian D1, D9 (rutas), D14, §2 (selector) y §4 (armazón).
+**Actualización 14/11/2026 (v0.7):** §2 con la regla de negocio de F10 D17 (1): INVESTIGADOR es exclusivo; la única cuenta con dos roles posible hoy es PRESIDENTE + EVALUADOR.
 
 ---
 
@@ -31,6 +32,8 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 | PRESIDENTE | Menú en F10 (spec-ui §3): Sesiones del pleno · Reportes |
 | EVALUADOR (+ perfil) | Menú en F10 (spec-ui §3): Mis evaluaciones |
 | INVESTIGADOR | Menú en F10 (spec-ui §3): Mis protocolos · Nuevo protocolo · Subsanaciones |
+
+**Regla (14/11/2026, F10 D17 (1), confirmada por la usuaria):** el rol INVESTIGADOR es exclusivo: un investigador no puede tener ningún otro rol y un miembro del comité no puede ser investigador. Las combinaciones posibles son solo entre roles del comité; la única cuenta con dos roles hoy es PRESIDENTE + EVALUADOR. El backend lo impide al asignar roles (`segregation-of-duties.service.ts:64-82` y `:174-177`).
 
 **Varios roles a la vez:** cuando la persona tiene más de un rol, el avatar muestra un **selector de rol activo**. El menú y las rutas corresponden al rol elegido. — Confirmado (spec-001 v3.5.3, HU-001 resuelto por backend TSK-001.1c, 31/10/2026).
 
