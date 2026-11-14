@@ -11,8 +11,12 @@ import { ProtocolFormComponent } from '../presentation/pages/protocol-form/proto
       <app-protocol-form></app-protocol-form>
     </div>
   `,
-  styles: [`
-    .create-page { padding: 2rem; }
-  `]
+  styles: [
+    `
+      .create-page {
+        padding: 2rem;
+      }
+    `,
+  ],
 })
 export class ProtocolCreatePage {}

@@ -1,15 +1,15 @@
 import { Observable } from 'rxjs';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
-  SecurityRole, 
-  CreateModuleDTO, 
+import {
+  SecurityModule,
+  SecurityPermission,
+  SecurityRole,
+  CreateModuleDTO,
   CreatePermissionDTO,
   UpdateRolePermissionsDTO,
   CreateRoleDTO,
   UpdateRoleDTO,
   RoleComplianceStatus,
-  RolePresetsMap
+  RolePresetsMap,
 } from '../entities/security.entity';
 
 export abstract class ISecurityRepositoryPort {
@@ -25,7 +25,10 @@ export abstract class ISecurityRepositoryPort {
   abstract getPermissions(): Observable<SecurityPermission[]>;
   abstract getPermissionById(id: number): Observable<SecurityPermission>;
   abstract createPermission(data: CreatePermissionDTO): Observable<SecurityPermission>;
-  abstract updatePermission(id: number, data: Partial<CreatePermissionDTO>): Observable<SecurityPermission>;
+  abstract updatePermission(
+    id: number,
+    data: Partial<CreatePermissionDTO>,
+  ): Observable<SecurityPermission>;
   abstract deletePermission(id: number): Observable<void>;
 
   // Roles
@@ -44,5 +47,3 @@ export abstract class ISecurityRepositoryPort {
   abstract getRoleCompliance(roleId: number): Observable<RoleComplianceStatus>;
   abstract resetRoleToPreset(roleId: number): Observable<SecurityRole>;
 }
-
-

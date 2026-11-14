@@ -1,0 +1,30 @@
+<section class="peer-risk-pending">
+  <app-page-header
+    heading="Estratificación de Riesgo"
+    subtitle="Protocolos pendientes de asignar pares para estratificar el riesgo."
+  />
+
+  <div class="peer-risk-pending__content">
+    @switch (estado()) {
+      @case ('cargando') {
+        <app-loading-state message="Cargando protocolos pendientes…" />
+      }
+      @case ('error') {
+        <app-error-state
+          message="No pudimos cargar los protocolos pendientes."
+          (retry)="cargar()"
+        />
+      }
+      @default {
+        @if (protocolos().length === 0) {
+          <app-empty-state message="No hay protocolos pendientes de estratificación de riesgo." />
+        } @else {
+          <app-peer-risk-pending-table
+            [protocols]="protocolos()"
+            (assignmentCompleted)="cargar()"
+          />
+        }
+      }
+    }
+  </div>
+</section>

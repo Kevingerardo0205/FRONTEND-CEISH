@@ -17,7 +17,7 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  
+
   .toolbar-content {
     display: flex;
     align-items: center;
@@ -31,7 +31,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    
+
     .logo-box {
       width: 40px;
       height: 40px;
@@ -41,15 +41,29 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      mat-icon { font-size: 24px; width: 24px; height: 24px; }
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
     }
 
     .brand-text {
       display: flex;
       flex-direction: column;
       line-height: 1.2;
-      .main-title { font-weight: 800; font-size: 1rem; color: #0f172a; }
-      .sub-title { font-size: 0.7rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+      .main-title {
+        font-weight: 800;
+        font-size: 1rem;
+        color: #0f172a;
+      }
+      .sub-title {
+        font-size: 0.7rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
     }
   }
 
@@ -59,7 +73,9 @@
     letter-spacing: 0.5px;
     border-radius: 8px;
     color: vars.$color-primary;
-    &:hover { background-color: #f8fafc; }
+    &:hover {
+      background-color: #f8fafc;
+    }
   }
 }
 
@@ -74,15 +90,15 @@
 .content-header {
   margin-bottom: 2.5rem;
   text-align: left;
-  .page-title { 
-    font-size: 2.25rem; 
-    font-weight: 900; 
-    color: #1e293b; 
+  .page-title {
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: #1e293b;
     letter-spacing: -1px;
     margin-bottom: 0.5rem;
   }
-  .page-subtitle { 
-    color: #64748b; 
+  .page-subtitle {
+    color: #64748b;
     font-size: 1.1rem;
     font-weight: 500;
   }
@@ -95,13 +111,15 @@
   padding: 0;
   overflow: hidden;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.05),
+    0 10px 10px -5px rgba(0, 0, 0, 0.02);
 }
 
 /* Ajustes del Stepper para que encaje perfecto */
 ::ng-deep .custom-stepper {
   background: transparent !important;
-  
+
   .mat-horizontal-stepper-header-container {
     background: #fafbfc;
     border-bottom: 1px solid #f1f5f9;
@@ -110,10 +128,13 @@
 
   .mat-step-header {
     height: 72px !important;
-    &:hover { background: #f8fafc !important; }
+    &:hover {
+      background: #f8fafc !important;
+    }
   }
 
-  .mat-step-icon-selected, .mat-step-icon-state-edit {
+  .mat-step-icon-selected,
+  .mat-step-icon-state-edit {
     background-color: vars.$color-primary !important;
   }
 
@@ -134,8 +155,14 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* --- FASE 2: Estética de los Cuadros (Inputs) --- */
@@ -218,7 +245,7 @@ textarea.mat-mdc-input-element {
 
 .team-section-inner {
   margin-top: 2rem;
-  
+
   .section-header-inline {
     display: flex;
     justify-content: space-between;
@@ -234,7 +261,9 @@ textarea.mat-mdc-input-element {
       display: flex;
       align-items: center;
       gap: 10px;
-      mat-icon { color: vars.$color-primary; }
+      mat-icon {
+        color: vars.$color-primary;
+      }
     }
   }
 }
@@ -296,7 +325,7 @@ textarea.mat-mdc-input-element {
   border: 1px solid #fef3c7;
   border-radius: 12px;
   color: #92400e;
-  
+
   .small-text {
     line-height: 1.4;
     display: block;
@@ -306,9 +335,14 @@ textarea.mat-mdc-input-element {
 /* --- Fin Fase 3 --- */
 
 @media (max-width: 768px) {
-
-
-  .register-main-content { padding: 1.5rem 1rem; }
-  .register-toolbar { height: auto; padding: 0.75rem 0; }
-  .content-header .page-title { font-size: 1.75rem; }
+  .register-main-content {
+    padding: 1.5rem 1rem;
+  }
+  .register-toolbar {
+    height: auto;
+    padding: 0.75rem 0;
+  }
+  .content-header .page-title {
+    font-size: 1.75rem;
+  }
 }

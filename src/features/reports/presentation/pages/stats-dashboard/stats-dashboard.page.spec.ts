@@ -3,12 +3,12 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
 import { StatsDashboardPage } from './stats-dashboard.page';
 import { ReportsUseCase } from '@features/reports/application/use-cases/reports.use-case';
-import { 
-  SummaryStats, 
-  ProtocolStats, 
-  StatusStats, 
-  EvaluationTimeStats, 
-  WorkloadStats 
+import {
+  SummaryStats,
+  ProtocolStats,
+  StatusStats,
+  EvaluationTimeStats,
+  WorkloadStats,
 } from '@features/reports/domain/entities/report.entity';
 
 describe('StatsDashboardPage', () => {
@@ -21,26 +21,26 @@ describe('StatsDashboardPage', () => {
     approvalRate: 82,
     avgEvaluationDays: 18.5,
     pendingRenewals: 12,
-    adverseEventsCount: 5
+    adverseEventsCount: 5,
   };
 
   const mockTypes: ProtocolStats[] = [
     { type: 'IO', count: 65 },
-    { type: 'EI', count: 45 }
+    { type: 'EI', count: 45 },
   ];
 
   const mockStatuses: StatusStats[] = [
     { status: 'Aprobado', count: 90 },
-    { status: 'Pendiente', count: 30 }
+    { status: 'Pendiente', count: 30 },
   ];
 
   const mockEvaluationTimes: EvaluationTimeStats[] = [
     { month: 'Ene', avgDays: 15 },
-    { month: 'Feb', avgDays: 18 }
+    { month: 'Feb', avgDays: 18 },
   ];
 
   const mockWorkload: WorkloadStats[] = [
-    { evaluator: 'Dr. Pérez', assignedCount: 12, completedCount: 10 }
+    { evaluator: 'Dr. Pérez', assignedCount: 12, completedCount: 10 },
   ];
 
   beforeEach(async () => {
@@ -49,7 +49,7 @@ describe('StatsDashboardPage', () => {
       'getProtocolsByType',
       'getProtocolsByStatus',
       'getEvaluationTimes',
-      'getWorkloadByEvaluator'
+      'getWorkloadByEvaluator',
     ]);
 
     mockReportsUseCase.getSummaryStats.and.returnValue(of(mockSummary));
@@ -59,13 +59,8 @@ describe('StatsDashboardPage', () => {
     mockReportsUseCase.getWorkloadByEvaluator.and.returnValue(of(mockWorkload));
 
     await TestBed.configureTestingModule({
-      imports: [
-        NoopAnimationsModule,
-        StatsDashboardPage
-      ],
-      providers: [
-        { provide: ReportsUseCase, useValue: mockReportsUseCase }
-      ]
+      imports: [NoopAnimationsModule, StatsDashboardPage],
+      providers: [{ provide: ReportsUseCase, useValue: mockReportsUseCase }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(StatsDashboardPage);
@@ -98,7 +93,10 @@ describe('StatsDashboardPage', () => {
 
     component.onDateChange();
 
-    expect(mockReportsUseCase.getSummaryStats).toHaveBeenCalledWith(component.startDate, component.endDate);
+    expect(mockReportsUseCase.getSummaryStats).toHaveBeenCalledWith(
+      component.startDate,
+      component.endDate,
+    );
   });
 
   it('should not reload data when only startDate is set', () => {

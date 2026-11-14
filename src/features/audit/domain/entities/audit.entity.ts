@@ -22,7 +22,7 @@ export interface ProtocolTrailEvent {
   action: string;
   status: 'PENDING' | 'COMPLETED' | 'REJECTED' | 'CONDITIONED';
   comments?: string;
-  documents?: { name: string, url: string }[];
+  documents?: { name: string; url: string }[];
   integrityHash: string;
 }
 

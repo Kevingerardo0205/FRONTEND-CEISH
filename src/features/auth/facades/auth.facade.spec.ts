@@ -3,7 +3,7 @@ import { of } from 'rxjs';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 import { IAuthRepositoryPort } from '@domain/ports/IAuthRepositoryPort';
 import { User } from '@domain/entities/user.entity';
-import { AuthFacade } from './auth.facade';
+import { AuthFacade, canEnterInvestigatorAreaRule } from './auth.facade';
 
 describe('AuthFacade (Multi-Role & PBAC)', () => {
   let facade: AuthFacade;
@@ -19,15 +19,21 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
     userRoles: [
       { id: 1, code: 'INVESTIGADOR', name: 'Investigador', isExpired: false },
       { id: 2, code: 'EVALUADOR', name: 'Evaluador Par', isExpired: false },
-      { id: 3, code: 'SECRETARIA', name: 'Secretaria Suplente', isExpired: true } // Expirado
+      { id: 3, code: 'SECRETARIA', name: 'Secretaria Suplente', isExpired: true }, // Expirado
     ],
     activo: true,
     emailVerificado: true,
-    permissions: ['RECEPCION_NUEVO', 'EVALUACION_EXPEDITA', 'DASHBOARD_RESUMEN']
+    permissions: ['RECEPCION_NUEVO', 'EVALUACION_EXPEDITA', 'DASHBOARD_RESUMEN'],
   };
 
   beforeEach(() => {
-    mockTokenStore = jasmine.createSpyObj('TokenStoreAdapter', ['getToken', 'getRefreshToken', 'saveToken', 'saveRefreshToken', 'removeTokens']);
+    mockTokenStore = jasmine.createSpyObj('TokenStoreAdapter', [
+      'getToken',
+      'getRefreshToken',
+      'saveToken',
+      'saveRefreshToken',
+      'removeTokens',
+    ]);
     mockAuthRepo = jasmine.createSpyObj('IAuthRepositoryPort', ['getUserById', 'refreshToken']);
 
     mockTokenStore.getToken.and.returnValue('mock-jwt-token');
@@ -37,8 +43,8 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
       providers: [
         AuthFacade,
         { provide: TokenStoreAdapter, useValue: mockTokenStore },
-        { provide: IAuthRepositoryPort, useValue: mockAuthRepo }
-      ]
+        { provide: IAuthRepositoryPort, useValue: mockAuthRepo },
+      ],
     });
 
     facade = TestBed.inject(AuthFacade);
@@ -92,12 +98,60 @@ describe('AuthFacade (Multi-Role & PBAC)', () => {
     it('debe otorgar todos los permisos si el usuario tiene ADMIN_ALL', () => {
       const adminUser: User = {
         ...mockMultiRoleUser,
-        permissions: ['ADMIN_ALL']
+        permissions: ['ADMIN_ALL'],
       };
       facade.setUser(adminUser);
 
       expect(facade.hasPermission('CUALQUIER_PERMISO_CUSTOM')).toBeTrue();
       expect(facade.hasAllPermissions(['P1', 'P2', 'P3'])).toBeTrue();
+    });
+  });
+
+  describe('canEnterInvestigatorArea() (F10 D9)', () => {
+    const createUser = (overrides: Partial<User> = {}): User => ({
+      nombre: 'Usuario Prueba',
+      email: 'usuario.prueba@example.test',
+      rol: 'INVESTIGADOR',
+      activo: true,
+      emailVerificado: false,
+      ...overrides,
+    });
+
+    it('permite al investigador con correo verificado', () => {
+      facade.setUser(createUser({ emailVerificado: true }));
+
+      expect(facade.canEnterInvestigatorArea()).toBeTrue();
+    });
+
+    it('rechaza al investigador con correo sin verificar', () => {
+      facade.setUser(createUser());
+
+      expect(facade.canEnterInvestigatorArea()).toBeFalse();
+    });
+
+    it('permite al investigador que también tiene el rol EVALUADOR sin verificar', () => {
+      facade.setUser(
+        createUser({
+          roles: ['INVESTIGADOR', 'EVALUADOR'],
+          emailVerificado: false,
+        }),
+      );
+
+      expect(facade.canEnterInvestigatorArea()).toBeTrue();
+    });
+
+    it('rechaza el acceso cuando no hay usuario', () => {
+      facade.logout();
+
+      expect(facade.canEnterInvestigatorArea()).toBeFalse();
+    });
+
+    it('consulta los roles del comité antes de aceptar la regla pura', () => {
+      const hasAnyRole = jasmine.createSpy().and.returnValue(true);
+
+      expect(canEnterInvestigatorAreaRule(createUser(), hasAnyRole)).toBeTrue();
+      expect(hasAnyRole).toHaveBeenCalledTimes(1);
+      expect(hasAnyRole).toHaveBeenCalledWith(['SECRETARIA', 'PRESIDENTE', 'EVALUADOR']);
     });
   });
 });

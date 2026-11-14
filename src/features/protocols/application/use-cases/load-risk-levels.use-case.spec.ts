@@ -11,10 +11,7 @@ describe('LoadRiskLevelsUseCase', () => {
     const rSpy = jasmine.createSpyObj('IProtocolRepositoryPort', ['getRiskLevels']);
 
     TestBed.configureTestingModule({
-      providers: [
-        LoadRiskLevelsUseCase,
-        { provide: IProtocolRepositoryPort, useValue: rSpy }
-      ]
+      providers: [LoadRiskLevelsUseCase, { provide: IProtocolRepositoryPort, useValue: rSpy }],
     });
 
     useCase = TestBed.inject(LoadRiskLevelsUseCase);
@@ -22,7 +19,10 @@ describe('LoadRiskLevelsUseCase', () => {
   });
 
   it('debe retornar catálogo de niveles de riesgo', (done) => {
-    const mockLevels = [{ id: 1, name: 'Mínimo' }, { id: 2, name: 'Bajo' }];
+    const mockLevels = [
+      { id: 1, name: 'Mínimo' },
+      { id: 2, name: 'Bajo' },
+    ];
     repoSpy.getRiskLevels.and.returnValue(of(mockLevels));
 
     useCase.execute().subscribe({
@@ -31,7 +31,7 @@ describe('LoadRiskLevelsUseCase', () => {
         expect(repoSpy.getRiskLevels).toHaveBeenCalled();
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

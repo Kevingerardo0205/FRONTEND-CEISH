@@ -13,12 +13,14 @@ describe('LoadPendingPeerAssignmentsUseCase', () => {
     TestBed.configureTestingModule({
       providers: [
         LoadPendingPeerAssignmentsUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: rSpy }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: rSpy },
+      ],
     });
 
     useCase = TestBed.inject(LoadPendingPeerAssignmentsUseCase);
-    repoSpy = TestBed.inject(IEvaluationRepositoryPort) as jasmine.SpyObj<IEvaluationRepositoryPort>;
+    repoSpy = TestBed.inject(
+      IEvaluationRepositoryPort,
+    ) as jasmine.SpyObj<IEvaluationRepositoryPort>;
   });
 
   it('debe retornar asignaciones pendientes de pares', (done) => {
@@ -31,7 +33,7 @@ describe('LoadPendingPeerAssignmentsUseCase', () => {
         expect(repoSpy.getMyPendingPeerAssignments).toHaveBeenCalled();
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

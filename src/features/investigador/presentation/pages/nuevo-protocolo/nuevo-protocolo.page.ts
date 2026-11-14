@@ -1,7 +1,14 @@
-import { Component, OnInit, inject, ViewChild } from '@angular/core';
+import { afterNextRender, Component, inject, Injector, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import {
+  FormBuilder,
+  Validators,
+  ReactiveFormsModule,
+  AbstractControl,
+  ValidationErrors,
+  FormsModule,
+} from '@angular/forms';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
 // Angular Material
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
@@ -20,8 +27,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import { CrearProtocoloDto, RequirementStatus, ChecklistRequirement } from '../../../domain/dtos/crear-protocolo.dto';
+import {
+  CrearProtocoloDto,
+  RequirementStatus,
+  ChecklistRequirement,
+} from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { finalize } from 'rxjs/operators';
 
 interface StudyType {
@@ -55,6 +67,20 @@ export function ecuadorianPhoneValidator(control: AbstractControl): ValidationEr
   return valid ? null : { invalidPhone: true };
 }
 
+/**
+ * Largo de min a max contado sobre el texto recortado. Devuelve las mismas claves que Validators
+ * (required, minlength, maxlength) para reutilizar los mensajes del template.
+ */
+export function trimmedLengthValidator(min: number, max: number) {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const length = String(control.value ?? '').trim().length;
+    if (length === 0) return { required: true };
+    if (length < min) return { minlength: { requiredLength: min, actualLength: length } };
+    if (length > max) return { maxlength: { requiredLength: max, actualLength: length } };
+    return null;
+  };
+}
+
 export function ecuadorianIdValidator(control: AbstractControl): ValidationErrors | null {
   const val = control.value;
   if (!val) return null;
@@ -66,15 +92,27 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
   selector: 'app-nuevo-protocolo',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, FormsModule, RouterModule,
-    MatStepperModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatButtonModule, MatIconModule, 
-    MatCardModule, MatCheckboxModule, MatSnackBarModule,
-    MatProgressSpinnerModule, MatDividerModule,
-    MatToolbarModule, MatTooltipModule, MatProgressBarModule
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    RouterModule,
+    MatStepperModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatCheckboxModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
+    MatDividerModule,
+    MatToolbarModule,
+    MatTooltipModule,
+    MatProgressBarModule,
   ],
   templateUrl: './nuevo-protocolo.page.html',
-  styleUrls: ['./nuevo-protocolo.page.scss']
+  styleUrls: ['./nuevo-protocolo.page.scss'],
 })
 export class NuevoProtocoloPage implements OnInit {
   @ViewChild('stepper') stepper!: MatStepper;
@@ -84,41 +122,108 @@ export class NuevoProtocoloPage implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly injector = inject(Injector);
 
   isLoading = false;
   isRequirementsLoading = false;
+  isDraftContinuation = false;
   protocolId: number | null = null;
-  
+
   tiposEstudio: StudyType[] = [];
   documentosRequeridos: RequiredDocument[] = [];
   documentUploadStatus: { [key: string]: string } = {};
   archivosCargados: { [key: string]: string } = {};
 
   generalForm = this.fb.group({
-    titulo: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(200)]],
+    titulo: ['', trimmedLengthValidator(20, 200)],
     tipoEstudio: ['', Validators.required],
     isAffidavitAccepted: [false, Validators.requiredTrue],
-    
+
     // Characteristics flags
     usesBiologicalSamples: [false, Validators.required],
     isVulnerablePopulation: [false, Validators.required],
     isIndigenousPopulation: [false, Validators.required],
     isMulticentric: [false, Validators.required],
-    isExternal: [false, Validators.required]
+    isExternal: [false, Validators.required],
   });
 
   ngOnInit(): void {
+    const borrador = this.route.snapshot.queryParamMap.get('borrador');
+    const borradorId = Number(borrador);
+
+    if (borrador !== null && Number.isInteger(borradorId) && borradorId > 0) {
+      this.continuarBorrador(borradorId);
+    }
+
     this.loadStudyTypes();
+  }
+
+  private continuarBorrador(id: number): void {
+    // Bloquea "Guardar" del paso 1 mientras se comprueba el borrador: evita crear otro protocolo.
+    this.isLoading = true;
+    this.protocoloService.misProtocolos().subscribe({
+      next: (protocolos) => {
+        const borrador = protocolos.find((protocolo) => protocolo.id === id);
+        if (!borrador || borrador.estado !== 'BORRADOR') {
+          this.rechazarContinuacionBorrador();
+          return;
+        }
+
+        this.protocolId = id;
+        this.isDraftContinuation = true;
+        this.isRequirementsLoading = true;
+        this.protocoloService.getChecklist(id).subscribe({
+          next: (res) => {
+            this.processRequirements(this.extractList(res));
+            this.isRequirementsLoading = false;
+            this.isLoading = false;
+            this.abrirPasoRequisitos();
+          },
+          error: () => {
+            this.processRequirements([]);
+            this.isRequirementsLoading = false;
+            this.isLoading = false;
+            this.abrirPasoRequisitos();
+          },
+        });
+      },
+      error: () => this.rechazarContinuacionBorrador(),
+    });
+  }
+
+  private rechazarContinuacionBorrador(): void {
+    this.isLoading = false;
+    this.snackBar.open(
+      'No se puede continuar: este protocolo ya no es un borrador o no está disponible.',
+      'Cerrar',
+      { duration: 5000 },
+    );
+    this.router.navigate(['/dashboard/investigador/mis-protocolos']);
+  }
+
+  private abrirPasoRequisitos(): void {
+    // Solo en el borrador: el paso 1 se marca completado (sus datos ya están en el backend) y el
+    // stepper lineal deja pasar al paso 2 sin el formulario. El flujo normal sigue con generalForm.
+    afterNextRender(
+      () => {
+        this.stepper.steps.first.completed = true;
+        this.stepper.next();
+      },
+      { injector: this.injector },
+    );
   }
 
   private loadStudyTypes() {
     this.protocoloService.getStudyTypes().subscribe({
       next: (types) => {
         const raw = types as unknown;
-        const list = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.['data'] as unknown[]);
+        const list = Array.isArray(raw)
+          ? raw
+          : ((raw as Record<string, unknown>)?.['data'] as unknown[]);
         this.tiposEstudio = (list || []) as StudyType[];
       },
-      error: () => this.snackBar.open('Error al cargar tipos de estudio.', 'Cerrar')
+      error: () => this.snackBar.open('Error al cargar tipos de estudio.', 'Cerrar'),
     });
   }
 
@@ -134,19 +239,18 @@ export class NuevoProtocoloPage implements OnInit {
     const formVal = this.generalForm.getRawValue();
 
     const payload: CrearProtocoloDto = {
-      title: formVal.titulo!,
+      title: (formVal.titulo ?? '').trim(),
       principalInvestigatorId: Number(user?.id),
       studyTypeId: Number(formVal.tipoEstudio),
-      riskLevelId: null as unknown as number,
       geographicCoverage: null as unknown as string,
       studyDurationMonths: null as unknown as number,
-      
+
       usesBiologicalSamples: !!formVal.usesBiologicalSamples,
       isVulnerablePopulation: !!formVal.isVulnerablePopulation,
       isIndigenousPopulation: !!formVal.isIndigenousPopulation,
       isMulticentric: !!formVal.isMulticentric,
       hasExternalInstitutions: !!formVal.isExternal,
-      
+
       sponsorRuc: null as unknown as string,
       sponsorPhone: null as unknown as string,
       sponsorAddress: null as unknown as string,
@@ -154,9 +258,9 @@ export class NuevoProtocoloPage implements OnInit {
       sponsorExecutingAgency: null as unknown as string,
       financingAmount: 0,
       isAffidavitAccepted: !!formVal.isAffidavitAccepted,
-      
+
       investigators: [],
-      institutions: []
+      institutions: [],
     };
 
     this.protocoloService.guardarProtocoloInicial(payload).subscribe({
@@ -164,8 +268,10 @@ export class NuevoProtocoloPage implements OnInit {
         const id = res.id || (res as unknown as { data?: { id?: number } })?.data?.id;
         if (id) {
           this.protocolId = id;
-          this.snackBar.open('Protocolo registrado. Cargando requisitos oficiales...', 'Info', { duration: 3000 });
-          
+          this.snackBar.open('Protocolo registrado. Cargando requisitos oficiales...', 'Info', {
+            duration: 3000,
+          });
+
           this.protocoloService.getChecklist(id).subscribe({
             next: (checklistRes) => {
               this.isLoading = false;
@@ -175,49 +281,68 @@ export class NuevoProtocoloPage implements OnInit {
             },
             error: () => {
               this.isLoading = false;
-              this.snackBar.open('⚠️ Protocolo creado, pero hubo un problema al generar la lista oficial.', 'Cerrar');
+              this.snackBar.open(
+                '⚠️ Protocolo creado, pero hubo un problema al generar la lista oficial.',
+                'Cerrar',
+              );
               this.processRequirements([]);
               this.stepper.next();
-            }
+            },
           });
         } else {
           this.isLoading = false;
-          this.snackBar.open('❌ Error: El servidor no devolvió un ID de protocolo válido.', 'Cerrar');
+          this.snackBar.open(
+            '❌ Error: El servidor no devolvió un ID de protocolo válido.',
+            'Cerrar',
+          );
         }
       },
       error: (err) => {
         this.isLoading = false;
-        this.snackBar.open('❌ Error: ' + (err.message || 'Error de validación al crear el protocolo'), 'Cerrar', { duration: 10000 });
-      }
+        this.snackBar.open(
+          '❌ Error: ' + (err.message || 'Error de validación al crear el protocolo'),
+          'Cerrar',
+          { duration: 10000 },
+        );
+      },
     });
   }
 
   public loadRequirements(protocolId?: number) {
     const idToUse = protocolId || this.protocolId;
-    
+
     if (idToUse) {
       this.isRequirementsLoading = true;
-      this.protocoloService.getChecklist(Number(idToUse)).pipe(
-        finalize(() => this.isRequirementsLoading = false)
-      ).subscribe({
-        next: (res) => {
-          const list = this.extractList(res);
-          this.processRequirements(list);
-        },
-        error: (err) => {
-          console.warn('[DEBUG] Error en checklist oficial...', err);
-          this.processRequirements([]);
-        }
-      });
+      this.protocoloService
+        .getChecklist(Number(idToUse))
+        .pipe(finalize(() => (this.isRequirementsLoading = false)))
+        .subscribe({
+          next: (res) => {
+            const list = this.extractList(res);
+            this.processRequirements(list);
+          },
+          error: (err) => {
+            console.warn('[DEBUG] Error en checklist oficial...', err);
+            this.processRequirements([]);
+          },
+        });
     }
   }
 
   private extractList(data: unknown): unknown[] {
     if (!data) return [];
     if (Array.isArray(data)) return data;
-    
+
     const obj = data as Record<string, unknown>;
-    const possibleKeys = ['data', 'results', 'checklist', 'requirements', 'protocolo_requisitos', 'items', 'list'];
+    const possibleKeys = [
+      'data',
+      'results',
+      'checklist',
+      'requirements',
+      'protocolo_requisitos',
+      'items',
+      'list',
+    ];
     for (const key of possibleKeys) {
       if (obj[key] && Array.isArray(obj[key])) {
         return obj[key] as unknown[];
@@ -234,23 +359,51 @@ export class NuevoProtocoloPage implements OnInit {
   private processRequirements(list: unknown[]) {
     let isEmergencyMode = false;
     if (list.length === 0) {
-        isEmergencyMode = true;
-        list = [
-            { id: 9001, code: 'PROTOCOLO_FINAL', name: 'Protocolo de Investigación (Requerido)', isRequired: true },
-            { id: 9002, code: 'CONSENTIMIENTO', name: 'Formulario de Consentimiento Informado', isRequired: true },
-            { id: 9003, code: 'CV_INVESTIGADORES', name: 'Hojas de Vida del Equipo', isRequired: true },
-            { id: 9004, code: 'COMPROMISO_ETICO', name: 'Carta de Compromiso Ético', isRequired: true }
-        ];
+      isEmergencyMode = true;
+      list = [
+        {
+          id: 9001,
+          code: 'PROTOCOLO_FINAL',
+          name: 'Protocolo de Investigación (Requerido)',
+          isRequired: true,
+        },
+        {
+          id: 9002,
+          code: 'CONSENTIMIENTO',
+          name: 'Formulario de Consentimiento Informado',
+          isRequired: true,
+        },
+        { id: 9003, code: 'CV_INVESTIGADORES', name: 'Hojas de Vida del Equipo', isRequired: true },
+        { id: 9004, code: 'COMPROMISO_ETICO', name: 'Carta de Compromiso Ético', isRequired: true },
+      ];
     }
 
     const uniqueMap = new Map<string, Record<string, unknown>>();
     list.forEach((rawItem, index) => {
-      const item = (typeof rawItem === 'object' && rawItem !== null ? rawItem : {}) as Record<string, unknown>;
-      const requirementObj = (item['requirement'] || item['requisito']) as Record<string, unknown> | undefined;
-      const code = (item['code'] || item['requirementCode'] || item['codigo_requisito'] || requirementObj?.['code'] || requirementObj?.['codigo'] || `GENERIC_${index}`) as string;
-      const name = (item['name'] || item['requirementName'] || item['nombre_requisito'] || requirementObj?.['name'] || requirementObj?.['description'] || requirementObj?.['nombre'] || 'Documento') as string;
-      const id = (item['id'] || item['requirementId'] || requirementObj?.['id'] || requirementObj?.['id']) as number | undefined;
-      
+      const item = (typeof rawItem === 'object' && rawItem !== null ? rawItem : {}) as Record<
+        string,
+        unknown
+      >;
+      const requirementObj = (item['requirement'] || item['requisito']) as
+        Record<string, unknown> | undefined;
+      const code = (item['code'] ||
+        item['requirementCode'] ||
+        item['codigo_requisito'] ||
+        requirementObj?.['code'] ||
+        requirementObj?.['codigo'] ||
+        `GENERIC_${index}`) as string;
+      const name = (item['name'] ||
+        item['requirementName'] ||
+        item['nombre_requisito'] ||
+        requirementObj?.['name'] ||
+        requirementObj?.['description'] ||
+        requirementObj?.['nombre'] ||
+        'Documento') as string;
+      const id = (item['id'] ||
+        item['requirementId'] ||
+        requirementObj?.['id'] ||
+        requirementObj?.['id']) as number | undefined;
+
       item['_resolvedCode'] = code;
       item['_resolvedName'] = name;
       item['_resolvedId'] = id;
@@ -265,40 +418,50 @@ export class NuevoProtocoloPage implements OnInit {
     this.documentosRequeridos = dedupedList.map((r) => ({
       id: r['_resolvedId'] as number | undefined,
       code: r['_resolvedCode'] as string,
-      nombre: isEmergencyMode ? `⚠️ ${r['_resolvedName']}` : r['_resolvedName'] as string,
+      nombre: isEmergencyMode ? `⚠️ ${r['_resolvedName']}` : (r['_resolvedName'] as string),
       isRequired: r['isRequired'] !== undefined ? (r['isRequired'] as boolean) : true,
       status: (r['status'] || r['estado'] || RequirementStatus.NO_PRESENTADO) as RequirementStatus,
       observations: (r['observations'] || r['observaciones'] || '') as string,
       icon: this.getTechnicalIcon(r['_resolvedCode'] as string),
-      alert: isEmergencyMode ? 'Modo de emergencia: El servidor no envió requisitos oficiales.' : this.getTechnicalAlert(r['_resolvedCode'] as string),
-      color: this.getStatusColor((r['status'] || r['estado']) as RequirementStatus)
+      alert: isEmergencyMode
+        ? 'Modo de emergencia: El servidor no envió requisitos oficiales.'
+        : this.getTechnicalAlert(r['_resolvedCode'] as string),
+      color: this.getStatusColor((r['status'] || r['estado']) as RequirementStatus),
     }));
 
-    this.documentosRequeridos.forEach(doc => {
-      this.documentUploadStatus[doc.code] = doc.status === RequirementStatus.PRESENTADO ? 'exito' : (doc.status === RequirementStatus.OBSERVADO ? 'error' : 'pendiente');
+    this.documentosRequeridos.forEach((doc) => {
+      this.documentUploadStatus[doc.code] =
+        doc.status === RequirementStatus.PRESENTADO
+          ? 'exito'
+          : doc.status === RequirementStatus.OBSERVADO
+            ? 'error'
+            : 'pendiente';
     });
   }
 
   private getStatusColor(status: RequirementStatus): string {
     switch (status) {
-      case RequirementStatus.PRESENTADO: return 'success';
-      case RequirementStatus.OBSERVADO: return 'warn';
-      default: return 'primary';
+      case RequirementStatus.PRESENTADO:
+        return 'success';
+      case RequirementStatus.OBSERVADO:
+        return 'warn';
+      default:
+        return 'primary';
     }
   }
 
   private getTechnicalIcon(code: string): string {
     if (!code) return 'description';
     const map: Record<string, string> = {
-      'TRADUCCION_ANCESTRAL': 'translate',
-      'POLIZA_SEGURO': 'security',
-      'CONTRATO_PROMOTOR': 'gavel',
-      'CONSENTIMIENTO': 'verified',
-      'CV_INVESTIGADORES': 'account_circle',
-      'CV_IP': 'account_circle',
-      'PROTOCOLO_FINAL': 'history_edu',
-      'PROTOCOLO_COMPLETO': 'history_edu',
-      'GENERIC': 'description'
+      TRADUCCION_ANCESTRAL: 'translate',
+      POLIZA_SEGURO: 'security',
+      CONTRATO_PROMOTOR: 'gavel',
+      CONSENTIMIENTO: 'verified',
+      CV_INVESTIGADORES: 'account_circle',
+      CV_IP: 'account_circle',
+      PROTOCOLO_FINAL: 'history_edu',
+      PROTOCOLO_COMPLETO: 'history_edu',
+      GENERIC: 'description',
     };
     return map[code] || 'description';
   }
@@ -306,10 +469,10 @@ export class NuevoProtocoloPage implements OnInit {
   private getTechnicalAlert(code: string): string | null {
     if (!code) return null;
     const map: Record<string, string> = {
-      'TRADUCCION_ANCESTRAL': 'Requisito mandatorio por población indígena.',
-      'POLIZA_SEGURO': 'Obligatorio para Ensayos Clínicos (AM 0005-2022).',
-      'CONTRATO_PROMOTOR': 'Acuerdo legal de patrocinio requerido.',
-      'CONSENTIMIENTO': 'Documento crítico de cumplimiento ético.'
+      TRADUCCION_ANCESTRAL: 'Requisito mandatorio por población indígena.',
+      POLIZA_SEGURO: 'Obligatorio para Ensayos Clínicos (AM 0005-2022).',
+      CONTRATO_PROMOTOR: 'Acuerdo legal de patrocinio requerido.',
+      CONSENTIMIENTO: 'Documento crítico de cumplimiento ético.',
     };
     return map[code] || null;
   }
@@ -319,37 +482,39 @@ export class NuevoProtocoloPage implements OnInit {
     const file = input.files?.[0];
     if (!file || !this.protocolId) return;
 
-    const requirement = this.documentosRequeridos.find(d => d.code === requirementCode);
-    
+    const requirement = this.documentosRequeridos.find((d) => d.code === requirementCode);
+
     if (!requirement || !requirement.id) {
-        this.documentUploadStatus[requirementCode] = 'subiendo';
-        this.protocoloService.subirDocumentosBulk(this.protocolId, [file]).subscribe({
-            next: () => {
-                this.documentUploadStatus[requirementCode] = 'exito';
-                this.archivosCargados[requirementCode] = file.name;
-            },
-            error: () => {
-                this.documentUploadStatus[requirementCode] = 'error';
-                this.snackBar.open('Error al subir documento.', 'Cerrar');
-            }
-        });
-        return;
+      this.documentUploadStatus[requirementCode] = 'subiendo';
+      this.protocoloService.subirDocumentosBulk(this.protocolId, [file]).subscribe({
+        next: () => {
+          this.documentUploadStatus[requirementCode] = 'exito';
+          this.archivosCargados[requirementCode] = file.name;
+        },
+        error: () => {
+          this.documentUploadStatus[requirementCode] = 'error';
+          this.snackBar.open('Error al subir documento.', 'Cerrar');
+        },
+      });
+      return;
     }
 
     this.documentUploadStatus[requirementCode] = 'subiendo';
-    
-    this.protocoloService.subirDocumento(file, this.protocolId, requirement.id, requirementCode).subscribe({
-      next: () => {
-        this.documentUploadStatus[requirementCode] = 'exito';
-        this.archivosCargados[requirementCode] = file.name;
-        this.loadRequirements(); 
-      },
-      error: (err) => {
-        console.error('[NuevoProtocoloPage] Error en subirDocumento:', err);
-        this.documentUploadStatus[requirementCode] = 'error';
-        this.snackBar.open('Error al subir documento técnico.', 'Cerrar');
-      }
-    });
+
+    this.protocoloService
+      .subirDocumento(file, this.protocolId, requirement.id, requirementCode)
+      .subscribe({
+        next: () => {
+          this.documentUploadStatus[requirementCode] = 'exito';
+          this.archivosCargados[requirementCode] = file.name;
+          this.loadRequirements();
+        },
+        error: (err) => {
+          console.error('[NuevoProtocoloPage] Error en subirDocumento:', err);
+          this.documentUploadStatus[requirementCode] = 'error';
+          this.snackBar.open('Error al subir documento técnico.', 'Cerrar');
+        },
+      });
   }
 
   onBulkUpload(event: Event) {
@@ -362,9 +527,9 @@ export class NuevoProtocoloPage implements OnInit {
       next: () => {
         this.isLoading = false;
         this.snackBar.open('✅ Archivos cargados exitosamente.', 'Cerrar', { duration: 3000 });
-        
-        files.forEach(f => {
-           this.archivosCargados[f.name] = f.name;
+
+        files.forEach((f) => {
+          this.archivosCargados[f.name] = f.name;
         });
 
         this.loadRequirements(this.protocolId!);
@@ -372,42 +537,47 @@ export class NuevoProtocoloPage implements OnInit {
       error: () => {
         this.isLoading = false;
         this.snackBar.open('❌ Error en la carga masiva.', 'Cerrar');
-      }
+      },
     });
   }
 
   onEnviarFinal(): void {
     if (!this.protocolId) return;
-    
-    const hasFormalRequirements = this.documentosRequeridos.some(d => !!d.id);
+
+    const hasFormalRequirements = this.documentosRequeridos.some((d) => !!d.id);
 
     if (hasFormalRequirements) {
-        const pendingMandatory = this.documentosRequeridos.some(d => d.isRequired && d.status !== RequirementStatus.PRESENTADO);
-        
-        if (pendingMandatory) {
-          this.snackBar.open('Debe subir todos los documentos marcados como obligatorios.', 'Cerrar');
-          return;
-        }
+      const pendingMandatory = this.documentosRequeridos.some(
+        (d) => d.isRequired && d.status !== RequirementStatus.PRESENTADO,
+      );
+
+      if (pendingMandatory) {
+        this.snackBar.open('Debe subir todos los documentos marcados como obligatorios.', 'Cerrar');
+        return;
+      }
     } else {
-        if (Object.keys(this.archivosCargados).length === 0) {
-            this.snackBar.open('⚠️ Debe subir al menos un documento antes de enviar.', 'Cerrar', { duration: 5000 });
-            return;
-        }
+      if (Object.keys(this.archivosCargados).length === 0) {
+        this.snackBar.open('⚠️ Debe subir al menos un documento antes de enviar.', 'Cerrar', {
+          duration: 5000,
+        });
+        return;
+      }
     }
 
     this.isLoading = true;
     this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
-      next: (res) => {
+      next: () => {
         this.isLoading = false;
-        const raw = res as Record<string, unknown>;
-        const codigo = (raw?.['code'] as string) || ((raw?.['data'] as Record<string, unknown>)?.['code'] as string) || 'CEISH-GEN-001';
-        this.snackBar.open(`✅ Protocolo ${codigo} enviado exitosamente.`, 'Cerrar', { duration: 5000 });
-        this.router.navigate(['/investigador/mis-protocolos']);
+        this.snackBar.open('Protocolo enviado a la Secretaría.', 'Cerrar', { duration: 5000 });
+        this.router.navigate(['/dashboard/investigador/mis-protocolos']);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         this.isLoading = false;
-        this.snackBar.open('Error final: ' + (err.message || 'No se pudo completar el registro'), 'Cerrar');
-      }
+        this.snackBar.open(
+          extractApiErrorMessage(err, 'No se pudo enviar el protocolo a la Secretaría.'),
+          'Cerrar',
+        );
+      },
     });
   }
 

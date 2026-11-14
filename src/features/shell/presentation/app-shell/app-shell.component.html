@@ -1,0 +1,150 @@
+<mat-sidenav-container class="shell-layout">
+  <!-- MENÚ LATERAL (F10 D16 (7): over por debajo de 1024 px, side desde 1024 px) -->
+  <mat-sidenav
+    id="shell-menu"
+    class="shell-sidebar"
+    [mode]="isNarrow() ? 'over' : 'side'"
+    [opened]="menuOpen()"
+    (openedChange)="menuOpen.set($event)"
+  >
+    <div class="sidebar-wrapper">
+      <div class="sidebar-header">
+        <!-- F10 D16 (5): solo el texto; el logo oficial es una tarea posterior. -->
+        <span class="brand-title" data-testid="brand">CEISH Espoch</span>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Menú principal">
+        @if (needsVerification()) {
+          <p class="nav-notice" data-testid="verify-email-notice">Verifica tu correo para crear y ver tus protocolos.</p>
+        } @else {
+          <ul class="nav-list">
+            @for (item of menuItems(); track item.id) {
+              <li class="nav-item">
+                <a
+                  class="nav-link"
+                  [routerLink]="item.route"
+                  routerLinkActive="active"
+                  #rla="routerLinkActive"
+                  [attr.aria-current]="rla.isActive ? 'page' : null"
+                  (click)="onNavClick()"
+                >
+                  <mat-icon class="nav-icon" aria-hidden="true">{{ item.icon }}</mat-icon>
+                  <span class="nav-label">{{ item.label }}</span>
+
+                  @if (item.badge === 'pendientes' && (pendingCount() ?? 0) > 0) {
+                    <span class="pending-badge" data-testid="pending-badge">{{ pendingCount() }}</span>
+                  }
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </nav>
+
+      <div class="sidebar-footer">
+        <button
+          type="button"
+          class="nav-link logout-link"
+          (click)="onLogout()"
+          aria-label="Cerrar sesión"
+        >
+          <mat-icon class="nav-icon" aria-hidden="true">logout</mat-icon>
+          <span class="nav-label">Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
+  </mat-sidenav>
+
+  <!-- CONTENIDO PRINCIPAL Y BARRA SUPERIOR -->
+  <mat-sidenav-content class="shell-main">
+    <header class="shell-topbar" role="banner">
+      <div class="topbar-left">
+        <button
+          type="button"
+          class="menu-toggle-btn"
+          data-testid="menu-toggle"
+          (click)="toggleMenu()"
+          [attr.aria-label]="menuOpen() ? 'Ocultar menú' : 'Mostrar menú'"
+          [attr.aria-expanded]="menuOpen()"
+          aria-controls="shell-menu"
+        >
+          <mat-icon aria-hidden="true">{{ menuOpen() ? 'first_page' : 'last_page' }}</mat-icon>
+        </button>
+        <div class="header-breadcrumb">
+          <span class="topbar-title">Panel de Gestión</span>
+          <span class="breadcrumb-separator" aria-hidden="true"></span>
+          <span class="topbar-date" data-testid="topbar-date">{{ currentDate | date: "EEEE, d 'de' MMMM" : '' : 'es' }}</span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Notificaciones: enlace a center sin badge mientras no haya fuente (F00 D7) -->
+        <a
+          mat-icon-button
+          routerLink="/dashboard/notifications/center"
+          class="bell-btn"
+          aria-label="Notificaciones"
+          data-testid="notifications-bell"
+        >
+          <mat-icon>notifications</mat-icon>
+        </a>
+
+        <mat-divider vertical class="topbar-divider"></mat-divider>
+
+        <!-- Avatar de Usuario y Menú (F10 D16 (6): cuadrado, sin nombre) -->
+        <button
+          type="button"
+          mat-button
+          [matMenuTriggerFor]="userMenu"
+          class="avatar-btn"
+          aria-label="Menú de usuario"
+          data-testid="avatar-button"
+        >
+          <span class="avatar-square">{{ userInitials() }}</span>
+          <mat-icon class="expand-icon">expand_more</mat-icon>
+        </button>
+
+        <mat-menu #userMenu="matMenu" xPosition="before" class="user-dropdown-panel">
+          <div class="dropdown-header">
+            <div class="dropdown-avatar">{{ userInitials() }}</div>
+            <div class="dropdown-user-info">
+              <span class="dropdown-name">{{ userName() }}</span>
+              <span class="dropdown-email">{{ userEmail() }}</span>
+            </div>
+          </div>
+          @if (activeRoleLabel()) {
+            <div class="role-badge" data-testid="role-badge">{{ activeRoleLabel() }}</div>
+          }
+
+          <!-- Selector de rol activo (T13c): solo aparece con más de un rol -->
+          <app-role-selector></app-role-selector>
+
+          <mat-divider></mat-divider>
+
+          <button mat-menu-item routerLink="/dashboard/profile" class="dropdown-item">
+            <mat-icon>person_outline</mat-icon>
+            <span>Mi perfil</span>
+          </button>
+
+          <mat-divider></mat-divider>
+
+          <button mat-menu-item (click)="onLogout()" class="dropdown-item logout-item">
+            <mat-icon>logout</mat-icon>
+            <span>Cerrar sesión</span>
+          </button>
+        </mat-menu>
+      </div>
+    </header>
+
+    <!-- CUERPO DE CONTENIDO -->
+    <main class="shell-content" role="main">
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+
+<!-- ASISTENTE DE IA INTELIGENTE RAG: fuera del contenedor del menú, para que su z-index no quede
+     dentro del de mat-sidenav-content (z-index 1) y el menú en modo over no lo tape. -->
+@if (showAssistant()) {
+  <app-ai-assistant></app-ai-assistant>
+}

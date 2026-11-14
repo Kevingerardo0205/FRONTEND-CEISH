@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ValidateDocumentaryUseCase {
   private repository = inject(IProtocolRepositoryPort);

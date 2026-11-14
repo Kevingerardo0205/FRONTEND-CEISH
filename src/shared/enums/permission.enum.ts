@@ -47,5 +47,5 @@ export enum Permission {
   REPORTES_EXPORTAR_PDF = 'REPORTES_EXPORTAR_PDF',
 
   // Otros
-  ADMIN_ALL = 'ADMIN_ALL'
+  ADMIN_ALL = 'ADMIN_ALL',
 }

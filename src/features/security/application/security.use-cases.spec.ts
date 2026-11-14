@@ -1,16 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ISecurityRepositoryPort } from '@domain/ports/ISecurityRepositoryPort';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
-  SecurityRole, 
-  CreateRoleDTO, 
+import {
+  SecurityModule,
+  SecurityPermission,
+  SecurityRole,
+  CreateRoleDTO,
   UpdateRoleDTO,
   CreateModuleDTO,
   CreatePermissionDTO,
   RoleComplianceStatus,
-  RolePresetsMap
+  RolePresetsMap,
 } from '@domain/entities/security.entity';
 import {
   GetSecurityCatalogUseCase,
@@ -23,22 +23,29 @@ import {
   GetRoleComplianceUseCase,
   ResetRolePresetUseCase,
   ManageSecurityModuleUseCase,
-  ManageSecurityPermissionUseCase
+  ManageSecurityPermissionUseCase,
 } from './security.use-cases';
 
 describe('Security Use Cases', () => {
   let mockRepository: jasmine.SpyObj<ISecurityRepositoryPort>;
 
   const mockModules: SecurityModule[] = [
-    { id: 1, code: 'RECEPCION', name: 'Recepción', icon: 'folder', order: 1, isActive: true }
+    { id: 1, code: 'RECEPCION', name: 'Recepción', icon: 'folder', order: 1, isActive: true },
   ];
 
   const mockPermissions: SecurityPermission[] = [
-    { id: 10, code: 'RECEPCION_NUEVO', name: 'Recepción Nueva', moduleId: 1 }
+    { id: 10, code: 'RECEPCION_NUEVO', name: 'Recepción Nueva', moduleId: 1 },
   ];
 
   const mockRoles: SecurityRole[] = [
-    { id: 2, code: 'SECRETARIA', name: 'Secretaría', description: 'Rol de secretaría', isActive: true, permissions: mockPermissions }
+    {
+      id: 2,
+      code: 'SECRETARIA',
+      name: 'Secretaría',
+      description: 'Rol de secretaría',
+      isActive: true,
+      permissions: mockPermissions,
+    },
   ];
 
   beforeEach(() => {
@@ -59,7 +66,7 @@ describe('Security Use Cases', () => {
       'deleteModule',
       'createPermission',
       'updatePermission',
-      'deletePermission'
+      'deletePermission',
     ]);
 
     TestBed.configureTestingModule({
@@ -75,8 +82,8 @@ describe('Security Use Cases', () => {
         GetRoleComplianceUseCase,
         ResetRolePresetUseCase,
         ManageSecurityModuleUseCase,
-        ManageSecurityPermissionUseCase
-      ]
+        ManageSecurityPermissionUseCase,
+      ],
     });
   });
 
@@ -118,7 +125,9 @@ describe('Security Use Cases', () => {
 
       const useCase = TestBed.inject(UpdateRolePermissionsUseCase);
       useCase.execute(2, [10, 11]).subscribe(() => {
-        expect(mockRepository.updateRolePermissions).toHaveBeenCalledWith(2, { permissionIds: [10, 11] });
+        expect(mockRepository.updateRolePermissions).toHaveBeenCalledWith(2, {
+          permissionIds: [10, 11],
+        });
         done();
       });
     });
@@ -129,7 +138,7 @@ describe('Security Use Cases', () => {
       const newRoleDTO: CreateRoleDTO = {
         code: 'EVALUADOR_EXTERNO',
         name: 'Evaluador Externo',
-        description: 'Par evaluador invitado'
+        description: 'Par evaluador invitado',
       };
       const createdRole: SecurityRole = { id: 5, ...newRoleDTO, isActive: true };
       mockRepository.createRole.and.returnValue(of(createdRole));
@@ -146,7 +155,12 @@ describe('Security Use Cases', () => {
   describe('UpdateRoleUseCase', () => {
     it('debe actualizar campos del rol', (done) => {
       const updateDTO: UpdateRoleDTO = { name: 'Secretaría General' };
-      const updatedRole: SecurityRole = { id: 2, code: 'SECRETARIA', name: 'Secretaría General', isActive: true };
+      const updatedRole: SecurityRole = {
+        id: 2,
+        code: 'SECRETARIA',
+        name: 'Secretaría General',
+        isActive: true,
+      };
       mockRepository.updateRole.and.returnValue(of(updatedRole));
 
       const useCase = TestBed.inject(UpdateRoleUseCase);
@@ -173,7 +187,7 @@ describe('Security Use Cases', () => {
   describe('GetRolePresetsUseCase', () => {
     it('debe consultar el mapa de plantillas oficiales', (done) => {
       const mockPresets: RolePresetsMap = {
-        SECRETARIA: ['RECEPCION_NUEVO', 'RECEPCION_VALIDAR']
+        SECRETARIA: ['RECEPCION_NUEVO', 'RECEPCION_VALIDAR'],
       };
       mockRepository.getRolePresets.and.returnValue(of(mockPresets));
 
@@ -196,7 +210,7 @@ describe('Security Use Cases', () => {
         missingPermissions: [],
         extraPermissions: [],
         currentPermissionCount: 20,
-        expectedPermissionCount: 20
+        expectedPermissionCount: 20,
       };
       mockRepository.getRoleCompliance.and.returnValue(of(mockCompliance));
 
@@ -216,7 +230,7 @@ describe('Security Use Cases', () => {
         code: 'SECRETARIA',
         name: 'Secretaría',
         isActive: true,
-        permissions: mockPermissions
+        permissions: mockPermissions,
       };
       mockRepository.resetRoleToPreset.and.returnValue(of(restoredRole));
 
@@ -231,7 +245,13 @@ describe('Security Use Cases', () => {
 
   describe('ManageSecurityModuleUseCase', () => {
     it('debe gestionar la creación, edición y borrado de módulos', (done) => {
-      const moduleDTO: CreateModuleDTO = { code: 'NUEVO_MOD', name: 'Nuevo', icon: 'star', order: 5, isActive: true };
+      const moduleDTO: CreateModuleDTO = {
+        code: 'NUEVO_MOD',
+        name: 'Nuevo',
+        icon: 'star',
+        order: 5,
+        isActive: true,
+      };
       const createdMod: SecurityModule = { id: 9, ...moduleDTO, isActive: true };
       mockRepository.createModule.and.returnValue(of(createdMod));
       mockRepository.updateModule.and.returnValue(of(createdMod));
@@ -253,7 +273,11 @@ describe('Security Use Cases', () => {
 
   describe('ManageSecurityPermissionUseCase', () => {
     it('debe gestionar la creación, edición y borrado de permisos', (done) => {
-      const permDTO: CreatePermissionDTO = { code: 'PERM_NUEVO', name: 'Nuevo Permiso', moduleId: 1 };
+      const permDTO: CreatePermissionDTO = {
+        code: 'PERM_NUEVO',
+        name: 'Nuevo Permiso',
+        moduleId: 1,
+      };
       const createdPerm: SecurityPermission = { id: 99, ...permDTO };
       mockRepository.createPermission.and.returnValue(of(createdPerm));
       mockRepository.updatePermission.and.returnValue(of(createdPerm));

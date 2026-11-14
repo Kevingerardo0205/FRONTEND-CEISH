@@ -1,23 +1,23 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
+import {
+  SecurityModule,
+  SecurityPermission,
   SecurityRole,
-  RoleComplianceStatus
+  RoleComplianceStatus,
 } from '@domain/entities/security.entity';
 import { RolePermissionsState } from '../../../application/role-permissions.state';
-import { 
-  GetSecurityCatalogUseCase, 
-  GetRolePermissionsUseCase, 
+import {
+  GetSecurityCatalogUseCase,
+  GetRolePermissionsUseCase,
   UpdateRolePermissionsUseCase,
   CreateRoleUseCase,
   UpdateRoleUseCase,
   DeleteRoleUseCase,
   GetRolePresetsUseCase,
   GetRoleComplianceUseCase,
-  ResetRolePresetUseCase
+  ResetRolePresetUseCase,
 } from '../../../application/security.use-cases';
 import { RoleMatrixComponent } from './role-matrix.component';
 
@@ -27,16 +27,22 @@ describe('RoleMatrixComponent', () => {
   let state: RolePermissionsState;
 
   const mockModules: SecurityModule[] = [
-    { id: 1, code: 'RECEPCION', name: 'Recepción', icon: 'folder', order: 1, isActive: true }
+    { id: 1, code: 'RECEPCION', name: 'Recepción', icon: 'folder', order: 1, isActive: true },
   ];
 
   const mockPermissions: SecurityPermission[] = [
     { id: 10, code: 'RECEPCION_NUEVO', name: 'Recepción Nueva', moduleId: 1 },
-    { id: 11, code: 'RECEPCION_VALIDAR', name: 'Validar Documentos', moduleId: 1 }
+    { id: 11, code: 'RECEPCION_VALIDAR', name: 'Validar Documentos', moduleId: 1 },
   ];
 
   const mockRoles: SecurityRole[] = [
-    { id: 2, code: 'SECRETARIA', name: 'Secretaría', isActive: true, permissions: [mockPermissions[0]] }
+    {
+      id: 2,
+      code: 'SECRETARIA',
+      name: 'Secretaría',
+      isActive: true,
+      permissions: [mockPermissions[0]],
+    },
   ];
 
   const mockCompliance: RoleComplianceStatus = {
@@ -47,13 +53,15 @@ describe('RoleMatrixComponent', () => {
     missingPermissions: [],
     extraPermissions: [],
     currentPermissionCount: 1,
-    expectedPermissionCount: 1
+    expectedPermissionCount: 1,
   };
 
   beforeEach(async () => {
     const mockGetCatalog = jasmine.createSpyObj('GetSecurityCatalogUseCase', ['execute']);
     const mockGetRolePermissions = jasmine.createSpyObj('GetRolePermissionsUseCase', ['execute']);
-    const mockUpdateRolePermissions = jasmine.createSpyObj('UpdateRolePermissionsUseCase', ['execute']);
+    const mockUpdateRolePermissions = jasmine.createSpyObj('UpdateRolePermissionsUseCase', [
+      'execute',
+    ]);
     const mockCreateRole = jasmine.createSpyObj('CreateRoleUseCase', ['execute']);
     const mockUpdateRole = jasmine.createSpyObj('UpdateRoleUseCase', ['execute']);
     const mockDeleteRole = jasmine.createSpyObj('DeleteRoleUseCase', ['execute']);
@@ -61,11 +69,13 @@ describe('RoleMatrixComponent', () => {
     const mockGetRoleCompliance = jasmine.createSpyObj('GetRoleComplianceUseCase', ['execute']);
     const mockResetRolePreset = jasmine.createSpyObj('ResetRolePresetUseCase', ['execute']);
 
-    mockGetCatalog.execute.and.returnValue(of({
-      modules: mockModules,
-      allPermissions: mockPermissions,
-      roles: mockRoles
-    }));
+    mockGetCatalog.execute.and.returnValue(
+      of({
+        modules: mockModules,
+        allPermissions: mockPermissions,
+        roles: mockRoles,
+      }),
+    );
     mockGetRoleCompliance.execute.and.returnValue(of(mockCompliance));
 
     await TestBed.configureTestingModule({
@@ -80,8 +90,8 @@ describe('RoleMatrixComponent', () => {
         { provide: DeleteRoleUseCase, useValue: mockDeleteRole },
         { provide: GetRolePresetsUseCase, useValue: mockGetRolePresets },
         { provide: GetRoleComplianceUseCase, useValue: mockGetRoleCompliance },
-        { provide: ResetRolePresetUseCase, useValue: mockResetRolePreset }
-      ]
+        { provide: ResetRolePresetUseCase, useValue: mockResetRolePreset },
+      ],
     }).compileComponents();
 
     state = TestBed.inject(RolePermissionsState);
@@ -160,7 +170,7 @@ describe('RoleMatrixComponent', () => {
       missingPermissions: ['RECEPCION_VALIDAR'],
       extraPermissions: ['ADMIN_ALL'],
       currentPermissionCount: 1,
-      expectedPermissionCount: 2
+      expectedPermissionCount: 2,
     };
 
     const tooltipCustom = component.getComplianceTooltip(customComp);

@@ -23,7 +23,7 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
     MatButtonModule,
     MatBadgeModule,
     MatCardModule,
-    MatChipsModule
+    MatChipsModule,
   ],
   template: `
     <div class="notifications-container">
@@ -41,11 +41,15 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
         <mat-tab-group>
           <mat-tab>
             <ng-template mat-tab-label>
-              <span [matBadge]="unreadCount" matBadgeOverlap="false" [matBadgeHidden]="unreadCount === 0">
+              <span
+                [matBadge]="unreadCount"
+                matBadgeOverlap="false"
+                [matBadgeHidden]="unreadCount === 0"
+              >
                 No leídas
               </span>
             </ng-template>
-            
+
             <div class="notifications-list">
               <div *ngIf="unreadNotifications.length === 0" class="empty-notifications">
                 <mat-icon>notifications_off</mat-icon>
@@ -53,16 +57,24 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
               </div>
 
               <mat-list>
-                <mat-list-item *ngFor="let note of unreadNotifications" class="notification-item" (click)="onNotificationClick(note)">
-                  <mat-icon matListItemIcon [ngClass]="note.type">{{ getIcon(note.category) }}</mat-icon>
+                <mat-list-item
+                  *ngFor="let note of unreadNotifications"
+                  class="notification-item"
+                  (click)="onNotificationClick(note)"
+                >
+                  <mat-icon matListItemIcon [ngClass]="note.type">{{
+                    getIcon(note.category)
+                  }}</mat-icon>
                   <div matListItemTitle class="notification-title">
                     {{ note.title }}
                     <span class="dot unread"></span>
                   </div>
                   <div matListItemLine class="notification-message">{{ note.message }}</div>
                   <div matListItemLine class="notification-meta">
-                    <mat-chip-listbox><mat-chip>{{ note.category }}</mat-chip></mat-chip-listbox>
-                    <span class="date">{{ note.createdAt | date:'short' }}</span>
+                    <mat-chip-listbox
+                      ><mat-chip>{{ note.category }}</mat-chip></mat-chip-listbox
+                    >
+                    <span class="date">{{ note.createdAt | date: 'short' }}</span>
                   </div>
                   <button mat-icon-button matListItemMeta (click)="markAsRead($event, note)">
                     <mat-icon>check</mat-icon>
@@ -75,14 +87,21 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
           <mat-tab label="Todas">
             <div class="notifications-list">
               <mat-list>
-                <mat-list-item *ngFor="let note of notifications" class="notification-item" [ngClass]="{'read': note.isRead}" (click)="onNotificationClick(note)">
-                  <mat-icon matListItemIcon [ngClass]="note.type">{{ getIcon(note.category) }}</mat-icon>
+                <mat-list-item
+                  *ngFor="let note of notifications"
+                  class="notification-item"
+                  [ngClass]="{ read: note.isRead }"
+                  (click)="onNotificationClick(note)"
+                >
+                  <mat-icon matListItemIcon [ngClass]="note.type">{{
+                    getIcon(note.category)
+                  }}</mat-icon>
                   <div matListItemTitle class="notification-title">
                     {{ note.title }}
                   </div>
                   <div matListItemLine class="notification-message">{{ note.message }}</div>
                   <div matListItemLine class="notification-meta">
-                    <span class="date">{{ note.createdAt | date:'short' }}</span>
+                    <span class="date">{{ note.createdAt | date: 'short' }}</span>
                   </div>
                 </mat-list-item>
               </mat-list>
@@ -92,39 +111,108 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
       </mat-card>
     </div>
   `,
-  styles: [`
-    .notifications-container { padding: 2rem; background: #f8f9fa; min-height: 100vh; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-    .header-content h1 { margin: 0; color: #003366; font-size: 2rem; font-weight: 700; }
-    .subtitle { color: #6c757d; margin: 0.5rem 0 0; }
+  styles: [
+    `
+      .notifications-container {
+        padding: 2rem;
+        background: #f8f9fa;
+        min-height: 100vh;
+      }
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      .header-content h1 {
+        margin: 0;
+        color: #003366;
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      .subtitle {
+        color: #6c757d;
+        margin: 0.5rem 0 0;
+      }
 
-    .notifications-card { border-radius: 12px; overflow: hidden; }
-    .notifications-list { min-height: 400px; padding: 1rem 0; }
-    
-    .notification-item {
-      cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;
-      &:hover { background: #f8f9fa; }
-      &.read { opacity: 0.7; }
-    }
+      .notifications-card {
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .notifications-list {
+        min-height: 400px;
+        padding: 1rem 0;
+      }
 
-    .notification-title { font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-    .dot.unread { width: 8px; height: 8px; background: #003366; border-radius: 50%; }
+      .notification-item {
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s;
+        &:hover {
+          background: #f8f9fa;
+        }
+        &.read {
+          opacity: 0.7;
+        }
+      }
 
-    .notification-message { color: #444; margin-top: 0.25rem; }
-    .notification-meta { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
-    .date { font-size: 0.75rem; color: #999; }
+      .notification-title {
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .dot.unread {
+        width: 8px;
+        height: 8px;
+        background: #003366;
+        border-radius: 50%;
+      }
 
-    .SUCCESS { color: #28a745; }
-    .INFO { color: #003366; }
-    .WARNING { color: #ffc107; }
-    .ERROR { color: #dc3545; }
+      .notification-message {
+        color: #444;
+        margin-top: 0.25rem;
+      }
+      .notification-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+      }
+      .date {
+        font-size: 0.75rem;
+        color: #999;
+      }
 
-    .empty-notifications {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 5rem; color: #999;
-      mat-icon { font-size: 4rem; width: 4rem; height: 4rem; margin-bottom: 1rem; }
-    }
-  `]
+      .SUCCESS {
+        color: #28a745;
+      }
+      .INFO {
+        color: #003366;
+      }
+      .WARNING {
+        color: #ffc107;
+      }
+      .ERROR {
+        color: #dc3545;
+      }
+
+      .empty-notifications {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 5rem;
+        color: #999;
+        mat-icon {
+          font-size: 4rem;
+          width: 4rem;
+          height: 4rem;
+          margin-bottom: 1rem;
+        }
+      }
+    `,
+  ],
 })
 export class NotificationsCenterPage implements OnInit {
   private readonly notificationUseCase = inject(NotificationUseCase);
@@ -132,9 +220,9 @@ export class NotificationsCenterPage implements OnInit {
   private readonly router = inject(Router);
 
   notifications: Notification[] = [];
-  
+
   get unreadNotifications() {
-    return this.notifications.filter(n => !n.isRead);
+    return this.notifications.filter((n) => !n.isRead);
   }
 
   get unreadCount() {
@@ -148,7 +236,9 @@ export class NotificationsCenterPage implements OnInit {
   loadNotifications() {
     const user = this.authFacade.currentUser();
     if (user && user.id) {
-      this.notificationUseCase.getNotifications(user.id).subscribe((notes: Notification[]) => this.notifications = notes);
+      this.notificationUseCase
+        .getNotifications(user.id)
+        .subscribe((notes: Notification[]) => (this.notifications = notes));
     }
   }
 
@@ -172,19 +262,25 @@ export class NotificationsCenterPage implements OnInit {
     const user = this.authFacade.currentUser();
     if (user && user.id) {
       this.notificationUseCase.markAllAsRead(user.id).subscribe(() => {
-        this.notifications.forEach(n => n.isRead = true);
+        this.notifications.forEach((n) => (n.isRead = true));
       });
     }
   }
 
   getIcon(category: string): string {
     switch (category) {
-      case 'VALIDATION': return 'fact_check';
-      case 'ASSIGNMENT': return 'assignment_ind';
-      case 'RESOLUTION': return 'gavel';
-      case 'FOLLOW_UP': return 'warning';
-      case 'AMENDMENT': return 'edit_document';
-      default: return 'notifications';
+      case 'VALIDATION':
+        return 'fact_check';
+      case 'ASSIGNMENT':
+        return 'assignment_ind';
+      case 'RESOLUTION':
+        return 'gavel';
+      case 'FOLLOW_UP':
+        return 'warning';
+      case 'AMENDMENT':
+        return 'edit_document';
+      default:
+        return 'notifications';
     }
   }
 }

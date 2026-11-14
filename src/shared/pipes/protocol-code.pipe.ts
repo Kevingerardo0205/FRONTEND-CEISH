@@ -2,7 +2,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
   name: 'protocolCode',
-  standalone: true
+  standalone: true,
 })
 export class ProtocolCodePipe implements PipeTransform {
   transform(value: string | undefined): string {

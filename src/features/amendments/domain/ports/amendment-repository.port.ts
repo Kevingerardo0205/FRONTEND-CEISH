@@ -1,5 +1,9 @@
 import { Observable } from 'rxjs';
-import { AmendmentItem, CreateAmendmentDTO, ReviewAmendmentDTO } from '../entities/amendment.entity';
+import {
+  AmendmentItem,
+  CreateAmendmentDTO,
+  ReviewAmendmentDTO,
+} from '../entities/amendment.entity';
 
 export interface ApprovedProtocolOption {
   id: string;

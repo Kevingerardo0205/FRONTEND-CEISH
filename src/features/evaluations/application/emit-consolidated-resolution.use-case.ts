@@ -20,24 +20,28 @@ export class EmitConsolidatedResolutionUseCase {
     file?: File;
   }): Observable<ResolutionEntity> {
     const s3Key = `protocols/${params.protocolId}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-    const fileToUpload = params.file || new File(
-      [new Blob(['Acta de Resolución Consolidada'], { type: 'application/pdf' })],
-      'Carta_Resolucion_Consolidada.pdf',
-      { type: 'application/pdf' }
-    );
+    const fileToUpload =
+      params.file ||
+      new File(
+        [new Blob(['Acta de Resolución Consolidada'], { type: 'application/pdf' })],
+        'Carta_Resolucion_Consolidada.pdf',
+        { type: 'application/pdf' },
+      );
 
     return this.s3Storage.getUploadUrl(s3Key, 'application/pdf').pipe(
-      switchMap(urlRes => this.s3Storage.uploadFileToS3(urlRes.uploadUrl, fileToUpload).pipe(
-        filter(upRes => upRes.success),
-        map(() => urlRes.key)
-      )),
-      switchMap(uploadedKey => {
+      switchMap((urlRes) =>
+        this.s3Storage.uploadFileToS3(urlRes.uploadUrl, fileToUpload).pipe(
+          filter((upRes) => upRes.success),
+          map(() => urlRes.key),
+        ),
+      ),
+      switchMap((uploadedKey) => {
         return this.resolutionRepo.submitResolution({
           protocolId: params.protocolId,
           validityYears: params.validityYears,
           followUpPeriodDays: params.followUpPeriodDays,
           observations: params.observations,
-          pdfLetterPath: uploadedKey
+          pdfLetterPath: uploadedKey,
         });
       }),
       map((res: ResolutionEntity) => {
@@ -49,10 +53,10 @@ export class EmitConsolidatedResolutionUseCase {
         }
         this.notificationBroker.publish('PROTOCOL_STATUS_UPDATED', {
           protocolId: String(params.protocolId),
-          status: finalStatus
+          status: finalStatus,
         });
         return res;
-      })
+      }),
     );
   }
 }

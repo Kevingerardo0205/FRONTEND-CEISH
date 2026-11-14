@@ -1,4 +1,13 @@
-import { Component, input, output, ChangeDetectionStrategy, signal, computed, effect, untracked } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  ChangeDetectionStrategy,
+  signal,
+  computed,
+  effect,
+  untracked,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -25,7 +34,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
     MatTooltipModule,
     ProtocolCodePipe,
     ProtocolStatusLabelPipe,
-    ProtocolStatusClassPipe
+    ProtocolStatusClassPipe,
   ],
   template: `
     <div class="workflow-card shadow-soft">
@@ -35,11 +44,12 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
           <h2>Bandeja de Trámites Activos</h2>
         </div>
         <div class="filter-group">
-          <button 
-            *ngFor="let option of filterOptions" 
-            class="filter-btn" 
+          <button
+            *ngFor="let option of filterOptions"
+            class="filter-btn"
             [class.active]="selectedFilter() === option.id"
-            (click)="onFilterClick(option.id)">
+            (click)="onFilterClick(option.id)"
+          >
             {{ option.label }}
           </button>
         </div>
@@ -47,12 +57,15 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
 
       <div class="table-responsive">
         <table mat-table [dataSource]="paginatedProtocols()" class="ops-table">
-          
           <ng-container matColumnDef="code">
             <th mat-header-cell *matHeaderCellDef>CÓDIGO CEISH</th>
             <td mat-cell *matCellDef="let p">
               <span class="code-badge">{{ p.code | protocolCode }}</span>
-              <span class="version-chip ms-2" *ngIf="p.version" style="font-size: 0.65rem; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: 700;">
+              <span
+                class="version-chip ms-2"
+                *ngIf="p.version"
+                style="font-size: 0.65rem; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: 700;"
+              >
                 V{{ p.version }}
               </span>
             </td>
@@ -93,11 +106,12 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="text-right">GESTIÓN</th>
             <td mat-cell *matCellDef="let p" class="text-right">
-              <button 
-                mat-flat-button 
-                color="primary" 
+              <button
+                mat-flat-button
+                color="primary"
                 class="quick-action-btn"
-                [routerLink]="['/dashboard/protocols/workspace', p.id]">
+                [routerLink]="['/dashboard/protocols/workspace', p.id]"
+              >
                 <mat-icon>arrow_right_alt</mat-icon>
                 Workspace
               </button>
@@ -105,27 +119,28 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
         </table>
-        
+
         <div class="empty-state" *ngIf="protocols().length === 0">
           <mat-icon>check_circle</mat-icon>
           <p>¡Gran trabajo! No tienes trámites pendientes en este filtro.</p>
         </div>
       </div>
 
-      <mat-paginator 
+      <mat-paginator
         *ngIf="protocols().length > 0"
-        [length]="protocols().length" 
-        [pageSize]="pageSize()" 
+        [length]="protocols().length"
+        [pageSize]="pageSize()"
         [pageIndex]="currentPageIndex()"
-        [pageSizeOptions]="[10, 25, 50]" 
-        (page)="onPageChange($event)" 
-        class="premium-paginator">
+        [pageSizeOptions]="[10, 25, 50]"
+        (page)="onPageChange($event)"
+        class="premium-paginator"
+      >
       </mat-paginator>
     </div>
   `,
-  styleUrls: ['./workflow-table.component.scss']
+  styleUrls: ['./workflow-table.component.scss'],
 })
 export class WorkflowTableComponent {
   protocols = input.required<ProtocolEntity[]>();
@@ -138,7 +153,7 @@ export class WorkflowTableComponent {
     { id: 'ALL', label: 'Todos' },
     { id: 'SUBMITTED', label: 'Pendientes' },
     { id: 'EN_REVISION_DOCUMENTAL', label: 'Incompletos' },
-    { id: 'VALIDATED', label: 'Validados' }
+    { id: 'VALIDATED', label: 'Validados' },
   ];
 
   currentPageIndex = signal<number>(0);

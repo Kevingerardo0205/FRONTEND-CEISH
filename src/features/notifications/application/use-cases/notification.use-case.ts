@@ -3,7 +3,7 @@ import { NotificationRepositoryAdapter } from '../../infrastructure/adapters/not
 import { EmailTemplate } from '../../domain/entities/notification.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NotificationUseCase {
   private readonly notificationRepo = inject(NotificationRepositoryAdapter);

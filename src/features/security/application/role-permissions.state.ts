@@ -1,18 +1,18 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Observable, tap } from 'rxjs';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
-  SecurityRole, 
-  CreateRoleDTO, 
+import {
+  SecurityModule,
+  SecurityPermission,
+  SecurityRole,
+  CreateRoleDTO,
   UpdateRoleDTO,
   PermissionDiff,
   RoleComplianceStatus,
-  RolePresetsMap
+  RolePresetsMap,
 } from '@domain/entities/security.entity';
-import { 
-  GetSecurityCatalogUseCase, 
-  GetRolePermissionsUseCase, 
+import {
+  GetSecurityCatalogUseCase,
+  GetRolePermissionsUseCase,
   UpdateRolePermissionsUseCase,
   CreateRoleUseCase,
   UpdateRoleUseCase,
@@ -20,7 +20,7 @@ import {
   GetRolePresetsUseCase,
   GetRoleComplianceUseCase,
   ResetRolePresetUseCase,
-  SecurityCatalog
+  SecurityCatalog,
 } from './security.use-cases';
 
 export interface ModulePermissionGroup {
@@ -34,7 +34,7 @@ export interface ModulePermissionGroup {
 export type ModuleCheckState = 'checked' | 'indeterminate' | 'unchecked';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RolePermissionsState {
   private readonly getCatalogUseCase = inject(GetSecurityCatalogUseCase);
@@ -51,11 +51,11 @@ export class RolePermissionsState {
   readonly roles = signal<SecurityRole[]>([]);
   readonly modules = signal<SecurityModule[]>([]);
   readonly permissions = signal<SecurityPermission[]>([]);
-  
+
   readonly selectedRoleId = signal<number | null>(null);
   readonly initialPermissionsSet = signal<Set<number>>(new Set());
   readonly currentPermissionsSet = signal<Set<number>>(new Set());
-  
+
   readonly complianceMap = signal<Map<number, RoleComplianceStatus>>(new Map());
   readonly presets = signal<RolePresetsMap>({});
 
@@ -71,7 +71,7 @@ export class RolePermissionsState {
   readonly selectedRole = computed<SecurityRole | null>(() => {
     const id = this.selectedRoleId();
     if (!id) return null;
-    return this.roles().find(r => r.id === id) ?? null;
+    return this.roles().find((r) => r.id === id) ?? null;
   });
 
   readonly selectedRoleCompliance = computed<RoleComplianceStatus | null>(() => {
@@ -106,7 +106,7 @@ export class RolePermissionsState {
     return {
       added,
       removed,
-      total: added.length + removed.length
+      total: added.length + removed.length,
     };
   });
 
@@ -120,22 +120,22 @@ export class RolePermissionsState {
     const groupsMap = new Map<number, ModulePermissionGroup>();
 
     // Inicializar módulos base
-    allMods.forEach(mod => {
+    allMods.forEach((mod) => {
       groupsMap.set(mod.id, {
         moduleId: mod.id,
         moduleCode: mod.code,
         moduleName: mod.name,
         moduleIcon: mod.icon || 'folder',
-        permissions: []
+        permissions: [],
       });
     });
 
     // Agrupar permisos
-    allPerms.forEach(perm => {
+    allPerms.forEach((perm) => {
       // Filtrado por búsqueda en nombre o código del permiso
       if (query) {
-        const matchesPerm = 
-          perm.name.toLowerCase().includes(query) || 
+        const matchesPerm =
+          perm.name.toLowerCase().includes(query) ||
           perm.code.toLowerCase().includes(query) ||
           (perm.module?.name.toLowerCase().includes(query) ?? false);
         if (!matchesPerm) return;
@@ -151,7 +151,7 @@ export class RolePermissionsState {
             moduleCode: perm.module.code,
             moduleName: perm.module.name,
             moduleIcon: perm.module.icon || 'folder',
-            permissions: []
+            permissions: [],
           });
         }
         groupsMap.get(perm.module.id)!.permissions.push(perm);
@@ -162,7 +162,7 @@ export class RolePermissionsState {
             moduleCode: 'GLOBAL',
             moduleName: 'Globales y Generales',
             moduleIcon: 'public',
-            permissions: []
+            permissions: [],
           });
         }
         groupsMap.get(0)!.permissions.push(perm);
@@ -170,7 +170,7 @@ export class RolePermissionsState {
     });
 
     // Retornar solo módulos con permisos coincidentes
-    return Array.from(groupsMap.values()).filter(g => g.permissions.length > 0);
+    return Array.from(groupsMap.values()).filter((g) => g.permissions.length > 0);
   });
 
   // --- Methods ---
@@ -194,8 +194,8 @@ export class RolePermissionsState {
           console.error('[RolePermissionsState] Error cargando catálogo:', err);
           this.error.set('No se pudo cargar la información base de seguridad.');
           this.loadingCatalog.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 
@@ -203,8 +203,9 @@ export class RolePermissionsState {
     return this.getRolePresetsUseCase.execute().pipe(
       tap({
         next: (presetMap) => this.presets.set(presetMap),
-        error: (err) => console.warn('[RolePermissionsState] No se pudieron cargar los presets:', err)
-      })
+        error: (err) =>
+          console.warn('[RolePermissionsState] No se pudieron cargar los presets:', err),
+      }),
     );
   }
 
@@ -221,14 +222,14 @@ export class RolePermissionsState {
         error: (err) => {
           console.warn(`[RolePermissionsState] Error cargando compliance para rol ${roleId}:`, err);
           this.loadingCompliance.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 
   loadAllRolesCompliance(rolesList?: SecurityRole[]): void {
     const list = rolesList || this.roles();
-    list.forEach(r => {
+    list.forEach((r) => {
       this.getRoleComplianceUseCase.execute(r.id).subscribe({
         next: (status) => {
           const mapCopy = new Map(this.complianceMap());
@@ -237,7 +238,7 @@ export class RolePermissionsState {
         },
         error: () => {
           // Fallback silencioso si no aplica
-        }
+        },
       });
     });
   }
@@ -252,13 +253,13 @@ export class RolePermissionsState {
     return this.getRolePermissionsUseCase.execute(roleId).pipe(
       tap({
         next: (perms) => {
-          const permSet = new Set<number>(perms.map(p => p.id));
+          const permSet = new Set<number>(perms.map((p) => p.id));
           this.initialPermissionsSet.set(new Set(permSet));
           this.currentPermissionsSet.set(new Set(permSet));
 
           // Sincronizar permisos en la entidad del rol en memoria
-          this.roles.update(currentRoles => 
-            currentRoles.map(r => r.id === roleId ? { ...r, permissions: perms } : r)
+          this.roles.update((currentRoles) =>
+            currentRoles.map((r) => (r.id === roleId ? { ...r, permissions: perms } : r)),
           );
 
           this.loadingPermissions.set(false);
@@ -266,8 +267,8 @@ export class RolePermissionsState {
         error: (err: unknown) => {
           console.error('[RolePermissionsState] Error cargando permisos del rol:', err);
           this.loadingPermissions.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 
@@ -284,7 +285,7 @@ export class RolePermissionsState {
   getModuleCheckState(permissions: SecurityPermission[]): ModuleCheckState {
     if (permissions.length === 0) return 'unchecked';
     const current = this.currentPermissionsSet();
-    const selectedInGroup = permissions.filter(p => current.has(p.id)).length;
+    const selectedInGroup = permissions.filter((p) => current.has(p.id)).length;
 
     if (selectedInGroup === permissions.length) return 'checked';
     if (selectedInGroup > 0) return 'indeterminate';
@@ -293,7 +294,7 @@ export class RolePermissionsState {
 
   toggleModulePermissions(permissions: SecurityPermission[], isChecked: boolean): void {
     const updated = new Set(this.currentPermissionsSet());
-    permissions.forEach(p => {
+    permissions.forEach((p) => {
       if (isChecked) {
         updated.add(p.id);
       } else {
@@ -305,7 +306,7 @@ export class RolePermissionsState {
 
   toggleAllPermissions(selectAll: boolean): void {
     const updated = new Set(this.currentPermissionsSet());
-    this.permissions().forEach(p => {
+    this.permissions().forEach((p) => {
       if (selectAll) {
         updated.add(p.id);
       } else {
@@ -333,11 +334,15 @@ export class RolePermissionsState {
         next: () => {
           // Actualizar snapshot de inicio
           this.initialPermissionsSet.set(new Set(this.currentPermissionsSet()));
-          
+
           // Actualizar conteo en la entidad del rol en memoria
-          const currentPermissionsList = this.permissions().filter(p => this.currentPermissionsSet().has(p.id));
-          this.roles.update(currentRoles =>
-            currentRoles.map(r => r.id === roleId ? { ...r, permissions: currentPermissionsList } : r)
+          const currentPermissionsList = this.permissions().filter((p) =>
+            this.currentPermissionsSet().has(p.id),
+          );
+          this.roles.update((currentRoles) =>
+            currentRoles.map((r) =>
+              r.id === roleId ? { ...r, permissions: currentPermissionsList } : r,
+            ),
           );
 
           // Refrescar estado de compliance tras modificar permisos
@@ -348,8 +353,8 @@ export class RolePermissionsState {
         error: (err: unknown) => {
           console.error('[RolePermissionsState] Error guardando permisos:', err);
           this.saving.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 
@@ -365,14 +370,14 @@ export class RolePermissionsState {
       tap({
         next: (restoredRole) => {
           const perms = restoredRole.permissions || [];
-          const permSet = new Set<number>(perms.map(p => p.id));
-          
+          const permSet = new Set<number>(perms.map((p) => p.id));
+
           this.initialPermissionsSet.set(new Set(permSet));
           this.currentPermissionsSet.set(new Set(permSet));
 
           // Actualizar rol en memoria
-          this.roles.update(current =>
-            current.map(r => r.id === roleId ? { ...r, permissions: perms } : r)
+          this.roles.update((current) =>
+            current.map((r) => (r.id === roleId ? { ...r, permissions: perms } : r)),
           );
 
           // Marcar cumplimiento como STANDARD
@@ -385,7 +390,7 @@ export class RolePermissionsState {
             missingPermissions: [],
             extraPermissions: [],
             currentPermissionCount: perms.length,
-            expectedPermissionCount: perms.length
+            expectedPermissionCount: perms.length,
           });
           this.complianceMap.set(mapCopy);
 
@@ -394,8 +399,8 @@ export class RolePermissionsState {
         error: (err: unknown) => {
           console.error('[RolePermissionsState] Error restableciendo rol a plantilla:', err);
           this.resettingPreset.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 
@@ -404,14 +409,14 @@ export class RolePermissionsState {
     return this.createRoleUseCase.execute(data).pipe(
       tap({
         next: (newRole) => {
-          this.roles.update(current => [...current, { ...newRole, permissions: [] }]);
+          this.roles.update((current) => [...current, { ...newRole, permissions: [] }]);
           this.saving.set(false);
         },
         error: (err: unknown) => {
           console.error('[RolePermissionsState] Error creando rol:', err);
           this.saving.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 
@@ -420,16 +425,16 @@ export class RolePermissionsState {
     return this.updateRoleUseCase.execute(id, data).pipe(
       tap({
         next: (updatedRole) => {
-          this.roles.update(current =>
-            current.map(r => r.id === id ? { ...r, ...updatedRole } : r)
+          this.roles.update((current) =>
+            current.map((r) => (r.id === id ? { ...r, ...updatedRole } : r)),
           );
           this.saving.set(false);
         },
         error: (err: unknown) => {
           console.error('[RolePermissionsState] Error actualizando rol:', err);
           this.saving.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 
@@ -438,7 +443,7 @@ export class RolePermissionsState {
     return this.deleteRoleUseCase.execute(id).pipe(
       tap({
         next: () => {
-          this.roles.update(current => current.filter(r => r.id !== id));
+          this.roles.update((current) => current.filter((r) => r.id !== id));
           if (this.selectedRoleId() === id) {
             this.selectedRoleId.set(null);
             this.initialPermissionsSet.set(new Set());
@@ -449,8 +454,8 @@ export class RolePermissionsState {
         error: (err: unknown) => {
           console.error('[RolePermissionsState] Error eliminando rol:', err);
           this.saving.set(false);
-        }
-      })
+        },
+      }),
     );
   }
 

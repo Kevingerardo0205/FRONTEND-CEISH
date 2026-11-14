@@ -20,8 +20,8 @@ describe('ProtocolTrailPage', () => {
       status: 'COMPLETED',
       comments: 'Expediente inicial cargado',
       documents: [{ name: 'Doc.pdf', url: '#' }],
-      integrityHash: 'sha256-mock'
-    }
+      integrityHash: 'sha256-mock',
+    },
   ];
 
   beforeEach(async () => {
@@ -29,22 +29,19 @@ describe('ProtocolTrailPage', () => {
     mockAuditUseCase.getProtocolTrail.and.returnValue(of(mockEvents));
 
     await TestBed.configureTestingModule({
-      imports: [
-        ProtocolTrailPage,
-        NoopAnimationsModule
-      ],
+      imports: [ProtocolTrailPage, NoopAnimationsModule],
       providers: [
         provideRouter([]),
         {
           provide: ActivatedRoute,
           useValue: {
             snapshot: {
-              params: { id: 'PRT-2026-001' }
-            }
-          }
+              params: { id: 'PRT-2026-001' },
+            },
+          },
         },
-        { provide: AuditUseCase, useValue: mockAuditUseCase }
-      ]
+        { provide: AuditUseCase, useValue: mockAuditUseCase },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProtocolTrailPage);

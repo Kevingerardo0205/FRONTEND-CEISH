@@ -1,0 +1,48 @@
+<div class="data-table">
+  @if (loading()) {
+    <app-loading-state />
+  } @else if (error()) {
+    <app-error-state [message]="error()!" (retry)="retry.emit()" />
+  } @else if (rows().length === 0) {
+    <app-empty-state [message]="emptyMessage()" />
+  } @else {
+    <div class="data-table__scroll">
+      <table class="data-table__table">
+        @if (caption()) {
+          <caption class="data-table__caption">
+            {{
+              caption()
+            }}
+          </caption>
+        }
+        <thead>
+          <tr>
+            @for (column of columns(); track column.key) {
+              <th scope="col">{{ column.header }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track $index) {
+            <tr
+              class="data-table__row"
+              tabindex="0"
+              (click)="rowClick.emit(row)"
+              (keydown.enter)="rowClick.emit(row)"
+            >
+              @for (column of columns(); track column.key) {
+                <td>
+                  @if (column.tone) {
+                    <app-status-chip [tone]="column.tone(row)" [label]="column.value(row)" />
+                  } @else {
+                    {{ column.value(row) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

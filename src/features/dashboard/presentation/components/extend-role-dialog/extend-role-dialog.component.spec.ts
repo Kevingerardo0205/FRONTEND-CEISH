@@ -13,7 +13,7 @@ describe('ExtendRoleDialogComponent', () => {
     userName: 'Jaime David Camacho',
     roleCode: 'SECRETARIA',
     roleName: 'Secretaria Ejecutiva',
-    currentValidUntil: '2026-09-18T23:59:59.000Z'
+    currentValidUntil: '2026-09-18T23:59:59.000Z',
   };
 
   beforeEach(async () => {
@@ -23,8 +23,8 @@ describe('ExtendRoleDialogComponent', () => {
       imports: [ExtendRoleDialogComponent, NoopAnimationsModule],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: MAT_DIALOG_DATA, useValue: mockData }
-      ]
+        { provide: MAT_DIALOG_DATA, useValue: mockData },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ExtendRoleDialogComponent);
@@ -55,13 +55,13 @@ describe('ExtendRoleDialogComponent', () => {
   it('debe cerrar el diálogo retornando el resultado cuando el formulario es válido', () => {
     component.form.patchValue({
       validUntil: '2026-10-31',
-      reason: 'Extensión aprobada por decanato'
+      reason: 'Extensión aprobada por decanato',
     });
 
     component.onSubmit();
     expect(mockDialogRef.close).toHaveBeenCalledWith({
       validUntil: '2026-10-31',
-      reason: 'Extensión aprobada por decanato'
+      reason: 'Extensión aprobada por decanato',
     });
   });
 

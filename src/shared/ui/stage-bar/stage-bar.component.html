@@ -1,0 +1,27 @@
+<ol class="stage-bar" aria-label="Etapas del protocolo">
+  @for (step of steps(); track step.stage.code) {
+    <li
+      class="step"
+      [class.step--done]="step.status === 'done'"
+      [class.step--current]="step.status === 'current'"
+      [class.step--pending]="step.status === 'pending'"
+      [attr.aria-current]="step.status === 'current' ? 'step' : null"
+      [attr.data-stage]="step.stage.code"
+    >
+      <span class="step__marker" aria-hidden="true">
+        {{ step.status === 'done' ? '✓' : step.stage.order }}
+      </span>
+      <span class="step__text">
+        <span class="step__label">{{ step.stage.label }}</span>
+        @if (step.status === 'done') {
+          <span class="visually-hidden">(completada)</span>
+        } @else if (step.status === 'pending') {
+          <span class="visually-hidden">(pendiente)</span>
+        }
+        @if (step.status === 'current' && detail()) {
+          <span class="step__detail">{{ detail() }}</span>
+        }
+      </span>
+    </li>
+  }
+</ol>

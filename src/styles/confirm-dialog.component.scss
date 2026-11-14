@@ -15,10 +15,18 @@
   left: 0;
 }
 
-.primary .dialog-header-accent { background: v.$color-primary; }
-.warn .dialog-header-accent { background: v.$color-secondary; }
-.info .dialog-header-accent { background: v.$color-primary-light; }
-.success .dialog-header-accent { background: v.$color-success; }
+.primary .dialog-header-accent {
+  background: v.$color-primary;
+}
+.warn .dialog-header-accent {
+  background: v.$color-secondary;
+}
+.info .dialog-header-accent {
+  background: v.$color-primary-light;
+}
+.success .dialog-header-accent {
+  background: v.$color-success;
+}
 
 .dialog-body {
   padding: 2.5rem 2rem 1.5rem;
@@ -41,10 +49,22 @@
   height: 32px;
 }
 
-.primary .icon-container { background: rgba(0, 51, 102, 0.1); color: v.$color-primary; }
-.warn .icon-container { background: rgba(220, 38, 38, 0.1); color: v.$color-secondary; }
-.info .icon-container { background: rgba(26, 82, 135, 0.1); color: v.$color-primary-light; }
-.success .icon-container { background: rgba(22, 163, 74, 0.1); color: v.$color-success; }
+.primary .icon-container {
+  background: rgba(0, 51, 102, 0.1);
+  color: v.$color-primary;
+}
+.warn .icon-container {
+  background: rgba(220, 38, 38, 0.1);
+  color: v.$color-secondary;
+}
+.info .icon-container {
+  background: rgba(26, 82, 135, 0.1);
+  color: v.$color-primary-light;
+}
+.success .icon-container {
+  background: rgba(22, 163, 74, 0.1);
+  color: v.$color-success;
+}
 
 .dialog-title {
   margin: 0 0 0.75rem;

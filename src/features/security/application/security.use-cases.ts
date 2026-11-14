@@ -1,16 +1,16 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, forkJoin } from 'rxjs';
 import { ISecurityRepositoryPort } from '@domain/ports/ISecurityRepositoryPort';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
-  SecurityRole, 
-  CreateModuleDTO, 
+import {
+  SecurityModule,
+  SecurityPermission,
+  SecurityRole,
+  CreateModuleDTO,
   CreatePermissionDTO,
   CreateRoleDTO,
   UpdateRoleDTO,
   RoleComplianceStatus,
-  RolePresetsMap
+  RolePresetsMap,
 } from '@domain/entities/security.entity';
 
 export interface SecurityCatalog {
@@ -20,7 +20,7 @@ export interface SecurityCatalog {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GetSecurityCatalogUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -29,13 +29,13 @@ export class GetSecurityCatalogUseCase {
     return forkJoin({
       modules: this.repository.getModules(),
       allPermissions: this.repository.getPermissions(),
-      roles: this.repository.getRoles()
+      roles: this.repository.getRoles(),
     });
   }
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GetRolePermissionsUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -46,7 +46,7 @@ export class GetRolePermissionsUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UpdateRolePermissionsUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -57,7 +57,7 @@ export class UpdateRolePermissionsUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CreateRoleUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -68,7 +68,7 @@ export class CreateRoleUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UpdateRoleUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -79,7 +79,7 @@ export class UpdateRoleUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class DeleteRoleUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -90,7 +90,7 @@ export class DeleteRoleUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GetRolePresetsUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -101,7 +101,7 @@ export class GetRolePresetsUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GetRoleComplianceUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -112,7 +112,7 @@ export class GetRoleComplianceUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ResetRolePresetUseCase {
   private repository = inject(ISecurityRepositoryPort);
@@ -123,25 +123,35 @@ export class ResetRolePresetUseCase {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ManageSecurityModuleUseCase {
   private repository = inject(ISecurityRepositoryPort);
 
-  create(data: CreateModuleDTO): Observable<SecurityModule> { return this.repository.createModule(data); }
-  update(id: number, data: Partial<CreateModuleDTO>): Observable<SecurityModule> { return this.repository.updateModule(id, data); }
-  delete(id: number): Observable<void> { return this.repository.deleteModule(id); }
+  create(data: CreateModuleDTO): Observable<SecurityModule> {
+    return this.repository.createModule(data);
+  }
+  update(id: number, data: Partial<CreateModuleDTO>): Observable<SecurityModule> {
+    return this.repository.updateModule(id, data);
+  }
+  delete(id: number): Observable<void> {
+    return this.repository.deleteModule(id);
+  }
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ManageSecurityPermissionUseCase {
   private repository = inject(ISecurityRepositoryPort);
 
-  create(data: CreatePermissionDTO): Observable<SecurityPermission> { return this.repository.createPermission(data); }
-  update(id: number, data: Partial<CreatePermissionDTO>): Observable<SecurityPermission> { return this.repository.updatePermission(id, data); }
-  delete(id: number): Observable<void> { return this.repository.deletePermission(id); }
+  create(data: CreatePermissionDTO): Observable<SecurityPermission> {
+    return this.repository.createPermission(data);
+  }
+  update(id: number, data: Partial<CreatePermissionDTO>): Observable<SecurityPermission> {
+    return this.repository.updatePermission(id, data);
+  }
+  delete(id: number): Observable<void> {
+    return this.repository.deletePermission(id);
+  }
 }
-
-

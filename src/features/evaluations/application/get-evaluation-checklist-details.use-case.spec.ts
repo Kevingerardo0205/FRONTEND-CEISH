@@ -13,18 +13,20 @@ describe('GetEvaluationChecklistDetailsUseCase', () => {
     TestBed.configureTestingModule({
       providers: [
         GetEvaluationChecklistDetailsUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: rSpy }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: rSpy },
+      ],
     });
 
     useCase = TestBed.inject(GetEvaluationChecklistDetailsUseCase);
-    repoSpy = TestBed.inject(IEvaluationRepositoryPort) as jasmine.SpyObj<IEvaluationRepositoryPort>;
+    repoSpy = TestBed.inject(
+      IEvaluationRepositoryPort,
+    ) as jasmine.SpyObj<IEvaluationRepositoryPort>;
   });
 
   it('debe retornar detalles del checklist', (done) => {
-    repoSpy.getChecklistDetails.and.returnValue(of([
-      { itemCodigo: 'ET_1', estado: 'C', observaciones: '' }
-    ]));
+    repoSpy.getChecklistDetails.and.returnValue(
+      of([{ itemCodigo: 'ET_1', estado: 'C', observaciones: '' }]),
+    );
 
     useCase.execute('eval-1').subscribe({
       next: (res) => {
@@ -33,7 +35,7 @@ describe('GetEvaluationChecklistDetailsUseCase', () => {
         expect(repoSpy.getChecklistDetails).toHaveBeenCalledWith('eval-1');
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

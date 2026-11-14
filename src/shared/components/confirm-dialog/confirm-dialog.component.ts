@@ -20,12 +20,12 @@ export interface ConfirmDialogData {
   template: `
     <div class="modern-dialog" [ngClass]="data.type || 'primary'">
       <div class="dialog-header-accent"></div>
-      
+
       <div class="dialog-body">
         <div class="icon-container">
           <mat-icon class="status-icon">{{ getIcon() }}</mat-icon>
         </div>
-        
+
         <h2 class="dialog-title">{{ data.title }}</h2>
         <p class="dialog-message">{{ data.message }}</p>
       </div>
@@ -34,28 +34,36 @@ export interface ConfirmDialogData {
         <button mat-button class="btn-cancel" (click)="onDismiss()">
           {{ data.cancelText || 'Cancelar' }}
         </button>
-        <button mat-flat-button class="btn-confirm" [color]="getButtonColor()" (click)="onConfirm()">
+        <button
+          mat-flat-button
+          class="btn-confirm"
+          [color]="getButtonColor()"
+          (click)="onConfirm()"
+        >
           {{ data.confirmText || 'Confirmar' }}
         </button>
       </div>
     </div>
   `,
-  styleUrls: ['../../../styles/confirm-dialog.component.scss']
+  styleUrls: ['../../../styles/confirm-dialog.component.scss'],
 })
 export class ConfirmDialogComponent {
-
   constructor(
     public dialogRef: MatDialogRef<ConfirmDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: ConfirmDialogData
+    @Inject(MAT_DIALOG_DATA) public data: ConfirmDialogData,
   ) {}
 
   getIcon(): string {
     if (this.data.icon) return this.data.icon;
     switch (this.data.type) {
-      case 'warn': return 'warning_amber';
-      case 'info': return 'info_outline';
-      case 'success': return 'check_circle_outline';
-      default: return 'help_outline';
+      case 'warn':
+        return 'warning_amber';
+      case 'info':
+        return 'info_outline';
+      case 'success':
+        return 'check_circle_outline';
+      default:
+        return 'help_outline';
     }
   }
 

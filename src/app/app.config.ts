@@ -39,6 +39,16 @@ import { IReportRepositoryPort } from '../features/reports/domain/ports/report-r
 import { ReportRepositoryAdapter } from '../features/reports/infrastructure/adapters/report-repository.adapter';
 import { IMeetingRepositoryPort } from '@domain/ports/IMeetingRepositoryPort';
 import { MeetingApiAdapter } from '@infrastructure/adapters/meeting-api.adapter';
+import { SessionRolesPort } from '@features/shell/domain/session-roles.port';
+import {
+  AuthSessionRolesAdapter,
+  AuthSessionUserAdapter,
+} from '@features/shell/infrastructure/auth-session.adapter';
+import { SessionUserPort } from '@features/shell/domain/session-user.port';
+import { MenuConfigPort } from '@domain/ports/menu-config.port';
+import { StaticMenuConfigAdapter } from '@features/shell/infrastructure/menu.config';
+import { PendingCountPort } from '@features/shell/domain/pending-count.port';
+import { PendingCountHttpAdapter } from '@features/shell/infrastructure/pending-count-http.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -61,6 +71,13 @@ export const appConfig: ApplicationConfig = {
     { provide: IAmendmentRepositoryPort, useClass: AmendmentApiAdapter },
     { provide: IAuditRepositoryPort, useClass: AuditRepositoryAdapter },
     { provide: IReportRepositoryPort, useClass: ReportRepositoryAdapter },
-    { provide: IMeetingRepositoryPort, useClass: MeetingApiAdapter }
-  ]
+    { provide: IMeetingRepositoryPort, useClass: MeetingApiAdapter },
+    { provide: SessionRolesPort, useClass: AuthSessionRolesAdapter },
+    { provide: SessionUserPort, useClass: AuthSessionUserAdapter },
+    // Registro único: GetMenuForRoleUseCase es providedIn 'root' y solo ve el inyector raíz.
+    { provide: MenuConfigPort, useClass: StaticMenuConfigAdapter },
+    // F01 T01-3: contador del menú. En root porque lo usa el AppShell (fuera de /pendientes) y
+    // GetPendingCountUseCase es providedIn 'root' (plan F01 §3).
+    { provide: PendingCountPort, useClass: PendingCountHttpAdapter },
+  ],
 };

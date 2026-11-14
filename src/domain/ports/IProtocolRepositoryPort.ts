@@ -43,8 +43,16 @@ export abstract class IProtocolRepositoryPort {
   abstract finalizeReception(id: string): Observable<{ message?: string }>;
   abstract getCertificate(id: string): Observable<Blob>;
   abstract finalizeValidation(protocolId: string): Observable<{ message?: string }>;
-  abstract updateRequirementStatus(protocolId: string, reqId: string, status: string): Observable<{ message?: string }>;
-  abstract verifyProtocol(protocolId: string, isComplete: boolean, missingItemsList: string): Observable<{ message?: string }>;
+  abstract updateRequirementStatus(
+    protocolId: string,
+    reqId: string,
+    status: string,
+  ): Observable<{ message?: string }>;
+  abstract verifyProtocol(
+    protocolId: string,
+    isComplete: boolean,
+    missingItemsList: string,
+  ): Observable<{ message?: string }>;
   abstract getValidationDetail(id: string): Observable<ValidationDetailResponse>;
   abstract acceptTimeline(id: string): Observable<{ message?: string }>;
   abstract getRiskLevels(): Observable<RiskLevel[]>;

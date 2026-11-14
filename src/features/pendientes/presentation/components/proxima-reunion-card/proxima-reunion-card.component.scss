@@ -1,0 +1,84 @@
+:host {
+  display: block;
+}
+
+.reunion {
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+  font-family: var(--font-content);
+  color: var(--c-text);
+}
+
+.reunion__titulo {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+}
+
+.reunion__cuerpo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.reunion__datos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  p {
+    margin: 0;
+  }
+}
+
+.reunion__convocatoria {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.reunion__fecha,
+.reunion__protocolos {
+  color: var(--c-text-2);
+}
+
+.reunion__lugar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.reunion__sin-enlace {
+  color: var(--c-text-2);
+}
+
+.reunion__unirse,
+.reunion__ver {
+  color: var(--c-primary-dark);
+  font-weight: 600;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.reunion__ver {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--min-h-action);
+  padding: 0 1rem;
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--c-primary-soft);
+  }
+}

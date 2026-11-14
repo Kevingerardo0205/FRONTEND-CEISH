@@ -15,7 +15,13 @@ export const EstadoCatalog = {
   DISCREPANCIA_RIESGO: { id: 16, code: 'DISCREPANCIA_RIESGO', categoria: 'PROTOCOLO' },
   APROBADO: { id: 17, code: 'APROBADO', categoria: 'PROTOCOLO' },
   RECHAZADO: { id: 18, code: 'RECHAZADO', categoria: 'PROTOCOLO' },
-  REQUIERE_SUBSANACION_VERSION: { id: 19, code: 'REQUIERE_SUBSANACION_VERSION', categoria: 'PROTOCOLO' },
+  REQUIERE_SUBSANACION_VERSION: {
+    id: 19,
+    code: 'REQUIERE_SUBSANACION_VERSION',
+    categoria: 'PROTOCOLO',
+  },
   REQUIERE_SUBSANACION_DOC: { id: 20, code: 'REQUIERE_SUBSANACION_DOC', categoria: 'RECEPCION' },
-  EN_CONTROL_DOCUMENTAL: { id: 21, code: 'EN_CONTROL_DOCUMENTAL', categoria: 'PROTOCOLO' }
+  EN_CONTROL_DOCUMENTAL: { id: 21, code: 'EN_CONTROL_DOCUMENTAL', categoria: 'PROTOCOLO' },
+  // F10 D13 (S-1f): estado del protocolo del backend (migración 1796000000000-AddCallsAndSessions).
+  APROBADO_CON_CONDICION: { id: 25, code: 'APROBADO_CON_CONDICION', categoria: 'PROTOCOLO' },
 } as const satisfies Record<string, EstadoCore>;

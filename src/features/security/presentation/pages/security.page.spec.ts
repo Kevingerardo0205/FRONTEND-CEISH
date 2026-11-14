@@ -3,25 +3,25 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
-  SecurityRole, 
-  CreateRoleDTO, 
+import {
+  SecurityModule,
+  SecurityPermission,
+  SecurityRole,
+  CreateRoleDTO,
   UpdateRoleDTO,
-  RoleComplianceStatus
+  RoleComplianceStatus,
 } from '@domain/entities/security.entity';
 import { RolePermissionsState } from '../../application/role-permissions.state';
-import { 
-  GetSecurityCatalogUseCase, 
-  GetRolePermissionsUseCase, 
+import {
+  GetSecurityCatalogUseCase,
+  GetRolePermissionsUseCase,
   UpdateRolePermissionsUseCase,
   CreateRoleUseCase,
   UpdateRoleUseCase,
   DeleteRoleUseCase,
   GetRolePresetsUseCase,
   GetRoleComplianceUseCase,
-  ResetRolePresetUseCase
+  ResetRolePresetUseCase,
 } from '../../application/security.use-cases';
 import { SecurityPage } from './security.page';
 
@@ -33,16 +33,16 @@ describe('SecurityPage', () => {
   let mockDialog: jasmine.SpyObj<MatDialog>;
 
   const mockModules: SecurityModule[] = [
-    { id: 1, code: 'RECEPCION', name: 'Recepción', icon: 'folder', order: 1, isActive: true }
+    { id: 1, code: 'RECEPCION', name: 'Recepción', icon: 'folder', order: 1, isActive: true },
   ];
 
   const mockPermissions: SecurityPermission[] = [
-    { id: 10, code: 'RECEPCION_NUEVO', name: 'Recepción Nueva', moduleId: 1 }
+    { id: 10, code: 'RECEPCION_NUEVO', name: 'Recepción Nueva', moduleId: 1 },
   ];
 
   const mockRoles: SecurityRole[] = [
     { id: 1, code: 'ADMIN', name: 'Administrador', isActive: true, permissions: mockPermissions },
-    { id: 2, code: 'SECRETARIA', name: 'Secretaría', isActive: true, permissions: [] }
+    { id: 2, code: 'SECRETARIA', name: 'Secretaría', isActive: true, permissions: [] },
   ];
 
   const mockCompliance: RoleComplianceStatus = {
@@ -53,7 +53,7 @@ describe('SecurityPage', () => {
     missingPermissions: [],
     extraPermissions: [],
     currentPermissionCount: 1,
-    expectedPermissionCount: 1
+    expectedPermissionCount: 1,
   };
 
   beforeEach(async () => {
@@ -62,7 +62,9 @@ describe('SecurityPage', () => {
 
     const mockGetCatalog = jasmine.createSpyObj('GetSecurityCatalogUseCase', ['execute']);
     const mockGetRolePermissions = jasmine.createSpyObj('GetRolePermissionsUseCase', ['execute']);
-    const mockUpdateRolePermissions = jasmine.createSpyObj('UpdateRolePermissionsUseCase', ['execute']);
+    const mockUpdateRolePermissions = jasmine.createSpyObj('UpdateRolePermissionsUseCase', [
+      'execute',
+    ]);
     const mockCreateRole = jasmine.createSpyObj('CreateRoleUseCase', ['execute']);
     const mockUpdateRole = jasmine.createSpyObj('UpdateRoleUseCase', ['execute']);
     const mockDeleteRole = jasmine.createSpyObj('DeleteRoleUseCase', ['execute']);
@@ -70,11 +72,13 @@ describe('SecurityPage', () => {
     const mockGetRoleCompliance = jasmine.createSpyObj('GetRoleComplianceUseCase', ['execute']);
     const mockResetRolePreset = jasmine.createSpyObj('ResetRolePresetUseCase', ['execute']);
 
-    mockGetCatalog.execute.and.returnValue(of({
-      modules: mockModules,
-      allPermissions: mockPermissions,
-      roles: mockRoles
-    }));
+    mockGetCatalog.execute.and.returnValue(
+      of({
+        modules: mockModules,
+        allPermissions: mockPermissions,
+        roles: mockRoles,
+      }),
+    );
     mockGetRolePermissions.execute.and.returnValue(of(mockPermissions));
     mockUpdateRolePermissions.execute.and.returnValue(of(undefined));
     mockGetRoleCompliance.execute.and.returnValue(of(mockCompliance));
@@ -93,18 +97,18 @@ describe('SecurityPage', () => {
         { provide: DeleteRoleUseCase, useValue: mockDeleteRole },
         { provide: GetRolePresetsUseCase, useValue: mockGetRolePresets },
         { provide: GetRoleComplianceUseCase, useValue: mockGetRoleCompliance },
-        { provide: ResetRolePresetUseCase, useValue: mockResetRolePreset }
-      ]
+        { provide: ResetRolePresetUseCase, useValue: mockResetRolePreset },
+      ],
     })
-    .overrideComponent(SecurityPage, {
-      set: {
-        providers: [
-          { provide: MatSnackBar, useValue: mockSnackBar },
-          { provide: MatDialog, useValue: mockDialog }
-        ]
-      }
-    })
-    .compileComponents();
+      .overrideComponent(SecurityPage, {
+        set: {
+          providers: [
+            { provide: MatSnackBar, useValue: mockSnackBar },
+            { provide: MatDialog, useValue: mockDialog },
+          ],
+        },
+      })
+      .compileComponents();
 
     state = TestBed.inject(RolePermissionsState);
     fixture = TestBed.createComponent(SecurityPage);
@@ -141,7 +145,7 @@ describe('SecurityPage', () => {
     const createdRole: SecurityRole = { id: 3, ...newDTO, isActive: true };
 
     const dialogRefSpy = {
-      afterClosed: () => of(newDTO)
+      afterClosed: () => of(newDTO),
     };
     mockDialog.open.and.returnValue(dialogRefSpy as any);
     spyOn(state, 'createRole').and.returnValue(of(createdRole));
@@ -155,10 +159,15 @@ describe('SecurityPage', () => {
 
   it('debe abrir diálogo y actualizar datos del rol', () => {
     const updateDTO: UpdateRoleDTO = { name: 'Admin General' };
-    const updatedRole: SecurityRole = { id: 1, code: 'ADMIN', name: 'Admin General', isActive: true };
+    const updatedRole: SecurityRole = {
+      id: 1,
+      code: 'ADMIN',
+      name: 'Admin General',
+      isActive: true,
+    };
 
     const dialogRefSpy = {
-      afterClosed: () => of(updateDTO)
+      afterClosed: () => of(updateDTO),
     };
     mockDialog.open.and.returnValue(dialogRefSpy as any);
     spyOn(state, 'updateRole').and.returnValue(of(updatedRole));

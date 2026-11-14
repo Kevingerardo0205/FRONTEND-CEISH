@@ -29,45 +29,50 @@ export class DashboardFacade {
   // Estadísticas calculadas para Investigador de forma resiliente
   public myObservedCount = computed(() => {
     const protocols = this.myProtocols();
-    return Array.isArray(protocols) 
-      ? protocols.filter(p => {
+    return Array.isArray(protocols)
+      ? protocols.filter((p) => {
           const core = resolveEstado(p.estado);
           return core && ['INCOMPLETO', 'REQUIERE_SUBSANACION_DOC'].includes(core.code);
-        }).length 
+        }).length
       : 0;
   });
   public myApprovedCount = computed(() => {
     const protocols = this.myProtocols();
-    return Array.isArray(protocols) 
-      ? protocols.filter(p => {
+    return Array.isArray(protocols)
+      ? protocols.filter((p) => {
           const core = resolveEstado(p.estado);
           return core && ['COMPLETO', 'APROBADO'].includes(core.code);
-        }).length 
+        }).length
       : 0;
   });
 
   public loadStats() {
     if (this.authFacade.hasAnyRole(['ADMIN', 'ADMIN_TI'])) {
-      this.userAdminRepo.getAll().pipe(
-        catchError(() => of([]))
-      ).subscribe(users => this.usersCountSignal.set(users.length));
+      this.userAdminRepo
+        .getAll()
+        .pipe(catchError(() => of([])))
+        .subscribe((users) => this.usersCountSignal.set(users.length));
     }
 
     if (this.authFacade.hasRole('INVESTIGADOR')) {
-      this.investigatorService.misProtocolos().pipe(
-        catchError(() => of([]))
-      ).subscribe(protocols => this.myProtocolsSignal.set(protocols));
+      this.investigatorService
+        .misProtocolos()
+        .pipe(catchError(() => of([])))
+        .subscribe((protocols) => this.myProtocolsSignal.set(protocols));
     }
 
     if (this.authFacade.hasAnyRole(['SECRETARIA', 'PRESIDENTA', 'PRESIDENTE'])) {
-      this.protocolRepo.getReceptionProtocols().pipe(
-        catchError(() => of([]))
-      ).subscribe(protocols => {
-        this.protocolsCountSignal.set(protocols.length);
-        this.pendingValidationCountSignal.set(
-          protocols.filter(p => ['SUBMITTED', 'PENDIENTE', 'EN_REVISION_SECRETARIA'].includes(p.status)).length
-        );
-      });
+      this.protocolRepo
+        .getReceptionProtocols()
+        .pipe(catchError(() => of([])))
+        .subscribe((protocols) => {
+          this.protocolsCountSignal.set(protocols.length);
+          this.pendingValidationCountSignal.set(
+            protocols.filter((p) =>
+              ['SUBMITTED', 'PENDIENTE', 'EN_REVISION_SECRETARIA'].includes(p.status),
+            ).length,
+          );
+        });
     }
   }
 }

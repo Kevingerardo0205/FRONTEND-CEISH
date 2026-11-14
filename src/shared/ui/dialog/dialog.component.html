@@ -1,0 +1,31 @@
+@if (open()) {
+  <div class="dialog-backdrop">
+    <div
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="headingId"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+      (keydown.escape)="close()"
+    >
+      <h2 class="dialog__title" [id]="headingId">{{ heading() }}</h2>
+      <div class="dialog__body">
+        <ng-content />
+      </div>
+      <div class="dialog__actions">
+        <button type="button" class="dialog__button" (click)="close()">
+          {{ cancelLabel() }}
+        </button>
+        <button
+          type="button"
+          class="dialog__button dialog__button--primary"
+          [disabled]="confirmDisabled()"
+          (click)="confirmed.emit()"
+        >
+          {{ confirmLabel() }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -7,7 +7,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AmendmentListPage } from './amendment-list.page';
 import { LoadAmendmentsUseCase } from '../../../application/load-amendments.use-case';
 import { ReviewAmendmentUseCase } from '../../../application/review-amendment.use-case';
-import { AmendmentStatus, AmendmentType, AmendmentSeverity, AmendmentItem } from '../../../domain/entities/amendment.entity';
+import {
+  AmendmentStatus,
+  AmendmentType,
+  AmendmentSeverity,
+  AmendmentItem,
+} from '../../../domain/entities/amendment.entity';
 
 describe('AmendmentListPage', () => {
   let component: AmendmentListPage;
@@ -32,7 +37,7 @@ describe('AmendmentListPage', () => {
       ethicalImpactDescription: 'Riesgo mínimo',
       documents: [{ name: 'Doc1.pdf', type: 'TRACKED_CHANGES' }],
       submittedAt: new Date().toISOString(),
-      versionNumber: 2
+      versionNumber: 2,
     },
     {
       id: 'enm-2',
@@ -47,13 +52,19 @@ describe('AmendmentListPage', () => {
       ethicalImpactDescription: 'Sin impacto',
       documents: [],
       submittedAt: new Date().toISOString(),
-      versionNumber: 2
-    }
+      versionNumber: 2,
+    },
   ];
 
   beforeEach(async () => {
-    mockLoadAmendmentsUseCase = jasmine.createSpyObj<LoadAmendmentsUseCase>('LoadAmendmentsUseCase', ['execute']);
-    mockReviewAmendmentUseCase = jasmine.createSpyObj<ReviewAmendmentUseCase>('ReviewAmendmentUseCase', ['execute']);
+    mockLoadAmendmentsUseCase = jasmine.createSpyObj<LoadAmendmentsUseCase>(
+      'LoadAmendmentsUseCase',
+      ['execute'],
+    );
+    mockReviewAmendmentUseCase = jasmine.createSpyObj<ReviewAmendmentUseCase>(
+      'ReviewAmendmentUseCase',
+      ['execute'],
+    );
     mockDialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
     mockSnackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
     mockRouter = jasmine.createSpyObj<Router>('Router', ['navigate']);
@@ -61,17 +72,14 @@ describe('AmendmentListPage', () => {
     mockLoadAmendmentsUseCase.execute.and.returnValue(of(mockAmendments));
 
     await TestBed.configureTestingModule({
-      imports: [
-        AmendmentListPage,
-        NoopAnimationsModule
-      ],
+      imports: [AmendmentListPage, NoopAnimationsModule],
       providers: [
         { provide: LoadAmendmentsUseCase, useValue: mockLoadAmendmentsUseCase },
         { provide: ReviewAmendmentUseCase, useValue: mockReviewAmendmentUseCase },
         { provide: MatDialog, useValue: mockDialog },
         { provide: MatSnackBar, useValue: mockSnackBar },
-        { provide: Router, useValue: mockRouter }
-      ]
+        { provide: Router, useValue: mockRouter },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AmendmentListPage);

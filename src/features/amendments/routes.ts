@@ -10,14 +10,13 @@ export const AMENDMENT_ROUTES: Routes = [
       {
         path: '',
         component: AmendmentListPage,
-        canActivate: [AuthGuard]
+        canActivate: [AuthGuard],
       },
       {
         path: 'request',
         component: AmendmentRequestPage,
-        canActivate: [AuthGuard]
-      }
-    ]
-  }
+        canActivate: [AuthGuard],
+      },
+    ],
+  },
 ];
-

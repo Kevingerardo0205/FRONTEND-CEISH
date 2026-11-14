@@ -30,7 +30,7 @@ export interface ExtendRoleDialogResult {
     MatButtonModule,
     MatIconModule,
     MatInputModule,
-    MatChipsModule
+    MatChipsModule,
   ],
   template: `
     <div class="extend-dialog-card">
@@ -70,7 +70,9 @@ export interface ExtendRoleDialogResult {
             <button type="button" class="preset-pill" (click)="applyPreset('1m')">+1 Mes</button>
             <button type="button" class="preset-pill" (click)="applyPreset('3m')">+3 Meses</button>
             <button type="button" class="preset-pill" (click)="applyPreset('6m')">+6 Meses</button>
-            <button type="button" class="preset-pill" (click)="applyPreset('end_year')">Fin de Año</button>
+            <button type="button" class="preset-pill" (click)="applyPreset('end_year')">
+              Fin de Año
+            </button>
           </div>
         </div>
 
@@ -78,12 +80,13 @@ export interface ExtendRoleDialogResult {
         <div class="field-group">
           <label class="field-label">Nueva Fecha Límite de Vigencia *</label>
           <mat-form-field appearance="outline" class="custom-field w-100">
-            <input 
-              matInput 
-              type="date" 
-              formControlName="validUntil" 
+            <input
+              matInput
+              type="date"
+              formControlName="validUntil"
               [min]="todayDateString"
-              required>
+              required
+            />
             <mat-icon matSuffix class="text-muted">event</mat-icon>
             <mat-error *ngIf="form.get('validUntil')?.hasError('required')">
               La fecha límite es obligatoria
@@ -99,12 +102,13 @@ export interface ExtendRoleDialogResult {
         <div class="field-group">
           <label class="field-label">Motivo Oficial / Justificación *</label>
           <mat-form-field appearance="outline" class="custom-field w-100">
-            <textarea 
-              matInput 
-              formControlName="reason" 
-              rows="3" 
+            <textarea
+              matInput
+              formControlName="reason"
+              rows="3"
               placeholder="Ej: Prórroga por ampliación de licencia médica de la titular..."
-              required>
+              required
+            >
             </textarea>
             <mat-icon matSuffix class="text-muted">description</mat-icon>
             <mat-error *ngIf="form.get('reason')?.hasError('required')">
@@ -118,9 +122,27 @@ export interface ExtendRoleDialogResult {
           <!-- SUGERENCIAS RÁPIDAS DE MOTIVO -->
           <div class="reason-suggestions">
             <span class="sugg-label">Sugerencias:</span>
-            <button type="button" class="sugg-chip" (click)="setReason('Prórroga por ampliación de licencia médica del titular')">Licencia Médica</button>
-            <button type="button" class="sugg-chip" (click)="setReason('Extensión de comisión de servicios institucionales')">Comisión Servicios</button>
-            <button type="button" class="sugg-chip" (click)="setReason('Continuidad en subrogación de funciones por resolución')">Resolución</button>
+            <button
+              type="button"
+              class="sugg-chip"
+              (click)="setReason('Prórroga por ampliación de licencia médica del titular')"
+            >
+              Licencia Médica
+            </button>
+            <button
+              type="button"
+              class="sugg-chip"
+              (click)="setReason('Extensión de comisión de servicios institucionales')"
+            >
+              Comisión Servicios
+            </button>
+            <button
+              type="button"
+              class="sugg-chip"
+              (click)="setReason('Continuidad en subrogación de funciones por resolución')"
+            >
+              Resolución
+            </button>
           </div>
         </div>
 
@@ -128,7 +150,13 @@ export interface ExtendRoleDialogResult {
           <button mat-stroked-button type="button" class="btn-cancel" (click)="onCancel()">
             Cancelar
           </button>
-          <button mat-flat-button color="primary" type="submit" class="btn-confirm" [disabled]="form.invalid">
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            class="btn-confirm"
+            [disabled]="form.invalid"
+          >
             <mat-icon class="me-1">save</mat-icon>
             <span>Confirmar Prórroga</span>
           </button>
@@ -136,196 +164,216 @@ export interface ExtendRoleDialogResult {
       </form>
     </div>
   `,
-  styles: [`
-    .extend-dialog-card {
-      position: relative;
-      background: #ffffff;
-      border-radius: 20px;
-      padding: 2rem;
-      overflow: hidden;
-      max-width: 520px;
-    }
+  styles: [
+    `
+      .extend-dialog-card {
+        position: relative;
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 2rem;
+        overflow: hidden;
+        max-width: 520px;
+      }
 
-    .top-accent {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 5px;
-      background: linear-gradient(90deg, #00796b, #009688, #4db6ac);
-    }
+      .top-accent {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #00796b, #009688, #4db6ac);
+      }
 
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-
-      .header-icon-box {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        background: #e0f2f1;
+      .dialog-header {
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: #00796b;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
 
-        mat-icon { font-size: 26px; width: 26px; height: 26px; }
-      }
-
-      .dialog-title {
-        font-size: 1.25rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin: 0;
-        letter-spacing: -0.01em;
-      }
-
-      .dialog-subtitle {
-        font-size: 0.8rem;
-        color: #64748b;
-        margin: 2px 0 0;
-      }
-    }
-
-    .user-summary-banner {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 0.85rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      margin-bottom: 1.25rem;
-
-      .summary-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 0.825rem;
-
-        .summary-label { color: #64748b; font-weight: 600; }
-        .summary-value { color: #1e293b; font-weight: 700; }
-      }
-
-      .role-badge {
-        padding: 2px 10px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        background: #e0f2fe;
-        color: #0369a1;
-      }
-    }
-
-    .field-group {
-      margin-bottom: 1.25rem;
-
-      .field-label {
-        display: block;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #334155;
-        margin-bottom: 0.4rem;
-      }
-    }
-
-    .preset-chips-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-bottom: 0.25rem;
-    }
-
-    .preset-pill {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      border-radius: 100px;
-      padding: 3px 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #334155;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-
-      &:hover {
-        background: #00796b;
-        border-color: #00796b;
-        color: #ffffff;
-        transform: translateY(-1px);
-      }
-    }
-
-    .days-remaining-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #00796b;
-      background: #e0f2f1;
-      padding: 2px 8px;
-      border-radius: 6px;
-
-      .badge-icon { font-size: 14px; width: 14px; height: 14px; }
-    }
-
-    .reason-suggestions {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.35rem;
-      margin-top: 0.25rem;
-
-      .sugg-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
-
-      .sugg-chip {
-        background: transparent;
-        border: 1px dashed #cbd5e1;
-        border-radius: 6px;
-        padding: 2px 8px;
-        font-size: 0.7rem;
-        color: #64748b;
-        cursor: pointer;
-        transition: all 0.15s;
-
-        &:hover {
-          background: #f8fafc;
-          border-color: #00796b;
+        .header-icon-box {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          background: #e0f2f1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           color: #00796b;
+
+          mat-icon {
+            font-size: 26px;
+            width: 26px;
+            height: 26px;
+          }
+        }
+
+        .dialog-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+
+        .dialog-subtitle {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin: 2px 0 0;
         }
       }
-    }
 
-    .dialog-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-      padding-top: 1rem;
-      border-top: 1px solid #f1f5f9;
+      .user-summary-banner {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-bottom: 1.25rem;
 
-      .btn-cancel {
-        border-radius: 10px;
-        font-weight: 600;
-        color: #64748b;
+        .summary-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 0.825rem;
+
+          .summary-label {
+            color: #64748b;
+            font-weight: 600;
+          }
+          .summary-value {
+            color: #1e293b;
+            font-weight: 700;
+          }
+        }
+
+        .role-badge {
+          padding: 2px 10px;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          background: #e0f2fe;
+          color: #0369a1;
+        }
       }
 
-      .btn-confirm {
-        border-radius: 10px;
-        font-weight: 700;
-        background: #00796b !important;
-        color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(0, 121, 107, 0.25);
+      .field-group {
+        margin-bottom: 1.25rem;
+
+        .field-label {
+          display: block;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #334155;
+          margin-bottom: 0.4rem;
+        }
+      }
+
+      .preset-chips-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .preset-pill {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 100px;
+        padding: 3px 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
         &:hover {
-          background: #004d40 !important;
+          background: #00796b;
+          border-color: #00796b;
+          color: #ffffff;
+          transform: translateY(-1px);
         }
       }
-    }
-  `]
+
+      .days-remaining-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #00796b;
+        background: #e0f2f1;
+        padding: 2px 8px;
+        border-radius: 6px;
+
+        .badge-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+        }
+      }
+
+      .reason-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.25rem;
+
+        .sugg-label {
+          font-size: 0.7rem;
+          color: #94a3b8;
+          font-weight: 600;
+        }
+
+        .sugg-chip {
+          background: transparent;
+          border: 1px dashed #cbd5e1;
+          border-radius: 6px;
+          padding: 2px 8px;
+          font-size: 0.7rem;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s;
+
+          &:hover {
+            background: #f8fafc;
+            border-color: #00796b;
+            color: #00796b;
+          }
+        }
+      }
+
+      .dialog-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #f1f5f9;
+
+        .btn-cancel {
+          border-radius: 10px;
+          font-weight: 600;
+          color: #64748b;
+        }
+
+        .btn-confirm {
+          border-radius: 10px;
+          font-weight: 700;
+          background: #00796b !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 12px rgba(0, 121, 107, 0.25);
+
+          &:hover {
+            background: #004d40 !important;
+          }
+        }
+      }
+    `,
+  ],
 })
 export class ExtendRoleDialogComponent {
   readonly data = inject<ExtendRoleDialogData>(MAT_DIALOG_DATA);
@@ -336,15 +384,17 @@ export class ExtendRoleDialogComponent {
 
   form: FormGroup = this.fb.group({
     validUntil: ['', [Validators.required]],
-    reason: ['', [Validators.required, Validators.minLength(5)]]
+    reason: ['', [Validators.required, Validators.minLength(5)]],
   });
 
   constructor() {
     // Si ya existe fecha previa, pre-asignar +1 mes a partir de ella o hoy
-    const baseDate = this.data.currentValidUntil ? new Date(this.data.currentValidUntil) : new Date();
+    const baseDate = this.data.currentValidUntil
+      ? new Date(this.data.currentValidUntil)
+      : new Date();
     baseDate.setMonth(baseDate.getMonth() + 1);
     this.form.patchValue({
-      validUntil: this.formatDateToLocalString(baseDate)
+      validUntil: this.formatDateToLocalString(baseDate),
     });
   }
 
@@ -368,7 +418,7 @@ export class ExtendRoleDialogComponent {
         break;
     }
     this.form.patchValue({
-      validUntil: this.formatDateToLocalString(target)
+      validUntil: this.formatDateToLocalString(target),
     });
   }
 
@@ -379,7 +429,11 @@ export class ExtendRoleDialogComponent {
   formatDate(dateStr?: string | null): string {
     if (!dateStr) return '---';
     try {
-      return new Date(dateStr).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' });
+      return new Date(dateStr).toLocaleDateString('es-EC', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
     } catch {
       return dateStr;
     }
@@ -390,7 +444,11 @@ export class ExtendRoleDialogComponent {
     try {
       const parts = validUntilStr.split('-');
       if (parts.length === 3) {
-        const target = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        const target = new Date(
+          parseInt(parts[0], 10),
+          parseInt(parts[1], 10) - 1,
+          parseInt(parts[2], 10),
+        );
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         target.setHours(0, 0, 0, 0);
@@ -420,7 +478,7 @@ export class ExtendRoleDialogComponent {
     if (this.form.valid) {
       const result: ExtendRoleDialogResult = {
         validUntil: this.form.value.validUntil,
-        reason: this.form.value.reason
+        reason: this.form.value.reason,
       };
       this.dialogRef.close(result);
     }

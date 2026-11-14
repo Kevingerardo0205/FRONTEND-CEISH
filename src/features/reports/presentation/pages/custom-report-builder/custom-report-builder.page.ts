@@ -24,7 +24,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatIconModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatTableModule
+    MatTableModule,
   ],
   template: `
     <div class="builder-container">
@@ -93,7 +93,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="selectedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: selectedColumns;"></tr>
+                <tr mat-row *matRowDef="let row; columns: selectedColumns"></tr>
               </table>
             </div>
           </mat-card-content>
@@ -101,34 +101,73 @@ import { MatSnackBar } from '@angular/material/snack-bar';
       </div>
     </div>
   `,
-  styles: [`
-    .builder-container { padding: 2rem; background: #f8f9fa; min-height: 100vh; }
-    .page-header { margin-bottom: 2rem; }
-    .header-content h1 { margin: 0; color: #003366; font-size: 2rem; font-weight: 700; }
-    .subtitle { color: #6c757d; margin: 0.5rem 0 0; }
+  styles: [
+    `
+      .builder-container {
+        padding: 2rem;
+        background: #f8f9fa;
+        min-height: 100vh;
+      }
+      .page-header {
+        margin-bottom: 2rem;
+      }
+      .header-content h1 {
+        margin: 0;
+        color: #003366;
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      .subtitle {
+        color: #6c757d;
+        margin: 0.5rem 0 0;
+      }
 
-    .builder-layout { display: grid; grid-template-columns: 250px 250px 1fr; gap: 1.5rem; align-items: start; }
-    .sidebar-card { border-radius: 12px; }
-    .full-width { width: 100%; }
-    .filter-options { margin-top: 1rem; }
+      .builder-layout {
+        display: grid;
+        grid-template-columns: 250px 250px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+      }
+      .sidebar-card {
+        border-radius: 12px;
+      }
+      .full-width {
+        width: 100%;
+      }
+      .filter-options {
+        margin-top: 1rem;
+      }
 
-    .preview-card { border-radius: 12px; min-height: 600px; }
-    .actions { margin-left: auto; }
-    
-    .table-container { overflow-x: auto; margin-top: 1.5rem; }
-    table { width: 100%; }
+      .preview-card {
+        border-radius: 12px;
+        min-height: 600px;
+      }
+      .actions {
+        margin-left: auto;
+      }
 
-    @media (max-width: 1200px) {
-      .builder-layout { grid-template-columns: 1fr; }
-    }
-  `]
+      .table-container {
+        overflow-x: auto;
+        margin-top: 1.5rem;
+      }
+      table {
+        width: 100%;
+      }
+
+      @media (max-width: 1200px) {
+        .builder-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    `,
+  ],
 })
 export class CustomReportBuilderPage {
   private readonly snackBar = inject(MatSnackBar);
 
   selectedTypes: string[] = [];
   selectedStatus: string[] = [];
-  
+
   availableColumns = [
     { id: 'code', label: 'Código' },
     { id: 'title', label: 'Título' },
@@ -136,15 +175,39 @@ export class CustomReportBuilderPage {
     { id: 'type', label: 'Tipo' },
     { id: 'status', label: 'Estado' },
     { id: 'date', label: 'Fecha Recepción' },
-    { id: 'institution', label: 'Institución' }
+    { id: 'institution', label: 'Institución' },
   ];
 
   selectedColumns: string[] = ['code', 'title', 'status'];
 
   previewData = [
-    { code: 'PRT-2024-001', title: 'Estudio de Prevalencia de Diabetes', investigator: 'Dr. John Doe', type: 'IO', status: 'Aprobado', date: '2024-01-15', institution: 'ESPOCH' },
-    { code: 'PRT-2024-002', title: 'Ensayo Clínico Fase III Vacuna', investigator: 'Dra. Jane Smith', type: 'EC', status: 'Pendiente', date: '2024-02-10', institution: 'HGO' },
-    { code: 'PRT-2024-003', title: 'Impacto de la Nutrición en Infantes', investigator: 'Dr. Carlos Ruiz', type: 'EI', status: 'Aprobado', date: '2024-03-05', institution: 'ESPOCH' }
+    {
+      code: 'PRT-2024-001',
+      title: 'Estudio de Prevalencia de Diabetes',
+      investigator: 'Dr. John Doe',
+      type: 'IO',
+      status: 'Aprobado',
+      date: '2024-01-15',
+      institution: 'ESPOCH',
+    },
+    {
+      code: 'PRT-2024-002',
+      title: 'Ensayo Clínico Fase III Vacuna',
+      investigator: 'Dra. Jane Smith',
+      type: 'EC',
+      status: 'Pendiente',
+      date: '2024-02-10',
+      institution: 'HGO',
+    },
+    {
+      code: 'PRT-2024-003',
+      title: 'Impacto de la Nutrición en Infantes',
+      investigator: 'Dr. Carlos Ruiz',
+      type: 'EI',
+      status: 'Aprobado',
+      date: '2024-03-05',
+      institution: 'ESPOCH',
+    },
   ];
 
   onColumnsChange() {
@@ -152,7 +215,7 @@ export class CustomReportBuilderPage {
   }
 
   getColumnLabel(id: string): string {
-    return this.availableColumns.find(c => c.id === id)?.label || id;
+    return this.availableColumns.find((c) => c.id === id)?.label || id;
   }
 
   exportReport() {

@@ -1,5 +1,5 @@
 export enum ProtocolType {
   EI = 'EI',
   EC = 'EC',
-  IO = 'IO'
+  IO = 'IO',
 }

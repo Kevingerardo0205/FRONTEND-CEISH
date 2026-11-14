@@ -1,0 +1,29 @@
+<header class="page-header">
+  <div class="page-header__text">
+    <h1 class="page-header__title">{{ heading() }}</h1>
+    @if (subtitle()) {
+      <p class="page-header__subtitle">{{ subtitle() }}</p>
+    }
+  </div>
+
+  @if (actionLabel()) {
+    <div class="page-header__action">
+      <button
+        type="button"
+        class="page-header__button"
+        [disabled]="!!disabledReason()"
+        [attr.aria-describedby]="disabledReason() || actionHelp() ? hintId : null"
+        (click)="onAction()"
+      >
+        {{ actionLabel() }}
+      </button>
+      @if (disabledReason()) {
+        <p class="page-header__hint page-header__hint--reason" [id]="hintId">
+          {{ disabledReason() }}
+        </p>
+      } @else if (actionHelp()) {
+        <p class="page-header__hint" [id]="hintId">{{ actionHelp() }}</p>
+      }
+    </div>
+  }
+</header>

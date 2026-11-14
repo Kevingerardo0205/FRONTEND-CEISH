@@ -15,5 +15,5 @@ export const EstadoAliasMap = {
   VALIDADO: EstadoCatalog.COMPLETO,
   ARCHIVADO: EstadoCatalog.ARCHIVADO_VENCIMIENTO,
   REQUIERE_SUBSANACION_VERSION: EstadoCatalog.REQUIERE_SUBSANACION_VERSION,
-  EN_CONTROL_DOCUMENTAL: EstadoCatalog.EN_CONTROL_DOCUMENTAL
+  EN_CONTROL_DOCUMENTAL: EstadoCatalog.EN_CONTROL_DOCUMENTAL,
 } as const satisfies Record<string, EstadoCore>;

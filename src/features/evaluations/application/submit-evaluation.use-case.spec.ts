@@ -17,13 +17,17 @@ describe('SubmitEvaluationUseCase', () => {
       providers: [
         SubmitEvaluationUseCase,
         { provide: IEvaluationRepositoryPort, useValue: rSpy },
-        { provide: NotificationBrokerService, useValue: nSpy }
-      ]
+        { provide: NotificationBrokerService, useValue: nSpy },
+      ],
     });
 
     useCase = TestBed.inject(SubmitEvaluationUseCase);
-    repoSpy = TestBed.inject(IEvaluationRepositoryPort) as jasmine.SpyObj<IEvaluationRepositoryPort>;
-    notificationSpy = TestBed.inject(NotificationBrokerService) as jasmine.SpyObj<NotificationBrokerService>;
+    repoSpy = TestBed.inject(
+      IEvaluationRepositoryPort,
+    ) as jasmine.SpyObj<IEvaluationRepositoryPort>;
+    notificationSpy = TestBed.inject(
+      NotificationBrokerService,
+    ) as jasmine.SpyObj<NotificationBrokerService>;
   });
 
   it('debe fallar el envío sin PDF si el resultado es APROBADO', (done) => {
@@ -34,22 +38,25 @@ describe('SubmitEvaluationUseCase', () => {
       error: (error) => {
         expect(error.message).toContain('PDF firmado es obligatorio');
         done();
-      }
+      },
     });
   });
 
   it('debe permitir el envío con PDF si el resultado es APROBADO', (done) => {
     const payload = { result: 1, assignmentId: 123, reportPath: '/uploads/report123.pdf' };
-    
+
     repoSpy.submitEvaluation.and.returnValue(of({ message: 'ok' }));
 
     useCase.execute(payload).subscribe({
       next: () => {
         expect(repoSpy.submitEvaluation).toHaveBeenCalledWith(payload);
-        expect(notificationSpy.publish).toHaveBeenCalledWith('EVALUATION_SUBMITTED', jasmine.any(Object));
+        expect(notificationSpy.publish).toHaveBeenCalledWith(
+          'EVALUATION_SUBMITTED',
+          jasmine.any(Object),
+        );
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 
@@ -61,7 +68,7 @@ describe('SubmitEvaluationUseCase', () => {
       error: (error) => {
         expect(error.message).toContain('PDF firmado es obligatorio');
         done();
-      }
+      },
     });
   });
 
@@ -75,7 +82,7 @@ describe('SubmitEvaluationUseCase', () => {
         expect(repoSpy.submitEvaluation).toHaveBeenCalledWith(payload);
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

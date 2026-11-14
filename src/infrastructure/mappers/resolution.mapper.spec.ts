@@ -10,8 +10,9 @@ describe('ResolutionMapper', () => {
       issuedAt: '2026-08-24T12:00:00Z',
       vigencia_aprobacion_anios: 2,
       periodo_seguimiento_dias: 90,
-      observaciones: 'Observaciones Mayores: Falta consentimiento informado.\nObservaciones Menores: Corregir ortografía.\nProcedimiento: Subir nueva versión del anexo 3.',
-      archivoCartaPdf: 'path/to/pdf'
+      observaciones:
+        'Observaciones Mayores: Falta consentimiento informado.\nObservaciones Menores: Corregir ortografía.\nProcedimiento: Subir nueva versión del anexo 3.',
+      archivoCartaPdf: 'path/to/pdf',
     };
 
     const domain = ResolutionMapper.toDomain(mockDto);
@@ -27,7 +28,7 @@ describe('ResolutionMapper', () => {
   it('should map unformatted observations as majorObservations', () => {
     const mockDto = {
       id: 123,
-      observaciones: 'Observaciones sin formato estructurado'
+      observaciones: 'Observaciones sin formato estructurado',
     };
 
     const domain = ResolutionMapper.toDomain(mockDto);
@@ -46,14 +47,16 @@ describe('ResolutionMapper', () => {
       majorObservations: 'Falta consentimiento informado.',
       minorObservations: 'Corregir ortografía.',
       correctionProcedure: 'Subir nueva versión del anexo 3.',
-      letterFilePath: 'path/to/pdf'
+      letterFilePath: 'path/to/pdf',
     };
 
     const payload = ResolutionMapper.toPayload(domainEntity);
 
     expect(payload.protocolId).toBe(45);
     expect(payload.resolutionTypeId).toBe(2);
-    expect(payload.observations).toContain('Observaciones Mayores: Falta consentimiento informado.');
+    expect(payload.observations).toContain(
+      'Observaciones Mayores: Falta consentimiento informado.',
+    );
     expect(payload.observations).toContain('Observaciones Menores: Corregir ortografía.');
     expect(payload.observations).toContain('Procedimiento: Subir nueva versión del anexo 3.');
   });
@@ -69,7 +72,7 @@ describe('ResolutionMapper', () => {
 
     const emptyPayload = ResolutionMapper.toPayload({
       protocolId: 45,
-      resolutionTypeId: 1
+      resolutionTypeId: 1,
     });
     expect(emptyPayload.observations).toBe('');
   });

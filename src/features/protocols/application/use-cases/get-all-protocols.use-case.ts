@@ -4,7 +4,7 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GetAllProtocolsUseCase {
   private repo = inject(IProtocolRepositoryPort);

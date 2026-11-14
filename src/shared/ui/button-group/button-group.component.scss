@@ -1,0 +1,33 @@
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-family: var(--font-content);
+}
+
+.button-group__button {
+  min-height: var(--min-h-filter);
+  padding: 0 1rem;
+  border: none;
+  border-radius: var(--radius-control);
+  background: var(--tone-gris-bg);
+  color: var(--tone-gris-fg);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--c-primary-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary-dark);
+    outline-offset: 2px;
+  }
+}
+
+.button-group__button--active,
+.button-group__button--active:hover {
+  background: var(--c-primary);
+  color: var(--c-surface);
+  font-weight: 600;
+}

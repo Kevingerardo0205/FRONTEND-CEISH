@@ -4,8 +4,20 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { of } from 'rxjs';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { VerificadoGuard } from './verificado.guard';
+import { RoleHome } from './role-home.guard';
 
-describe('VerificadoGuard (Multi-Role Support)', () => {
+const COMMITTEE_ROLES = ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR'];
+
+const unverifiedUser = (rol: string) => ({
+  nombre: 'Usuario Prueba',
+  email: 'usuario.prueba@example.test',
+  rol,
+  roles: [rol],
+  activo: true,
+  emailVerificado: false,
+});
+
+describe('VerificadoGuard (role-based email verification)', () => {
   let guard: VerificadoGuard;
   let mockAuthFacade: jasmine.SpyObj<AuthFacade>;
   let mockRouter: jasmine.SpyObj<Router>;
@@ -21,8 +33,9 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
         VerificadoGuard,
         { provide: AuthFacade, useValue: mockAuthFacade },
         { provide: Router, useValue: mockRouter },
-        { provide: MatSnackBar, useValue: mockSnackBar }
-      ]
+        { provide: MatSnackBar, useValue: mockSnackBar },
+        { provide: RoleHome, useValue: { urlTree: () => '/dashboard/home' } },
+      ],
     });
 
     guard = TestBed.inject(VerificadoGuard);
@@ -38,49 +51,31 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
     expect(result).toBe('/auth/login' as any);
   });
 
-  it('debe permitir acceso directo a roles administrativos sin exigir emailVerificado', () => {
-    mockAuthFacade.currentUser.and.returnValue({
-      nombre: 'Secretaria CEISH',
-      email: 'sec@espoch.edu.ec',
-      rol: 'SECRETARIA',
-      roles: ['SECRETARIA'],
-      activo: true,
-      emailVerificado: false // No verificado
-    });
+  it('debe consultar los 3 roles del comité exentos de verificación', () => {
+    mockAuthFacade.currentUser.and.returnValue(unverifiedUser('SECRETARIA') as any);
     mockAuthFacade.hasAnyRole.and.returnValue(true);
 
-    const result = guard.canActivate();
+    guard.canActivate();
 
-    expect(result).toBeTrue();
+    expect(mockAuthFacade.hasAnyRole).toHaveBeenCalledWith(COMMITTEE_ROLES);
   });
 
-  it('debe permitir acceso si el usuario posee un rol administrativo como secundario', () => {
-    // Usuario con INVESTIGADOR como primario y ADMIN_TI como secundario
-    mockAuthFacade.currentUser.and.returnValue({
-      nombre: 'Ing. TI y Docente',
-      email: 'ti@espoch.edu.ec',
-      rol: 'INVESTIGADOR',
-      roles: ['INVESTIGADOR', 'ADMIN_TI'],
-      activo: true,
-      emailVerificado: false
+  COMMITTEE_ROLES.forEach((rol) => {
+    it(`debe permitir acceso directo al rol del comité ${rol} sin emailVerificado`, () => {
+      mockAuthFacade.currentUser.and.returnValue(unverifiedUser(rol) as any);
+      mockAuthFacade.hasAnyRole.and.returnValue(true);
+
+      const result = guard.canActivate();
+
+      expect(result).toBeTrue();
     });
-    mockAuthFacade.hasAnyRole.and.returnValue(true);
-
-    const result = guard.canActivate();
-
-    expect(result).toBeTrue();
-    expect(mockAuthFacade.hasAnyRole).toHaveBeenCalledWith(['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE', 'ADMIN_TI']);
   });
 
   it('debe permitir acceso a investigadores si su email está verificado', () => {
     mockAuthFacade.currentUser.and.returnValue({
-      nombre: 'Dr. Investigador',
-      email: 'inv@espoch.edu.ec',
-      rol: 'INVESTIGADOR',
-      roles: ['INVESTIGADOR'],
-      activo: true,
-      emailVerificado: true // Verificado
-    });
+      ...unverifiedUser('INVESTIGADOR'),
+      emailVerificado: true,
+    } as any);
     mockAuthFacade.hasAnyRole.and.returnValue(false);
 
     const result = guard.canActivate();
@@ -88,27 +83,20 @@ describe('VerificadoGuard (Multi-Role Support)', () => {
     expect(result).toBeTrue();
   });
 
-  it('debe bloquear y notificar a un investigador no verificado', () => {
-    mockAuthFacade.currentUser.and.returnValue({
-      nombre: 'Dr. Investigador Nuevo',
-      email: 'nuevo@espoch.edu.ec',
-      rol: 'INVESTIGADOR',
-      roles: ['INVESTIGADOR'],
-      activo: true,
-      emailVerificado: false // No verificado
-    });
+  it('debe bloquear y notificar a un investigador no verificado (no exento)', () => {
+    mockAuthFacade.currentUser.and.returnValue(unverifiedUser('INVESTIGADOR') as any);
     mockAuthFacade.hasAnyRole.and.returnValue(false);
     mockSnackBar.open.and.returnValue({ onAction: () => of(undefined) } as any);
-    mockRouter.createUrlTree.and.returnValue('/dashboard' as any);
-
     const result = guard.canActivate();
 
+    expect(mockAuthFacade.hasAnyRole).toHaveBeenCalledWith(COMMITTEE_ROLES);
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       jasmine.stringMatching(/Debe verificar su correo/),
       jasmine.any(String),
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
-    expect(mockRouter.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
-    expect(result).toBe('/dashboard' as any);
+    // D12: vuelve al inicio del rol activo (RoleHome), no a /dashboard.
+    expect(mockRouter.createUrlTree).not.toHaveBeenCalled();
+    expect(result).toBe('/dashboard/home' as any);
   });
 });

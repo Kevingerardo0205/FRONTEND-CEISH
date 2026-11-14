@@ -22,7 +22,7 @@ import { LoadAllProtocolsUseCase } from '../application/use-cases/load-all-proto
     MatIconModule,
     MatChipsModule,
     MatTooltipModule,
-    ProtocolCodePipe
+    ProtocolCodePipe,
   ],
   template: `
     <div class="page-container">
@@ -39,7 +39,6 @@ import { LoadAllProtocolsUseCase } from '../application/use-cases/load-all-proto
 
       <div class="table-card">
         <table mat-table [dataSource]="protocols()" class="full-width-table">
-          
           <ng-container matColumnDef="code">
             <th mat-header-cell *matHeaderCellDef>Código</th>
             <td mat-cell *matCellDef="let protocol">{{ protocol.code | protocolCode }}</td>
@@ -69,56 +68,99 @@ import { LoadAllProtocolsUseCase } from '../application/use-cases/load-all-proto
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let protocol">
-              <button mat-icon-button [routerLink]="['/protocols/detail', protocol.id]" matTooltip="Ver detalles">
+              <button
+                mat-icon-button
+                [routerLink]="['/protocols/detail', protocol.id]"
+                matTooltip="Ver detalles"
+              >
                 <mat-icon>visibility</mat-icon>
               </button>
-              <button mat-icon-button color="warn" *ngIf="protocol.status === ProtocolStatus.DRAFT" matTooltip="Eliminar">
+              <button
+                mat-icon-button
+                color="warn"
+                *ngIf="protocol.status === ProtocolStatus.DRAFT"
+                matTooltip="Eliminar"
+              >
                 <mat-icon>delete</mat-icon>
               </button>
             </td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
         </table>
 
         <div class="empty-state" *ngIf="!protocols().length">
           <mat-icon>description</mat-icon>
           <p>No se encontraron protocolos registrados.</p>
-          <button mat-stroked-button color="primary" routerLink="/protocols/create">Registrar el primero</button>
+          <button mat-stroked-button color="primary" routerLink="/protocols/create">
+            Registrar el primero
+          </button>
         </div>
       </div>
     </div>
   `,
-  styles: [`
-    .page-container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      h1 { margin: 0; font-size: 1.8rem; color: #003366; }
-      p { margin: 0.5rem 0 0; color: #64748b; }
-    }
-    .table-card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-      overflow: hidden;
-    }
-    .full-width-table { width: 100%; }
-    .title-cell { max-width: 400px; font-weight: 500; }
-    .empty-state {
-      padding: 4rem;
-      text-align: center;
-      color: #94a3b8;
-      mat-icon { font-size: 64px; width: 64px; height: 64px; margin-bottom: 1rem; }
-    }
-    
-    .status-draft { background: #e2e8f0 !important; color: #475569 !important; }
-    .status-submitted { background: #dcfce7 !important; color: #166534 !important; }
-    .status-review { background: #fef9c3 !important; color: #854d0e !important; }
-  `]
+  styles: [
+    `
+      .page-container {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        h1 {
+          margin: 0;
+          font-size: 1.8rem;
+          color: #003366;
+        }
+        p {
+          margin: 0.5rem 0 0;
+          color: #64748b;
+        }
+      }
+      .table-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+      }
+      .full-width-table {
+        width: 100%;
+      }
+      .title-cell {
+        max-width: 400px;
+        font-weight: 500;
+      }
+      .empty-state {
+        padding: 4rem;
+        text-align: center;
+        color: #94a3b8;
+        mat-icon {
+          font-size: 64px;
+          width: 64px;
+          height: 64px;
+          margin-bottom: 1rem;
+        }
+      }
+
+      .status-draft {
+        background: #e2e8f0 !important;
+        color: #475569 !important;
+      }
+      .status-submitted {
+        background: #dcfce7 !important;
+        color: #166534 !important;
+      }
+      .status-review {
+        background: #fef9c3 !important;
+        color: #854d0e !important;
+      }
+    `,
+  ],
 })
 export class ProtocolListPage implements OnInit {
   private loadAllProtocolsUC = inject(LoadAllProtocolsUseCase);
@@ -132,15 +174,21 @@ export class ProtocolListPage implements OnInit {
   }
 
   loadProtocols() {
-    this.loadAllProtocolsUC.execute().subscribe((data: ProtocolEntity[]) => this.protocols.set(data));
+    this.loadAllProtocolsUC
+      .execute()
+      .subscribe((data: ProtocolEntity[]) => this.protocols.set(data));
   }
 
   getStatusClass(status: string): string {
     switch (status) {
-      case ProtocolStatus.DRAFT: return 'status-draft';
-      case ProtocolStatus.SUBMITTED: return 'status-submitted';
-      case ProtocolStatus.UNDER_REVIEW: return 'status-review';
-      default: return '';
+      case ProtocolStatus.DRAFT:
+        return 'status-draft';
+      case ProtocolStatus.SUBMITTED:
+        return 'status-submitted';
+      case ProtocolStatus.UNDER_REVIEW:
+        return 'status-review';
+      default:
+        return '';
     }
   }
 }

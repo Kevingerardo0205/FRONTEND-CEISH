@@ -1,6 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { UserAdmin, UserRoleItem, RoleAssignmentPayloadItem } from '@domain/entities/user-admin.entity';
+import {
+  UserAdmin,
+  UserRoleItem,
+  RoleAssignmentPayloadItem,
+} from '@domain/entities/user-admin.entity';
 import { UserRole } from '@domain/entities/user.entity';
 import { IUserAdminRepositoryPort, Role } from '@domain/ports/user-admin-repository.port';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
@@ -42,8 +46,10 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
       map((res: unknown) => {
         const envelope = res as { data?: unknown };
         const users = envelope.data ?? res;
-        return Array.isArray(users) ? (users as RawBackendUser[]).map((u) => this.mapToDomain(u)) : [];
-      })
+        return Array.isArray(users)
+          ? (users as RawBackendUser[]).map((u) => this.mapToDomain(u))
+          : [];
+      }),
     );
   }
 
@@ -53,13 +59,13 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
       fullName: user.nombre,
       email: user.email,
       nationalId: user.cedula || '',
-      roles: rolesPayload
+      roles: rolesPayload,
     };
     return this.apiClient.post<unknown>(ENDPOINTS.USERS.BASE, payload).pipe(
       map((res: unknown) => {
         const envelope = res as { data?: RawBackendUser };
         return this.mapToDomain(envelope.data ?? (res as RawBackendUser));
-      })
+      }),
     );
   }
 
@@ -80,7 +86,7 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
       map((res: unknown) => {
         const envelope = res as { data?: RawBackendUser };
         return this.mapToDomain(envelope.data ?? (res as RawBackendUser));
-      })
+      }),
     );
   }
 
@@ -93,13 +99,13 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
             roleCode: ur.code.toUpperCase(),
             validFrom: ur.validFrom || null,
             validUntil: ur.validUntil,
-            reason: ur.reason || null
+            reason: ur.reason || null,
           };
         }
         return ur.code.toUpperCase();
       });
     }
-    const raw: string[] = user.roles ? user.roles : (user.rol ? [user.rol] : []);
+    const raw: string[] = user.roles ? user.roles : user.rol ? [user.rol] : [];
     return raw.map((r: string) => r.toUpperCase());
   }
 
@@ -112,7 +118,7 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
       map((res: unknown) => {
         const body = res as { data?: Role[] };
         return body.data ?? (res as Role[]);
-      })
+      }),
     );
   }
 
@@ -120,16 +126,21 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
     return this.apiClient.patch<void>(`${ENDPOINTS.USERS.BY_ID(id)}/roles`, { roles });
   }
 
-  extendTemporaryRole(id: string, roleCode: string, validUntil: string, reason?: string): Observable<void> {
+  extendTemporaryRole(
+    id: string,
+    roleCode: string,
+    validUntil: string,
+    reason?: string,
+  ): Observable<void> {
     return this.apiClient.patch<void>(`${ENDPOINTS.USERS.BY_ID(id)}/roles/${roleCode}/extend`, {
       validUntil,
-      reason: reason || null
+      reason: reason || null,
     });
   }
 
   suspendTemporaryRole(id: string, roleCode: string, reason?: string): Observable<void> {
     return this.apiClient.post<void>(`${ENDPOINTS.USERS.BY_ID(id)}/roles/${roleCode}/suspend`, {
-      reason: reason || null
+      reason: reason || null,
     });
   }
 
@@ -146,7 +157,7 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
         rol: 'INVESTIGADOR',
         userRoles: [],
         perfil: 'Personal Administrativo',
-        activo: true
+        activo: true,
       };
     }
     const rawRoles = Array.isArray(u.roles) ? u.roles : [];
@@ -154,18 +165,19 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
       if (typeof r === 'string') {
         return {
           code: r.toUpperCase(),
-          name: r
+          name: r,
         };
       }
       const code = (r.code || r.codigo || r.nombre || r.name || '').toUpperCase();
       const validFrom = r.validFrom ?? (r as any).valid_from ?? null;
       const validUntil = r.validUntil ?? (r as any).valid_until ?? null;
       const reason = r.reason ?? (r as any).motivo_delegacion ?? null;
-      const isExpired = r.isExpired !== undefined 
-        ? r.isExpired 
-        : (r as any).is_expired !== undefined
-        ? (r as any).is_expired
-        : Boolean(validUntil && new Date(validUntil).getTime() < Date.now());
+      const isExpired =
+        r.isExpired !== undefined
+          ? r.isExpired
+          : (r as any).is_expired !== undefined
+            ? (r as any).is_expired
+            : Boolean(validUntil && new Date(validUntil).getTime() < Date.now());
       return {
         id: r.id,
         code,
@@ -173,11 +185,11 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
         validFrom,
         validUntil,
         reason,
-        isExpired
+        isExpired,
       };
     });
 
-    const roleCodes = userRoles.map(r => r.code).filter(Boolean);
+    const roleCodes = userRoles.map((r) => r.code).filter(Boolean);
     const primaryRole = (roleCodes[0] || 'INVESTIGADOR') as UserRole;
 
     return {
@@ -188,7 +200,7 @@ export class UserAdminApiAdapter implements IUserAdminRepositoryPort {
       userRoles,
       perfil: u.investigatorProfile ? 'Investigador' : 'Personal Administrativo',
       activo: u.isActive ?? u.activo ?? true,
-      cedula: u.nationalId || u.cedula
+      cedula: u.nationalId || u.cedula,
     };
   }
 }

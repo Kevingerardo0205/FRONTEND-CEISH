@@ -4,7 +4,7 @@ import { environment } from 'src/environments/environment';
 import { Observable } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ApiClientService {
   private http = inject(HttpClient);
@@ -18,11 +18,11 @@ export class ApiClientService {
   get<T>(url: string, params?: Record<string, any>): Observable<T> {
     let httpParams = new HttpParams();
     if (params) {
-      Object.keys(params).forEach(key => {
+      Object.keys(params).forEach((key) => {
         const val = params[key];
         if (val !== undefined && val !== null) {
           if (Array.isArray(val)) {
-            val.forEach(item => {
+            val.forEach((item) => {
               if (item !== undefined && item !== null) {
                 httpParams = httpParams.append(key, String(item));
               }

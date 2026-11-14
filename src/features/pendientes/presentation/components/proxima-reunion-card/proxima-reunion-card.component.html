@@ -1,0 +1,47 @@
+<section class="reunion" aria-labelledby="proxima-reunion-titulo">
+  <h2 id="proxima-reunion-titulo" class="reunion__titulo">Próxima reunión</h2>
+
+  @switch (estado()) {
+    @case ('cargando') {
+      <app-loading-state message="Cargando la próxima reunión…" />
+    }
+    @case ('error') {
+      <app-error-state message="No pudimos cargar la próxima reunión." (retry)="reintentar.emit()" />
+    }
+    @default {
+      @if (reunion(); as r) {
+        <div class="reunion__cuerpo">
+          <div class="reunion__datos">
+            <p class="reunion__convocatoria">
+              Convocatoria N.º {{ r.numeroConvocatoria }} · {{ tipo() }}
+            </p>
+            <p class="reunion__fecha">{{ fecha() }}</p>
+            @if (r.lugar; as lugar) {
+              <p class="reunion__lugar">
+                <span>{{ lugar.nombre }}</span>
+                @if (lugar.esVirtual) {
+                  @if (lugar.enlaceReunion; as enlace) {
+                    <a
+                      class="reunion__unirse"
+                      [href]="enlace"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Unirse a la reunión (se abre en otra pestaña)"
+                      >Unirse a la reunión</a
+                    >
+                  } @else {
+                    <span class="reunion__sin-enlace">Enlace no disponible</span>
+                  }
+                }
+              </p>
+            }
+            <p class="reunion__protocolos">{{ protocolos() }}</p>
+          </div>
+          <a class="reunion__ver" routerLink="/convocatorias">Ver convocatoria</a>
+        </div>
+      } @else {
+        <app-empty-state message="No hay una reunión programada." />
+      }
+    }
+  }
+</section>

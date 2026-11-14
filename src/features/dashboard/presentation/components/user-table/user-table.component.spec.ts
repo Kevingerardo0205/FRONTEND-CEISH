@@ -17,17 +17,17 @@ describe('UserTableComponent (Multi-Role & Suplencias)', () => {
       roles: ['INVESTIGADOR', 'SECRETARIA'],
       userRoles: [
         { code: 'INVESTIGADOR', name: 'Investigador', isExpired: false },
-        { 
-          code: 'SECRETARIA', 
-          name: 'Secretaria Suplente', 
-          validFrom: '2026-09-01T00:00:00.000Z', 
-          validUntil: '2026-09-30T23:59:59.000Z', 
-          reason: 'Subrogación por vacaciones', 
-          isExpired: false 
-        }
+        {
+          code: 'SECRETARIA',
+          name: 'Secretaria Suplente',
+          validFrom: '2026-09-01T00:00:00.000Z',
+          validUntil: '2026-09-30T23:59:59.000Z',
+          reason: 'Subrogación por vacaciones',
+          isExpired: false,
+        },
       ],
       perfil: 'Docente Investigador',
-      activo: true
+      activo: true,
     },
     {
       id: '2',
@@ -37,23 +37,23 @@ describe('UserTableComponent (Multi-Role & Suplencias)', () => {
       rol: 'EVALUADOR',
       roles: ['EVALUADOR'],
       userRoles: [
-        { 
-          code: 'EVALUADOR', 
-          name: 'Evaluador Par', 
-          validFrom: '2026-01-01T00:00:00.000Z', 
-          validUntil: '2026-05-01T00:00:00.000Z', 
-          reason: 'Comisión temporal', 
-          isExpired: true 
-        }
+        {
+          code: 'EVALUADOR',
+          name: 'Evaluador Par',
+          validFrom: '2026-01-01T00:00:00.000Z',
+          validUntil: '2026-05-01T00:00:00.000Z',
+          reason: 'Comisión temporal',
+          isExpired: true,
+        },
       ],
       perfil: 'Evaluador de Ética',
-      activo: false
-    }
+      activo: false,
+    },
   ];
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UserTableComponent, NoopAnimationsModule]
+      imports: [UserTableComponent, NoopAnimationsModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(UserTableComponent);
@@ -64,7 +64,14 @@ describe('UserTableComponent (Multi-Role & Suplencias)', () => {
 
   it('debe crearse y renderizar la tabla con las columnas configuradas', () => {
     expect(component).toBeTruthy();
-    expect(component.displayedColumns).toEqual(['cedula', 'nombre', 'email', 'rol', 'estado', 'acciones']);
+    expect(component.displayedColumns).toEqual([
+      'cedula',
+      'nombre',
+      'email',
+      'rol',
+      'estado',
+      'acciones',
+    ]);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelectorAll('tr[mat-row]').length).toBe(2);
   });
@@ -86,7 +93,10 @@ describe('UserTableComponent (Multi-Role & Suplencias)', () => {
   });
 
   it('debe generar tooltips informativos con motivos de suplencia', () => {
-    const permanentTooltip = component.getRoleTooltip({ code: 'INVESTIGADOR', name: 'Investigador' });
+    const permanentTooltip = component.getRoleTooltip({
+      code: 'INVESTIGADOR',
+      name: 'Investigador',
+    });
     expect(permanentTooltip).toContain('Rol permanente: Investigador');
 
     const activeTooltip = component.getRoleTooltip({
@@ -94,7 +104,7 @@ describe('UserTableComponent (Multi-Role & Suplencias)', () => {
       name: 'Secretaria Suplente',
       validUntil: '2026-09-30T00:00:00.000Z',
       reason: 'Subrogación',
-      isExpired: false
+      isExpired: false,
     });
     expect(activeTooltip).toContain('⏳ Suplencia temporal vigente hasta');
     expect(activeTooltip).toContain('Motivo: Subrogación');
@@ -104,7 +114,7 @@ describe('UserTableComponent (Multi-Role & Suplencias)', () => {
       name: 'Evaluador',
       validUntil: '2026-05-01T00:00:00.000Z',
       reason: 'Comisión terminada',
-      isExpired: true
+      isExpired: true,
     });
     expect(expiredTooltip).toContain('⌛ Suplencia finalizada');
   });

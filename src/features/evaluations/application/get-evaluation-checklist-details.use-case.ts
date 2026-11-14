@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IEvaluationRepositoryPort, ChecklistDetailItem } from '@domain/ports/IEvaluationRepositoryPort';
+import {
+  IEvaluationRepositoryPort,
+  ChecklistDetailItem,
+} from '@domain/ports/IEvaluationRepositoryPort';
 
 @Injectable({ providedIn: 'root' })
 export class GetEvaluationChecklistDetailsUseCase {

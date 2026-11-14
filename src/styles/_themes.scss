@@ -22,26 +22,34 @@
   &.btn-primary {
     background-color: v.$color-primary;
     color: white;
-    &:hover:not(:disabled) { background-color: v.$color-primary-dark; }
+    &:hover:not(:disabled) {
+      background-color: v.$color-primary-dark;
+    }
   }
 
   &.btn-danger {
     background-color: v.$color-secondary;
     color: white;
-    &:hover:not(:disabled) { background-color: v.$color-secondary-hover; }
+    &:hover:not(:disabled) {
+      background-color: v.$color-secondary-hover;
+    }
   }
 
   &.btn-warning {
     background-color: v.$color-accent;
     color: white;
-    &:hover:not(:disabled) { background-color: v.$color-accent-hover; }
+    &:hover:not(:disabled) {
+      background-color: v.$color-accent-hover;
+    }
   }
 
   &.btn-outline {
     background-color: transparent;
     border: 1px solid v.$color-border;
     color: v.$color-text-main;
-    &:hover:not(:disabled) { background-color: v.$color-bg-body; }
+    &:hover:not(:disabled) {
+      background-color: v.$color-bg-body;
+    }
   }
 }
 
@@ -61,7 +69,8 @@
     box-shadow: 0 0 0 3px rgba(26, 82, 135, 0.1);
   }
 
-  &:read-only, &:disabled {
+  &:read-only,
+  &:disabled {
     background-color: v.$color-bg-body;
     cursor: not-allowed;
   }

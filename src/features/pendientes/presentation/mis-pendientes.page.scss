@@ -1,0 +1,13 @@
+:host {
+  display: block;
+}
+
+.mis-pendientes {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.mis-pendientes__filtros {
+  margin-bottom: -0.5rem;
+}

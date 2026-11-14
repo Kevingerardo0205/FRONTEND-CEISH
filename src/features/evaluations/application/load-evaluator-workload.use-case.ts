@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { IEvaluationRepositoryPort, EvaluationAssignment } from '@domain/ports/IEvaluationRepositoryPort';
+import {
+  IEvaluationRepositoryPort,
+  EvaluationAssignment,
+} from '@domain/ports/IEvaluationRepositoryPort';
 
 @Injectable({ providedIn: 'root' })
 export class LoadEvaluatorWorkloadUseCase {
@@ -8,10 +11,10 @@ export class LoadEvaluatorWorkloadUseCase {
 
   execute(): Observable<{ activeCount: number; urgentCount: number }> {
     return this.evalRepo.getMyAssignments().pipe(
-      map(assignments => ({
+      map((assignments) => ({
         activeCount: assignments.length,
-        urgentCount: assignments.filter((a: EvaluationAssignment) => a.isUrgent).length
-      }))
+        urgentCount: assignments.filter((a: EvaluationAssignment) => a.isUrgent).length,
+      })),
     );
   }
 }

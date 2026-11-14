@@ -12,9 +12,7 @@ describe('AssignmentPage', () => {
 
     await TestBed.configureTestingModule({
       imports: [AssignmentPage],
-      providers: [
-        { provide: Router, useValue: routerSpy }
-      ]
+      providers: [{ provide: Router, useValue: routerSpy }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AssignmentPage);
@@ -24,5 +22,9 @@ describe('AssignmentPage', () => {
 
   it('debe crear el componente', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('F01 T01-0: lleva a la bandeja en su ruta propia, /estratificacion-riesgo', () => {
+    expect(routerSpy.navigate).toHaveBeenCalledOnceWith(['/estratificacion-riesgo']);
   });
 });

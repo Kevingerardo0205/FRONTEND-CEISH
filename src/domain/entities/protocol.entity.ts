@@ -33,7 +33,7 @@ export interface ProtocolEntity {
   sponsorWeb?: string;
   sponsorExecutingAgency?: string;
   financingAmount?: number;
-  
+
   // Aceptación de Tiempos y Reglamentos (CEISH)
   isTimelineTermsAccepted?: boolean;
   timelineTermsAcceptedAt?: string | null;

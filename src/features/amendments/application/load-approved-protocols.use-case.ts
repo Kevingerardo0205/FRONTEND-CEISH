@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IAmendmentRepositoryPort, ApprovedProtocolOption } from '../domain/ports/amendment-repository.port';
+import {
+  IAmendmentRepositoryPort,
+  ApprovedProtocolOption,
+} from '../domain/ports/amendment-repository.port';
 
 @Injectable({ providedIn: 'root' })
 export class LoadApprovedProtocolsUseCase {

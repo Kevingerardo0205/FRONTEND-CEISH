@@ -29,7 +29,7 @@ import { EmailTemplate } from '@features/notifications/domain/entities/notificat
     MatDividerModule,
     MatChipsModule,
     MatSnackBarModule,
-    MatListModule
+    MatListModule,
   ],
   template: `
     <div class="templates-container">
@@ -48,7 +48,12 @@ import { EmailTemplate } from '@features/notifications/domain/entities/notificat
           </mat-card-header>
           <mat-card-content>
             <mat-action-list>
-              <button mat-list-item *ngFor="let t of templates" (click)="selectTemplate(t)" [ngClass]="{'active': selectedTemplate?.id === t.id}">
+              <button
+                mat-list-item
+                *ngFor="let t of templates"
+                (click)="selectTemplate(t)"
+                [ngClass]="{ active: selectedTemplate?.id === t.id }"
+              >
                 <mat-icon matListItemIcon>mail</mat-icon>
                 <div matListItemTitle>{{ t.name }}</div>
                 <div matListItemLine>{{ t.category }}</div>
@@ -70,18 +75,21 @@ import { EmailTemplate } from '@features/notifications/domain/entities/notificat
               </button>
             </div>
           </mat-card-header>
-          
+
           <mat-card-content>
             <div class="editor-form">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Asunto del Correo</mat-label>
-                <input matInput [(ngModel)]="selectedTemplate.subject">
+                <input matInput [(ngModel)]="selectedTemplate.subject" />
               </mat-form-field>
 
               <div class="variables-panel">
                 <p>Variables disponibles (haga clic para insertar):</p>
                 <mat-chip-listbox>
-                  <mat-chip *ngFor="let v of selectedTemplate.variables" (click)="insertVariable(v)">
+                  <mat-chip
+                    *ngFor="let v of selectedTemplate.variables"
+                    (click)="insertVariable(v)"
+                  >
                     {{ '{{' + v + '}}' }}
                   </mat-chip>
                 </mat-chip-listbox>
@@ -89,7 +97,12 @@ import { EmailTemplate } from '@features/notifications/domain/entities/notificat
 
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Cuerpo del Mensaje (HTML/Texto)</mat-label>
-                <textarea matInput rows="15" [(ngModel)]="selectedTemplate.body" #templateBody></textarea>
+                <textarea
+                  matInput
+                  rows="15"
+                  [(ngModel)]="selectedTemplate.body"
+                  #templateBody
+                ></textarea>
               </mat-form-field>
             </div>
           </mat-card-content>
@@ -104,32 +117,92 @@ import { EmailTemplate } from '@features/notifications/domain/entities/notificat
       </div>
     </div>
   `,
-  styles: [`
-    .templates-container { padding: 2rem; background: #f8f9fa; min-height: 100vh; }
-    .page-header { margin-bottom: 2rem; }
-    .header-content h1 { margin: 0; color: #003366; font-size: 2rem; font-weight: 700; }
-    .subtitle { color: #6c757d; margin: 0.5rem 0 0; }
+  styles: [
+    `
+      .templates-container {
+        padding: 2rem;
+        background: #f8f9fa;
+        min-height: 100vh;
+      }
+      .page-header {
+        margin-bottom: 2rem;
+      }
+      .header-content h1 {
+        margin: 0;
+        color: #003366;
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      .subtitle {
+        color: #6c757d;
+        margin: 0.5rem 0 0;
+      }
 
-    .main-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; align-items: start; }
-    
-    .templates-list-card { border-radius: 12px; height: calc(100vh - 200px); overflow-y: auto; }
-    .active { background: rgba(0, 51, 102, 0.05); border-right: 4px solid #003366; }
+      .main-layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+      }
 
-    .editor-card { border-radius: 12px; min-height: calc(100vh - 200px); }
-    .editor-card.empty { display: flex; justify-content: center; align-items: center; text-align: center; color: #999; 
-      mat-icon { font-size: 4rem; width: 4rem; height: 4rem; margin-bottom: 1rem; }
-    }
+      .templates-list-card {
+        border-radius: 12px;
+        height: calc(100vh - 200px);
+        overflow-y: auto;
+      }
+      .active {
+        background: rgba(0, 51, 102, 0.05);
+        border-right: 4px solid #003366;
+      }
 
-    .editor-actions { display: flex; gap: 0.5rem; margin-left: auto; }
-    .editor-form { margin-top: 1.5rem; }
-    .full-width { width: 100%; }
-    
-    .variables-panel { background: #f1f3f4; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; 
-      p { margin-top: 0; font-size: 0.85rem; font-weight: 600; color: #666; }
-    }
+      .editor-card {
+        border-radius: 12px;
+        min-height: calc(100vh - 200px);
+      }
+      .editor-card.empty {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: #999;
+        mat-icon {
+          font-size: 4rem;
+          width: 4rem;
+          height: 4rem;
+          margin-bottom: 1rem;
+        }
+      }
 
-    textarea { font-family: monospace; }
-  `]
+      .editor-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: auto;
+      }
+      .editor-form {
+        margin-top: 1.5rem;
+      }
+      .full-width {
+        width: 100%;
+      }
+
+      .variables-panel {
+        background: #f1f3f4;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        p {
+          margin-top: 0;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #666;
+        }
+      }
+
+      textarea {
+        font-family: monospace;
+      }
+    `,
+  ],
 })
 export class EmailTemplatesPage implements OnInit {
   private readonly notificationUseCase = inject(NotificationUseCase);
@@ -143,7 +216,7 @@ export class EmailTemplatesPage implements OnInit {
   }
 
   loadTemplates() {
-    this.notificationUseCase.getTemplates().subscribe(templates => {
+    this.notificationUseCase.getTemplates().subscribe((templates) => {
       this.templates = templates;
     });
   }

@@ -13,25 +13,29 @@ describe('LoadEvaluationConsolidationUseCase', () => {
     TestBed.configureTestingModule({
       providers: [
         LoadEvaluationConsolidationUseCase,
-        { provide: IEvaluationRepositoryPort, useValue: rSpy }
-      ]
+        { provide: IEvaluationRepositoryPort, useValue: rSpy },
+      ],
     });
 
     useCase = TestBed.inject(LoadEvaluationConsolidationUseCase);
-    repoSpy = TestBed.inject(IEvaluationRepositoryPort) as jasmine.SpyObj<IEvaluationRepositoryPort>;
+    repoSpy = TestBed.inject(
+      IEvaluationRepositoryPort,
+    ) as jasmine.SpyObj<IEvaluationRepositoryPort>;
   });
 
   it('debe normalizar evaluaciones desde el backend', (done) => {
-    repoSpy.consolidateEvaluation.and.returnValue(of({
-      data: {
-        protocolId: 'proto-1',
-        evaluations: [
-          { id: '1', evaluatorId: '10', result: 'APROBADO' },
-          { id: '2', evaluatorId: '20', verdict: 'RECHAZADO' }
-        ],
-        isUnanimous: false
-      }
-    } as any));
+    repoSpy.consolidateEvaluation.and.returnValue(
+      of({
+        data: {
+          protocolId: 'proto-1',
+          evaluations: [
+            { id: '1', evaluatorId: '10', result: 'APROBADO' },
+            { id: '2', evaluatorId: '20', verdict: 'RECHAZADO' },
+          ],
+          isUnanimous: false,
+        },
+      } as any),
+    );
 
     useCase.execute('proto-1').subscribe({
       next: (result) => {
@@ -41,15 +45,17 @@ describe('LoadEvaluationConsolidationUseCase', () => {
         expect(result.isUnanimous).toBeFalse();
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 
   it('debe manejar respuesta sin data wrapper', (done) => {
-    repoSpy.consolidateEvaluation.and.returnValue(of({
-      evaluations: [{ id: '1', evaluatorName: 'Dr. López' }],
-      isUnanimous: true
-    } as any));
+    repoSpy.consolidateEvaluation.and.returnValue(
+      of({
+        evaluations: [{ id: '1', evaluatorName: 'Dr. López' }],
+        isUnanimous: true,
+      } as any),
+    );
 
     useCase.execute('proto-2').subscribe({
       next: (result) => {
@@ -58,21 +64,23 @@ describe('LoadEvaluationConsolidationUseCase', () => {
         expect(result.isUnanimous).toBeTrue();
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 
   it('debe manejar lista vacía de evaluaciones', (done) => {
-    repoSpy.consolidateEvaluation.and.returnValue(of({
-      data: { protocolId: 'proto-3', evaluations: [], isUnanimous: true }
-    }));
+    repoSpy.consolidateEvaluation.and.returnValue(
+      of({
+        data: { protocolId: 'proto-3', evaluations: [], isUnanimous: true },
+      }),
+    );
 
     useCase.execute('proto-3').subscribe({
       next: (result) => {
         expect(result.evaluations.length).toBe(0);
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

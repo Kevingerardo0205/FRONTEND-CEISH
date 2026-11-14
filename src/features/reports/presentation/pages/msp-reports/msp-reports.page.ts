@@ -12,7 +12,7 @@ import { ReportsUseCase } from '@features/reports/application/use-cases/reports.
 import { MSPReportData } from '@features/reports/domain/entities/report.entity';
 
 // Dynamically import libraries to avoid build-time missing module errors if they are not installed
-// and use common patterns. 
+// and use common patterns.
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -30,14 +30,16 @@ type AutoTableJsPDF = jsPDF & { lastAutoTable?: { finalY: number } };
     MatSelectModule,
     MatFormFieldModule,
     MatIconModule,
-    MatTableModule
+    MatTableModule,
   ],
   template: `
     <div class="msp-container">
       <header class="page-header">
         <div class="header-content">
           <h1>Reportes Oficiales MSP</h1>
-          <p class="subtitle">Generación de informes de gestión para el Ministerio de Salud Pública</p>
+          <p class="subtitle">
+            Generación de informes de gestión para el Ministerio de Salud Pública
+          </p>
         </div>
       </header>
 
@@ -95,13 +97,16 @@ type AutoTableJsPDF = jsPDF & { lastAutoTable?: { finalY: number } };
         <div class="preview-grid">
           <!-- Sesiones y Asistencia -->
           <mat-card>
-            <mat-card-header><mat-card-title>Sesiones y Asistencia</mat-card-title></mat-card-header>
+            <mat-card-header
+              ><mat-card-title>Sesiones y Asistencia</mat-card-title></mat-card-header
+            >
             <mat-card-content>
               <div class="summary-item">
                 <span>Ordinarias:</span> <strong>{{ reportData.sessions.ordinary }}</strong>
               </div>
               <div class="summary-item">
-                <span>Extraordinarias:</span> <strong>{{ reportData.sessions.extraordinary }}</strong>
+                <span>Extraordinarias:</span>
+                <strong>{{ reportData.sessions.extraordinary }}</strong>
               </div>
               <table mat-table [dataSource]="reportData.attendance" class="preview-table">
                 <ng-container matColumnDef="member">
@@ -120,29 +125,52 @@ type AutoTableJsPDF = jsPDF & { lastAutoTable?: { finalY: number } };
 
           <!-- Modalidades y Resoluciones -->
           <mat-card>
-            <mat-card-header><mat-card-title>Evaluaciones y Resoluciones</mat-card-title></mat-card-header>
+            <mat-card-header
+              ><mat-card-title>Evaluaciones y Resoluciones</mat-card-title></mat-card-header
+            >
             <mat-card-content>
               <div class="section-title">Modalidades:</div>
-              <div class="summary-item"><span>Exento:</span> <strong>{{ reportData.modalities.exempt }}</strong></div>
-              <div class="summary-item"><span>Expedita:</span> <strong>{{ reportData.modalities.expedited }}</strong></div>
-              <div class="summary-item"><span>Pleno:</span> <strong>{{ reportData.modalities.full }}</strong></div>
-              
+              <div class="summary-item">
+                <span>Exento:</span> <strong>{{ reportData.modalities.exempt }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Expedita:</span> <strong>{{ reportData.modalities.expedited }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Pleno:</span> <strong>{{ reportData.modalities.full }}</strong>
+              </div>
+
               <div class="section-title">Resoluciones:</div>
-              <div class="summary-item"><span>Aprobados:</span> <strong>{{ reportData.resolutions.approved }}</strong></div>
-              <div class="summary-item"><span>Condicionados:</span> <strong>{{ reportData.resolutions.conditioned }}</strong></div>
-              <div class="summary-item"><span>No Aprobados:</span> <strong>{{ reportData.resolutions.notApproved }}</strong></div>
+              <div class="summary-item">
+                <span>Aprobados:</span> <strong>{{ reportData.resolutions.approved }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Condicionados:</span>
+                <strong>{{ reportData.resolutions.conditioned }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>No Aprobados:</span> <strong>{{ reportData.resolutions.notApproved }}</strong>
+              </div>
             </mat-card-content>
           </mat-card>
 
           <!-- Otros Datos PET 5.1 -->
           <mat-card class="full-width">
-            <mat-card-header><mat-card-title>Muestras Biológicas y Poblaciones Vulnerables</mat-card-title></mat-card-header>
+            <mat-card-header
+              ><mat-card-title
+                >Muestras Biológicas y Poblaciones Vulnerables</mat-card-title
+              ></mat-card-header
+            >
             <mat-card-content>
               <div class="preview-row">
                 <div class="data-group">
                   <div class="section-title">Uso de Muestras Biológicas:</div>
-                  <div class="summary-item"><span>Sí:</span> <strong>{{ reportData.biologicalSamples.yes }}</strong></div>
-                  <div class="summary-item"><span>No:</span> <strong>{{ reportData.biologicalSamples.no }}</strong></div>
+                  <div class="summary-item">
+                    <span>Sí:</span> <strong>{{ reportData.biologicalSamples.yes }}</strong>
+                  </div>
+                  <div class="summary-item">
+                    <span>No:</span> <strong>{{ reportData.biologicalSamples.no }}</strong>
+                  </div>
                 </div>
                 <div class="data-group">
                   <div class="section-title">Poblaciones Vulnerables:</div>
@@ -159,34 +187,98 @@ type AutoTableJsPDF = jsPDF & { lastAutoTable?: { finalY: number } };
       </div>
     </div>
   `,
-  styles: [`
-    .msp-container { padding: 2rem; background: #f8f9fa; min-height: 100vh; }
-    .page-header { margin-bottom: 2rem; }
-    .header-content h1 { margin: 0; color: #003366; font-size: 2rem; font-weight: 700; }
-    .subtitle { color: #6c757d; margin: 0.5rem 0 0; }
+  styles: [
+    `
+      .msp-container {
+        padding: 2rem;
+        background: #f8f9fa;
+        min-height: 100vh;
+      }
+      .page-header {
+        margin-bottom: 2rem;
+      }
+      .header-content h1 {
+        margin: 0;
+        color: #003366;
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      .subtitle {
+        color: #6c757d;
+        margin: 0.5rem 0 0;
+      }
 
-    .filter-card { border-radius: 12px; margin-bottom: 2rem; }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: center; }
-    .generate-btn { height: 56px; }
+      .filter-card {
+        border-radius: 12px;
+        margin-bottom: 2rem;
+      }
+      .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: center;
+      }
+      .generate-btn {
+        height: 56px;
+      }
 
-    .actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .export-buttons { display: flex; gap: 0.5rem; }
+      .actions-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      .export-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
 
-    .preview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
-    .full-width { grid-column: span 2; }
-    .summary-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
-    .section-title { font-weight: 600; margin: 1rem 0 0.5rem; color: #003366; }
-    .preview-table { width: 100%; margin-top: 1rem; }
-    
-    .preview-row { display: flex; gap: 3rem; }
-    .data-group { flex: 1; }
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+      .full-width {
+        grid-column: span 2;
+      }
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+      }
+      .section-title {
+        font-weight: 600;
+        margin: 1rem 0 0.5rem;
+        color: #003366;
+      }
+      .preview-table {
+        width: 100%;
+        margin-top: 1rem;
+      }
 
-    @media (max-width: 768px) {
-      .preview-grid { grid-template-columns: 1fr; }
-      .full-width { grid-column: span 1; }
-      .preview-row { flex-direction: column; gap: 1rem; }
-    }
-  `]
+      .preview-row {
+        display: flex;
+        gap: 3rem;
+      }
+      .data-group {
+        flex: 1;
+      }
+
+      @media (max-width: 768px) {
+        .preview-grid {
+          grid-template-columns: 1fr;
+        }
+        .full-width {
+          grid-column: span 1;
+        }
+        .preview-row {
+          flex-direction: column;
+          gap: 1rem;
+        }
+      }
+    `,
+  ],
 })
 export class MSPReportsPage {
   private readonly reportsUseCase = inject(ReportsUseCase);
@@ -197,26 +289,42 @@ export class MSPReportsPage {
   month: number = new Date().getMonth() + 1;
   years = [2024, 2025, 2026];
   months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
 
   reportData?: MSPReportData;
   displayedColumns = ['member', 'percentage'];
 
   loadReport() {
-    this.reportsUseCase.getMSPReport(this.period, this.year, this.month)
-      .subscribe((data: MSPReportData) => this.reportData = data);
+    this.reportsUseCase
+      .getMSPReport(this.period, this.year, this.month)
+      .subscribe((data: MSPReportData) => (this.reportData = data));
   }
 
   exportToExcel() {
     if (!this.reportData) return;
 
     const wb = XLSX.utils.book_new();
-    
+
     // Resumen General
     const summaryData = [
-      ['Reporte CEISH-ESPOCH', this.period === 'monthly' ? `Mes: ${this.months[this.month-1]} ${this.year}` : `Año: ${this.year}`],
+      [
+        'Reporte CEISH-ESPOCH',
+        this.period === 'monthly'
+          ? `Mes: ${this.months[this.month - 1]} ${this.year}`
+          : `Año: ${this.year}`,
+      ],
       [],
       ['Sesiones Ordinarias', this.reportData.sessions.ordinary],
       ['Sesiones Extraordinarias', this.reportData.sessions.extraordinary],
@@ -229,7 +337,7 @@ export class MSPReportsPage {
       ['Resoluciones'],
       ['Aprobados', this.reportData.resolutions.approved],
       ['Condicionados', this.reportData.resolutions.conditioned],
-      ['No Aprobados', this.reportData.resolutions.notApproved]
+      ['No Aprobados', this.reportData.resolutions.notApproved],
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
@@ -247,7 +355,10 @@ export class MSPReportsPage {
 
     const doc = new jsPDF();
     const title = `REPORTE DE GESTIÓN CEISH-ESPOCH - ${this.period.toUpperCase()}`;
-    const subtitle = this.period === 'monthly' ? `${this.months[this.month-1]} ${this.year}` : `Año ${this.year}`;
+    const subtitle =
+      this.period === 'monthly'
+        ? `${this.months[this.month - 1]} ${this.year}`
+        : `Año ${this.year}`;
 
     doc.setFontSize(16);
     doc.text(title, 105, 20, { align: 'center' });
@@ -260,8 +371,8 @@ export class MSPReportsPage {
       head: [['Tipo de Sesión', 'Cantidad']],
       body: [
         ['Ordinarias', this.reportData.sessions.ordinary],
-        ['Extraordinarias', this.reportData.sessions.extraordinary]
-      ]
+        ['Extraordinarias', this.reportData.sessions.extraordinary],
+      ],
     });
     const sessionsFinalY = (doc as AutoTableJsPDF).lastAutoTable?.finalY ?? 50;
 
@@ -272,8 +383,8 @@ export class MSPReportsPage {
       body: [
         ['Exento', this.reportData.modalities.exempt],
         ['Expedita', this.reportData.modalities.expedited],
-        ['Pleno', this.reportData.modalities.full]
-      ]
+        ['Pleno', this.reportData.modalities.full],
+      ],
     });
 
     doc.save(`Reporte_MSP_${this.year}_${this.month}.pdf`);
@@ -282,15 +393,15 @@ export class MSPReportsPage {
 
   copyToClipboard() {
     if (!this.reportData) return;
-    
+
     const text = `
-Resumen de Gestión CEISH-ESPOCH (${this.months[this.month-1]} ${this.year}):
+Resumen de Gestión CEISH-ESPOCH (${this.months[this.month - 1]} ${this.year}):
 - Sesiones Ordinarias: ${this.reportData.sessions.ordinary}
 - Sesiones Extraordinarias: ${this.reportData.sessions.extraordinary}
 - Protocolos Evaluados: ${this.reportData.modalities.exempt + this.reportData.modalities.expedited + this.reportData.modalities.full}
 - Resoluciones Emitidas: ${this.reportData.resolutions.approved} Aprobados, ${this.reportData.resolutions.conditioned} Condicionados.
     `;
-    
+
     navigator.clipboard.writeText(text);
     this.snackBar.open('Texto copiado al portapapeles', 'Cerrar', { duration: 3000 });
   }

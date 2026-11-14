@@ -17,7 +17,7 @@ import { EvaluatorEntity, EvaluatorProfile } from '@domain/entities/evaluator.en
     MatIconModule,
     MatChipsModule,
     MatFormFieldModule,
-    MatSelectModule
+    MatSelectModule,
   ],
   template: `
     <div class="load-container">
@@ -25,7 +25,10 @@ import { EvaluatorEntity, EvaluatorProfile } from '@domain/entities/evaluator.en
         <h3>Carga de Evaluadores</h3>
         <mat-form-field appearance="outline" class="profile-filter">
           <mat-label>Filtrar por Perfil</mat-label>
-          <mat-select (selectionChange)="onFilterChange($event.value)" placeholder="Todos los perfiles">
+          <mat-select
+            (selectionChange)="onFilterChange($event.value)"
+            placeholder="Todos los perfiles"
+          >
             <mat-option [value]="null">Todos</mat-option>
             <mat-option value="JURIDICO">Jurídico</mat-option>
             <mat-option value="SALUD">Salud</mat-option>
@@ -58,52 +61,107 @@ import { EvaluatorEntity, EvaluatorProfile } from '@domain/entities/evaluator.en
             <div class="load-indicator">
               <span class="count">{{ ev.cargaActiva || 0 }}</span>
               <div class="progress-bar">
-                <div class="fill" [style.width.%]="(ev.cargaActiva || 0) * 20" 
-                     [ngClass]="{'high': (ev.cargaActiva || 0) >= 5, 'medium': (ev.cargaActiva || 0) >= 3}"></div>
+                <div
+                  class="fill"
+                  [style.width.%]="(ev.cargaActiva || 0) * 20"
+                  [ngClass]="{
+                    high: (ev.cargaActiva || 0) >= 5,
+                    medium: (ev.cargaActiva || 0) >= 3,
+                  }"
+                ></div>
               </div>
             </div>
           </td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
       </table>
     </div>
   `,
-  styles: [`
-    .load-container { background: white; border-radius: 16px; padding: 1.5rem; }
-    .filter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .profile-filter { width: 200px; }
-    table { width: 100%; }
-    
-    .load-indicator { display: flex; align-items: center; gap: 1rem; }
-    .count { font-weight: bold; min-width: 20px; }
-    .progress-bar { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
-    .fill { height: 100%; background: #10b981; transition: width 0.3s; }
-    .fill.medium { background: #f59e0b; }
-    .fill.high { background: #ef4444; }
+  styles: [
+    `
+      .load-container {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+      }
+      .filter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      .profile-filter {
+        width: 200px;
+      }
+      table {
+        width: 100%;
+      }
 
-    mat-chip {
-      font-size: 10px; font-weight: 700;
-      &.juridico { background: #e0f2fe; color: #0369a1; }
-      &.salud { background: #f0fdf4; color: #15803d; }
-      &.metodologia { background: #fff7ed; color: #c2410c; }
-      &.sociedad_civil { background: #fdf2f8; color: #be185d; }
-    }
-  `]
+      .load-indicator {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .count {
+        font-weight: bold;
+        min-width: 20px;
+      }
+      .progress-bar {
+        flex: 1;
+        height: 8px;
+        background: #f1f5f9;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .fill {
+        height: 100%;
+        background: #10b981;
+        transition: width 0.3s;
+      }
+      .fill.medium {
+        background: #f59e0b;
+      }
+      .fill.high {
+        background: #ef4444;
+      }
+
+      mat-chip {
+        font-size: 10px;
+        font-weight: 700;
+        &.juridico {
+          background: #e0f2fe;
+          color: #0369a1;
+        }
+        &.salud {
+          background: #f0fdf4;
+          color: #15803d;
+        }
+        &.metodologia {
+          background: #fff7ed;
+          color: #c2410c;
+        }
+        &.sociedad_civil {
+          background: #fdf2f8;
+          color: #be185d;
+        }
+      }
+    `,
+  ],
 })
 export class EvaluatorLoadComponent implements OnInit {
   private evaluatorRepo = inject(IEvaluatorRepositoryPort);
-  
+
   evaluators = signal<EvaluatorEntity[]>([]);
   selectedProfile = signal<EvaluatorProfile | null>(null);
-  
+
   displayedColumns = ['nombre', 'perfil', 'carga'];
 
   filteredEvaluators = signal<EvaluatorEntity[]>([]);
 
   ngOnInit() {
-    this.evaluatorRepo.getEvaluatorsWithLoad().subscribe(data => {
+    this.evaluatorRepo.getEvaluatorsWithLoad().subscribe((data) => {
       this.evaluators.set(data);
       this.applyFilter();
     });
@@ -119,7 +177,7 @@ export class EvaluatorLoadComponent implements OnInit {
     if (!profile) {
       this.filteredEvaluators.set(this.evaluators());
     } else {
-      this.filteredEvaluators.set(this.evaluators().filter(e => e.perfil === profile));
+      this.filteredEvaluators.set(this.evaluators().filter((e) => e.perfil === profile));
     }
   }
 }

@@ -4,7 +4,7 @@ import { ProtocolUI } from '@shared/utils/protocol-ui.util';
 @Pipe({
   name: 'protocolStatusLabel',
   standalone: true,
-  pure: true
+  pure: true,
 })
 export class ProtocolStatusLabelPipe implements PipeTransform {
   transform(value: string | undefined): string {

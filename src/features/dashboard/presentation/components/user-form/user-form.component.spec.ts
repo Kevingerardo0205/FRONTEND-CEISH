@@ -19,36 +19,36 @@ describe('UserRegistrationFormComponent (Multi-Role & Configuración Granular)',
     roles: ['EVALUADOR', 'SECRETARIA'],
     userRoles: [
       { code: 'EVALUADOR', name: 'Evaluador', isExpired: false },
-      { 
-        code: 'SECRETARIA', 
-        name: 'Secretaría', 
-        validUntil: '2026-09-30T00:00:00.000Z', 
-        reason: 'Subrogación por maternidad', 
-        isExpired: false 
-      }
+      {
+        code: 'SECRETARIA',
+        name: 'Secretaría',
+        validUntil: '2026-09-30T00:00:00.000Z',
+        reason: 'Subrogación por maternidad',
+        isExpired: false,
+      },
     ],
     perfil: 'Docente Evaluador',
-    activo: true
+    activo: true,
   };
 
   beforeEach(async () => {
     mockCatalogUseCase = jasmine.createSpyObj('GetSecurityCatalogUseCase', ['execute']);
-    mockCatalogUseCase.execute.and.returnValue(of({
-      modules: [],
-      allPermissions: [],
-      roles: [
-        { id: 1, code: 'ADMIN_TI', name: 'Administrador TI', isActive: true },
-        { id: 2, code: 'SECRETARIA', name: 'Secretaría', isActive: true },
-        { id: 3, code: 'EVALUADOR', name: 'Evaluador', isActive: true },
-        { id: 4, code: 'INVESTIGADOR', name: 'Investigador', isActive: true }
-      ]
-    }));
+    mockCatalogUseCase.execute.and.returnValue(
+      of({
+        modules: [],
+        allPermissions: [],
+        roles: [
+          { id: 1, code: 'ADMIN_TI', name: 'Administrador TI', isActive: true },
+          { id: 2, code: 'SECRETARIA', name: 'Secretaría', isActive: true },
+          { id: 3, code: 'EVALUADOR', name: 'Evaluador', isActive: true },
+          { id: 4, code: 'INVESTIGADOR', name: 'Investigador', isActive: true },
+        ],
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [UserRegistrationFormComponent, NoopAnimationsModule],
-      providers: [
-        { provide: GetSecurityCatalogUseCase, useValue: mockCatalogUseCase }
-      ]
+      providers: [{ provide: GetSecurityCatalogUseCase, useValue: mockCatalogUseCase }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(UserRegistrationFormComponent);
@@ -64,7 +64,7 @@ describe('UserRegistrationFormComponent (Multi-Role & Configuración Granular)',
 
   it('debe validar que la cédula contenga exactamente 10 dígitos numéricos', () => {
     const cedulaCtrl = component.userForm.get('cedula');
-    
+
     cedulaCtrl?.setValue('123');
     expect(cedulaCtrl?.valid).toBeFalse();
 
@@ -87,10 +87,10 @@ describe('UserRegistrationFormComponent (Multi-Role & Configuración Granular)',
     const configs = component.rolesConfig();
     expect(configs.length).toBe(2);
 
-    const evaluadorConfig = configs.find(c => c.code === 'EVALUADOR');
+    const evaluadorConfig = configs.find((c) => c.code === 'EVALUADOR');
     expect(evaluadorConfig?.isTemporal).toBeFalse();
 
-    const secretariaConfig = configs.find(c => c.code === 'SECRETARIA');
+    const secretariaConfig = configs.find((c) => c.code === 'SECRETARIA');
     expect(secretariaConfig?.isTemporal).toBeTrue();
     expect(secretariaConfig?.validUntil).toBe('2026-09-30');
     expect(secretariaConfig?.reason).toBe('Subrogación por maternidad');
@@ -105,7 +105,7 @@ describe('UserRegistrationFormComponent (Multi-Role & Configuración Granular)',
       email: 'mateo.castro@espoch.edu.ec',
       roles: ['PRESIDENTE', 'SECRETARIA', 'EVALUADOR'],
       perfil: 'Docente y Miembro de Comité',
-      activo: true
+      activo: true,
     });
 
     // Configurar SECRETARIA como suplencia
@@ -120,44 +120,46 @@ describe('UserRegistrationFormComponent (Multi-Role & Configuración Granular)',
 
     component.submit();
 
-    expect(component.save.emit).toHaveBeenCalledWith(jasmine.objectContaining({
-      cedula: '0609876543',
-      nombre: 'Ing. Mateo Castro',
-      email: 'mateo.castro@espoch.edu.ec',
-      roles: ['PRESIDENTE', 'SECRETARIA', 'EVALUADOR'],
-      rol: 'PRESIDENTE',
-      userRoles: [
-        {
-          code: 'PRESIDENTE',
-          name: jasmine.any(String),
-          validUntil: null,
-          reason: null,
-          isExpired: false
-        },
-        {
-          code: 'SECRETARIA',
-          name: jasmine.any(String),
-          validUntil: '2026-09-15',
-          reason: 'Subrogación vacaciones',
-          isExpired: false
-        },
-        {
-          code: 'EVALUADOR',
-          name: jasmine.any(String),
-          validUntil: '2026-12-31',
-          reason: 'Comisión ética 2026',
-          isExpired: false
-        }
-      ],
-      perfil: 'Docente y Miembro de Comité',
-      activo: true
-    }));
+    expect(component.save.emit).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        cedula: '0609876543',
+        nombre: 'Ing. Mateo Castro',
+        email: 'mateo.castro@espoch.edu.ec',
+        roles: ['PRESIDENTE', 'SECRETARIA', 'EVALUADOR'],
+        rol: 'PRESIDENTE',
+        userRoles: [
+          {
+            code: 'PRESIDENTE',
+            name: jasmine.any(String),
+            validUntil: null,
+            reason: null,
+            isExpired: false,
+          },
+          {
+            code: 'SECRETARIA',
+            name: jasmine.any(String),
+            validUntil: '2026-09-15',
+            reason: 'Subrogación vacaciones',
+            isExpired: false,
+          },
+          {
+            code: 'EVALUADOR',
+            name: jasmine.any(String),
+            validUntil: '2026-12-31',
+            reason: 'Comisión ética 2026',
+            isExpired: false,
+          },
+        ],
+        perfil: 'Docente y Miembro de Comité',
+        activo: true,
+      }),
+    );
   });
 
   it('debe aplicar la regla de exclusividad SoD desmarcando roles incompatibles cuando se selecciona INVESTIGADOR', () => {
     // Caso 1: Tenía roles de comité y se selecciona INVESTIGADOR
     component.userForm.get('roles')?.setValue(['SECRETARIA', 'EVALUADOR']);
-    expect(component.rolesConfig().map(c => c.code)).toEqual(['SECRETARIA', 'EVALUADOR']);
+    expect(component.rolesConfig().map((c) => c.code)).toEqual(['SECRETARIA', 'EVALUADOR']);
     expect(component.isInvestigadorSelected()).toBeFalse();
 
     // Selecciona INVESTIGADOR -> Se deben remover los de comité
@@ -173,15 +175,15 @@ describe('UserRegistrationFormComponent (Multi-Role & Configuración Granular)',
 
   it('debe aplicar presets de fecha rápida correctamente mediante applyDatePreset', () => {
     component.userForm.patchValue({
-      roles: ['SECRETARIA']
+      roles: ['SECRETARIA'],
     });
 
     component.applyDatePreset('SECRETARIA', '15d');
-    const config15d = component.rolesConfig().find(c => c.code === 'SECRETARIA');
+    const config15d = component.rolesConfig().find((c) => c.code === 'SECRETARIA');
     expect(config15d?.validUntil).toBeTruthy();
 
     component.applyDatePreset('SECRETARIA', 'end_year');
-    const configEndYear = component.rolesConfig().find(c => c.code === 'SECRETARIA');
+    const configEndYear = component.rolesConfig().find((c) => c.code === 'SECRETARIA');
     expect(configEndYear?.validUntil).toContain('-12-31');
   });
 

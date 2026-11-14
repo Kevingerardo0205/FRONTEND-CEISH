@@ -16,10 +16,16 @@ import { CrearProtocoloDto } from '../../../domain/dtos/crear-protocolo.dto';
   selector: 'app-upload-documentos',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule,
-    MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatProgressBarModule,
-    MatSnackBarModule, MatTooltipModule
+    CommonModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatSnackBarModule,
+    MatTooltipModule,
   ],
   template: `
     <div class="upload-container animate-fade-in">
@@ -34,18 +40,23 @@ import { CrearProtocoloDto } from '../../../domain/dtos/crear-protocolo.dto';
 
         <mat-card-content>
           <!-- Zona de Drag & Drop -->
-          <div 
+          <div
             class="drop-zone mb-5"
             [class.active]="isDragging"
             (dragover)="onDragOver($event)"
             (dragleave)="onDragLeave($event)"
             (drop)="onDrop($event)"
-            (click)="fileInput.click()">
-            
-            <input #fileInput type="file" multiple hidden 
-                   (change)="onFileSelected($event)"
-                   [accept]="formatosAceptadosString">
-            
+            (click)="fileInput.click()"
+          >
+            <input
+              #fileInput
+              type="file"
+              multiple
+              hidden
+              (change)="onFileSelected($event)"
+              [accept]="formatosAceptadosString"
+            />
+
             <div class="drop-zone-content">
               <div class="icon-circle mb-3">
                 <mat-icon>upload_file</mat-icon>
@@ -62,29 +73,43 @@ import { CrearProtocoloDto } from '../../../domain/dtos/crear-protocolo.dto';
 
           <!-- Listado de Requisitos con sus Archivos -->
           <div class="requisitos-upload-grid">
-            <div *ngFor="let req of requisitos; trackBy: trackByFn" 
-                 class="req-upload-item"
-                 [class.has-files]="archivosPorRequisito[req.id]?.length">
-              
+            <div
+              *ngFor="let req of requisitos; trackBy: trackByFn"
+              class="req-upload-item"
+              [class.has-files]="archivosPorRequisito[req.id]?.length"
+            >
               <div class="req-upload-header d-flex justify-content-between align-items-center mb-3">
                 <div class="d-flex align-items-center">
                   <span class="req-id-badge me-2">{{ req.anexo }}</span>
                   <span class="req-name fw-bold">{{ req.nombre }}</span>
                 </div>
-                <mat-icon *ngIf="archivosPorRequisito[req.id]?.length" class="text-success">check_circle</mat-icon>
-                <mat-icon *ngIf="!archivosPorRequisito[req.id]?.length" class="text-muted">pending_actions</mat-icon>
+                <mat-icon *ngIf="archivosPorRequisito[req.id]?.length" class="text-success"
+                  >check_circle</mat-icon
+                >
+                <mat-icon *ngIf="!archivosPorRequisito[req.id]?.length" class="text-muted"
+                  >pending_actions</mat-icon
+                >
               </div>
 
               <!-- Archivos subidos para este requisito -->
               <div class="files-list" *ngIf="archivosPorRequisito[req.id]?.length">
-                <div *ngFor="let archivo of archivosPorRequisito[req.id]; let i = index" 
-                     class="file-pill d-flex align-items-center justify-content-between">
+                <div
+                  *ngFor="let archivo of archivosPorRequisito[req.id]; let i = index"
+                  class="file-pill d-flex align-items-center justify-content-between"
+                >
                   <div class="d-flex align-items-center overflow-hidden">
                     <mat-icon class="me-2 text-primary">description</mat-icon>
-                    <span class="file-name text-truncate" [matTooltip]="archivo.name">{{ archivo.name }}</span>
+                    <span class="file-name text-truncate" [matTooltip]="archivo.name">{{
+                      archivo.name
+                    }}</span>
                     <span class="file-size ms-2">({{ formatoBytes(archivo.size) }})</span>
                   </div>
-                  <button mat-icon-button color="warn" size="small" (click)="eliminarArchivo(req.id, i)">
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    size="small"
+                    (click)="eliminarArchivo(req.id, i)"
+                  >
                     <mat-icon style="font-size: 18px;">close</mat-icon>
                   </button>
                 </div>
@@ -107,170 +132,205 @@ import { CrearProtocoloDto } from '../../../domain/dtos/crear-protocolo.dto';
             <div class="row align-items-center">
               <div class="col-md-8">
                 <h5 class="fw-bold mb-1">Resumen de Carga Técnica</h5>
-                <p class="text-white-50 small mb-0">Total: {{ archivosValidos }} / {{ requisitosObligatorios }} documentos obligatorios adjuntos</p>
+                <p class="text-white-50 small mb-0">
+                  Total: {{ archivosValidos }} / {{ requisitosObligatorios }} documentos
+                  obligatorios adjuntos
+                </p>
               </div>
               <div class="col-md-4 text-end">
-                <div class="percentage-display h2 fw-bold mb-0">{{ porcentajeArchivosListos }}%</div>
+                <div class="percentage-display h2 fw-bold mb-0">
+                  {{ porcentajeArchivosListos }}%
+                </div>
               </div>
             </div>
-            <mat-progress-bar 
-              mode="determinate" 
+            <mat-progress-bar
+              mode="determinate"
               [value]="porcentajeArchivosListos"
               class="summary-progress mt-3"
-              [color]="porcentajeArchivosListos === 100 ? 'accent' : 'warn'">
+              [color]="porcentajeArchivosListos === 100 ? 'accent' : 'warn'"
+            >
             </mat-progress-bar>
           </div>
         </mat-card-content>
       </mat-card>
     </div>
   `,
-  styles: [`
-    .header-icon {
-      background: #eff6ff;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      mat-icon { font-size: 24px; }
-    }
-
-    .drop-zone {
-      border: 2px dashed #e2e8f0;
-      border-radius: 20px;
-      padding: 3rem 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      background: #f8fafc;
-      
-      &:hover, &.active {
-        border-color: #3b82f6;
-        background: #f0f7ff;
-        .icon-circle { background: #3b82f6; color: white; transform: scale(1.1); }
+  styles: [
+    `
+      .header-icon {
+        background: #eff6ff;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        mat-icon {
+          font-size: 24px;
+        }
       }
-    }
 
-    .icon-circle {
-      width: 64px;
-      height: 64px;
-      background: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      transition: all 0.3s ease;
-      mat-icon { font-size: 32px; width: 32px; height: 32px; color: #3b82f6; }
-    }
+      .drop-zone {
+        border: 2px dashed #e2e8f0;
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f8fafc;
 
-    .formats-badges {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      .badge { font-weight: 500; font-size: 0.7rem; }
-    }
-
-    .requisitos-upload-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-      gap: 1.5rem;
-    }
-
-    .req-upload-item {
-      padding: 1.5rem;
-      border-radius: 16px;
-      border: 1px solid #e2e8f0;
-      background: white;
-      transition: all 0.3s ease;
-      
-      &.has-files {
-        border-color: #86efac;
-        background: #f0fdf4;
+        &:hover,
+        &.active {
+          border-color: #3b82f6;
+          background: #f0f7ff;
+          .icon-circle {
+            background: #3b82f6;
+            color: white;
+            transform: scale(1.1);
+          }
+        }
       }
-    }
 
-    .req-id-badge {
-      background: #334155;
-      color: white;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 700;
-    }
+      .icon-circle {
+        width: 64px;
+        height: 64px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        mat-icon {
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+          color: #3b82f6;
+        }
+      }
 
-    .file-pill {
-      background: white;
-      border: 1px solid #e2e8f0;
-      padding: 0.5rem 1rem;
-      border-radius: 10px;
-      margin-top: 0.5rem;
-      animation: fadeIn 0.3s ease-out;
-    }
+      .formats-badges {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        .badge {
+          font-weight: 500;
+          font-size: 0.7rem;
+        }
+      }
 
-    .file-name { font-size: 0.85rem; font-weight: 500; }
-    .file-size { font-size: 0.75rem; color: #94a3b8; }
+      .requisitos-upload-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
+        gap: 1.5rem;
+      }
 
-    .error-pill {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: #dc2626;
-      font-size: 0.8rem;
-      background: #fef2f2;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      mat-icon { font-size: 16px; height: 16px; width: 16px; }
-    }
+      .req-upload-item {
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        transition: all 0.3s ease;
 
-    .summary-progress {
-      height: 12px;
-      border-radius: 6px;
-    }
+        &.has-files {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
+      }
 
-    .percentage-display { color: #86efac; }
-  `]
+      .req-id-badge {
+        background: #334155;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
+
+      .file-pill {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        margin-top: 0.5rem;
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      .file-name {
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      .file-size {
+        font-size: 0.75rem;
+        color: #94a3b8;
+      }
+
+      .error-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #dc2626;
+        font-size: 0.8rem;
+        background: #fef2f2;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        mat-icon {
+          font-size: 16px;
+          height: 16px;
+          width: 16px;
+        }
+      }
+
+      .summary-progress {
+        height: 12px;
+        border-radius: 6px;
+      }
+
+      .percentage-display {
+        color: #86efac;
+      }
+    `,
+  ],
 })
 export class UploadDocumentosComponent {
   @Input() requisitos!: RequisitoDocumento[];
   @Input() protocoloData!: Partial<CrearProtocoloDto>;
   @Output() archivosSubidos = new EventEmitter<boolean>();
-  
+
   private snackBar = inject(MatSnackBar);
-  
+
   archivosPorRequisito: Record<string, File[]> = {};
   erroresPorRequisito: Record<string, string> = {};
   isDragging = false;
-  
+
   get formatosAceptadosString(): string {
     const formatos = new Set<string>();
-    this.requisitos.forEach(r => {
-      r.formatosAceptados?.forEach(f => formatos.add(f));
+    this.requisitos.forEach((r) => {
+      r.formatosAceptados?.forEach((f) => formatos.add(f));
     });
     return Array.from(formatos).join(',');
   }
-  
+
   get archivosTotales(): number {
     return Object.values(this.archivosPorRequisito).flat().length;
   }
 
   get requisitosObligatorios(): number {
-    return this.requisitos.filter(r => !r.esCondicional || this.condicionAplica(r)).length;
+    return this.requisitos.filter((r) => !r.esCondicional || this.condicionAplica(r)).length;
   }
-  
+
   get archivosValidos(): number {
     return Object.entries(this.archivosPorRequisito).filter(([reqId, archivos]) => {
-      const req = this.requisitos.find(r => r.id === reqId);
+      const req = this.requisitos.find((r) => r.id === reqId);
       return req && (!req.esCondicional || this.condicionAplica(req)) && archivos.length > 0;
     }).length;
   }
-  
+
   get porcentajeArchivosListos(): number {
     const obligatorios = this.requisitosObligatorios;
     if (obligatorios === 0) return 100;
     return Math.round((this.archivosValidos / obligatorios) * 100);
   }
-  
+
   get tieneArchivosParaEnviar(): boolean {
     return this.archivosTotales > 0;
   }
@@ -291,7 +351,7 @@ export class UploadDocumentosComponent {
     event.preventDefault();
     event.stopPropagation();
     this.isDragging = false;
-    
+
     const files = event.dataTransfer?.files;
     if (files?.length) {
       this.procesarArchivos(Array.from(files));
@@ -302,42 +362,50 @@ export class UploadDocumentosComponent {
     const input = event.target as HTMLInputElement;
     if (input.files?.length) {
       this.procesarArchivos(Array.from(input.files));
-      input.value = ''; 
+      input.value = '';
     }
   }
 
   private procesarArchivos(files: File[]): void {
-    files.forEach(archivo => {
-      const requisito = this.requisitos.find(req => {
-        if (req.formatosAceptados?.includes(archivo.type) || this.checkExtension(archivo, req.formatosAceptados)) {
+    files.forEach((archivo) => {
+      const requisito = this.requisitos.find((req) => {
+        if (
+          req.formatosAceptados?.includes(archivo.type) ||
+          this.checkExtension(archivo, req.formatosAceptados)
+        ) {
           if (archivo.size > (req.maxSizeMB || 10) * 1024 * 1024) {
-            this.erroresPorRequisito[req.id] = `Archivo muy grande. Máximo ${req.maxSizeMB || 10} MB`;
+            this.erroresPorRequisito[req.id] =
+              `Archivo muy grande. Máximo ${req.maxSizeMB || 10} MB`;
             return false;
           }
           return true;
         }
         return false;
       });
-      
+
       if (requisito) {
         if (!this.archivosPorRequisito[requisito.id]) {
           this.archivosPorRequisito[requisito.id] = [];
         }
-        
+
         if (!requisito.aceptaMultiple && this.archivosPorRequisito[requisito.id].length >= 1) {
           this.erroresPorRequisito[requisito.id] = 'Solo se permite 1 archivo para este documento';
           return;
         }
-        
+
         this.archivosPorRequisito[requisito.id].push(archivo);
         delete this.erroresPorRequisito[requisito.id];
       } else {
-        this.snackBar.open(`⚠️ Formato no válido para ningún documento: ${archivo.name}`, 'Cerrar', {
-          duration: 4000
-        });
+        this.snackBar.open(
+          `⚠️ Formato no válido para ningún documento: ${archivo.name}`,
+          'Cerrar',
+          {
+            duration: 4000,
+          },
+        );
       }
     });
-    
+
     this.emitirEstado();
   }
 
@@ -345,15 +413,15 @@ export class UploadDocumentosComponent {
     if (!acceptedTypes) return true;
     const extension = file.name.split('.').pop()?.toLowerCase();
     if (!extension) return false;
-    
+
     // Mapeo simple de mimetypes a extensiones comunes para validación extra
     const mimeToExt: Record<string, string[]> = {
       'application/pdf': ['pdf'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
-      'application/msword': ['doc']
+      'application/msword': ['doc'],
     };
 
-    return acceptedTypes.some(type => mimeToExt[type]?.includes(extension));
+    return acceptedTypes.some((type) => mimeToExt[type]?.includes(extension));
   }
 
   eliminarArchivo(requisitoId: string, index: number): void {

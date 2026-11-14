@@ -2,21 +2,21 @@ import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { BaseApiService } from '../api/base-api.service';
 import { ISecurityRepositoryPort } from '@domain/ports/ISecurityRepositoryPort';
-import { 
-  SecurityModule, 
-  SecurityPermission, 
-  SecurityRole, 
-  CreateModuleDTO, 
+import {
+  SecurityModule,
+  SecurityPermission,
+  SecurityRole,
+  CreateModuleDTO,
   CreatePermissionDTO,
   UpdateRolePermissionsDTO,
   CreateRoleDTO,
   UpdateRoleDTO,
   RoleComplianceStatus,
-  RolePresetsMap
+  RolePresetsMap,
 } from '@domain/entities/security.entity';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SecurityApiAdapter extends BaseApiService implements ISecurityRepositoryPort {
   private readonly MODULES_URL = '/auth/modules';
@@ -25,7 +25,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
 
   getModules(): Observable<SecurityModule[]> {
     return this.get<unknown>(this.MODULES_URL).pipe(
-      map(res => this.extractArray(res) as SecurityModule[])
+      map((res) => this.extractArray(res) as SecurityModule[]),
     );
   }
 
@@ -34,13 +34,13 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityModule };
         return body.data ?? (res as SecurityModule);
-      })
+      }),
     );
   }
 
   getModulePermissions(id: number): Observable<SecurityPermission[]> {
     return this.get<unknown>(`${this.MODULES_URL}/${id}/permissions`).pipe(
-      map(res => this.extractArray(res) as SecurityPermission[])
+      map((res) => this.extractArray(res) as SecurityPermission[]),
     );
   }
 
@@ -49,7 +49,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityModule };
         return body.data ?? (res as SecurityModule);
-      })
+      }),
     );
   }
 
@@ -58,7 +58,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityModule };
         return body.data ?? (res as SecurityModule);
-      })
+      }),
     );
   }
 
@@ -68,7 +68,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
 
   getPermissions(): Observable<SecurityPermission[]> {
     return this.get<unknown>(this.PERMISSIONS_URL).pipe(
-      map(res => this.extractArray(res) as SecurityPermission[])
+      map((res) => this.extractArray(res) as SecurityPermission[]),
     );
   }
 
@@ -77,7 +77,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityPermission };
         return body.data ?? (res as SecurityPermission);
-      })
+      }),
     );
   }
 
@@ -86,7 +86,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityPermission };
         return body.data ?? (res as SecurityPermission);
-      })
+      }),
     );
   }
 
@@ -95,7 +95,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityPermission };
         return body.data ?? (res as SecurityPermission);
-      })
+      }),
     );
   }
 
@@ -105,7 +105,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
 
   getRoles(): Observable<SecurityRole[]> {
     return this.get<unknown>(this.ROLES_URL).pipe(
-      map(res => this.extractArray(res) as SecurityRole[])
+      map((res) => this.extractArray(res) as SecurityRole[]),
     );
   }
 
@@ -114,7 +114,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityRole };
         return body.data ?? (res as SecurityRole);
-      })
+      }),
     );
   }
 
@@ -123,7 +123,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityRole };
         return body.data ?? (res as SecurityRole);
-      })
+      }),
     );
   }
 
@@ -132,7 +132,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityRole };
         return body.data ?? (res as SecurityRole);
-      })
+      }),
     );
   }
 
@@ -142,7 +142,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
 
   getRolePermissions(id: number): Observable<SecurityPermission[]> {
     return this.get<unknown>(`${this.ROLES_URL}/${id}/permissions`).pipe(
-      map(res => this.extractArray(res) as SecurityPermission[])
+      map((res) => this.extractArray(res) as SecurityPermission[]),
     );
   }
 
@@ -163,7 +163,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: RolePresetsMap };
         return body.data ?? (res as RolePresetsMap);
-      })
+      }),
     );
   }
 
@@ -172,7 +172,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: RoleComplianceStatus };
         return body.data ?? (res as RoleComplianceStatus);
-      })
+      }),
     );
   }
 
@@ -181,7 +181,7 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
       map((res: unknown) => {
         const body = res as { data?: SecurityRole };
         return body.data ?? (res as SecurityRole);
-      })
+      }),
     );
   }
 
@@ -195,4 +195,3 @@ export class SecurityApiAdapter extends BaseApiService implements ISecurityRepos
     return [];
   }
 }
-

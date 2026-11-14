@@ -2,5 +2,5 @@ export enum EvaluationStatus {
   SUGGESTED = 'SUGGESTED',
   ASSIGNED = 'ASSIGNED',
   SUBMITTED = 'SUBMITTED',
-  OBSERVED = 'OBSERVED'
+  OBSERVED = 'OBSERVED',
 }

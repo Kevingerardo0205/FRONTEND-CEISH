@@ -12,7 +12,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
-import { PeerAssignmentEntity, PET_RISK_LEVELS, RiskLevelInfo } from '@domain/entities/peer-evaluation.entity';
+import {
+  PeerAssignmentEntity,
+  PET_RISK_LEVELS,
+  RiskLevelInfo,
+} from '@domain/entities/peer-evaluation.entity';
 import { ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
 import { FileUploaderComponent } from '@shared/components/file-uploader/file-uploader.component';
 import { switchMap, map, filter } from 'rxjs/operators';
@@ -33,7 +37,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
     MatTooltipModule,
     MatSnackBarModule,
     FileUploaderComponent,
-    DecimalPipe
+    DecimalPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -64,7 +68,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
             <span class="step-label">Recepción</span>
           </div>
           <div class="timeline-line completed"></div>
-          
+
           <div class="timeline-step completed">
             <div class="step-circle">
               <mat-icon>check</mat-icon>
@@ -72,7 +76,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
             <span class="step-label">Validación</span>
           </div>
           <div class="timeline-line completed"></div>
-          
+
           <div class="timeline-step active">
             <div class="step-circle">
               <mat-icon>security</mat-icon>
@@ -80,7 +84,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
             <span class="step-label">Evaluación de Riesgo</span>
           </div>
           <div class="timeline-line"></div>
-          
+
           <div class="timeline-step pending">
             <div class="step-circle">
               <mat-icon>gavel</mat-icon>
@@ -95,7 +99,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
             <span class="ceish-badge">{{ assignment.protocol.ceishCode || 'SIN CÓDIGO' }}</span>
             <h3 class="protocol-title">{{ assignment.protocol.title }}</h3>
           </div>
-          
+
           <div class="metadata-grid">
             <div class="meta-item">
               <span class="label">Investigador</span>
@@ -118,10 +122,19 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
             <div class="doc-item" *ngFor="let doc of protocolDocuments()">
               <mat-icon class="pdf-icon">picture_as_pdf</mat-icon>
               <div class="doc-info">
-                <span class="doc-name" [matTooltip]="doc.name || doc.title">{{ doc.name || doc.title }}</span>
+                <span class="doc-name" [matTooltip]="doc.name || doc.title">{{
+                  doc.name || doc.title
+                }}</span>
                 <span class="doc-type">{{ doc.type || 'Documento de recepción' }}</span>
               </div>
-              <button type="button" (click)="verDocumento(doc.id)" class="view-doc-btn" mat-icon-button color="primary" matTooltip="Abrir documento">
+              <button
+                type="button"
+                (click)="verDocumento(doc.id)"
+                class="view-doc-btn"
+                mat-icon-button
+                color="primary"
+                matTooltip="Abrir documento"
+              >
                 <mat-icon>open_in_new</mat-icon>
               </button>
             </div>
@@ -138,12 +151,16 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
                 <p class="helper">Consulte los criterios del manual PET 4.2.1 al seleccionar.</p>
               </div>
             </div>
-            
+
             <mat-form-field appearance="outline" class="w-full dense-field">
               <mat-label>Seleccione el nivel</mat-label>
               <mat-select formControlName="riskLevelId">
                 @for (risk of riskLevels; track risk.id) {
-                  <mat-option [value]="risk.id" [matTooltip]="risk.description" matTooltipPosition="right">
+                  <mat-option
+                    [value]="risk.id"
+                    [matTooltip]="risk.description"
+                    matTooltipPosition="right"
+                  >
                     {{ risk.name }}
                   </mat-option>
                 }
@@ -160,18 +177,23 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
               <span class="step-number">2</span>
               <div>
                 <h4>Justificación Técnica Ética</h4>
-                <p class="helper">Fundamente de manera técnica y metodológica la atribución de este riesgo.</p>
+                <p class="helper">
+                  Fundamente de manera técnica y metodológica la atribución de este riesgo.
+                </p>
               </div>
             </div>
 
             <mat-form-field appearance="outline" class="w-full">
               <mat-label>Observaciones y Justificación</mat-label>
-              <textarea 
-                matInput 
-                formControlName="observations" 
+              <textarea
+                matInput
+                formControlName="observations"
                 rows="4"
-                placeholder="Ej: El estudio utiliza encuestas anónimas sobre hábitos alimenticios cotidianos..."></textarea>
-              <mat-hint align="end">{{ assessmentForm.get('observations')?.value?.length || 0 }} / 30 min</mat-hint>
+                placeholder="Ej: El estudio utiliza encuestas anónimas sobre hábitos alimenticios cotidianos..."
+              ></textarea>
+              <mat-hint align="end"
+                >{{ assessmentForm.get('observations')?.value?.length || 0 }} / 30 min</mat-hint
+              >
               <mat-error *ngIf="assessmentForm.get('observations')?.hasError('required')">
                 La justificación es obligatoria.
               </mat-error>
@@ -193,7 +215,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 
             <div class="upload-container" [class.has-files]="selectedFiles().length > 0">
               <app-file-uploader (upload)="onFileUpload($event)"></app-file-uploader>
-              
+
               @if (selectedFiles().length > 0) {
                 <div class="file-summary animate-in">
                   <div class="summary-header">
@@ -205,7 +227,9 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
                       <li>
                         <mat-icon>check_circle</mat-icon>
                         <span class="name">{{ file.name }}</span>
-                        <span class="size">({{ (file.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+                        <span class="size"
+                          >({{ file.size / 1024 / 1024 | number: '1.1-2' }} MB)</span
+                        >
                       </li>
                     }
                   </ul>
@@ -223,11 +247,12 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 
       <footer mat-dialog-actions class="modal-footer">
         <button mat-button (click)="close()" [disabled]="isSubmitting()">Cancelar</button>
-        <button 
-          mat-flat-button 
+        <button
+          mat-flat-button
           class="btn-submit"
           [disabled]="assessmentForm.invalid || isSubmitting() || selectedFiles().length === 0"
-          (click)="onSubmit()">
+          (click)="onSubmit()"
+        >
           <mat-icon *ngIf="isSubmitting()" class="rotating">sync</mat-icon>
           <mat-icon *ngIf="!isSubmitting()">send</mat-icon>
           <span>{{ isSubmitting() ? 'Procesando...' : 'Enviar Dictamen' }}</span>
@@ -236,9 +261,20 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
     </div>
   `,
   styles: `
-    :host { display: block; --primary: #003366; --accent: #ea580c; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0; }
-    
-    .assessment-wrapper { display: flex; flex-direction: column; max-height: 90vh; }
+    :host {
+      display: block;
+      --primary: #003366;
+      --accent: #ea580c;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    .assessment-wrapper {
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+    }
 
     .modal-header {
       padding: 1.25rem 1.5rem;
@@ -252,7 +288,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
         display: flex;
         align-items: center;
         gap: 1rem;
-        
+
         .icon-box {
           background: #fff7ed;
           color: var(--accent);
@@ -260,12 +296,28 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
           border-radius: 12px;
           display: flex;
           align-items: center;
-          mat-icon { font-size: 24px; width: 24px; height: 24px; }
+          mat-icon {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+          }
         }
 
         .title-meta {
-          h2 { margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.01em; }
-          .version { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+          h2 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
+          }
+          .version {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
         }
       }
     }
@@ -282,13 +334,13 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 1.25rem;
-      
+
       .protocol-header {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
         margin-bottom: 1.25rem;
-        
+
         .ceish-badge {
           background: #fff7ed;
           color: var(--accent);
@@ -301,7 +353,13 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
           letter-spacing: 0.05em;
         }
 
-        .protocol-title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-main); line-height: 1.5; }
+        .protocol-title {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 700;
+          color: var(--text-main);
+          line-height: 1.5;
+        }
       }
 
       .metadata-grid {
@@ -315,8 +373,18 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
           display: flex;
           flex-direction: column;
           gap: 0.25rem;
-          .label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
-          .value { font-size: 0.85rem; font-weight: 700; color: var(--text-main); }
+          .label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+          }
+          .value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-main);
+          }
         }
       }
     }
@@ -328,7 +396,10 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
       padding-bottom: 1.5rem;
       border-bottom: 1px solid var(--border);
 
-      &.no-border { border: none; padding-bottom: 0; }
+      &.no-border {
+        border: none;
+        padding-bottom: 0;
+      }
 
       .section-header {
         display: flex;
@@ -350,24 +421,50 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
           margin-top: 2px;
         }
 
-        .section-icon { font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
+        .section-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+          flex-shrink: 0;
+        }
 
-        h4 { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-main); }
-        .helper { margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
-        .text-error { color: #dc2626; }
+        h4 {
+          margin: 0;
+          font-size: 0.95rem;
+          font-weight: 800;
+          color: var(--text-main);
+        }
+        .helper {
+          margin: 0.25rem 0 0;
+          font-size: 0.8rem;
+          color: var(--text-muted);
+          font-weight: 500;
+        }
+        .text-error {
+          color: #dc2626;
+        }
       }
     }
 
-    .w-full { width: 100%; }
-    .dense-field { ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; } }
+    .w-full {
+      width: 100%;
+    }
+    .dense-field {
+      ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+        display: none;
+      }
+    }
 
     .upload-container {
       display: flex;
       flex-direction: column;
       gap: 1rem;
-      
+
       &.has-files {
-        ::ng-deep .uploader-container { border-color: #86efac; background: #f0fdf4; }
+        ::ng-deep .uploader-container {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
       }
     }
 
@@ -382,7 +479,11 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
       font-size: 0.8rem;
       font-weight: 600;
       border: 1px solid #fed7aa;
-      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
     }
 
     .file-summary {
@@ -399,11 +500,20 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
         font-weight: 800;
         color: #166534;
         margin-bottom: 0.75rem;
-        mat-icon { font-size: 18px; width: 18px; height: 18px; }
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
       }
 
       .file-mini-list {
-        margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.5rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
         li {
           display: flex;
           align-items: center;
@@ -411,9 +521,23 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
           font-size: 0.8rem;
           color: #166534;
           font-weight: 600;
-          mat-icon { font-size: 16px; width: 16px; height: 16px; color: #22c55e; }
-          .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .size { color: #15803d; opacity: 0.7; font-size: 0.7rem; }
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            color: #22c55e;
+          }
+          .name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .size {
+            color: #15803d;
+            opacity: 0.7;
+            font-size: 0.7rem;
+          }
         }
       }
     }
@@ -426,21 +550,56 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
       gap: 1rem;
       background: #fcfdfe;
 
-      button { font-weight: 800; border-radius: 12px; height: 48px; padding: 0 1.5rem; }
-      .btn-submit { min-width: 180px; background: var(--primary); }
+      button {
+        font-weight: 800;
+        border-radius: 12px;
+        height: 48px;
+        padding: 0 1.5rem;
+      }
+      .btn-submit {
+        min-width: 180px;
+        background: var(--primary);
+      }
     }
 
-    .rotating { animation: rotate 1.5s linear infinite; }
-    @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .animate-in { animation: slideIn 0.3s ease-out; }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .rotating {
+      animation: rotate 1.5s linear infinite;
+    }
+    @keyframes rotate {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .animate-in {
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
     .custom-scrollbar {
       scrollbar-width: thin;
       scrollbar-color: #cbd5e1 #f1f5f9;
-      &::-webkit-scrollbar { width: 6px; }
-      &::-webkit-scrollbar-track { background: #f1f5f9; }
-      &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      &::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
     }
 
     /* Timeline styles */
@@ -452,7 +611,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 1.25rem 1.5rem;
-      
+
       .timeline-step {
         display: flex;
         flex-direction: column;
@@ -461,7 +620,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
         flex: 1;
         position: relative;
         z-index: 1;
-        
+
         .step-circle {
           width: 32px;
           height: 32px;
@@ -475,26 +634,32 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
           font-weight: 700;
           font-size: 0.85rem;
           transition: all 0.3s ease;
-          
-          mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
         }
-        
+
         .step-label {
           font-size: 0.72rem;
           font-weight: 700;
           color: #64748b;
           text-align: center;
         }
-        
+
         &.completed {
           .step-circle {
             background: #dcfce7;
             border-color: #22c55e;
             color: #15803d;
           }
-          .step-label { color: #15803d; }
+          .step-label {
+            color: #15803d;
+          }
         }
-        
+
         &.active {
           .step-circle {
             background: #eff6ff;
@@ -502,21 +667,29 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
             color: #1d4ed8;
             box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
           }
-          .step-label { color: #1d4ed8; }
+          .step-label {
+            color: #1d4ed8;
+          }
         }
-        
+
         &.pending {
-          .step-circle { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
-          .step-label { color: #94a3b8; }
+          .step-circle {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #94a3b8;
+          }
+          .step-label {
+            color: #94a3b8;
+          }
         }
       }
-      
+
       .timeline-line {
         height: 2px;
         background: #e2e8f0;
         flex: 1.5;
         margin-top: -1.2rem;
-        
+
         &.completed {
           background: #22c55e;
         }
@@ -529,7 +702,7 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 1.25rem;
-      
+
       .section-title-wrapper {
         display: flex;
         align-items: center;
@@ -537,17 +710,29 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
         border-bottom: 1px solid #edf2f7;
         padding-bottom: 0.75rem;
         margin-bottom: 1rem;
-        
-        mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--primary); }
-        h4 { margin: 0; font-size: 0.9rem; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          color: var(--primary);
+        }
+        h4 {
+          margin: 0;
+          font-size: 0.9rem;
+          font-weight: 800;
+          color: var(--text-main);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
       }
-      
+
       .docs-grid {
         display: grid;
         grid-template-columns: 1fr;
         gap: 0.75rem;
       }
-      
+
       .doc-item {
         display: flex;
         align-items: center;
@@ -557,20 +742,25 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
         border: 1px solid #edf2f7;
         border-radius: 12px;
         transition: all 0.2s ease;
-        
+
         &:hover {
           background: #f1f5f9;
           transform: translateY(-1px);
         }
-        
-        .pdf-icon { font-size: 24px; width: 24px; height: 24px; color: #ef4444; }
-        
+
+        .pdf-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+          color: #ef4444;
+        }
+
         .doc-info {
           flex: 1;
           display: flex;
           flex-direction: column;
           min-width: 0;
-          
+
           .doc-name {
             font-size: 0.8rem;
             font-weight: 700;
@@ -579,25 +769,29 @@ import { S3StorageService } from '@infrastructure/services/s3-storage.service';
             overflow: hidden;
             text-overflow: ellipsis;
           }
-          
+
           .doc-type {
             font-size: 0.65rem;
             color: #64748b;
             font-weight: 600;
           }
         }
-        
+
         .view-doc-btn {
           width: 32px;
           height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
-          mat-icon { font-size: 18px; width: 18px; height: 18px; }
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
         }
       }
     }
-  `
+  `,
 })
 export class PeerRiskAssessmentFormComponent implements OnInit {
   private fb = inject(FormBuilder);
@@ -612,12 +806,12 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
   isSubmitting = signal<boolean>(false);
   selectedFiles = signal<File[]>([]);
   protocolDocuments = signal<ProtocolDocumentHistoryEntry[]>([]);
-  
+
   assignment!: PeerAssignmentEntity;
 
   constructor(
     public dialogRef: MatDialogRef<PeerRiskAssessmentFormComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { assignment: PeerAssignmentEntity }
+    @Inject(MAT_DIALOG_DATA) public data: { assignment: PeerAssignmentEntity },
   ) {
     this.assignment = data.assignment;
   }
@@ -631,7 +825,7 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
       error: (err: unknown) => {
         console.error('Error al generar la URL de descarga:', err);
         this.snack.open('No se pudo abrir el documento.', 'Cerrar', { duration: 3000 });
-      }
+      },
     });
   }
 
@@ -649,8 +843,11 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
         }
       },
       error: (err: unknown) => {
-        console.warn('[PeerRiskAssessmentForm] Error al cargar catálogo dinámico de niveles de riesgo, usando fallback:', err);
-      }
+        console.warn(
+          '[PeerRiskAssessmentForm] Error al cargar catálogo dinámico de niveles de riesgo, usando fallback:',
+          err,
+        );
+      },
     });
   }
 
@@ -663,7 +860,7 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
         },
         error: (err: unknown) => {
           console.error('[PeerRiskAssessmentForm] Error cargando documentos:', err);
-        }
+        },
       });
     }
   }
@@ -671,7 +868,10 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
   private initForm() {
     this.assessmentForm = this.fb.group({
       riskLevelId: [this.assignment.proposedRiskLevelId || '', Validators.required],
-      observations: [this.assignment.observations || '', [Validators.required, Validators.minLength(30)]]
+      observations: [
+        this.assignment.observations || '',
+        [Validators.required, Validators.minLength(30)],
+      ],
     });
   }
 
@@ -704,35 +904,38 @@ export class PeerRiskAssessmentFormComponent implements OnInit {
     const protocolId = this.assignment.protocolId || this.assignment.protocol?.id;
     const s3Key = `protocols/${protocolId}/docEvaluacion/${sanitizedName}`;
 
-    this.s3StorageService.getUploadUrl(s3Key, file.type || 'application/pdf').pipe(
-      switchMap(urlRes => 
-        this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, file).pipe(
-          filter(uploadRes => uploadRes.success),
-          map(() => urlRes.key)
-        )
-      ),
-      switchMap(filePath => {
-        const payload = {
-          riskLevelId: Number(this.assessmentForm.value.riskLevelId),
-          observations: this.assessmentForm.value.observations,
-          reportPath: filePath
-        };
+    this.s3StorageService
+      .getUploadUrl(s3Key, file.type || 'application/pdf')
+      .pipe(
+        switchMap((urlRes) =>
+          this.s3StorageService.uploadFileToS3(urlRes.uploadUrl, file).pipe(
+            filter((uploadRes) => uploadRes.success),
+            map(() => urlRes.key),
+          ),
+        ),
+        switchMap((filePath) => {
+          const payload = {
+            riskLevelId: Number(this.assessmentForm.value.riskLevelId),
+            observations: this.assessmentForm.value.observations,
+            reportPath: filePath,
+          };
 
-        return this.evaluationRepo.submitPeerRiskProposed(this.assignment.id.toString(), payload);
-      })
-    ).subscribe({
-      next: () => {
-        this.snack.open('Dictamen de riesgo enviado exitosamente.', 'Éxito', { duration: 3000 });
-        this.isSubmitting.set(false);
-        this.dialogRef.close(true);
-      },
-      error: (err: unknown) => {
-        console.error('Error enviando dictamen:', err);
-        const errorRecord = err as { message?: string };
-        const msg = errorRecord.message || 'Error crítico al procesar la solicitud.';
-        this.snack.open(msg, 'Cerrar', { duration: 5000 });
-        this.isSubmitting.set(false);
-      }
-    });
+          return this.evaluationRepo.submitPeerRiskProposed(this.assignment.id.toString(), payload);
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.snack.open('Dictamen de riesgo enviado exitosamente.', 'Éxito', { duration: 3000 });
+          this.isSubmitting.set(false);
+          this.dialogRef.close(true);
+        },
+        error: (err: unknown) => {
+          console.error('Error enviando dictamen:', err);
+          const errorRecord = err as { message?: string };
+          const msg = errorRecord.message || 'Error crítico al procesar la solicitud.';
+          this.snack.open(msg, 'Cerrar', { duration: 5000 });
+          this.isSubmitting.set(false);
+        },
+      });
   }
 }

@@ -31,8 +31,8 @@ describe('ResolutionGeneratorPage', () => {
       submissionDate: new Date(),
       status: ProtocolStatus.EVALUADO,
       currentVersion: 1,
-      principalInvestigator: 'Dr. Marco Ramos'
-    } as unknown as ProtocolEntity
+      principalInvestigator: 'Dr. Marco Ramos',
+    } as unknown as ProtocolEntity,
   ];
 
   const mockEvaluations: EvaluationEntity[] = [
@@ -42,15 +42,27 @@ describe('ResolutionGeneratorPage', () => {
       evaluatorId: '201',
       evaluatorName: 'Dr. Evaluador Metodológico',
       status: 'APPROVED',
-      comments: 'Excelente diseño experimental'
-    } as unknown as EvaluationEntity
+      comments: 'Excelente diseño experimental',
+    } as unknown as EvaluationEntity,
   ];
 
   beforeEach(async () => {
-    mockLoadPendingResolutions = jasmine.createSpyObj<LoadPendingResolutionsUseCase>('LoadPendingResolutionsUseCase', ['execute']);
-    mockLoadProtocolById = jasmine.createSpyObj<LoadProtocolByIdUseCase>('LoadProtocolByIdUseCase', ['execute']);
-    mockLoadResolutionInsumos = jasmine.createSpyObj<LoadResolutionInsumosUseCase>('LoadResolutionInsumosUseCase', ['execute', 'downloadPdf', 'downloadDocx']);
-    mockGenerateResolution = jasmine.createSpyObj<GenerateAndSubmitResolutionUseCase>('GenerateAndSubmitResolutionUseCase', ['execute']);
+    mockLoadPendingResolutions = jasmine.createSpyObj<LoadPendingResolutionsUseCase>(
+      'LoadPendingResolutionsUseCase',
+      ['execute'],
+    );
+    mockLoadProtocolById = jasmine.createSpyObj<LoadProtocolByIdUseCase>(
+      'LoadProtocolByIdUseCase',
+      ['execute'],
+    );
+    mockLoadResolutionInsumos = jasmine.createSpyObj<LoadResolutionInsumosUseCase>(
+      'LoadResolutionInsumosUseCase',
+      ['execute', 'downloadPdf', 'downloadDocx'],
+    );
+    mockGenerateResolution = jasmine.createSpyObj<GenerateAndSubmitResolutionUseCase>(
+      'GenerateAndSubmitResolutionUseCase',
+      ['execute'],
+    );
     mockSnackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
     mockDialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
 
@@ -59,10 +71,7 @@ describe('ResolutionGeneratorPage', () => {
     mockLoadResolutionInsumos.execute.and.returnValue(of(mockEvaluations));
 
     await TestBed.configureTestingModule({
-      imports: [
-        ResolutionGeneratorPage,
-        NoopAnimationsModule
-      ],
+      imports: [ResolutionGeneratorPage, NoopAnimationsModule],
       providers: [
         provideRouter([]),
         { provide: LoadPendingResolutionsUseCase, useValue: mockLoadPendingResolutions },
@@ -70,8 +79,8 @@ describe('ResolutionGeneratorPage', () => {
         { provide: LoadResolutionInsumosUseCase, useValue: mockLoadResolutionInsumos },
         { provide: GenerateAndSubmitResolutionUseCase, useValue: mockGenerateResolution },
         { provide: MatSnackBar, useValue: mockSnackBar },
-        { provide: MatDialog, useValue: mockDialog }
-      ]
+        { provide: MatDialog, useValue: mockDialog },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResolutionGeneratorPage);

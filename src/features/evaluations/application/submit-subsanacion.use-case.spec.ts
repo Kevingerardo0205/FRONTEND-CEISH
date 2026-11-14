@@ -10,10 +10,7 @@ describe('SubmitSubsanacionUseCase', () => {
   beforeEach(() => {
     const sSpy = jasmine.createSpyObj('ProtocoloService', ['finalizarProtocolo']);
     TestBed.configureTestingModule({
-      providers: [
-        SubmitSubsanacionUseCase,
-        { provide: ProtocoloService, useValue: sSpy }
-      ]
+      providers: [SubmitSubsanacionUseCase, { provide: ProtocoloService, useValue: sSpy }],
     });
     useCase = TestBed.inject(SubmitSubsanacionUseCase);
     serviceSpy = TestBed.inject(ProtocoloService) as jasmine.SpyObj<ProtocoloService>;
@@ -26,7 +23,7 @@ describe('SubmitSubsanacionUseCase', () => {
         expect(serviceSpy.finalizarProtocolo).toHaveBeenCalledWith(42);
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

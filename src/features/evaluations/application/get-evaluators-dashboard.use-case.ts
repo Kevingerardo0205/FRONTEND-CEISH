@@ -1,9 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IEvaluationRepositoryPort, EvaluatorsDashboardResponse } from '@domain/ports/IEvaluationRepositoryPort';
+import {
+  IEvaluationRepositoryPort,
+  EvaluatorsDashboardResponse,
+} from '@domain/ports/IEvaluationRepositoryPort';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GetEvaluatorsDashboardUseCase {
   private repo = inject(IEvaluationRepositoryPort);

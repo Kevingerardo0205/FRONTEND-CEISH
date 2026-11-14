@@ -6,8 +6,15 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { of } from 'rxjs';
 import { SessionExpiredDialogComponent } from '@shared/components/session-expired-dialog/session-expired-dialog.component';
+import {
+  ERROR_400_ARRAY_BODY,
+  ERROR_400_BODY,
+  ERROR_404_BODY,
+} from '@features/evaluations/testing/reassignment.fixtures';
+import { apiErrorStatus } from '@shared/utils/api-error-message.util';
 
 describe('ErrorInterceptor', () => {
   let httpMock: HttpTestingController;
@@ -22,10 +29,10 @@ describe('ErrorInterceptor', () => {
     mockDialog = jasmine.createSpyObj('MatDialog', ['open', 'closeAll']);
     Object.defineProperty(mockDialog, 'openDialogs', { get: () => [] });
     mockDialog.open.and.returnValue({
-      afterClosed: () => of(true)
+      afterClosed: () => of(true),
     } as any);
 
-    mockRouter = jasmine.createSpyObj('Router', ['navigate']);
+    mockRouter = jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl']);
     mockAuthFacade = jasmine.createSpyObj('AuthFacade', ['refreshToken', 'logout']);
 
     TestBed.configureTestingModule({
@@ -35,13 +42,14 @@ describe('ErrorInterceptor', () => {
         {
           provide: HTTP_INTERCEPTORS,
           useClass: ErrorInterceptor,
-          multi: true
+          multi: true,
         },
         { provide: MatSnackBar, useValue: mockSnackBar },
         { provide: MatDialog, useValue: mockDialog },
         { provide: Router, useValue: mockRouter },
-        { provide: AuthFacade, useValue: mockAuthFacade }
-      ]
+        { provide: AuthFacade, useValue: mockAuthFacade },
+        { provide: RoleHome, useValue: { urlTree: () => 'inicio-del-rol-activo' } },
+      ],
     });
 
     httpMock = TestBed.inject(HttpTestingController);
@@ -52,13 +60,70 @@ describe('ErrorInterceptor', () => {
     httpMock.verify();
   });
 
+  it('D12: un 403 sin verificación pendiente navega al inicio del rol activo, no a /dashboard', (done) => {
+    httpClient.post('/api/protocolos', {}).subscribe({
+      error: () => {
+        expect(mockRouter.navigateByUrl).toHaveBeenCalledOnceWith('inicio-del-rol-activo' as any);
+        expect(mockRouter.navigate).not.toHaveBeenCalledWith(['/dashboard']);
+        done();
+      },
+    });
+
+    httpMock
+      .expectOne('/api/protocolos')
+      .flush({ message: 'Forbidden resource' }, { status: 403, statusText: 'Forbidden' });
+  });
+
+  describe('T13d-4: 403 en rutas públicas de auth', () => {
+    const verificationBody = {
+      statusCode: 403,
+      path: '/api/auth/login',
+      error: {
+        message: 'Por favor, confirma tu correo electrónico antes de iniciar sesión.',
+        error: 'Forbidden',
+        statusCode: 403,
+      },
+    };
+
+    for (const path of ['/api/auth/login', '/api/auth/register', '/api/auth/confirm-email']) {
+      it(`${path}: relanza el HttpErrorResponse original, sin navegar`, (done) => {
+        httpClient.post(path, {}).subscribe({
+          error: (err) => {
+            expect(err instanceof HttpErrorResponse).toBeTrue();
+            expect((err as HttpErrorResponse).status).toBe(403);
+            expect((err as HttpErrorResponse).error).toEqual(verificationBody);
+            expect(mockRouter.navigate).not.toHaveBeenCalled();
+            expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+            done();
+          },
+        });
+
+        httpMock.expectOne(path).flush(verificationBody, { status: 403, statusText: 'Forbidden' });
+      });
+    }
+
+    it('un 403 fuera de auth sigue yendo al inicio del rol activo (D12)', (done) => {
+      httpClient.get('/api/auth/users').subscribe({
+        error: (err) => {
+          expect(err instanceof HttpErrorResponse).toBeFalse();
+          expect(mockRouter.navigateByUrl).toHaveBeenCalledOnceWith('inicio-del-rol-activo' as any);
+          done();
+        },
+      });
+
+      httpMock
+        .expectOne('/api/auth/users')
+        .flush({ message: 'Forbidden resource' }, { status: 403, statusText: 'Forbidden' });
+    });
+  });
+
   it('debe reintentar llamadas GET fallidas en caso de error 503 y luego fallar', (done) => {
     httpClient.get('/api/protocols').subscribe({
       next: () => fail('No debería tener éxito'),
       error: (error) => {
         expect(error).toBeTruthy();
         done();
-      }
+      },
     });
 
     const req1 = httpMock.expectOne('/api/protocols');
@@ -81,7 +146,7 @@ describe('ErrorInterceptor', () => {
       error: (error) => {
         expect(error).toBeTruthy();
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/protocols');
@@ -95,10 +160,10 @@ describe('ErrorInterceptor', () => {
         expect(mockSnackBar.open).toHaveBeenCalledWith(
           'El servidor del CEISH está experimentando problemas. Por favor, inténtelo de nuevo más tarde.',
           'Cerrar',
-          { duration: 5000 }
+          { duration: 5000 },
         );
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/protocols');
@@ -112,11 +177,125 @@ describe('ErrorInterceptor', () => {
         expect(error.type).toBe('CONCURRENCY_ERROR');
         expect(error.status).toBe(409);
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/protocols');
     req.flush({ message: 'Conflicto de versiones' }, { status: 409, statusText: 'Conflict' });
+  });
+
+  describe('409 con cuerpos reales del backend', () => {
+    const backendMessage =
+      'El protocolo no se puede enviar en su estado actual: solo se envía un borrador o un protocolo con documentación incompleta o por subsanar.';
+
+    it('muestra el mensaje en español anidado y conserva el tipo de concurrencia', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error.type).toBe('CONCURRENCY_ERROR');
+          expect(error.status).toBe(409);
+          expect(error.message).toBe(backendMessage);
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        {
+          statusCode: 409,
+          timestamp: '...',
+          path: '/api/protocols/1/submit',
+          error: { message: backendMessage, error: 'Conflict', statusCode: 409 },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+    });
+
+    it('une el mensaje anidado cuando el backend lo devuelve como arreglo', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error.message).toBe('a; b');
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        {
+          statusCode: 409,
+          timestamp: '...',
+          path: '/api/protocols/1/submit',
+          error: { message: ['a', 'b'], error: 'Conflict', statusCode: 409 },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+    });
+
+    it('usa el mensaje genérico cuando el cuerpo no contiene un mensaje anidado', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error.message).toBe(
+            'Este trámite ha sido actualizado por otro usuario. Por favor, recargue el expediente.',
+          );
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        { statusCode: 409 },
+        { status: 409, statusText: 'Conflict' },
+      );
+    });
+  });
+
+  describe('mensaje anidado en body.error.message (cuerpos reales del backend)', () => {
+    function expectMessage(
+      body: object,
+      status: number,
+      statusText: string,
+      expected: string,
+      done: DoneFn,
+    ): void {
+      httpClient.get('/api/evaluations/protocol/0/active-assignments').subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(error.message).toBe(expected);
+          done();
+        },
+      });
+      httpMock
+        .expectOne('/api/evaluations/protocol/0/active-assignments')
+        .flush(body, { status, statusText });
+    }
+
+    it('400 real: "Validation failed (numeric string is expected)"', (done) => {
+      expectMessage(
+        ERROR_400_BODY,
+        400,
+        'Bad Request',
+        'Validation failed (numeric string is expected)',
+        done,
+      );
+    });
+
+    it('404 real: "El protocolo con ID 0 no existe."', (done) => {
+      expectMessage(ERROR_404_BODY, 404, 'Not Found', 'El protocolo con ID 0 no existe.', done);
+    });
+
+    it('400 con message como arreglo: une los mensajes con "; "', (done) => {
+      expectMessage(
+        ERROR_400_ARRAY_BODY,
+        400,
+        'Bad Request',
+        'replacementEvaluatorId must be a number; reason must be one of the following values',
+        done,
+      );
+    });
+
+    it('sin mensaje en el cuerpo sigue usando statusText', (done) => {
+      expectMessage({ statusCode: 400 }, 400, 'Bad Request', 'Bad Request', done);
+    });
   });
 
   it('debe cerrar sesión y abrir la ventana flotante centrada SessionExpiredDialogComponent si /auth/refresh falla con 401', (done) => {
@@ -124,16 +303,67 @@ describe('ErrorInterceptor', () => {
       next: () => fail('No debería tener éxito'),
       error: (error) => {
         expect(mockAuthFacade.logout).toHaveBeenCalled();
-        expect(mockDialog.open).toHaveBeenCalledWith(SessionExpiredDialogComponent, jasmine.objectContaining({
-          disableClose: true,
-          width: '460px'
-        }));
+        expect(mockDialog.open).toHaveBeenCalledWith(
+          SessionExpiredDialogComponent,
+          jasmine.objectContaining({
+            disableClose: true,
+            width: '460px',
+          }),
+        );
         expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login']);
         done();
-      }
+      },
     });
 
     const req = httpMock.expectOne('/api/auth/refresh');
     req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+  });
+
+  describe('F10 S-1g (D14): el Error relanzado conserva el status', () => {
+    it('un 404 con el cuerpo real conserva status 404 y el mensaje', (done) => {
+      httpClient.get('/api/protocols/0').subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(error.status).toBe(404);
+          expect(error.message).toBe('El protocolo con ID 0 no existe.');
+          expect(apiErrorStatus(error)).toBe(404);
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/0').flush(ERROR_404_BODY, { status: 404, statusText: 'Not Found' });
+    });
+
+    it('un 500 conserva status 500', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(apiErrorStatus(error)).toBe(500);
+          done();
+        },
+      });
+
+      httpMock.expectOne('/api/protocols/1/submit').flush(
+        { statusCode: 500, timestamp: '...', path: '/api/protocols/1/submit', error: { message: 'Internal server error' } },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
+    });
+
+    it('sin conexión conserva status 0', (done) => {
+      httpClient.post('/api/protocols/1/submit', {}).subscribe({
+        next: () => fail('No debería tener éxito'),
+        error: (error) => {
+          expect(error instanceof Error).toBeTrue();
+          expect(apiErrorStatus(error)).toBe(0);
+          done();
+        },
+      });
+
+      httpMock
+        .expectOne('/api/protocols/1/submit')
+        .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+    });
   });
 });

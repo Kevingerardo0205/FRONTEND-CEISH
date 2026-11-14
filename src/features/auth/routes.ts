@@ -9,31 +9,31 @@ import { ResetPasswordPage } from './presentation/pages/reset-password.page';
 export const AUTH_ROUTES: Routes = [
   {
     path: 'login',
-    component: LoginPage
+    component: LoginPage,
   },
   {
     path: 'register',
-    component: RegisterPage
+    component: RegisterPage,
   },
   {
     path: 'confirm-email',
-    component: ConfirmEmailPage
+    component: ConfirmEmailPage,
   },
   {
     path: 'setup-account',
-    component: SetupAccountPage
+    component: SetupAccountPage,
   },
   {
     path: 'forgot-password',
-    component: ForgotPasswordPage
+    component: ForgotPasswordPage,
   },
   {
     path: 'reset-password',
-    component: ResetPasswordPage
+    component: ResetPasswordPage,
   },
   {
     path: '',
     redirectTo: 'login',
-    pathMatch: 'full'
-  }
+    pathMatch: 'full',
+  },
 ];

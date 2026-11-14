@@ -14,16 +14,25 @@ export class CreateTemplateUseCase {
       switchMap(() => {
         if (params.file) {
           const s3Key = `templates/${params.code.toLowerCase()}_template.docx`;
-          return this.s3Storage.getUploadUrl(s3Key, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document').pipe(
-            switchMap(urlRes => this.s3Storage.uploadFileToS3(urlRes.uploadUrl, params.file!).pipe(
-              filter(upRes => upRes.success),
-              map(() => urlRes.key)
-            )),
-            switchMap(uploadedKey => this.docRepo.associateTemplateFile(params.code, uploadedKey))
-          );
+          return this.s3Storage
+            .getUploadUrl(
+              s3Key,
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            )
+            .pipe(
+              switchMap((urlRes) =>
+                this.s3Storage.uploadFileToS3(urlRes.uploadUrl, params.file!).pipe(
+                  filter((upRes) => upRes.success),
+                  map(() => urlRes.key),
+                ),
+              ),
+              switchMap((uploadedKey) =>
+                this.docRepo.associateTemplateFile(params.code, uploadedKey),
+              ),
+            );
         }
         return [null];
-      })
+      }),
     );
   }
 }

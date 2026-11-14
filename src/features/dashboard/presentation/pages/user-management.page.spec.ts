@@ -11,7 +11,7 @@ import {
   DeleteUserAdminUseCase,
   ExtendTemporaryRoleUseCase,
   SuspendTemporaryRoleUseCase,
-  SendConfirmationEmailUseCase
+  SendConfirmationEmailUseCase,
 } from '@features/dashboard/use-cases';
 import { IUserAdminRepositoryPort } from '@domain/ports/user-admin-repository.port';
 import { GetSecurityCatalogUseCase } from '../../../security/application/security.use-cases';
@@ -41,7 +41,7 @@ describe('UserManagementPage', () => {
       rol: 'SECRETARIA',
       roles: ['SECRETARIA'],
       perfil: 'Secretaria Ejecutiva',
-      activo: true
+      activo: true,
     },
     {
       id: '2',
@@ -51,8 +51,8 @@ describe('UserManagementPage', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR'],
       perfil: 'Docente Investigador',
-      activo: true
-    }
+      activo: true,
+    },
   ];
 
   beforeEach(async () => {
@@ -63,21 +63,33 @@ describe('UserManagementPage', () => {
     mockExtendRole = jasmine.createSpyObj('ExtendTemporaryRoleUseCase', ['execute']);
     mockSuspendRole = jasmine.createSpyObj('SuspendTemporaryRoleUseCase', ['execute']);
     mockSendConfirmationEmail = jasmine.createSpyObj('SendConfirmationEmailUseCase', ['execute']);
-    mockAdminRepo = jasmine.createSpyObj('IUserAdminRepositoryPort', ['getAll', 'create', 'update', 'delete', 'getRoles', 'updateRoles', 'extendTemporaryRole', 'suspendTemporaryRole', 'sendConfirmationEmail']);
+    mockAdminRepo = jasmine.createSpyObj('IUserAdminRepositoryPort', [
+      'getAll',
+      'create',
+      'update',
+      'delete',
+      'getRoles',
+      'updateRoles',
+      'extendTemporaryRole',
+      'suspendTemporaryRole',
+      'sendConfirmationEmail',
+    ]);
     mockCatalogUseCase = jasmine.createSpyObj('GetSecurityCatalogUseCase', ['execute']);
     mockDialog = jasmine.createSpyObj('MatDialog', ['open']);
     mockSnackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
 
     mockGetUsers.execute.and.returnValue(of(mockUsers));
     mockSendConfirmationEmail.execute.and.returnValue(of(undefined));
-    mockCatalogUseCase.execute.and.returnValue(of({
-      modules: [],
-      allPermissions: [],
-      roles: [
-        { id: 1, code: 'SECRETARIA', name: 'Secretaría', isActive: true },
-        { id: 2, code: 'INVESTIGADOR', name: 'Investigador', isActive: true }
-      ]
-    }));
+    mockCatalogUseCase.execute.and.returnValue(
+      of({
+        modules: [],
+        allPermissions: [],
+        roles: [
+          { id: 1, code: 'SECRETARIA', name: 'Secretaría', isActive: true },
+          { id: 2, code: 'INVESTIGADOR', name: 'Investigador', isActive: true },
+        ],
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [UserManagementPage, NoopAnimationsModule],
@@ -92,18 +104,18 @@ describe('UserManagementPage', () => {
         { provide: IUserAdminRepositoryPort, useValue: mockAdminRepo },
         { provide: GetSecurityCatalogUseCase, useValue: mockCatalogUseCase },
         { provide: MatDialog, useValue: mockDialog },
-        { provide: MatSnackBar, useValue: mockSnackBar }
-      ]
+        { provide: MatSnackBar, useValue: mockSnackBar },
+      ],
     })
-    .overrideComponent(UserManagementPage, {
-      set: {
-        providers: [
-          { provide: MatDialog, useValue: mockDialog },
-          { provide: MatSnackBar, useValue: mockSnackBar }
-        ]
-      }
-    })
-    .compileComponents();
+      .overrideComponent(UserManagementPage, {
+        set: {
+          providers: [
+            { provide: MatDialog, useValue: mockDialog },
+            { provide: MatSnackBar, useValue: mockSnackBar },
+          ],
+        },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(UserManagementPage);
     component = fixture.componentInstance;
@@ -146,7 +158,7 @@ describe('UserManagementPage', () => {
       rol: 'SECRETARIA',
       roles: ['SECRETARIA'],
       perfil: 'Asistente',
-      activo: true
+      activo: true,
     };
     mockRegisterUser.execute.and.returnValue(of({ ...newUser, id: '15' }));
 
@@ -156,7 +168,7 @@ describe('UserManagementPage', () => {
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       jasmine.stringMatching(/registrado con éxito/),
       'Cerrar',
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
   });
 
@@ -169,7 +181,7 @@ describe('UserManagementPage', () => {
       rol: 'SECRETARIA',
       roles: ['SECRETARIA', 'EVALUADOR'],
       perfil: 'Secretaria General',
-      activo: true
+      activo: true,
     };
     mockUpdateUser.execute.and.returnValue(of(userToUpdate));
 
@@ -179,7 +191,7 @@ describe('UserManagementPage', () => {
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       jasmine.stringMatching(/actualizado con éxito/),
       'Cerrar',
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
   });
 
@@ -191,10 +203,10 @@ describe('UserManagementPage', () => {
       rol: 'INVESTIGADOR',
       roles: ['INVESTIGADOR'],
       perfil: 'Investigador',
-      activo: true
+      activo: true,
     };
     const errorResponse = {
-      error: { message: 'El correo institucional ya se encuentra registrado' }
+      error: { message: 'El correo institucional ya se encuentra registrado' },
     };
     mockRegisterUser.execute.and.returnValue(throwError(() => errorResponse));
 
@@ -203,13 +215,13 @@ describe('UserManagementPage', () => {
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       '❌ El correo institucional ya se encuentra registrado',
       'Entendido',
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
   });
 
   it('debe abrir el diálogo de confirmación para revocar el acceso del usuario', () => {
     const dialogRefSpy = {
-      afterClosed: () => of(true)
+      afterClosed: () => of(true),
     };
     mockDialog.open.and.returnValue(dialogRefSpy as any);
     mockDeleteUser.execute.and.returnValue(of(undefined));
@@ -221,49 +233,70 @@ describe('UserManagementPage', () => {
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       jasmine.stringMatching(/Acceso revocado/),
       'Cerrar',
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
   });
 
   it('debe abrir ExtendRoleDialogComponent y prorrogar la suplencia temporal', () => {
     const dialogRefSpy = {
-      afterClosed: () => of({ validUntil: '2026-11-30', reason: 'Prórroga aprobada' })
+      afterClosed: () => of({ validUntil: '2026-11-30', reason: 'Prórroga aprobada' }),
     };
     mockDialog.open.and.returnValue(dialogRefSpy as any);
     mockExtendRole.execute.and.returnValue(of(undefined));
 
     component.onExtendRole({
       user: mockUsers[0],
-      role: { code: 'SECRETARIA', name: 'Secretaria', validUntil: '2026-09-30', reason: 'Suplencia', isExpired: false }
+      role: {
+        code: 'SECRETARIA',
+        name: 'Secretaria',
+        validUntil: '2026-09-30',
+        reason: 'Suplencia',
+        isExpired: false,
+      },
     });
 
     expect(mockDialog.open).toHaveBeenCalled();
-    expect(mockExtendRole.execute).toHaveBeenCalledWith('1', 'SECRETARIA', '2026-11-30', 'Prórroga aprobada');
+    expect(mockExtendRole.execute).toHaveBeenCalledWith(
+      '1',
+      'SECRETARIA',
+      '2026-11-30',
+      'Prórroga aprobada',
+    );
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       jasmine.stringMatching(/prorrogada exitosamente/),
       'Cerrar',
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
   });
 
   it('debe abrir SuspendRoleDialogComponent y suspender la suplencia temporal', () => {
     const dialogRefSpy = {
-      afterClosed: () => of({ reason: 'Retorno anticipado de la titular' })
+      afterClosed: () => of({ reason: 'Retorno anticipado de la titular' }),
     };
     mockDialog.open.and.returnValue(dialogRefSpy as any);
     mockSuspendRole.execute.and.returnValue(of(undefined));
 
     component.onSuspendRole({
       user: mockUsers[0],
-      role: { code: 'SECRETARIA', name: 'Secretaria', validUntil: '2026-09-30', reason: 'Suplencia', isExpired: false }
+      role: {
+        code: 'SECRETARIA',
+        name: 'Secretaria',
+        validUntil: '2026-09-30',
+        reason: 'Suplencia',
+        isExpired: false,
+      },
     });
 
     expect(mockDialog.open).toHaveBeenCalled();
-    expect(mockSuspendRole.execute).toHaveBeenCalledWith('1', 'SECRETARIA', 'Retorno anticipado de la titular');
+    expect(mockSuspendRole.execute).toHaveBeenCalledWith(
+      '1',
+      'SECRETARIA',
+      'Retorno anticipado de la titular',
+    );
     expect(mockSnackBar.open).toHaveBeenCalledWith(
       jasmine.stringMatching(/finalizada y registrada en auditoría/),
       'Cerrar',
-      jasmine.any(Object)
+      jasmine.any(Object),
     );
   });
 });

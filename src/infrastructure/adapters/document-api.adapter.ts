@@ -1,22 +1,35 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { IDocumentRepositoryPort, DocumentValidationResult, DocumentUploadResult, Template } from '@domain/ports/IDocumentRepositoryPort';
+import {
+  IDocumentRepositoryPort,
+  DocumentValidationResult,
+  DocumentUploadResult,
+  Template,
+} from '@domain/ports/IDocumentRepositoryPort';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
 import { ENDPOINTS } from '../api/endpoints.constant';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class DocumentApiAdapter extends IDocumentRepositoryPort {
   private apiClient = inject(ApiClientService);
 
-  validateDocument(documentId: string, statusId: number, observations: string, pageCount?: number | null): Observable<DocumentValidationResult> {
-    return this.apiClient.post<DocumentValidationResult>(`/reception/document/${documentId}/validate`, {
-      statusId,
-      observations,
-      pageCount
-    });
+  validateDocument(
+    documentId: string,
+    statusId: number,
+    observations: string,
+    pageCount?: number | null,
+  ): Observable<DocumentValidationResult> {
+    return this.apiClient.post<DocumentValidationResult>(
+      `/reception/document/${documentId}/validate`,
+      {
+        statusId,
+        observations,
+        pageCount,
+      },
+    );
   }
 
   uploadDocument(file: File): Observable<DocumentUploadResult> {
@@ -30,7 +43,7 @@ export class DocumentApiAdapter extends IDocumentRepositoryPort {
       map((res: unknown) => {
         const body = res as { data?: Template[] };
         return body.data ?? (res as Template[]);
-      })
+      }),
     );
   }
 
@@ -39,7 +52,7 @@ export class DocumentApiAdapter extends IDocumentRepositoryPort {
       map((res: unknown) => {
         const body = res as { data?: { downloadUrl: string } };
         return body.data ?? (res as { downloadUrl: string });
-      })
+      }),
     );
   }
 
@@ -48,7 +61,7 @@ export class DocumentApiAdapter extends IDocumentRepositoryPort {
       map((res: unknown) => {
         const body = res as { data?: Template };
         return body.data ?? (res as Template);
-      })
+      }),
     );
   }
 
@@ -57,7 +70,7 @@ export class DocumentApiAdapter extends IDocumentRepositoryPort {
       map((res: unknown) => {
         const body = res as { data?: { message: string } };
         return body.data ?? (res as { message: string });
-      })
+      }),
     );
   }
 }

@@ -24,7 +24,7 @@ export interface AmendmentReviewDialogData {
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
   ],
   template: `
     <div class="review-dialog-container">
@@ -33,7 +33,9 @@ export interface AmendmentReviewDialogData {
           <mat-icon class="header-icon text-primary">rate_review</mat-icon>
           <div>
             <h2 class="dialog-title m-0">Dictamen de Enmienda</h2>
-            <span class="text-muted small">{{ data.amendment.protocolCode }} - Versión {{ data.amendment.versionNumber }}</span>
+            <span class="text-muted small"
+              >{{ data.amendment.protocolCode }} - Versión {{ data.amendment.versionNumber }}</span
+            >
           </div>
         </div>
         <button mat-icon-button (click)="dialogRef.close()" aria-label="Cerrar">
@@ -47,12 +49,27 @@ export interface AmendmentReviewDialogData {
           <span class="badge bg-primary-subtle text-primary border">
             {{ data.amendment.type }}
           </span>
-          <span class="badge" [ngClass]="data.amendment.severity === 'SUBSTANTIAL' ? 'bg-danger-subtle text-danger border-danger' : 'bg-info-subtle text-info border-info'">
-            {{ data.amendment.severity === 'SUBSTANTIAL' ? '⚠️ Modificación Sustancial' : 'ℹ️ Modificación Menor' }}
+          <span
+            class="badge"
+            [ngClass]="
+              data.amendment.severity === 'SUBSTANTIAL'
+                ? 'bg-danger-subtle text-danger border-danger'
+                : 'bg-info-subtle text-info border-info'
+            "
+          >
+            {{
+              data.amendment.severity === 'SUBSTANTIAL'
+                ? '⚠️ Modificación Sustancial'
+                : 'ℹ️ Modificación Menor'
+            }}
           </span>
         </div>
-        <p class="small text-secondary mb-1"><strong>Justificación:</strong> {{ data.amendment.justification }}</p>
-        <p class="small text-secondary m-0"><strong>Impacto Ético:</strong> {{ data.amendment.ethicalImpactDescription }}</p>
+        <p class="small text-secondary mb-1">
+          <strong>Justificación:</strong> {{ data.amendment.justification }}
+        </p>
+        <p class="small text-secondary m-0">
+          <strong>Impacto Ético:</strong> {{ data.amendment.ethicalImpactDescription }}
+        </p>
       </div>
 
       <form [formGroup]="reviewForm" (ngSubmit)="onSubmit()">
@@ -60,7 +77,9 @@ export interface AmendmentReviewDialogData {
           <mat-label>Resolución / Dictamen</mat-label>
           <mat-select formControlName="status">
             <mat-option [value]="AmendmentStatus.APPROVED">🟢 APROBAR ENMIENDA</mat-option>
-            <mat-option [value]="AmendmentStatus.OBSERVED">🟡 SOLICITAR SUBSANACIÓN / OBSERVADA</mat-option>
+            <mat-option [value]="AmendmentStatus.OBSERVED"
+              >🟡 SOLICITAR SUBSANACIÓN / OBSERVADA</mat-option
+            >
             <mat-option [value]="AmendmentStatus.REJECTED">🔴 RECHAZAR ENMIENDA</mat-option>
           </mat-select>
           <mat-error *ngIf="reviewForm.get('status')?.hasError('required')">
@@ -70,11 +89,12 @@ export interface AmendmentReviewDialogData {
 
         <mat-form-field appearance="outline" class="w-100 mb-3">
           <mat-label>Observaciones y Dictamen Técnico</mat-label>
-          <textarea 
-            matInput 
-            formControlName="reviewNotes" 
-            rows="4" 
-            placeholder="Fundamente el dictamen bioético o especifique las correcciones requeridas...">
+          <textarea
+            matInput
+            formControlName="reviewNotes"
+            rows="4"
+            placeholder="Fundamente el dictamen bioético o especifique las correcciones requeridas..."
+          >
           </textarea>
           <mat-error *ngIf="reviewForm.get('reviewNotes')?.hasError('required')">
             El fundamento del dictamen es obligatorio
@@ -86,11 +106,7 @@ export interface AmendmentReviewDialogData {
 
         <div class="dialog-actions d-flex justify-content-end gap-2 mt-3">
           <button mat-button type="button" (click)="dialogRef.close()">Cancelar</button>
-          <button 
-            mat-flat-button 
-            color="primary" 
-            type="submit" 
-            [disabled]="reviewForm.invalid">
+          <button mat-flat-button color="primary" type="submit" [disabled]="reviewForm.invalid">
             <mat-icon>save</mat-icon>
             Guardar Dictamen
           </button>
@@ -98,27 +114,31 @@ export interface AmendmentReviewDialogData {
       </form>
     </div>
   `,
-  styles: [`
-    .review-dialog-container {
-      padding: 1.5rem;
-      max-width: 580px;
-    }
-    .dialog-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #003366;
-    }
-    .header-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
-    }
-    .amendment-summary-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-    }
-    .w-100 { width: 100%; }
-  `]
+  styles: [
+    `
+      .review-dialog-container {
+        padding: 1.5rem;
+        max-width: 580px;
+      }
+      .dialog-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #003366;
+      }
+      .header-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+      .amendment-summary-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+      .w-100 {
+        width: 100%;
+      }
+    `,
+  ],
 })
 export class AmendmentReviewDialogComponent {
   readonly AmendmentStatus = AmendmentStatus;
@@ -129,7 +149,7 @@ export class AmendmentReviewDialogComponent {
 
   reviewForm: FormGroup = this.fb.group({
     status: [AmendmentStatus.APPROVED, Validators.required],
-    reviewNotes: ['', [Validators.required, Validators.minLength(15)]]
+    reviewNotes: ['', [Validators.required, Validators.minLength(15)]],
   });
 
   onSubmit(): void {
@@ -137,7 +157,7 @@ export class AmendmentReviewDialogComponent {
       this.dialogRef.close({
         amendmentId: this.data.amendment.id,
         status: this.reviewForm.value.status,
-        reviewNotes: this.reviewForm.value.reviewNotes
+        reviewNotes: this.reviewForm.value.reviewNotes,
       });
     }
   }

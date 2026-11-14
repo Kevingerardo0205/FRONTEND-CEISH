@@ -8,11 +8,11 @@ export class ValidationContext {
   private strategies: ValidationStrategy[] = [
     new IoValidationStrategy(),
     new EiValidationStrategy(),
-    new EcValidationStrategy()
+    new EcValidationStrategy(),
   ];
 
   getStrategy(type: ProtocolType): ValidationStrategy {
-    const strategy = this.strategies.find(s => s.type === type);
+    const strategy = this.strategies.find((s) => s.type === type);
     if (!strategy) throw new Error(`Estrategia no encontrada para el tipo: ${type}`);
     return strategy;
   }

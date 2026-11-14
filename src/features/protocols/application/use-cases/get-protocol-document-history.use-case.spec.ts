@@ -13,8 +13,8 @@ describe('GetProtocolDocumentHistoryUseCase', () => {
     TestBed.configureTestingModule({
       providers: [
         GetProtocolDocumentHistoryUseCase,
-        { provide: IProtocolRepositoryPort, useValue: rSpy }
-      ]
+        { provide: IProtocolRepositoryPort, useValue: rSpy },
+      ],
     });
 
     useCase = TestBed.inject(GetProtocolDocumentHistoryUseCase);
@@ -22,10 +22,12 @@ describe('GetProtocolDocumentHistoryUseCase', () => {
   });
 
   it('debe retornar historial de documentos del protocolo', (done) => {
-    repoSpy.getDocumentHistory.and.returnValue(of([
-      { id: 1, fileName: 'Solicitud.pdf', uploadedAt: '2025-01-01' },
-      { id: 2, fileName: 'Ficha.docx', uploadedAt: '2025-01-02' }
-    ]));
+    repoSpy.getDocumentHistory.and.returnValue(
+      of([
+        { id: 1, fileName: 'Solicitud.pdf', uploadedAt: '2025-01-01' },
+        { id: 2, fileName: 'Ficha.docx', uploadedAt: '2025-01-02' },
+      ]),
+    );
 
     useCase.execute('proto-1').subscribe({
       next: (result) => {
@@ -33,7 +35,7 @@ describe('GetProtocolDocumentHistoryUseCase', () => {
         expect(repoSpy.getDocumentHistory).toHaveBeenCalledWith('proto-1');
         done();
       },
-      error: fail
+      error: fail,
     });
   });
 });

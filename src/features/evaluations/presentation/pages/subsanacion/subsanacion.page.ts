@@ -1,4 +1,12 @@
-import { Component, inject, signal, OnInit, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  computed,
+  ChangeDetectionStrategy,
+  DestroyRef,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -25,7 +33,11 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
-import { ChecklistRequirement, EstadoProtocolo, ProtocoloResumen } from '@features/investigador/domain/dtos/crear-protocolo.dto';
+import {
+  ChecklistRequirement,
+  EstadoProtocolo,
+  ProtocoloResumen,
+} from '@features/investigador/domain/dtos/crear-protocolo.dto';
 import { ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
 import { RequirementStatus } from '@features/investigador/domain/dtos/crear-protocolo.dto';
 
@@ -81,16 +93,20 @@ interface ProtocolDocument {
     MatDividerModule,
     ProtocolCodePipe,
     ProtocolStatusLabelPipe,
-    ProtocolStatusClassPipe
+    ProtocolStatusClassPipe,
   ],
   template: `
     <div class="subsanacion-container animate-fade-in">
-      
       <!-- DETALLE DE SUBSANACIÓN SI HAY PROTOCOLO SELECCIONADO -->
       <ng-container *ngIf="protocolId() > 0; else listTemplate">
         <header class="page-header mb-4">
           <div class="d-flex align-items-center gap-3">
-            <button mat-icon-button (click)="goBackToList()" class="back-btn" aria-label="Volver a la bandeja">
+            <button
+              mat-icon-button
+              (click)="goBackToList()"
+              class="back-btn"
+              aria-label="Volver a la bandeja"
+            >
               <mat-icon>arrow_back</mat-icon>
             </button>
             <div class="title-section">
@@ -99,7 +115,9 @@ interface ProtocolDocument {
               <p class="page-subtitle">{{ protocolTitle() }}</p>
             </div>
           </div>
-          <span class="protocol-badge" *ngIf="protocolCode()">{{ protocolCode() | protocolCode }}</span>
+          <span class="protocol-badge" *ngIf="protocolCode()">{{
+            protocolCode() | protocolCode
+          }}</span>
         </header>
 
         <!-- Banner Informativo Ámbar (Screen 2) -->
@@ -116,11 +134,16 @@ interface ProtocolDocument {
                 <h4 class="m-0 fw-bold">Modificaciones en Versión 2.0 Requeridas</h4>
               </ng-template>
               <p class="m-0 mt-1 small" *ngIf="isEnControlDocumental(); else legacyBannerText">
-                El protocolo se encuentra en fase de carga de nueva versión (Control Documental). Por favor, cargue los archivos corregidos para los requisitos observados o rechazados. El trámite no podrá ser reenviado hasta completar las correcciones.
+                El protocolo se encuentra en fase de carga de nueva versión (Control Documental).
+                Por favor, cargue los archivos corregidos para los requisitos observados o
+                rechazados. El trámite no podrá ser reenviado hasta completar las correcciones.
               </p>
               <ng-template #legacyBannerText>
                 <p class="m-0 mt-1 small">
-                  El comité ético ha emitido observaciones a su postulación. Por favor, revise detalladamente los informes de los evaluadores en el panel izquierdo y cargue los archivos corregidos en el listado de requisitos de la derecha. El trámite no podrá ser reenviado hasta completar las correcciones.
+                  El comité ético ha emitido observaciones a su postulación. Por favor, revise
+                  detalladamente los informes de los evaluadores en el panel izquierdo y cargue los
+                  archivos corregidos en el listado de requisitos de la derecha. El trámite no podrá
+                  ser reenviado hasta completar las correcciones.
                 </p>
               </ng-template>
             </div>
@@ -132,7 +155,10 @@ interface ProtocolDocument {
           <div class="col-12 col-checklist">
             <div class="content-card shadow-soft p-4">
               <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="fw-bold m-0 d-flex align-items-center gap-2 text-primary" style="color: #1e3a8a !important; font-weight: 800;">
+                <h3
+                  class="fw-bold m-0 d-flex align-items-center gap-2 text-primary"
+                  style="color: #1e3a8a !important; font-weight: 800;"
+                >
                   <mat-icon style="color: #1e3a8a;">list_alt</mat-icon>
                   Checklist de Documentación
                 </h3>
@@ -141,13 +167,25 @@ interface ProtocolDocument {
               <!-- Barra de Progreso de Subsanación -->
               <div class="progress-section mb-4">
                 <div class="mb-2">
-                  <span class="badge-success-count" *ngIf="pendingRequirementsCount() === 0">Completo</span>
-                  <span class="badge-pending" *ngIf="pendingRequirementsCount() > 0">Pendiente</span>
+                  <span class="badge-success-count" *ngIf="pendingRequirementsCount() === 0"
+                    >Completo</span
+                  >
+                  <span class="badge-pending" *ngIf="pendingRequirementsCount() > 0"
+                    >Pendiente</span
+                  >
                 </div>
                 <div class="d-flex justify-content-between small text-muted mb-1 fw-bold">
-                  <span>Progreso de Carga{{ checklist().length - pendingRequirementsCount() }} / {{ checklist().length }}</span>
+                  <span
+                    >Progreso de Carga{{ checklist().length - pendingRequirementsCount() }} /
+                    {{ checklist().length }}</span
+                  >
                 </div>
-                <mat-progress-bar mode="determinate" [value]="getProgressValue()" color="primary" class="rounded-pill"></mat-progress-bar>
+                <mat-progress-bar
+                  mode="determinate"
+                  [value]="getProgressValue()"
+                  color="primary"
+                  class="rounded-pill"
+                ></mat-progress-bar>
               </div>
 
               <div class="table-responsive">
@@ -156,50 +194,119 @@ interface ProtocolDocument {
                     <tr>
                       <th style="color: #1e3a8a; font-weight: 800;">REQUISITO / DOCUMENTO</th>
                       <th class="text-center" style="color: #1e3a8a; font-weight: 800;">ESTADO</th>
-                      <th class="text-end" *ngIf="isInvestigador()" style="color: #1e3a8a; font-weight: 800;">CARGA</th>
+                      <th
+                        class="text-end"
+                        *ngIf="isInvestigador()"
+                        style="color: #1e3a8a; font-weight: 800;"
+                      >
+                        CARGA
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr *ngFor="let req of checklist()">
                       <td class="req-detail">
                         <strong class="text-dark">{{ req.requirementName }}</strong>
-                        <span class="text-muted" style="font-weight: normal; font-size: 0.85rem;" *ngIf="req.requirementCode"> ({{ req.requirementCode }})</span>
-                        
+                        <span
+                          class="text-muted"
+                          style="font-weight: normal; font-size: 0.85rem;"
+                          *ngIf="req.requirementCode"
+                        >
+                          ({{ req.requirementCode }})</span
+                        >
+
                         <!-- Motivo de Observación -->
-                        <div class="req-observation small text-danger p-2 bg-red-soft rounded border-start border-danger border-3 mt-2" *ngIf="req.observations">
+                        <div
+                          class="req-observation small text-danger p-2 bg-red-soft rounded border-start border-danger border-3 mt-2"
+                          *ngIf="req.observations"
+                        >
                           <strong>Motivo:</strong> {{ req.observations }}
                         </div>
 
                         <!-- Enlace para ver documento previamente cargado (Accesible para Investigador y Secretaría) -->
-                        <div class="uploaded-doc-preview mt-2" *ngIf="getRequirementDocument(req) as doc">
-                          <button mat-button color="primary" class="btn-view-doc p-0 d-inline-flex align-items-center" (click)="verDocumento(doc.id)" type="button" style="text-transform: none; min-width: auto; line-height: normal; height: auto;">
-                            <mat-icon class="text-danger" style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;">picture_as_pdf</mat-icon>
-                            <span class="doc-link-text text-truncate" style="max-width: 250px; font-size: 0.82rem; font-weight: 600; text-decoration: underline;">
+                        <div
+                          class="uploaded-doc-preview mt-2"
+                          *ngIf="getRequirementDocument(req) as doc"
+                        >
+                          <button
+                            mat-button
+                            color="primary"
+                            class="btn-view-doc p-0 d-inline-flex align-items-center"
+                            (click)="verDocumento(doc.id)"
+                            type="button"
+                            style="text-transform: none; min-width: auto; line-height: normal; height: auto;"
+                          >
+                            <mat-icon
+                              class="text-danger"
+                              style="font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;"
+                              >picture_as_pdf</mat-icon
+                            >
+                            <span
+                              class="doc-link-text text-truncate"
+                              style="max-width: 250px; font-size: 0.82rem; font-weight: 600; text-decoration: underline;"
+                            >
                               {{ doc.name || doc.title || 'Ver Archivo Cargado' }}
                             </span>
-                            <mat-icon style="font-size: 14px; width: 14px; height: 14px; margin-left: 4px; color: #64748b; vertical-align: middle;">open_in_new</mat-icon>
+                            <mat-icon
+                              style="font-size: 14px; width: 14px; height: 14px; margin-left: 4px; color: #64748b; vertical-align: middle;"
+                              >open_in_new</mat-icon
+                            >
                           </button>
                         </div>
                       </td>
                       <td class="text-center">
                         <span class="badge-status" [ngClass]="req.status.toLowerCase()">
-                          {{ req.status === 'NO_PRESENTADO' ? 'NO PRESENTADO' : (req.status === 'NO_APLICA' ? 'NO APLICA' : req.status) }}
+                          {{
+                            req.status === 'NO_PRESENTADO'
+                              ? 'NO PRESENTADO'
+                              : req.status === 'NO_APLICA'
+                                ? 'NO APLICA'
+                                : req.status
+                          }}
                         </span>
                       </td>
                       <td class="text-end" *ngIf="isInvestigador()">
                         <ng-container *ngIf="isRequirementLocked(req); else uploadAction">
-                          <mat-icon class="text-success" matTooltip="Documento Inmutable" *ngIf="req.status !== 'NO_APLICA'">check_circle</mat-icon>
-                          <mat-icon class="text-muted" matTooltip="Requisito No Aplica para este trámite" *ngIf="req.status === 'NO_APLICA'">remove_circle_outline</mat-icon>
+                          <mat-icon
+                            class="text-success"
+                            matTooltip="Documento Inmutable"
+                            *ngIf="req.status !== 'NO_APLICA'"
+                            >check_circle</mat-icon
+                          >
+                          <mat-icon
+                            class="text-muted"
+                            matTooltip="Requisito No Aplica para este trámite"
+                            *ngIf="req.status === 'NO_APLICA'"
+                            >remove_circle_outline</mat-icon
+                          >
                         </ng-container>
-                        
+
                         <ng-template #uploadAction>
-                          <div class="upload-btn-container d-flex align-items-center justify-content-end gap-2">
-                            <span class="spinner-border spinner-border-sm text-primary" role="status" *ngIf="uploadingRequirementId() === req.id"></span>
-                            <button mat-stroked-button color="primary" class="btn-upload btn-sm" [disabled]="uploadingRequirementId() > 0" (click)="fileInput.click()">
+                          <div
+                            class="upload-btn-container d-flex align-items-center justify-content-end gap-2"
+                          >
+                            <span
+                              class="spinner-border spinner-border-sm text-primary"
+                              role="status"
+                              *ngIf="uploadingRequirementId() === req.id"
+                            ></span>
+                            <button
+                              mat-stroked-button
+                              color="primary"
+                              class="btn-upload btn-sm"
+                              [disabled]="uploadingRequirementId() > 0"
+                              (click)="fileInput.click()"
+                            >
                               <mat-icon>cloud_upload</mat-icon>
                               Subir
                             </button>
-                            <input #fileInput type="file" (change)="onUploadFile($event, req.id, req.requirementCode)" accept="application/pdf" style="display: none;" />
+                            <input
+                              #fileInput
+                              type="file"
+                              (change)="onUploadFile($event, req.id, req.requirementCode)"
+                              accept="application/pdf"
+                              style="display: none;"
+                            />
                           </div>
                         </ng-template>
                       </td>
@@ -213,16 +320,20 @@ interface ProtocolDocument {
               <!-- Botón de Enviar Subsanación -->
               <div class="actions-footer mt-4" *ngIf="isInvestigador()">
                 <p class="small text-muted m-0 mb-2" *ngIf="!isReadyToSubmit()">
-                  * Debe cargar todos los documentos marcados como Pendientes/Observados para poder enviar.
+                  * Debe cargar todos los documentos marcados como Pendientes/Observados para poder
+                  enviar.
                 </p>
                 <div class="d-flex flex-column align-items-start gap-2" *ngIf="isReadyToSubmit()">
                   <p class="small text-success m-0 fw-bold d-flex align-items-center gap-1 mb-2">
                     <span>✓ ¡Listo para enviar! Todos los requisitos están cubiertos.</span>
                   </p>
-                  
-                  <button mat-flat-button class="emit-btn" 
-                          [disabled]="!isReadyToSubmit() || isSubmitting()"
-                          (click)="onSubmitSubsanacion()">
+
+                  <button
+                    mat-flat-button
+                    class="emit-btn"
+                    [disabled]="!isReadyToSubmit() || isSubmitting()"
+                    (click)="onSubmitSubsanacion()"
+                  >
                     <mat-icon>send</mat-icon>
                     {{ isSubmitting() ? 'Enviando...' : 'Enviar Subsanación' }}
                   </button>
@@ -234,20 +345,32 @@ interface ProtocolDocument {
           <!-- PANEL DERECHO: Observaciones del Comité (Anónimas) -->
           <div class="col-12 col-observations">
             <div class="content-card shadow-soft p-4">
-              <h3 class="fw-bold mb-4 d-flex align-items-center gap-2 text-primary" style="color: #1e3a8a !important; font-weight: 800;">
+              <h3
+                class="fw-bold mb-4 d-flex align-items-center gap-2 text-primary"
+                style="color: #1e3a8a !important; font-weight: 800;"
+              >
                 <mat-icon style="color: #1e3a8a;">speaker_notes</mat-icon>
                 Observaciones de los Evaluadores
               </h3>
 
-              <div class="empty-state p-4 text-center rounded border" *ngIf="observations().length === 0">
-                <mat-icon style="font-size: 32px; width:32px; height:32px; color: #94a3b8;">chat_bubble_outline</mat-icon>
-                <p class="small text-muted m-0 mt-2">No se encontraron observaciones detalladas registradas.</p>
+              <div
+                class="empty-state p-4 text-center rounded border"
+                *ngIf="observations().length === 0"
+              >
+                <mat-icon style="font-size: 32px; width:32px; height:32px; color: #94a3b8;"
+                  >chat_bubble_outline</mat-icon
+                >
+                <p class="small text-muted m-0 mt-2">
+                  No se encontraron observaciones detalladas registradas.
+                </p>
               </div>
 
               <!-- Lista de Evaluaciones Anónimas Estáticas (Sin acordeón) -->
               <div class="obs-list">
                 <div *ngFor="let obs of observations(); let i = index" class="obs-card mb-3">
-                  <div class="obs-card-header d-flex justify-content-between align-items-center mb-3">
+                  <div
+                    class="obs-card-header d-flex justify-content-between align-items-center mb-3"
+                  >
                     <h4 class="fw-bold text-dark m-0" style="font-size: 14px; font-weight: 700;">
                       Evaluador {{ getProfileLabel(obs.evaluatorProfile) }}
                     </h4>
@@ -258,8 +381,19 @@ interface ProtocolDocument {
 
                   <div class="panel-content">
                     <!-- Observaciones Generales (Se ocultan si están vacías o indican "Sin observaciones") -->
-                    <div class="mb-3" *ngIf="obs.generalObservations && obs.generalObservations.trim() !== '' && !isSinObservaciones(obs.generalObservations)">
-                      <span class="d-block fw-bold text-muted small text-uppercase mb-1" style="font-size: 12px; letter-spacing: 0.5px;">Observaciones Generales</span>
+                    <div
+                      class="mb-3"
+                      *ngIf="
+                        obs.generalObservations &&
+                        obs.generalObservations.trim() !== '' &&
+                        !isSinObservaciones(obs.generalObservations)
+                      "
+                    >
+                      <span
+                        class="d-block fw-bold text-muted small text-uppercase mb-1"
+                        style="font-size: 12px; letter-spacing: 0.5px;"
+                        >Observaciones Generales</span
+                      >
                       <p class="m-0 text-dark" style="font-size: 14px; line-height: 1.5;">
                         {{ obs.generalObservations }}
                       </p>
@@ -268,40 +402,70 @@ interface ProtocolDocument {
                     <!-- Descargas de Documentos del Evaluador -->
                     <div class="mb-3" *ngIf="obs.reportPath || obs.rutaPdf || obs.rutaDocx">
                       <div class="ev-doc-list">
-                      
                         <!-- Informe Adicional -->
-                        <div class="ev-doc-link" *ngIf="obs.reportPath" (click)="downloadFile(obs.reportPath)">
+                        <div
+                          class="ev-doc-link"
+                          *ngIf="obs.reportPath"
+                          (click)="downloadFile(obs.reportPath)"
+                        >
                           <mat-icon class="text-danger">picture_as_pdf</mat-icon>
-                          <span class="doc-title-text">Informe Técnico Evaluador {{ i + 1 }} (PDF Adicional)</span>
+                          <span class="doc-title-text"
+                            >Informe Técnico Evaluador {{ i + 1 }} (PDF Adicional)</span
+                          >
                           <mat-icon class="open-icon">open_in_new</mat-icon>
                         </div>
 
                         <!-- Anexo 9 PDF -->
-                        <div class="ev-doc-link" *ngIf="obs.rutaPdf" (click)="downloadFile(obs.rutaPdf)">
+                        <div
+                          class="ev-doc-link"
+                          *ngIf="obs.rutaPdf"
+                          (click)="downloadFile(obs.rutaPdf)"
+                        >
                           <mat-icon class="text-danger">picture_as_pdf</mat-icon>
-                          <span class="doc-title-text">Informe Técnico Evaluador {{ i + 1 }} (PDF Oficial)</span>
+                          <span class="doc-title-text"
+                            >Informe Técnico Evaluador {{ i + 1 }} (PDF Oficial)</span
+                          >
                           <mat-icon class="open-icon">open_in_new</mat-icon>
                         </div>
 
                         <!-- Anexo 9 Word / Docx -->
-                        <div class="ev-doc-link" *ngIf="obs.rutaDocx" (click)="downloadFile(obs.rutaDocx)">
-                          <mat-icon class="text-primary" style="color: #0284c7 !important;">description</mat-icon>
-                          <span class="doc-title-text">Informe Técnico Evaluador {{ i + 1 }} (Word Editable)</span>
+                        <div
+                          class="ev-doc-link"
+                          *ngIf="obs.rutaDocx"
+                          (click)="downloadFile(obs.rutaDocx)"
+                        >
+                          <mat-icon class="text-primary" style="color: #0284c7 !important;"
+                            >description</mat-icon
+                          >
+                          <span class="doc-title-text"
+                            >Informe Técnico Evaluador {{ i + 1 }} (Word Editable)</span
+                          >
                           <mat-icon class="open-icon">download</mat-icon>
                         </div>
-
                       </div>
                     </div>
 
                     <!-- Lista de Requisitos Evaluados como "No Cumple" -->
                     <div class="checklist-nc" *ngIf="hasObservedItems(obs)">
-                      <h5 class="fw-bold small text-danger text-uppercase mb-2" style="font-size: 12px; letter-spacing: 0.5px;">Requisitos Observados (No Cumple)</h5>
+                      <h5
+                        class="fw-bold small text-danger text-uppercase mb-2"
+                        style="font-size: 12px; letter-spacing: 0.5px;"
+                      >
+                        Requisitos Observados (No Cumple)
+                      </h5>
                       <ng-container *ngFor="let item of getChecklistDetails(obs)">
-                        <div class="nc-item p-3 border-start border-danger border-3 bg-red-soft rounded mb-2" *ngIf="isItemObserved(item)">
+                        <div
+                          class="nc-item p-3 border-start border-danger border-3 bg-red-soft rounded mb-2"
+                          *ngIf="isItemObserved(item)"
+                        >
                           <div class="d-flex justify-content-between align-items-start">
-                            <strong class="small text-dark">{{ getItemCode(item) }}: {{ getItemDescription(item) }}</strong>
+                            <strong class="small text-dark"
+                              >{{ getItemCode(item) }}: {{ getItemDescription(item) }}</strong
+                            >
                           </div>
-                          <p class="m-0 mt-1 small text-muted"><strong>Observación:</strong> {{ getItemObservations(item) }}</p>
+                          <p class="m-0 mt-1 small text-muted">
+                            <strong>Observación:</strong> {{ getItemObservations(item) }}
+                          </p>
                         </div>
                       </ng-container>
                     </div>
@@ -311,30 +475,50 @@ interface ProtocolDocument {
 
               <!-- Documentos Consolidados del Comité (Anexo 12 y Formato de Respuestas) -->
               <div class="mt-4 pt-3 border-top">
-                <h5 class="fw-bold small text-muted text-uppercase mb-3" style="font-size: 12px; letter-spacing: 0.5px;">Documentos Consolidados del Comité</h5>
+                <h5
+                  class="fw-bold small text-muted text-uppercase mb-3"
+                  style="font-size: 12px; letter-spacing: 0.5px;"
+                >
+                  Documentos Consolidados del Comité
+                </h5>
                 <div class="ev-doc-list">
-                  
                   <div class="ev-doc-link" (click)="downloadConsolidatedPdf()">
                     <mat-icon class="text-danger" style="margin-top: 2px;">picture_as_pdf</mat-icon>
                     <div class="d-flex flex-column align-items-start" style="flex: 1;">
-                      <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;">Anexo 12: Carta de Observaciones Consolidadas</span>
-                      <span class="text-muted small" style="font-size: 11px; margin-top: 2px; text-align: left;">Documento oficial con el detalle de las observaciones emitidas por el comité.</span>
+                      <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;"
+                        >Anexo 12: Carta de Observaciones Consolidadas</span
+                      >
+                      <span
+                        class="text-muted small"
+                        style="font-size: 11px; margin-top: 2px; text-align: left;"
+                        >Documento oficial con el detalle de las observaciones emitidas por el
+                        comité.</span
+                      >
                     </div>
                     <mat-icon class="open-icon" style="align-self: center;">open_in_new</mat-icon>
                   </div>
 
                   <div class="ev-doc-link" (click)="downloadResponseTemplate()">
-                    <mat-icon class="text-primary" style="color: #0284c7 !important; margin-top: 2px;">description</mat-icon>
+                    <mat-icon
+                      class="text-primary"
+                      style="color: #0284c7 !important; margin-top: 2px;"
+                      >description</mat-icon
+                    >
                     <div class="d-flex flex-column align-items-start" style="flex: 1;">
-                      <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;">Formato de Respuestas a Evaluadores</span>
-                      <span class="text-muted small" style="font-size: 11px; margin-top: 2px; text-align: left;">Descargue la plantilla de Word (DOCX) obligatoria para responder punto por punto a las observaciones.</span>
+                      <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;"
+                        >Formato de Respuestas a Evaluadores</span
+                      >
+                      <span
+                        class="text-muted small"
+                        style="font-size: 11px; margin-top: 2px; text-align: left;"
+                        >Descargue la plantilla de Word (DOCX) obligatoria para responder punto por
+                        punto a las observaciones.</span
+                      >
                     </div>
                     <mat-icon class="open-icon" style="align-self: center;">download</mat-icon>
                   </div>
-
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -346,7 +530,9 @@ interface ProtocolDocument {
           <div class="title-section">
             <div class="breadcrumb">Evaluación / Bandeja de Subsanaciones</div>
             <h1 class="page-title">Bandeja de Subsanaciones</h1>
-            <p class="page-subtitle">Seleccione un protocolo en proceso de corrección de observaciones.</p>
+            <p class="page-subtitle">
+              Seleccione un protocolo en proceso de corrección de observaciones.
+            </p>
           </div>
         </header>
 
@@ -364,26 +550,40 @@ interface ProtocolDocument {
               </thead>
               <tbody>
                 <tr *ngFor="let p of protocols()">
-                  <td class="fw-bold text-dark">{{ p.codigoCeish || ('PRT-' + p.id) | protocolCode }}</td>
+                  <td class="fw-bold text-dark">
+                    {{ p.codigoCeish || 'PRT-' + p.id | protocolCode }}
+                  </td>
                   <td>
                     <strong class="text-dark">{{ p.titulo }}</strong>
-                    <span class="d-block small text-muted" *ngIf="p.tipoEstudio">{{ p.tipoEstudio }}</span>
+                    <span class="d-block small text-muted" *ngIf="p.tipoEstudio">{{
+                      p.tipoEstudio
+                    }}</span>
                   </td>
-                  <td class="text-muted">{{ p.fechaCreacion ? (p.fechaCreacion | date:'dd/MM/yyyy') : 'N/A' }}</td>
+                  <td class="text-muted">
+                    {{ p.fechaCreacion ? (p.fechaCreacion | date: 'dd/MM/yyyy') : 'N/A' }}
+                  </td>
                   <td class="text-center">
                     <span class="badge-status" [ngClass]="p.estado | protocolStatusClass">
                       {{ p.estado | protocolStatusLabel }}
                     </span>
                   </td>
                   <td class="text-end">
-                    <button mat-flat-button color="primary" class="btn-sm" style="font-weight: 700; border-radius: 8px;" (click)="selectProtocol(p.id)">
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      class="btn-sm"
+                      style="font-weight: 700; border-radius: 8px;"
+                      (click)="selectProtocol(p.id)"
+                    >
                       Ver Observaciones
                     </button>
                   </td>
                 </tr>
                 <tr *ngIf="protocols().length === 0">
                   <td colspan="5" class="text-center p-5 text-muted">
-                    <mat-icon style="font-size: 48px; width:48px; height:48px; color: #94a3b8;">inbox</mat-icon>
+                    <mat-icon style="font-size: 48px; width:48px; height:48px; color: #94a3b8;"
+                      >inbox</mat-icon
+                    >
                     <p class="m-0 mt-2 fw-bold">No tienes protocolos en bandeja de correcciones.</p>
                   </td>
                 </tr>
@@ -392,342 +592,453 @@ interface ProtocolDocument {
           </div>
         </div>
       </ng-template>
-
     </div>
   `,
-  styles: [`
-    /* Grid system fallback - Spacing and padding based on 4px/8px scale */
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      margin-left: -12px;
-      margin-right: -12px;
-    }
-    .col-12 {
-      width: 100%;
-      padding-left: 12px;
-      padding-right: 12px;
-      box-sizing: border-box;
-    }
-    .col-checklist, .col-observations {
-      width: 100%;
-      padding-left: 12px;
-      padding-right: 12px;
-      box-sizing: border-box;
-    }
-    @media (min-width: 768px) {
-      .col-checklist {
-        flex: 0 0 65%;
-        max-width: 65%;
+  styles: [
+    `
+      /* Grid system fallback - Spacing and padding based on 4px/8px scale */
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-left: -12px;
+        margin-right: -12px;
       }
+      .col-12 {
+        width: 100%;
+        padding-left: 12px;
+        padding-right: 12px;
+        box-sizing: border-box;
+      }
+      .col-checklist,
       .col-observations {
-        flex: 0 0 35%;
-        max-width: 35%;
+        width: 100%;
+        padding-left: 12px;
+        padding-right: 12px;
+        box-sizing: border-box;
       }
-    }
-
-    .subsanacion-container { padding: 24px; max-width: 1400px; margin: 0 auto; }
-    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
-    .breadcrumb { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-    .protocol-badge { background: #003366; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; }
-    .page-title { font-size: 32px; font-weight: 700; color: #1e293b; margin: 4px 0; line-height: 1.25; }
-    .page-subtitle { font-size: 16px; color: #64748b; margin: 0; line-height: 1.5; }
-
-    .content-card { 
-      background: white; 
-      border-radius: 16px; 
-      border: 1px solid #e2e8f0; 
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-      padding: 24px !important;
-    }
-
-    .alert-banner {
-      display: flex; gap: 16px; padding: 16px 24px; border-radius: 16px; align-items: center;
-      background: #fffbeb; color: #92400e; border: 1px solid #fef3c7; border-left: 6px solid #d97706;
-      margin-bottom: 24px;
-      .banner-icon-container mat-icon { font-size: 40px; width: 40px; height: 40px; color: #d97706; }
-    }
-
-    /* Estilos de Tarjetas Estáticas de Evaluadores */
-    .obs-list {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .obs-card {
-      background: transparent; 
-      border: none;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 16px 0 20px 0;
-      box-shadow: none;
-      
-      &:last-child {
-        border-bottom: none;
-      }
-    }
-    .obs-card-header {
-      border-bottom: 1px solid #f1f5f9;
-      padding-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      
-      h4 {
-        margin: 0;
-      }
-    }
-
-    .badge-result {
-      padding: 4px 12px; 
-      border-radius: 100px; 
-      font-size: 12px; 
-      font-weight: 600; 
-      text-transform: uppercase;
-      display: inline-block;
-      letter-spacing: 0.5px;
-      
-      &.aprobado { 
-        background: #dcfce7; 
-        color: #166534; 
-        border: 1px solid rgba(22, 101, 52, 0.1);
-      }
-      &.no_aprobado { 
-        background: #fee2e2; 
-        color: #991b1b; 
-        border: 1px solid rgba(153, 27, 27, 0.1);
-      }
-      &.con_observaciones, &.aprobado_con_observaciones, &.aprobado_condicionado, &.requiere_cambios_menores, &.requiere_cambios_mayores { 
-        background: #fef3c7; 
-        color: #854d0e; 
-        border: 1px solid rgba(133, 77, 14, 0.15);
-      }
-    }
-
-    .bg-red-soft { background: #fff5f5; }
-
-    .badge-pending { 
-      background: rgba(245, 158, 11, 0.1); 
-      color: #d97706; 
-      padding: 4px 12px; 
-      border-radius: 100px; 
-      font-size: 12px; 
-      font-weight: 600;
-      border: 1px solid rgba(245, 158, 11, 0.2);
-    }
-    .badge-success-count { 
-      background: #dcfce7; 
-      color: #166534; 
-      padding: 4px 12px; 
-      border-radius: 100px; 
-      font-size: 12px; 
-      font-weight: 600;
-      border: 1px solid rgba(22, 101, 52, 0.1);
-    }
-
-    .checklist-table {
-      border-collapse: collapse;
-      margin-top: 16px;
-      th { 
-        padding: 12px 16px; 
-        font-size: 12px; 
-        font-weight: 600; 
-        color: #1e3a8a; 
-        border-bottom: 2px solid #e2e8f0; 
-        text-transform: uppercase; 
-        letter-spacing: 0.5px;
-      }
-      td { 
-        padding: 12px 16px; 
-        border-bottom: 1px solid #f1f5f9; 
-        vertical-align: middle; 
-        transition: background-color 0.2s;
-      }
-      tr:hover td {
-        background-color: #f8fafc;
-      }
-    }
-
-    .badge-status {
-      padding: 4px 12px; 
-      border-radius: 100px; 
-      font-size: 12px; 
-      font-weight: 600; 
-      text-transform: uppercase; 
-      display: inline-block;
-      letter-spacing: 0.5px;
-      
-      &.approved { background: #dcfce7; color: #166534; border: 1px solid rgba(22, 101, 52, 0.1); }
-      &.rejected { background: #fee2e2; color: #991b1b; border: 1px solid rgba(153, 27, 27, 0.1); }
-      &.pending { background: #fef3c7; color: #854d0e; border: 1px solid rgba(133, 77, 14, 0.1); }
-      &.review { background: #e0f2fe; color: #0369a1; border: 1px solid rgba(3, 105, 161, 0.1); }
-      
-      /* Requisitos individuales - Presentado ahora es verde y redondeado */
-      &.aprobado, &.validado, &.presentado { 
-        background: #dcfce7 !important; 
-        color: #166534 !important; 
-        border: 1px solid rgba(22, 101, 52, 0.1) !important; 
-      }
-      &.no_presentado, &.rechazado { 
-        background: #fee2e2 !important; 
-        color: #991b1b !important; 
-        border: 1px solid rgba(153, 27, 27, 0.1) !important; 
-      }
-      &.observado, &.pendiente { 
-        background: #fef3c7 !important; 
-        color: #854d0e !important; 
-        border: 1px solid rgba(133, 77, 14, 0.15) !important; 
-      }
-      &.no_aplica { 
-        background: #f1f5f9 !important; 
-        color: #475569 !important; 
-        border: 1px solid rgba(71, 85, 105, 0.1) !important; 
-      }
-    }
-
-    /* Barra de Progreso de Carga en color Indigo */
-    .progress-section ::ng-deep .mat-mdc-progress-bar {
-      --mdc-linear-progress-active-indicator-color: #6366f1; /* Indigo */
-      --mdc-linear-progress-track-color: #e2e8f0;
-      height: 8px !important;
-      border-radius: 4px;
-    }
-
-    .btn-upload {
-      border: 1.5px solid #3b82f6 !important;
-      color: #2563eb !important;
-      background-color: transparent !important;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 12px;
-      line-height: 28px;
-      height: 32px;
-      padding: 0 12px;
-      transition: all 0.2s ease;
-      &:hover {
-        background-color: rgba(37, 99, 235, 0.05) !important;
-      }
-      mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
-    }
-
-    .emit-btn {
-      height: 40px;
-      background: #10b981 !important;
-      color: white !important;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
-      padding: 0 16px;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border: none;
-      
-      &:hover:not(:disabled) {
-        background: #059669 !important;
-      }
-      
-      &:disabled {
-        background: #cbd5e1 !important;
-        color: #94a3b8 !important;
-        box-shadow: none;
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-    }
-
-    .comparison-matrix {
-      border-collapse: collapse;
-      th { padding: 12px; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; }
-      td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    }
-
-    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    .btn-download-pdf {
-      margin-top: 8px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
-      background: white !important;
-      color: #92400e !important;
-      border: 1px solid #d97706 !important;
-      padding: 0 16px;
-      height: 36px;
-      line-height: 36px;
-      transition: all 0.2s ease;
-      &:hover {
-        background: #fef3c7 !important;
-        transform: translateY(-1px);
-      }
-    }
-    
-    /* Documentos adjuntos en formato de enlace minimalista */
-    .ev-doc-list { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 6px; 
-      padding: 4px 0; 
-    }
-    .ev-doc-link {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 10px 12px;
-      border-bottom: 1px solid #f1f5f9;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-      width: 100%;
-      box-sizing: border-box;
-      
-      &:last-child {
-        border-bottom: none;
-      }
-      
-      &:hover {
-        background-color: #f8fafc;
-        
-        .doc-title-text {
-          color: #0250a3;
-          text-decoration: underline;
+      @media (min-width: 768px) {
+        .col-checklist {
+          flex: 0 0 65%;
+          max-width: 65%;
+        }
+        .col-observations {
+          flex: 0 0 35%;
+          max-width: 35%;
         }
       }
-      
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
+
+      .subsanacion-container {
+        padding: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
       }
-      
-      .doc-title-text {
-        font-size: 13px;
-        font-weight: 600;
-        color: #2563eb;
-        transition: color 0.15s ease;
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 24px;
       }
-      
-      .open-icon {
+      .breadcrumb {
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .protocol-badge {
+        background: #003366;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 700;
         font-size: 14px;
-        width: 14px;
-        height: 14px;
-        color: #94a3b8;
-        margin-left: auto;
       }
-    }
-  `]
+      .page-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 4px 0;
+        line-height: 1.25;
+      }
+      .page-subtitle {
+        font-size: 16px;
+        color: #64748b;
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      .content-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        padding: 24px !important;
+      }
+
+      .alert-banner {
+        display: flex;
+        gap: 16px;
+        padding: 16px 24px;
+        border-radius: 16px;
+        align-items: center;
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fef3c7;
+        border-left: 6px solid #d97706;
+        margin-bottom: 24px;
+        .banner-icon-container mat-icon {
+          font-size: 40px;
+          width: 40px;
+          height: 40px;
+          color: #d97706;
+        }
+      }
+
+      /* Estilos de Tarjetas Estáticas de Evaluadores */
+      .obs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .obs-card {
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 16px 0 20px 0;
+        box-shadow: none;
+
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+      .obs-card-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+
+        h4 {
+          margin: 0;
+        }
+      }
+
+      .badge-result {
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+        letter-spacing: 0.5px;
+
+        &.aprobado {
+          background: #dcfce7;
+          color: #166534;
+          border: 1px solid rgba(22, 101, 52, 0.1);
+        }
+        &.no_aprobado {
+          background: #fee2e2;
+          color: #991b1b;
+          border: 1px solid rgba(153, 27, 27, 0.1);
+        }
+        &.con_observaciones,
+        &.aprobado_con_observaciones,
+        &.aprobado_condicionado,
+        &.requiere_cambios_menores,
+        &.requiere_cambios_mayores {
+          background: #fef3c7;
+          color: #854d0e;
+          border: 1px solid rgba(133, 77, 14, 0.15);
+        }
+      }
+
+      .bg-red-soft {
+        background: #fff5f5;
+      }
+
+      .badge-pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+      }
+      .badge-success-count {
+        background: #dcfce7;
+        color: #166534;
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid rgba(22, 101, 52, 0.1);
+      }
+
+      .checklist-table {
+        border-collapse: collapse;
+        margin-top: 16px;
+        th {
+          padding: 12px 16px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #1e3a8a;
+          border-bottom: 2px solid #e2e8f0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #f1f5f9;
+          vertical-align: middle;
+          transition: background-color 0.2s;
+        }
+        tr:hover td {
+          background-color: #f8fafc;
+        }
+      }
+
+      .badge-status {
+        padding: 4px 12px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+        letter-spacing: 0.5px;
+
+        &.approved {
+          background: #dcfce7;
+          color: #166534;
+          border: 1px solid rgba(22, 101, 52, 0.1);
+        }
+        &.rejected {
+          background: #fee2e2;
+          color: #991b1b;
+          border: 1px solid rgba(153, 27, 27, 0.1);
+        }
+        &.pending {
+          background: #fef3c7;
+          color: #854d0e;
+          border: 1px solid rgba(133, 77, 14, 0.1);
+        }
+        &.review {
+          background: #e0f2fe;
+          color: #0369a1;
+          border: 1px solid rgba(3, 105, 161, 0.1);
+        }
+
+        /* Requisitos individuales - Presentado ahora es verde y redondeado */
+        &.aprobado,
+        &.validado,
+        &.presentado {
+          background: #dcfce7 !important;
+          color: #166534 !important;
+          border: 1px solid rgba(22, 101, 52, 0.1) !important;
+        }
+        &.no_presentado,
+        &.rechazado {
+          background: #fee2e2 !important;
+          color: #991b1b !important;
+          border: 1px solid rgba(153, 27, 27, 0.1) !important;
+        }
+        &.observado,
+        &.pendiente {
+          background: #fef3c7 !important;
+          color: #854d0e !important;
+          border: 1px solid rgba(133, 77, 14, 0.15) !important;
+        }
+        &.no_aplica {
+          background: #f1f5f9 !important;
+          color: #475569 !important;
+          border: 1px solid rgba(71, 85, 105, 0.1) !important;
+        }
+      }
+
+      /* Barra de Progreso de Carga en color Indigo */
+      .progress-section ::ng-deep .mat-mdc-progress-bar {
+        --mdc-linear-progress-active-indicator-color: #6366f1; /* Indigo */
+        --mdc-linear-progress-track-color: #e2e8f0;
+        height: 8px !important;
+        border-radius: 4px;
+      }
+
+      .btn-upload {
+        border: 1.5px solid #3b82f6 !important;
+        color: #2563eb !important;
+        background-color: transparent !important;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 12px;
+        line-height: 28px;
+        height: 32px;
+        padding: 0 12px;
+        transition: all 0.2s ease;
+        &:hover {
+          background-color: rgba(37, 99, 235, 0.05) !important;
+        }
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          margin-right: 4px;
+        }
+      }
+
+      .emit-btn {
+        height: 40px;
+        background: #10b981 !important;
+        color: white !important;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 0 16px;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: none;
+
+        &:hover:not(:disabled) {
+          background: #059669 !important;
+        }
+
+        &:disabled {
+          background: #cbd5e1 !important;
+          color: #94a3b8 !important;
+          box-shadow: none;
+          cursor: not-allowed;
+          opacity: 0.5;
+        }
+      }
+
+      .comparison-matrix {
+        border-collapse: collapse;
+        th {
+          padding: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          border-bottom: 2px solid #f1f5f9;
+          text-transform: uppercase;
+        }
+        td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #f1f5f9;
+          vertical-align: middle;
+        }
+      }
+
+      .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-slide-up {
+        animation: slideUp 0.4s ease-out forwards;
+      }
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .btn-download-pdf {
+        margin-top: 8px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        background: white !important;
+        color: #92400e !important;
+        border: 1px solid #d97706 !important;
+        padding: 0 16px;
+        height: 36px;
+        line-height: 36px;
+        transition: all 0.2s ease;
+        &:hover {
+          background: #fef3c7 !important;
+          transform: translateY(-1px);
+        }
+      }
+
+      /* Documentos adjuntos en formato de enlace minimalista */
+      .ev-doc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 4px 0;
+      }
+      .ev-doc-link {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        width: 100%;
+        box-sizing: border-box;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background-color: #f8fafc;
+
+          .doc-title-text {
+            color: #0250a3;
+            text-decoration: underline;
+          }
+        }
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+        }
+
+        .doc-title-text {
+          font-size: 13px;
+          font-weight: 600;
+          color: #2563eb;
+          transition: color 0.15s ease;
+        }
+
+        .open-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+          color: #94a3b8;
+          margin-left: auto;
+        }
+      }
+    `,
+  ],
 })
 export class SubsanacionPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private destroyRef = inject(DestroyRef);
-  
+
   private authFacade = inject(AuthFacade);
   private loadSubsanacionDetailUC = inject(LoadSubsanacionDetailUseCase);
   private uploadCorrectionUC = inject(UploadCorrectionUseCase);
@@ -744,12 +1055,12 @@ export class SubsanacionPage implements OnInit {
   protocolTitle = signal<string>('');
   protocolStatus = signal<string>('');
   protocolVersion = signal<number>(1);
-  
+
   protocols = signal<ProtocoloResumen[]>([]);
   observations = signal<EvaluationObservation[]>([]);
   checklist = signal<ChecklistRequirement[]>([]);
   protocolDocuments = signal<ProtocolDocument[]>([]);
-  
+
   isSubmitting = signal(false);
   uploadingRequirementId = signal<number>(0);
 
@@ -767,15 +1078,16 @@ export class SubsanacionPage implements OnInit {
   }
 
   // Computed reactivos (Screen 2)
-  readonly pendingRequirementsCount = computed(() => 
-    this.checklist().filter(item => {
-      if (item.status === 'NO_APLICA') return false;
-      return !this.isRequirementLocked(item);
-    }).length
+  readonly pendingRequirementsCount = computed(
+    () =>
+      this.checklist().filter((item) => {
+        if (item.status === 'NO_APLICA') return false;
+        return !this.isRequirementLocked(item);
+      }).length,
   );
 
-  readonly isReadyToSubmit = computed(() => 
-    this.checklist().length > 0 && this.pendingRequirementsCount() === 0
+  readonly isReadyToSubmit = computed(
+    () => this.checklist().length > 0 && this.pendingRequirementsCount() === 0,
   );
 
   readonly isEnControlDocumental = computed(() => {
@@ -786,7 +1098,7 @@ export class SubsanacionPage implements OnInit {
   ngOnInit() {
     this.isInvestigador.set(this.authFacade.hasRole('INVESTIGADOR'));
 
-    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const pId = Number(params['protocolId']);
       if (pId > 0) {
         this.protocolId.set(pId);
@@ -804,31 +1116,39 @@ export class SubsanacionPage implements OnInit {
         next: (list) => {
           this.protocols.set(list || []);
         },
-        error: () => this.snackBar.open('❌ Error al cargar la bandeja de protocolos.', 'Cerrar')
+        error: () => this.snackBar.open('❌ Error al cargar la bandeja de protocolos.', 'Cerrar'),
       });
     } else {
       this.loadReceptionProtocolsUC.execute().subscribe({
         next: (list) => {
-          const filtered = (list || []).filter(p => {
+          const filtered = (list || []).filter((p) => {
             const core = resolveEstado(p.status);
-            return core && core.code === 'EVALUADO' || (p.status as string) === 'EVALUACION_SUBSANACIONES';
+            return (
+              (core && core.code === 'EVALUADO') ||
+              (p.status as string) === 'EVALUACION_SUBSANACIONES'
+            );
           });
-            const mapped = filtered.map(p => ({
-              id: Number(p.id),
-              codigoCeish: p.code || '',
-              titulo: p.title,
-              estado: p.status as unknown as EstadoProtocolo,
-              fechaCreacion: p.submissionDate ? p.submissionDate.toISOString() : ''
-            }));
+          const mapped = filtered.map((p) => ({
+            id: Number(p.id),
+            codigoCeish: p.code || '',
+            titulo: p.title,
+            estado: p.status as unknown as EstadoProtocolo,
+            fechaCreacion: p.submissionDate ? p.submissionDate.toISOString() : '',
+          }));
           this.protocols.set(mapped);
         },
-        error: () => this.snackBar.open('❌ Error al cargar la bandeja de protocolos de subsanación.', 'Cerrar')
+        error: () =>
+          this.snackBar.open(
+            '❌ Error al cargar la bandeja de protocolos de subsanación.',
+            'Cerrar',
+          ),
       });
     }
   }
 
   loadProtocolDetail() {
-    this.loadSubsanacionDetailUC.execute(this.protocolId())
+    this.loadSubsanacionDetailUC
+      .execute(this.protocolId())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {
@@ -836,12 +1156,14 @@ export class SubsanacionPage implements OnInit {
           this.protocolTitle.set(result.protocol.titulo || 'Protocolo de Investigación');
           this.protocolStatus.set(result.protocol.estado || '');
           const rawP = result.protocol as unknown as Record<string, unknown>;
-          this.protocolVersion.set((rawP['versionNumber'] as number) || (rawP['version'] as number) || 1);
+          this.protocolVersion.set(
+            (rawP['versionNumber'] as number) || (rawP['version'] as number) || 1,
+          );
           this.observations.set((result.observations || []) as unknown as EvaluationObservation[]);
           this.checklist.set((result.checklist || []) as unknown as ChecklistRequirement[]);
           this.protocolDocuments.set(result.documents || []);
         },
-        error: () => this.snackBar.open('❌ Error al cargar datos del protocolo.', 'Cerrar')
+        error: () => this.snackBar.open('❌ Error al cargar datos del protocolo.', 'Cerrar'),
       });
   }
 
@@ -856,52 +1178,66 @@ export class SubsanacionPage implements OnInit {
     }
 
     this.uploadingRequirementId.set(requirementId);
-    this.uploadCorrectionUC.execute({
-      file,
-      protocolId: this.protocolId(),
-      requirementId,
-      requirementCode,
-      versionNumber: this.protocolVersion() || 1
-    }).pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: (docs) => {
-        this.checklist.update(items =>
-          items.map(item => item.id === requirementId ? { ...item, status: RequirementStatus.PRESENTADO } : item)
-        );
-        this.protocolDocuments.set(docs || []);
-        this.uploadingRequirementId.set(0);
-        this.snackBar.open('✅ Archivo corregido cargado con éxito.', 'Cerrar', { duration: 4000 });
-      },
-      error: (err) => {
-        console.error('Error uploading correction:', err);
-        this.uploadingRequirementId.set(0);
-        this.snackBar.open('❌ Error al subir documento de subsanación.', 'Cerrar', { duration: 4000 });
-      }
-    });
+    this.uploadCorrectionUC
+      .execute({
+        file,
+        protocolId: this.protocolId(),
+        requirementId,
+        requirementCode,
+        versionNumber: this.protocolVersion() || 1,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (docs) => {
+          this.checklist.update((items) =>
+            items.map((item) =>
+              item.id === requirementId ? { ...item, status: RequirementStatus.PRESENTADO } : item,
+            ),
+          );
+          this.protocolDocuments.set(docs || []);
+          this.uploadingRequirementId.set(0);
+          this.snackBar.open('✅ Archivo corregido cargado con éxito.', 'Cerrar', {
+            duration: 4000,
+          });
+        },
+        error: (err) => {
+          console.error('Error uploading correction:', err);
+          this.uploadingRequirementId.set(0);
+          this.snackBar.open('❌ Error al subir documento de subsanación.', 'Cerrar', {
+            duration: 4000,
+          });
+        },
+      });
   }
 
   getRequirementDocument(req: ChecklistRequirement | string): ProtocolDocument | null {
     const docs = this.protocolDocuments();
     if (!req) return null;
-    
+
     // Si se pasa un código directamente como string
     if (typeof req === 'string') {
       const reqCode = req.toLowerCase();
-      return docs.find(d => 
-        (d.path && d.path.toLowerCase().includes(reqCode)) || 
-        (d.type && d.type.toLowerCase().includes(reqCode))
-      ) || null;
+      return (
+        docs.find(
+          (d) =>
+            (d.path && d.path.toLowerCase().includes(reqCode)) ||
+            (d.type && d.type.toLowerCase().includes(reqCode)),
+        ) || null
+      );
     }
 
     // Si se pasa el objeto ChecklistRequirement completo
-    return docs.find(d => {
-      const matchId = req.id && (d as unknown as Record<string, unknown>)['requirementId'] === req.id;
-      const matchCode = req.requirementCode && (
-        (d.path && d.path.toLowerCase().includes(req.requirementCode.toLowerCase())) ||
-        (d.type && d.type.toLowerCase().includes(req.requirementCode.toLowerCase()))
-      );
-      return matchId || matchCode;
-    }) || null;
+    return (
+      docs.find((d) => {
+        const matchId =
+          req.id && (d as unknown as Record<string, unknown>)['requirementId'] === req.id;
+        const matchCode =
+          req.requirementCode &&
+          ((d.path && d.path.toLowerCase().includes(req.requirementCode.toLowerCase())) ||
+            (d.type && d.type.toLowerCase().includes(req.requirementCode.toLowerCase())));
+        return matchId || matchCode;
+      }) || null
+    );
   }
 
   verDocumento(documentId: number) {
@@ -911,10 +1247,13 @@ export class SubsanacionPage implements OnInit {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');
         } else {
-          this.snackBar.open('⚠️ No se encontró la URL de descarga para el documento.', 'Cerrar', { duration: 3000 });
+          this.snackBar.open('⚠️ No se encontró la URL de descarga para el documento.', 'Cerrar', {
+            duration: 3000,
+          });
         }
       },
-      error: () => this.snackBar.open('❌ No se pudo abrir el documento.', 'Cerrar', { duration: 3000 })
+      error: () =>
+        this.snackBar.open('❌ No se pudo abrir el documento.', 'Cerrar', { duration: 3000 }),
     });
   }
 
@@ -923,15 +1262,19 @@ export class SubsanacionPage implements OnInit {
       this.isSubmitting.set(true);
       this.submitSubsanacionUC.execute(this.protocolId()).subscribe({
         next: () => {
-          this.snackBar.open('✅ Subsanación enviada exitosamente a la Secretaría.', 'Cerrar', { duration: 5000 });
+          this.snackBar.open('✅ Subsanación enviada exitosamente a la Secretaría.', 'Cerrar', {
+            duration: 5000,
+          });
           this.isSubmitting.set(false);
           this.router.navigate(['/dashboard/investigador/mis-protocolos']);
         },
         error: (err) => {
           console.error('Error submitting correction finalization:', err);
-          this.snackBar.open('❌ Error al enviar la subsanación final.', 'Cerrar', { duration: 4000 });
+          this.snackBar.open('❌ Error al enviar la subsanación final.', 'Cerrar', {
+            duration: 4000,
+          });
           this.isSubmitting.set(false);
-        }
+        },
       });
     }
   }
@@ -944,13 +1287,13 @@ export class SubsanacionPage implements OnInit {
 
   getProfileLabel(profile: string): string {
     const map: Record<string, string> = {
-      'METODOLOGIA': 'Metodológico',
-      'BIOETICA': 'de Bioética',
-      'LEGAL': 'de Aspectos Jurídicos',
-      'SOCIEDAD_CIVIL': 'Sociedad Civil',
-      'ETICA': 'Ética',
-      'CIENTIFICO': 'Científico',
-      'EXTERNO': 'Externo'
+      METODOLOGIA: 'Metodológico',
+      BIOETICA: 'de Bioética',
+      LEGAL: 'de Aspectos Jurídicos',
+      SOCIEDAD_CIVIL: 'Sociedad Civil',
+      ETICA: 'Ética',
+      CIENTIFICO: 'Científico',
+      EXTERNO: 'Externo',
     };
     return map[profile] || profile;
   }
@@ -962,12 +1305,18 @@ export class SubsanacionPage implements OnInit {
       const map: Record<number, string> = {
         1: 'APROBADO',
         2: 'CON_OBSERVACIONES',
-        3: 'NO_APROBADO'
+        3: 'NO_APROBADO',
       };
       return map[result] || String(result);
     }
     if (typeof result === 'object') {
-      return (result['name'] as string) || (result['code'] as string) || (result['label'] as string) || (result['verdict'] as string) || 'CON_OBSERVACIONES';
+      return (
+        (result['name'] as string) ||
+        (result['code'] as string) ||
+        (result['label'] as string) ||
+        (result['verdict'] as string) ||
+        'CON_OBSERVACIONES'
+      );
     }
     return String(result);
   }
@@ -979,7 +1328,11 @@ export class SubsanacionPage implements OnInit {
 
   isSinObservaciones(text: string): boolean {
     if (!text) return true;
-    const clean = text.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ");
+    const clean = text
+      .trim()
+      .toLowerCase()
+      .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '')
+      .replace(/\s+/g, ' ');
     return (
       clean === 'sin observaciones' ||
       clean === 'sin observaciones generales' ||
@@ -994,7 +1347,7 @@ export class SubsanacionPage implements OnInit {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { protocolId: id },
-      queryParamsHandling: 'merge'
+      queryParamsHandling: 'merge',
     });
   }
 
@@ -1002,29 +1355,35 @@ export class SubsanacionPage implements OnInit {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { protocolId: null },
-      queryParamsHandling: 'merge'
+      queryParamsHandling: 'merge',
     });
   }
 
   downloadConsolidatedPdf() {
     const protocolIdVal = this.protocolId();
     if (!protocolIdVal) return;
-    
+
     this.downloadConsolidatedPdfUC.execute(String(protocolIdVal)).subscribe({
       next: (res) => {
-        const resolutionData = (Array.isArray(res) ? res[0] : res) as Record<string, unknown> | undefined;
-        const letterPath = (resolutionData?.['letterFilePath'] || resolutionData?.['pdfLetterPath']) as string | undefined;
-        
+        const resolutionData = (Array.isArray(res) ? res[0] : res) as
+          Record<string, unknown> | undefined;
+        const letterPath = (resolutionData?.['letterFilePath'] ||
+          resolutionData?.['pdfLetterPath']) as string | undefined;
+
         // Si el backend retornó un path de carta específico, lo usamos; de lo contrario fallback al key por defecto
-        const s3Key = letterPath || `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-        
+        const s3Key =
+          letterPath || `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
+
         this.downloadFile(s3Key);
       },
       error: (err) => {
-        console.warn('[SubsanacionPage] Falló consulta de resolución, usando key por defecto:', err);
+        console.warn(
+          '[SubsanacionPage] Falló consulta de resolución, usando key por defecto:',
+          err,
+        );
         const s3Key = `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
         this.downloadFile(s3Key);
-      }
+      },
     });
   }
 
@@ -1033,7 +1392,8 @@ export class SubsanacionPage implements OnInit {
     const list = obs.checklistDetails || obs.detallesChecklist || obs.checklist;
     if (Array.isArray(list)) return list;
     if (list && typeof list === 'object') {
-      const maybeArray = (list as Record<string, unknown>)['items'] || (list as Record<string, unknown>)['data'];
+      const maybeArray =
+        (list as Record<string, unknown>)['items'] || (list as Record<string, unknown>)['data'];
       if (Array.isArray(maybeArray)) return maybeArray;
     }
     return [];
@@ -1047,7 +1407,7 @@ export class SubsanacionPage implements OnInit {
 
   hasObservedItems(obs: EvaluationObservation): boolean {
     const details = this.getChecklistDetails(obs);
-    return details.some(item => this.isItemObserved(item));
+    return details.some((item) => this.isItemObserved(item));
   }
 
   getItemCode(item: ChecklistDetailObservation): string {
@@ -1068,13 +1428,15 @@ export class SubsanacionPage implements OnInit {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');
         } else {
-          this.snackBar.open('⚠️ No se encontró la URL de descarga para el documento.', 'Cerrar', { duration: 3000 });
+          this.snackBar.open('⚠️ No se encontró la URL de descarga para el documento.', 'Cerrar', {
+            duration: 3000,
+          });
         }
       },
       error: (err) => {
         console.error('[SubsanacionPage] Error al obtener URL de descarga:', err);
         this.snackBar.open('❌ Error al obtener el documento.', 'Cerrar', { duration: 3000 });
-      }
+      },
     });
   }
 
@@ -1084,13 +1446,19 @@ export class SubsanacionPage implements OnInit {
         if (res && res.downloadUrl) {
           window.open(res.downloadUrl, '_blank');
         } else {
-          window.open(`${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
+          window.open(
+            `${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`,
+            '_blank',
+          );
         }
       },
       error: (err) => {
         console.warn('Error downloading template via repository, trying direct fallback:', err);
-        window.open(`${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`, '_blank');
-      }
+        window.open(
+          `${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`,
+          '_blank',
+        );
+      },
     });
   }
 }

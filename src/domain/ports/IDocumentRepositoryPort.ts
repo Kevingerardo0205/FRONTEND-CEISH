@@ -20,7 +20,12 @@ export interface Template {
 }
 
 export abstract class IDocumentRepositoryPort {
-  abstract validateDocument(documentId: string, statusId: number, observations: string, pageCount?: number | null): Observable<DocumentValidationResult>;
+  abstract validateDocument(
+    documentId: string,
+    statusId: number,
+    observations: string,
+    pageCount?: number | null,
+  ): Observable<DocumentValidationResult>;
   abstract uploadDocument(file: File): Observable<DocumentUploadResult>;
   abstract getTemplates(): Observable<Template[]>;
   abstract downloadTemplate(code: string): Observable<{ downloadUrl: string }>;

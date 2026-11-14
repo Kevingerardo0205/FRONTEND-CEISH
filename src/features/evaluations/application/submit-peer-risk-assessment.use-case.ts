@@ -6,11 +6,14 @@ import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPo
 export class SubmitPeerRiskAssessmentUseCase {
   private evalRepo = inject(IEvaluationRepositoryPort);
 
-  execute(assignmentId: string, payload: {
-    riskLevelId: number;
-    observations: string;
-    reportPath: string;
-  }): Observable<void> {
+  execute(
+    assignmentId: string,
+    payload: {
+      riskLevelId: number;
+      observations: string;
+      reportPath: string;
+    },
+  ): Observable<void> {
     return this.evalRepo.submitPeerRiskProposed(assignmentId, payload);
   }
 }
