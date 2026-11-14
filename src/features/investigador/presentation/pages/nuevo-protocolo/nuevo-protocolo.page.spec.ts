@@ -297,6 +297,65 @@ describe('NuevoProtocoloPage — botón del paso 2 (D6)', () => {
   });
 });
 
+describe('NuevoProtocoloPage — dentro del marco (F09-8, C1)', () => {
+  // Copias escritas a mano de specs/F09-investigador-borrador-envio/spec-ui.md §3.2 (v0.3).
+  const MIS_PROTOCOLOS_HREF = '/dashboard/investigador/mis-protocolos';
+  const TITULO = 'Nuevo protocolo';
+  const SUBTITULO =
+    'Complete la información básica y cargue la documentación requerida por el CEISH.';
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [NuevoProtocoloPage, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ProtocoloService,
+          useValue: { guardarProtocoloInicial: () => NEVER, getStudyTypes: () => NEVER },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+      ],
+    }).compileComponents();
+  });
+
+  function render(): HTMLElement {
+    const fixture = TestBed.createComponent(NuevoProtocoloPage);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('no trae barra, marca ni pie propios', () => {
+    const el = render();
+
+    expect(el.querySelector('mat-toolbar')).toBeNull();
+    expect(el.textContent).not.toContain('CEISH - ESPOCH');
+    expect(el.textContent).not.toContain('Gestión de Investigaciones Éticas');
+    expect(el.textContent).not.toContain('Todos los derechos reservados');
+  });
+
+  it('la miga lleva a Mis protocolos y marca "Nuevo protocolo" como página actual', () => {
+    const el = render();
+    const nav = el.querySelector('nav[aria-label="Ruta de navegación"]');
+    expect(nav).not.toBeNull();
+
+    const enlace = nav?.querySelector('a') as HTMLAnchorElement;
+    expect(enlace.textContent?.trim()).toBe('Mis protocolos');
+    expect(enlace.getAttribute('href')).toBe(MIS_PROTOCOLOS_HREF);
+
+    const actual = nav?.querySelector('[aria-current="page"]');
+    expect(actual?.textContent?.trim()).toBe(TITULO);
+  });
+
+  it('muestra el título y el subtítulo en PageHeader', () => {
+    const el = render();
+    const header = el.querySelector('app-page-header');
+    expect(header).not.toBeNull();
+
+    expect(header?.querySelector('h1')?.textContent?.trim()).toBe(TITULO);
+    expect(header?.querySelector('p')?.textContent?.trim()).toBe(SUBTITULO);
+  });
+});
+
 describe('NuevoProtocoloPage - continuar borrador', () => {
   const mensajeNoDisponible =
     'No se puede continuar: este protocolo ya no es un borrador o no está disponible.';
@@ -401,6 +460,17 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     expect(page.stepper.selectedIndex).toBe(1);
     expect(page.stepper.steps.first.completed).toBeTrue();
     expect(page.stepper.steps.first.editable).toBeFalse();
+  });
+
+  it('?borrador=5 confirmado: la página actual de la miga dice "Borrador" (F09-8)', async () => {
+    const { fixture } = render('5', of([protocolo(5, EstadoProtocolo.BORRADOR)]));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const actual = (fixture.nativeElement as HTMLElement).querySelector(
+      'nav[aria-label="Ruta de navegación"] [aria-current="page"]',
+    );
+    expect(actual?.textContent?.trim()).toBe('Borrador');
   });
 
   it('?borrador=5 rechaza EN_REVISION_SECRETARIA y regresa a Mis protocolos', async () => {

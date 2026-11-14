@@ -22,7 +22,6 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
@@ -34,6 +33,7 @@ import {
 } from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { finalize } from 'rxjs/operators';
 
 interface StudyType {
@@ -107,7 +107,7 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatDividerModule,
-    MatToolbarModule,
+    PageHeaderComponent,
     MatTooltipModule,
     MatProgressBarModule,
   ],
