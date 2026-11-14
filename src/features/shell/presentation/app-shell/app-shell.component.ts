@@ -1,9 +1,9 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { catchError, of } from 'rxjs';
+import { catchError, of, switchMap } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -78,9 +78,17 @@ export class AppShellComponent implements OnInit {
     return role ? Role.fromBackend(role).label : '';
   });
 
-  // Contador de pendientes: emitirá número si hay adapter configurado, o null si no hay fuente
+  // Contador de pendientes: número si hay adapter configurado, o null si no hay fuente.
+  // F10 T10-5b: solo con SECRETARIA activa (GET /secretaria/pendientes es de la Secretaría; con
+  // otro rol el 403 haría navegar al interceptor) y se vuelve a pedir cada vez que se pasa a SECRETARIA.
   readonly pendingCount = toSignal(
-    this.getPendingCountUseCase.execute().pipe(catchError(() => of(null))),
+    toObservable(this.activeRole).pipe(
+      switchMap((role) =>
+        role === 'SECRETARIA'
+          ? this.getPendingCountUseCase.execute().pipe(catchError(() => of(null)))
+          : of(null),
+      ),
+    ),
     {
       initialValue: null,
     },

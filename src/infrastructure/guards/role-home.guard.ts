@@ -44,9 +44,20 @@ export function redirectKeepingQuery(path: string): RedirectFunction {
 }
 
 /**
+ * canMatch por rol activo (F10 D16 (11)): la ruta solo coincide si el rol activo está en `roles`.
+ * Sin rol activo no coincide. Se evalúa en cada navegación, así que sigue al cambio de rol.
+ */
+export function activeRoleIn(roles: readonly RoleCode[]): CanMatchFn {
+  return () => {
+    const active = inject(ActiveRoleFacade).activeRole();
+    return !!active && roles.includes(active);
+  };
+}
+
+/**
  * canMatch por rol activo (D9): la ruta solo coincide si el rol activo es `role`.
- * Se evalúa en cada navegación, así que al cambiar de rol cambia el layout.
+ * Se evalúa en cada navegación, así que al cambiar de rol cambia la rama de /dashboard.
  */
 export function activeRoleIs(role: RoleCode): CanMatchFn {
-  return () => inject(ActiveRoleFacade).activeRole() === role;
+  return activeRoleIn([role]);
 }

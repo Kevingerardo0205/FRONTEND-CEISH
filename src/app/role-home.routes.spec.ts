@@ -22,7 +22,7 @@ describe('ROLE_HOME contra data.roles de las rutas (T13d)', () => {
       if (page) {
         expect(page.data?.['roles']).toContain(role);
       } else {
-        // Fuera del AppShell, el inicio es /dashboard/home, que no exige rol.
+        // Fuera de las rutas nuevas, el inicio es /dashboard/home, que no exige rol.
         expect(home).toBe('/dashboard/home');
       }
     });
@@ -30,8 +30,8 @@ describe('ROLE_HOME contra data.roles de las rutas (T13d)', () => {
 });
 
 /**
- * Sin navegar: sin el canMatch del AppShell, todos los roles entran a su rama y se forma
- * un bucle /pendientes ↔ /dashboard/home que cuelga el navegador. Esta prueba lo detecta antes.
+ * Sin navegar: el padre único del AppShell coincide con los 4 roles (F10 D16 (11)) y no
+ * coincide sin rol activo (esa sesión va al respaldo y recibe un solo aviso, F00 D12).
  */
 describe('Padre único del AppShell (T13d-3)', () => {
   const shellIndex = () =>
@@ -48,28 +48,44 @@ describe('Padre único del AppShell (T13d-3)', () => {
     );
   }
 
-  it('el canMatch del AppShell coincide solo con el rol activo SECRETARIA', () => {
-    expect(matches('SECRETARIA')).toBeTrue();
-  });
-
-  for (const role of ['PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR', null] as (RoleCode | null)[]) {
-    it(`el canMatch del AppShell no coincide con ${role ?? 'sin rol activo'}`, () => {
-      expect(matches(role)).toBeFalse();
+  for (const role of ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'] as RoleCode[]) {
+    it(`el canMatch del AppShell coincide con el rol activo ${role}`, () => {
+      expect(matches(role)).toBeTrue();
     });
   }
 
-  it("el AppShell va antes que 'dashboard' de DashboardPage y que **", () => {
-    const dashboard = routes.findIndex((r) => r.path === 'dashboard');
+  it('el canMatch del AppShell no coincide sin rol activo', () => {
+    expect(matches(null)).toBeFalse();
+  });
+
+  // Sin este canMatch, los otros roles toman la redirección de D11 y se forma el bucle
+  // /pendientes ↔ /dashboard/home que cuelga el navegador.
+  for (const role of ['SECRETARIA', 'PRESIDENTE', 'EVALUADOR', 'INVESTIGADOR'] as RoleCode[]) {
+    it(`el primer hijo 'dashboard' del AppShell (D11) ${role === 'SECRETARIA' ? 'coincide' : 'no coincide'} con ${role}`, () => {
+      TestBed.configureTestingModule({
+        providers: [{ provide: ActiveRoleFacade, useValue: { activeRole: signal(role) } }],
+      });
+      const first = routes[shellIndex()].children?.find((r) => r.path === 'dashboard');
+      const guards = (first?.canMatch ?? []) as CanMatchFn[];
+      expect(guards.length).withContext('canMatch del primer hijo dashboard').toBe(1);
+      const result = TestBed.runInInjectionContext(
+        () => guards[0](first as Route, [] as UrlSegment[]) as boolean,
+      );
+      expect(result).toBe(role === 'SECRETARIA');
+    });
+  }
+
+  it("no hay padre 'dashboard' fuera del AppShell, y el AppShell va antes que **", () => {
     const wildcard = routes.findIndex((r) => r.path === '**');
+    expect(routes.some((r) => r.path === 'dashboard')).toBeFalse();
     expect(shellIndex()).toBeGreaterThanOrEqual(0);
-    expect(shellIndex()).toBeLessThan(dashboard);
-    expect(dashboard).toBeLessThan(wildcard);
+    expect(shellIndex()).toBeLessThan(wildcard);
   });
 });
 
 /**
- * Sin navegar: D11 solo en la rama de la Secretaría. Si DashboardPage también redirigiera
- * /dashboard/home a /pendientes, los otros roles entrarían en un bucle con el RoleGuard.
+ * Sin navegar: D11 solo en la rama de la Secretaría. Si la rama de los otros roles también
+ * redirigiera /dashboard/home a /pendientes, entrarían en un bucle con el RoleGuard.
  */
 describe('Redirect de /dashboard/home solo en la rama de la Secretaría (D11)', () => {
   const home = (list: Route[]) => list.find((r) => r.path === 'home');
@@ -78,9 +94,10 @@ describe('Redirect de /dashboard/home solo en la rama de la Secretaría (D11)', 
     expect(home(SECRETARIA_DASHBOARD_ROUTES)?.redirectTo).toBeDefined();
   });
 
-  it('en DashboardPage, home carga DashboardHomePage y no redirige', () => {
-    const page = home(DASHBOARD_ROUTES[0].children ?? []);
+  it('en la rama de los otros roles (DASHBOARD_ROUTES), home carga DashboardHomePage y no redirige', () => {
+    const page = home(DASHBOARD_ROUTES);
     expect(page?.redirectTo).toBeUndefined();
     expect(page?.loadComponent).toBeDefined();
+    expect(DASHBOARD_ROUTES.some((r) => !!r.component)).withContext('sin marco propio').toBeFalse();
   });
 });

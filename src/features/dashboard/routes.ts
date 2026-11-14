@@ -1,14 +1,14 @@
 import { Routes } from '@angular/router';
-import { DashboardPage } from './presentation/pages/dashboard.page';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { redirectKeepingQuery } from '@infrastructure/guards/role-home.guard';
 
 /**
- * Hijos de /dashboard, compartidos por los dos layouts (D9, 03/11/2026).
+ * /dashboard/... de PRESIDENTE, EVALUADOR e INVESTIGADOR dentro del AppShell (F10 D16 (11));
+ * la Secretaría usa las mismas rutas con los redirects de D11 (SECRETARIA_DASHBOARD_ROUTES).
  * Retiro: cuando F01–F08 muevan cada pantalla a su ruta nueva, su hijo sale de aquí.
  */
-const DASHBOARD_CHILDREN: Routes = [
+export const DASHBOARD_ROUTES: Routes = [
   {
     path: 'home',
     loadComponent: () =>
@@ -103,27 +103,13 @@ const DASHBOARD_CHILDREN: Routes = [
 ];
 
 /**
- * /dashboard/... de la Secretaría (D9, T13d-3): se carga como hijo 'dashboard' del único
- * AppShell de app.routes.ts, así /pendientes y /dashboard/... comparten la misma instancia.
+ * /dashboard/... de la Secretaría (D9, T13d-3): se carga como el primer hijo 'dashboard' del
+ * AppShell (canMatch SECRETARIA), así /pendientes y /dashboard/... comparten la misma instancia.
  * D11: /dashboard y /dashboard/home → /pendientes, conservando los query params (?tab=peers).
  * Retiro: cuando F01–F08 muevan las pantallas de la Secretaría a sus rutas nuevas.
  */
 export const SECRETARIA_DASHBOARD_ROUTES: Routes = [
   { path: 'home', redirectTo: redirectKeepingQuery('/pendientes'), pathMatch: 'full' },
   { path: '', redirectTo: redirectKeepingQuery('/pendientes'), pathMatch: 'full' },
-  ...DASHBOARD_CHILDREN,
-];
-
-/**
- * /dashboard/... de los otros roles, con el layout actual (DashboardPage). La Secretaría
- * no llega aquí: el padre del AppShell (canMatch SECRETARIA) va antes en app.routes.ts.
- * Retiro: en T14, cuando ningún rol use DashboardPage.
- */
-export const DASHBOARD_ROUTES: Routes = [
-  {
-    path: '',
-    component: DashboardPage,
-    canActivate: [AuthGuard],
-    children: DASHBOARD_CHILDREN,
-  },
+  ...DASHBOARD_ROUTES,
 ];

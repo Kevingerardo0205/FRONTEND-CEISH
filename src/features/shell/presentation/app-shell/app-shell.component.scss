@@ -1,4 +1,4 @@
-// F10 D16: aspecto del marco del Investigador (DashboardPage + sidebar) con los cambios de D16.
+// F10 D16: aspecto del antiguo marco del Investigador con los cambios de D16.
 .shell-layout {
   height: 100vh;
   background-color: var(--c-bg, #f8fafc);
@@ -235,7 +235,6 @@
       font-size: 0.9rem;
       color: var(--c-text-2, #475569);
       font-weight: 600;
-      text-transform: capitalize;
     }
   }
 

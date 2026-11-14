@@ -15,7 +15,20 @@ const ROLE_KEY = 'ceish.activeRole';
  * y 1900000000000-AddProtocolosListarPermission). Son los del rol, no los que pide cada ruta: así la
  * prueba falla si una opción del menú necesita un permiso que ese rol no tiene.
  */
-const ROLE_PERMISSIONS: Record<Exclude<RoleCode, 'SECRETARIA'>, string[]> = {
+const ROLE_PERMISSIONS: Record<RoleCode, string[]> = {
+  // T10-5b: SECRETARIA, copiada de 1880000000000-FixedRolesMatrix.ts:91-125 del backend (dev
+  // fe4c63d) más PROTOCOLOS_LISTAR (1900000000000-AddProtocolosListarPermission).
+  SECRETARIA: [
+    'DASHBOARD_RESUMEN', 'DASHBOARD_NOTIF', 'DASHBOARD_VENCIMIENTOS', 'RECEPCION_LISTA',
+    'RECEPCION_VALIDAR', 'RECEPCION_BUSCAR', 'RECEPCION_CONSTANCIAS', 'RECEPCION_NUEVO',
+    'EVALUACION_ASIGNAR', 'EVALUACION_INFORMES', 'EVALUACION_RIESGO', 'EVALUACION_EXPEDITA',
+    'EVALUACION_PLENO', 'EVALUACION_SUBSANACIONES', 'RESOLUCION_CREAR', 'RESOLUCION_NOTIF',
+    'RESOLUCION_HISTORIAL', 'RESOLUCION_CONVOCATORIAS', 'SEGUIMIENTO_AVANCE', 'SEGUIMIENTO_FINAL',
+    'SEGUIMIENTO_EVENTOS', 'SEGUIMIENTO_RENOVACIONES', 'SEGUIMIENTO_SUSPENSION', 'USUARIOS_VER',
+    'USUARIOS_GESTIONAR', 'USUARIOS_CONFLICTOS', 'EVALUADORES_PERFILES', 'REPORTES_CARGA',
+    'REPORTES_EXPORTAR', 'REPORTES_AUDITORIA', 'AUDITORIA_ACCESOS', 'CONFIG_PARAMETROS',
+    'CONFIG_PLANTILLAS', 'CONFIG_CATALOGOS', 'CONFIG_NOTIF', 'PROTOCOLOS_LISTAR',
+  ],
   PRESIDENTE: [
     'DASHBOARD_RESUMEN', 'DASHBOARD_NOTIF', 'DASHBOARD_VENCIMIENTOS', 'EVALUACION_INFORMES',
     'EVALUACION_RIESGO', 'EVALUACION_EXPEDITA', 'EVALUACION_PLENO', 'RESOLUCION_CREAR',
@@ -95,17 +108,23 @@ describe('F10: cada opción del menú abre su pantalla con su rol activo', () =>
     localStorage.removeItem(ROLE_KEY);
   });
 
-  for (const item of MENU_ITEMS.filter((entry) => !entry.roles.includes('SECRETARIA'))) {
-    const role = item.roles[0] as Exclude<RoleCode, 'SECRETARIA'>;
+  // F10 D16 (11): las opciones de los 4 roles abren dentro del único marco, el AppShell.
+  const has = (selector: string) => harness.fixture.nativeElement.querySelector(selector) !== null;
 
-    it(role + ' abre ' + item.label + ' en ' + item.route, async () => {
+  for (const item of MENU_ITEMS) {
+    const role = item.roles[0] as RoleCode;
+    // /configuracion redirige a /configuracion/usuarios (F00 D10).
+    const finalUrl = item.route === '/configuracion' ? '/configuracion/usuarios' : item.route;
+
+    it(role + ' abre ' + item.label + ' en ' + item.route + ' dentro del AppShell', async () => {
       expect(ROLE_PERMISSIONS[role]).withContext('permisos de la matriz para ' + role).toBeDefined();
       await start([role], role, ROLE_PERMISSIONS[role]);
 
       await harness.navigateByUrl(item.route);
 
-      expect(router.url).toBe(item.route);
+      expect(router.url).toBe(finalUrl);
       expect(notify).not.toHaveBeenCalled();
+      expect(has('app-shell')).withContext('dentro del AppShell').toBeTrue();
     });
   }
 

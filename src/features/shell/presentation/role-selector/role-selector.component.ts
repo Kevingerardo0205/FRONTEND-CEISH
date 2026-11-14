@@ -8,7 +8,7 @@ import { ROLE_HOME } from '../../domain/role-home';
 /**
  * Selector de rol activo (spec-ui F00 §2, criterios 3 y 8).
  * Solo aparece con más de un rol. Al elegir otro rol, cambia el rol activo y navega a su inicio.
- * Vive en el avatar del AppShell y del layout actual (DashboardPage) mientras existan los dos.
+ * Vive en el menú del avatar del AppShell, el único marco de los 4 roles (F10 D16 (11)).
  */
 @Component({
   selector: 'app-role-selector',
