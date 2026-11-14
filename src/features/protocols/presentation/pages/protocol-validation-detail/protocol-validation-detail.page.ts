@@ -27,7 +27,8 @@ import { ReceptionSuccessDialog } from './reception-success-dialog.component';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import { WORKSPACE_ACTION_ROLES } from '../../../domain/workspace-tab-roles';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
@@ -945,7 +946,7 @@ export class ProtocolValidationDetailPage implements OnInit {
   private downloadDocument = inject(DownloadProtocolDocumentUseCase);
   private dialog = inject(MatDialog);
   private s3StorageService = inject(S3StorageService);
-  private authFacade = inject(AuthFacade);
+  private activeRoleFacade = inject(ActiveRoleFacade);
   private protocoloService = inject(ProtocoloService);
 
   // Workspace integration
@@ -961,8 +962,11 @@ export class ProtocolValidationDetailPage implements OnInit {
   checklist = signal<ValidationChecklistItem[]>([]);
   globalStatus = signal<ValidationGlobalStatus | null>(null);
 
-  userRole = computed(() => this.authFacade.currentUser()?.rol?.toUpperCase() || '');
-  isInvestigador = computed(() => this.userRole() === 'INVESTIGADOR');
+  // F10 D17 (4): vista de subsanación con el rol activo en `SUBMIT_CORRECTIONS`.
+  isInvestigador = computed(() => {
+    const activeRole = this.activeRoleFacade.activeRole();
+    return !!activeRole && WORKSPACE_ACTION_ROLES.SUBMIT_CORRECTIONS.includes(activeRole);
+  });
 
   uploadingRequirements = signal<Record<number, boolean>>({});
   dragOverReqId = signal<number | null>(null);

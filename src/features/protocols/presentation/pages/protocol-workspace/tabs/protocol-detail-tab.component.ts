@@ -6,7 +6,11 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { ProtocolWorkspaceService } from '../../../../application/services/protocol-workspace.service';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import {
+  WORKSPACE_ACTION_ROLES,
+  WORKSPACE_SECTION_ROLES,
+} from '../../../../domain/workspace-tab-roles';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
@@ -538,7 +542,7 @@ import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/st
 })
 export class ProtocolDetailTabPage {
   private workspaceService = inject(ProtocolWorkspaceService);
-  private authFacade = inject(AuthFacade);
+  private activeRoleFacade = inject(ActiveRoleFacade);
   private auditUseCase = inject(AuditUseCase);
 
   resolveEstado = resolveEstado;
@@ -575,9 +579,10 @@ export class ProtocolDetailTabPage {
     this.workspaceService.refreshEvaluations();
   }
 
+  /** F10 D17 (2): cuerpo evaluador solo con el rol activo en `EVALUATOR_PANEL`. */
   showEvaluators(): boolean {
-    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
-    return ['ADMIN', 'SECRETARIA', 'PRESIDENTA', 'PRESIDENTE'].includes(role || '');
+    const activeRole = this.activeRoleFacade.activeRole();
+    return !!activeRole && WORKSPACE_SECTION_ROLES.EVALUATOR_PANEL.includes(activeRole);
   }
 
   versions = computed(() => {
@@ -600,12 +605,14 @@ export class ProtocolDetailTabPage {
   isEditable(): boolean {
     const p = this.protocol();
     if (!p) return false;
-    const role = this.authFacade.currentUser()?.rol?.toUpperCase();
+    // F10 D17 (3): la misma regla de rol que "Completar / Editar" de la cabecera (D12).
+    const activeRole = this.activeRoleFacade.activeRole();
     const status = p.status as string;
     const core = resolveEstado(status);
     const code = core?.code || status;
     return (
-      role === 'INVESTIGADOR' &&
+      !!activeRole &&
+      WORKSPACE_ACTION_ROLES.EDIT_PROTOCOL.includes(activeRole) &&
       status?.toUpperCase() !== 'BORRADOR' &&
       (code === 'INICIADO' || code === 'REQUIERE_SUBSANACION_DOC' || code === 'INCOMPLETO')
     );

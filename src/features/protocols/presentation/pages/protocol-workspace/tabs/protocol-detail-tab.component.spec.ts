@@ -6,15 +6,43 @@ import { of } from 'rxjs';
 import { ProtocolDetailTabPage } from './protocol-detail-tab.component';
 import { ProtocolWorkspaceService } from '../../../../application/services/protocol-workspace.service';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
+import { RoleCode } from '@domain/value-objects/role.vo';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import {
+  WORKSPACE_ACTION_ROLES,
+  WORKSPACE_SECTION_ROLES,
+  WorkspaceAction,
+  WorkspaceSection,
+} from '../../../../domain/workspace-tab-roles';
 
+/**
+ * F10 D17: el Resumen decide con el rol activo (`ActiveRoleFacade`).
+ *
+ * Dato de prueba: en varias pruebas el campo antiguo `currentUser().rol` lleva un rol distinto
+ * del rol activo, solo para asegurar que se usa el rol activo (si el código volviera a `.rol`,
+ * la prueba fallaría). Esas cuentas no existen: el rol INVESTIGADOR es exclusivo (D17 (1)) y la
+ * única cuenta con dos roles posible es PRESIDENTE + EVALUADOR.
+ * El componente ya no usa `AuthFacade`; el simulado se da para que una vuelta a `.rol` falle por
+ * la comprobación y no por el inyector.
+ */
 describe('ProtocolDetailTabPage - edicion de protocolo', () => {
   let page: ProtocolDetailTabPage;
   let protocolSignal: WritableSignal<ProtocolEntity | null>;
+  let activeRole: WritableSignal<RoleCode | null>;
+  let legacyRol: string;
+
+  function create(active: RoleCode, legacy: string): void {
+    activeRole.set(active);
+    legacyRol = legacy;
+    page = TestBed.createComponent(ProtocolDetailTabPage).componentInstance;
+  }
 
   beforeEach(async () => {
     protocolSignal = signal<ProtocolEntity | null>(null);
+    activeRole = signal<RoleCode | null>(null);
+    legacyRol = '';
     await TestBed.configureTestingModule({
       imports: [ProtocolDetailTabPage],
       providers: [
@@ -22,9 +50,10 @@ describe('ProtocolDetailTabPage - edicion de protocolo', () => {
           provide: ProtocolWorkspaceService,
           useValue: { protocol: protocolSignal, evaluations: signal([]) },
         },
+        { provide: ActiveRoleFacade, useValue: { activeRole } },
         {
           provide: AuthFacade,
-          useValue: { currentUser: () => ({ rol: 'INVESTIGADOR' }) },
+          useValue: { currentUser: () => ({ rol: legacyRol }) },
         },
         {
           provide: AuditUseCase,
@@ -36,8 +65,6 @@ describe('ProtocolDetailTabPage - edicion de protocolo', () => {
     })
       .overrideComponent(ProtocolDetailTabPage, { set: { template: '' } })
       .compileComponents();
-
-    page = TestBed.createComponent(ProtocolDetailTabPage).componentInstance;
   });
 
   function setStatus(status: string): void {
@@ -53,6 +80,8 @@ describe('ProtocolDetailTabPage - edicion de protocolo', () => {
   }
 
   it('rol INVESTIGADOR y BORRADOR devuelve isEditable false sin distinguir mayusculas', () => {
+    // Dato de prueba (cuenta que no existe): campo antiguo SECRETARIA, rol activo INVESTIGADOR.
+    create('INVESTIGADOR', 'SECRETARIA');
     setStatus('BORRADOR');
     expect(page.isEditable()).toBeFalse();
 
@@ -61,17 +90,34 @@ describe('ProtocolDetailTabPage - edicion de protocolo', () => {
   });
 
   it('rol INVESTIGADOR y INCOMPLETO conserva isEditable true', () => {
+    // Dato de prueba (cuenta que no existe): campo antiguo SECRETARIA, rol activo INVESTIGADOR.
+    create('INVESTIGADOR', 'SECRETARIA');
     setStatus('INCOMPLETO');
     expect(page.isEditable()).toBeTrue();
+  });
+
+  it('con SECRETARIA activa no hay Editar aunque el estado lo abra (D17 (3))', () => {
+    // Dato de prueba (cuenta que no existe): campo antiguo INVESTIGADOR, rol activo SECRETARIA.
+    create('SECRETARIA', 'INVESTIGADOR');
+    setStatus('INCOMPLETO');
+    expect(page.isEditable()).toBeFalse();
+  });
+
+  it('con PRESIDENTE activo (cuenta PRESIDENTE + EVALUADOR) no hay Editar (D17 (3))', () => {
+    create('PRESIDENTE', 'EVALUADOR');
+    setStatus('INCOMPLETO');
+    expect(page.isEditable()).toBeFalse();
   });
 });
 
 /**
- * F10 S-1g (D14, EARS 28): el Resumen pide las evaluaciones solo cuando muestra el cuerpo
- * evaluador (`showEvaluators()`, con `currentUser().rol` hasta S-1e) y un error no se muestra
- * como "sin evaluadores". Plantilla real.
+ * F10 S-1g (D14, EARS 28) y S-1e (D17 (2), EARS 43): el Resumen pide las evaluaciones y muestra el
+ * cuerpo evaluador solo con el rol activo en `EVALUATOR_PANEL`; un error no se muestra como "sin
+ * evaluadores". Plantilla real.
+ * Con EVALUADOR activo (también en la cuenta PRESIDENTE + EVALUADOR) el Resumen no se abre: lo
+ * prueba `workspace-routes.spec.ts` ("decide con el rol activo entre PRESIDENTE y EVALUADOR").
  */
-describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14, S-1g)', () => {
+describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14 y D17)', () => {
   const ERROR_TEXT = 'No pudimos cargar el cuerpo evaluador.';
   const EMPTY_TEXT = 'No se han asignado evaluadores a este protocolo aún.';
 
@@ -84,7 +130,7 @@ describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14, S-1g)', () => {
     refreshEvaluations: jasmine.Spy;
   };
 
-  async function render(rol: string): Promise<HTMLElement> {
+  async function render(active: RoleCode, legacyRol: string): Promise<HTMLElement> {
     workspace = {
       protocol: signal<ProtocolEntity | null>({
         id: '5',
@@ -106,7 +152,8 @@ describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14, S-1g)', () => {
       providers: [
         provideRouter([]),
         { provide: ProtocolWorkspaceService, useValue: workspace },
-        { provide: AuthFacade, useValue: { currentUser: () => ({ rol }) } },
+        { provide: ActiveRoleFacade, useValue: { activeRole: signal<RoleCode | null>(active) } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ rol: legacyRol }) } },
         {
           provide: AuditUseCase,
           useValue: { getProtocolTrail: jasmine.createSpy('getProtocolTrail').and.returnValue(of([])) },
@@ -118,20 +165,49 @@ describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14, S-1g)', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('con SECRETARIA pide las evaluaciones del protocolo abierto', async () => {
-    await render('SECRETARIA');
+  it('con SECRETARIA activa muestra el cuerpo evaluador y pide las evaluaciones del protocolo abierto', async () => {
+    // Dato de prueba (cuenta que no existe): campo antiguo INVESTIGADOR, rol activo SECRETARIA.
+    const el = await render('SECRETARIA', 'INVESTIGADOR');
 
+    expect(el.querySelector('.evaluators-section')).not.toBeNull();
     expect(workspace.loadEvaluations).toHaveBeenCalledOnceWith('5');
   });
 
-  it('con INVESTIGADOR no pide las evaluaciones', async () => {
-    await render('INVESTIGADOR');
+  it('con PRESIDENTE activo muestra el cuerpo evaluador y pide las evaluaciones', async () => {
+    // Dato de prueba (cuenta que no existe): campo antiguo INVESTIGADOR, rol activo PRESIDENTE.
+    const el = await render('PRESIDENTE', 'INVESTIGADOR');
 
+    expect(el.querySelector('.evaluators-section')).not.toBeNull();
+    expect(workspace.loadEvaluations).toHaveBeenCalledOnceWith('5');
+  });
+
+  it('cuenta PRESIDENTE + EVALUADOR con PRESIDENTE activo ve el cuerpo evaluador aunque el campo antiguo diga EVALUADOR', async () => {
+    const el = await render('PRESIDENTE', 'EVALUADOR');
+
+    expect(el.querySelector('.evaluators-section')).not.toBeNull();
+    expect(workspace.loadEvaluations).toHaveBeenCalledOnceWith('5');
+  });
+
+  it('con INVESTIGADOR activo no muestra el cuerpo evaluador ni pide las evaluaciones', async () => {
+    // Dato de prueba (cuenta que no existe): campo antiguo SECRETARIA, rol activo INVESTIGADOR.
+    const el = await render('INVESTIGADOR', 'SECRETARIA');
+
+    expect(el.querySelector('.evaluators-section')).toBeNull();
+    expect(el.textContent).not.toContain('Miembros');
+    expect(workspace.loadEvaluations).not.toHaveBeenCalled();
+  });
+
+  it('con EVALUADOR activo no muestra el cuerpo evaluador ni pide las evaluaciones', async () => {
+    // Dato de prueba (cuenta que no existe): campo antiguo PRESIDENTE, rol activo EVALUADOR.
+    // EVALUADOR no abre el Resumen (guard D10); la regla del componente también lo deja fuera.
+    const el = await render('EVALUADOR', 'PRESIDENTE');
+
+    expect(el.querySelector('.evaluators-section')).toBeNull();
     expect(workspace.loadEvaluations).not.toHaveBeenCalled();
   });
 
   it('si fallan muestra "No pudimos cargar el cuerpo evaluador." con Reintentar, nunca "No se han asignado…"', async () => {
-    const el = await render('SECRETARIA');
+    const el = await render('SECRETARIA', 'SECRETARIA');
     workspace.evaluationsError.set(true);
     TestBed.tick();
 
@@ -147,7 +223,7 @@ describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14, S-1g)', () => {
   });
 
   it('sin error y sin evaluadores muestra "No se han asignado…"; mientras carga, no', async () => {
-    const el = await render('SECRETARIA');
+    const el = await render('SECRETARIA', 'SECRETARIA');
 
     expect(el.textContent).toContain(EMPTY_TEXT);
     expect(el.textContent).not.toContain(ERROR_TEXT);
@@ -160,3 +236,23 @@ describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14, S-1g)', () => {
   });
 });
 
+/** F10 D12 y D17: las tablas del dominio, contra su copia escrita a mano desde la spec. */
+describe('Tablas de roles del espacio del protocolo (F10 D12 y D17)', () => {
+  const EXPECTED_SECTION_ROLES: Record<WorkspaceSection, RoleCode[]> = {
+    EVALUATOR_PANEL: ['SECRETARIA', 'PRESIDENTE'],
+  };
+  const EXPECTED_ACTION_ROLES: Record<WorkspaceAction, RoleCode[]> = {
+    EDIT_PROTOCOL: ['INVESTIGADOR'],
+    VALIDATE_ALL: ['SECRETARIA'],
+    ASSIGN_EVALUATORS: ['SECRETARIA'],
+    SUBMIT_CORRECTIONS: ['INVESTIGADOR'],
+  };
+
+  it('WORKSPACE_SECTION_ROLES es la de D17 (2): el cuerpo evaluador solo con SECRETARIA y PRESIDENTE', () => {
+    expect(WORKSPACE_SECTION_ROLES).toEqual(EXPECTED_SECTION_ROLES);
+  });
+
+  it('WORKSPACE_ACTION_ROLES es la de D12 y D17 (4)', () => {
+    expect(WORKSPACE_ACTION_ROLES).toEqual(EXPECTED_ACTION_ROLES);
+  });
+});
