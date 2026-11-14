@@ -1,4 +1,13 @@
-import { afterNextRender, Component, inject, Injector, OnInit, ViewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  inject,
+  Injector,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -8,7 +17,7 @@ import {
   ValidationErrors,
   FormsModule,
 } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router';
 
 // Angular Material
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
@@ -35,6 +44,7 @@ import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { finalize } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 interface StudyType {
   id: number;
@@ -124,6 +134,23 @@ export class NuevoProtocoloPage implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * Peticiones del protocolo en pantalla (comprobación del borrador, creación, checklist,
+   * subidas y envío): se cancelan al volver a un protocolo nuevo y al destruir la página.
+   */
+  private trabajos = new Subscription();
+  /**
+   * Cambia al volver a un protocolo nuevo. Las subidas y el envío no se cancelan (la petición ya
+   * salió y cortarla podría dejar un archivo sin registrar): su respuesta se ignora si cambió.
+   */
+  private generacion = 0;
+  private queryParamsVistos = false;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.trabajos.unsubscribe());
+  }
 
   isLoading = false;
   isRequirementsLoading = false;
@@ -149,47 +176,100 @@ export class NuevoProtocoloPage implements OnInit {
   });
 
   ngOnInit(): void {
-    const borrador = this.route.snapshot.queryParamMap.get('borrador');
-    const borradorId = Number(borrador);
-
-    if (borrador !== null && Number.isInteger(borradorId) && borradorId > 0) {
-      this.continuarBorrador(borradorId);
-    }
+    // El componente se reutiliza cuando solo cambian los query params (por ejemplo, "Nuevo
+    // protocolo" del menú con ?borrador abierto): se escucha queryParamMap, no route.snapshot.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => this.onQueryParams(params));
 
     this.loadStudyTypes();
+  }
+
+  private onQueryParams(params: ParamMap): void {
+    const borradorId = this.parseBorrador(params.get('borrador'));
+
+    // La URL que fija guardarInicial (?borrador={id} del protocolo recién creado) no reinicia nada.
+    if (borradorId !== null && borradorId === this.protocolId) return;
+
+    if (this.queryParamsVistos) this.reiniciarProtocoloNuevo();
+    this.queryParamsVistos = true;
+
+    if (borradorId !== null) this.continuarBorrador(borradorId);
+  }
+
+  private parseBorrador(valor: string | null): number | null {
+    const id = Number(valor);
+    return valor !== null && Number.isInteger(id) && id > 0 ? id : null;
+  }
+
+  /** Vuelve a un protocolo nuevo: vacío, en el paso 1 y sin nada del borrador anterior. */
+  private reiniciarProtocoloNuevo(): void {
+    this.trabajos.unsubscribe();
+    this.trabajos = new Subscription();
+    this.generacion++;
+
+    this.isLoading = false;
+    this.isRequirementsLoading = false;
+    this.isDraftContinuation = false;
+    this.protocolId = null;
+    this.documentosRequeridos = [];
+    this.documentUploadStatus = {};
+    this.archivosCargados = {};
+
+    if (this.stepper) {
+      this.stepper.reset();
+      // reset() deja en false el "completado" que fija abrirPasoRequisitos; null devuelve el paso 1
+      // al cálculo normal de CdkStep (formulario válido y paso visitado).
+      (this.stepper.steps.first as unknown as { completed: boolean | null }).completed = null;
+    }
+    this.generalForm.reset({
+      titulo: '',
+      tipoEstudio: '',
+      isAffidavitAccepted: false,
+      usesBiologicalSamples: false,
+      isVulnerablePopulation: false,
+      isIndigenousPopulation: false,
+      isMulticentric: false,
+      isExternal: false,
+    });
   }
 
   private continuarBorrador(id: number): void {
     // Bloquea "Guardar" del paso 1 mientras se comprueba el borrador: evita crear otro protocolo.
     this.isLoading = true;
-    this.protocoloService.misProtocolos().subscribe({
-      next: (protocolos) => {
-        const borrador = protocolos.find((protocolo) => protocolo.id === id);
-        if (!borrador || borrador.estado !== 'BORRADOR') {
-          this.rechazarContinuacionBorrador();
-          return;
-        }
+    const trabajo = this.trabajos;
+    trabajo.add(
+      this.protocoloService.misProtocolos().subscribe({
+        next: (protocolos) => {
+          const borrador = protocolos.find((protocolo) => protocolo.id === id);
+          if (!borrador || borrador.estado !== 'BORRADOR') {
+            this.rechazarContinuacionBorrador();
+            return;
+          }
 
-        this.protocolId = id;
-        this.isDraftContinuation = true;
-        this.isRequirementsLoading = true;
-        this.protocoloService.getChecklist(id).subscribe({
-          next: (res) => {
-            this.processRequirements(this.extractList(res));
-            this.isRequirementsLoading = false;
-            this.isLoading = false;
-            this.abrirPasoRequisitos();
-          },
-          error: () => {
-            this.processRequirements([]);
-            this.isRequirementsLoading = false;
-            this.isLoading = false;
-            this.abrirPasoRequisitos();
-          },
-        });
-      },
-      error: () => this.rechazarContinuacionBorrador(),
-    });
+          this.protocolId = id;
+          this.isDraftContinuation = true;
+          this.isRequirementsLoading = true;
+          trabajo.add(
+            this.protocoloService.getChecklist(id).subscribe({
+              next: (res) => {
+                this.processRequirements(this.extractList(res));
+                this.isRequirementsLoading = false;
+                this.isLoading = false;
+                this.abrirPasoRequisitos();
+              },
+              error: () => {
+                this.processRequirements([]);
+                this.isRequirementsLoading = false;
+                this.isLoading = false;
+                this.abrirPasoRequisitos();
+              },
+            }),
+          );
+        },
+        error: () => this.rechazarContinuacionBorrador(),
+      }),
+    );
   }
 
   private rechazarContinuacionBorrador(): void {
@@ -205,8 +285,11 @@ export class NuevoProtocoloPage implements OnInit {
   private abrirPasoRequisitos(): void {
     // Solo en el borrador: el paso 1 se marca completado (sus datos ya están en el backend) y el
     // stepper lineal deja pasar al paso 2 sin el formulario. El flujo normal sigue con generalForm.
+    const id = this.protocolId;
     afterNextRender(
       () => {
+        // Si antes del render se volvió a un protocolo nuevo, ya no se abre el paso 2.
+        if (!this.isDraftContinuation || this.protocolId !== id) return;
         this.stepper.steps.first.completed = true;
         this.stepper.next();
       },
@@ -223,11 +306,40 @@ export class NuevoProtocoloPage implements OnInit {
           : ((raw as Record<string, unknown>)?.['data'] as unknown[]);
         this.tiposEstudio = (list || []) as StudyType[];
       },
-      error: () => this.snackBar.open('Error al cargar tipos de estudio.', 'Cerrar'),
+      error: () =>
+        this.snackBar.open('No se pudieron cargar los tipos de investigación.', 'Cerrar'),
     });
   }
 
+  /** El error de la declaración se muestra después de tocar la casilla sin marcarla. */
+  get declaracionConError(): boolean {
+    const control = this.generalForm.controls.isAffidavitAccepted;
+    return control.touched && control.hasError('required');
+  }
+
+  /**
+   * Motivo visible del botón "Registrar y continuar" deshabilitado (F00 §5: la acción se
+   * deshabilita mostrando el motivo). Sin motivo mientras se guarda o con el formulario válido.
+   */
+  get motivoPasoDatos(): string | null {
+    if (this.isLoading || this.generalForm.valid) return null;
+    const { titulo, tipoEstudio, isAffidavitAccepted } = this.generalForm.controls;
+    const faltan: string[] = [];
+    if (titulo.invalid) faltan.push('el título (de 20 a 200 caracteres)');
+    if (tipoEstudio.invalid) faltan.push('el tipo de investigación');
+    if (isAffidavitAccepted.invalid) faltan.push('la declaración jurada');
+    if (faltan.length === 0) return null;
+    const lista =
+      faltan.length === 1
+        ? faltan[0]
+        : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`;
+    return `Falta completar: ${lista}.`;
+  }
+
   guardarInicial(): void {
+    // Con el protocolo ya creado el paso 1 queda bloqueado ([editable] en la plantilla): editar
+    // los datos registrados es T09-7, bloqueada por el backend. No se registra un segundo protocolo.
+    if (this.protocolId !== null) return;
     if (this.generalForm.invalid) {
       this.generalForm.markAllAsTouched();
       this.snackBar.open('Complete todos los campos obligatorios antes de continuar.', 'Cerrar');
@@ -263,49 +375,62 @@ export class NuevoProtocoloPage implements OnInit {
       institutions: [],
     };
 
-    this.protocoloService.guardarProtocoloInicial(payload).subscribe({
-      next: (res) => {
-        const id = res.id || (res as unknown as { data?: { id?: number } })?.data?.id;
-        if (id) {
-          this.protocolId = id;
-          this.snackBar.open('Protocolo registrado. Cargando requisitos oficiales...', 'Info', {
-            duration: 3000,
-          });
+    const trabajo = this.trabajos;
+    trabajo.add(
+      this.protocoloService.guardarProtocoloInicial(payload).subscribe({
+        next: (res) => {
+          // Número, para compararlo con el ?borrador={id} que emite la URL (onQueryParams).
+          const id = Number(res.id || (res as unknown as { data?: { id?: number } })?.data?.id);
+          if (Number.isInteger(id) && id > 0) {
+            this.protocolId = id;
+            // La URL pasa a ?borrador={id} sin recargar: recargar continúa el borrador y "Nuevo
+            // protocolo" del menú cambia los query params y vuelve a un protocolo nuevo.
+            this.router.navigate([], {
+              relativeTo: this.route,
+              queryParams: { borrador: id },
+              replaceUrl: true,
+            });
+            this.snackBar.open('Protocolo registrado. Cargando los requisitos…', 'Cerrar', {
+              duration: 3000,
+            });
 
-          this.protocoloService.getChecklist(id).subscribe({
-            next: (checklistRes) => {
-              this.isLoading = false;
-              const list = this.extractList(checklistRes);
-              this.processRequirements(list);
-              this.stepper.next(); // Avanza al Paso 2 (Documentos)
-            },
-            error: () => {
-              this.isLoading = false;
-              this.snackBar.open(
-                '⚠️ Protocolo creado, pero hubo un problema al generar la lista oficial.',
-                'Cerrar',
-              );
-              this.processRequirements([]);
-              this.stepper.next();
-            },
-          });
-        } else {
+            trabajo.add(
+              this.protocoloService.getChecklist(id).subscribe({
+                next: (checklistRes) => {
+                  this.isLoading = false;
+                  const list = this.extractList(checklistRes);
+                  this.processRequirements(list);
+                  this.stepper.next(); // Avanza al Paso 2 (Documentos)
+                },
+                error: () => {
+                  this.isLoading = false;
+                  this.snackBar.open(
+                    '⚠️ Protocolo creado, pero hubo un problema al generar la lista oficial.',
+                    'Cerrar',
+                  );
+                  this.processRequirements([]);
+                  this.stepper.next();
+                },
+              }),
+            );
+          } else {
+            this.isLoading = false;
+            this.snackBar.open(
+              'No se pudo registrar el protocolo: el servidor no devolvió su identificador.',
+              'Cerrar',
+            );
+          }
+        },
+        error: (err: unknown) => {
           this.isLoading = false;
           this.snackBar.open(
-            '❌ Error: El servidor no devolvió un ID de protocolo válido.',
+            extractApiErrorMessage(err, 'No se pudo registrar el protocolo.'),
             'Cerrar',
+            { duration: 10000 },
           );
-        }
-      },
-      error: (err) => {
-        this.isLoading = false;
-        this.snackBar.open(
-          '❌ Error: ' + (err.message || 'Error de validación al crear el protocolo'),
-          'Cerrar',
-          { duration: 10000 },
-        );
-      },
-    });
+        },
+      }),
+    );
   }
 
   public loadRequirements(protocolId?: number) {
@@ -313,19 +438,21 @@ export class NuevoProtocoloPage implements OnInit {
 
     if (idToUse) {
       this.isRequirementsLoading = true;
-      this.protocoloService
-        .getChecklist(Number(idToUse))
-        .pipe(finalize(() => (this.isRequirementsLoading = false)))
-        .subscribe({
-          next: (res) => {
-            const list = this.extractList(res);
-            this.processRequirements(list);
-          },
-          error: (err) => {
-            console.warn('[DEBUG] Error en checklist oficial...', err);
-            this.processRequirements([]);
-          },
-        });
+      this.trabajos.add(
+        this.protocoloService
+          .getChecklist(Number(idToUse))
+          .pipe(finalize(() => (this.isRequirementsLoading = false)))
+          .subscribe({
+            next: (res) => {
+              const list = this.extractList(res);
+              this.processRequirements(list);
+            },
+            error: (err) => {
+              console.warn('[DEBUG] Error en checklist oficial...', err);
+              this.processRequirements([]);
+            },
+          }),
+      );
     }
   }
 
@@ -484,14 +611,18 @@ export class NuevoProtocoloPage implements OnInit {
 
     const requirement = this.documentosRequeridos.find((d) => d.code === requirementCode);
 
+    const vigente = this.mismaGeneracion();
+
     if (!requirement || !requirement.id) {
       this.documentUploadStatus[requirementCode] = 'subiendo';
       this.protocoloService.subirDocumentosBulk(this.protocolId, [file]).subscribe({
         next: () => {
+          if (!vigente()) return;
           this.documentUploadStatus[requirementCode] = 'exito';
           this.archivosCargados[requirementCode] = file.name;
         },
         error: () => {
+          if (!vigente()) return;
           this.documentUploadStatus[requirementCode] = 'error';
           this.snackBar.open('Error al subir documento.', 'Cerrar');
         },
@@ -505,16 +636,24 @@ export class NuevoProtocoloPage implements OnInit {
       .subirDocumento(file, this.protocolId, requirement.id, requirementCode)
       .subscribe({
         next: () => {
+          if (!vigente()) return;
           this.documentUploadStatus[requirementCode] = 'exito';
           this.archivosCargados[requirementCode] = file.name;
           this.loadRequirements();
         },
         error: (err) => {
+          if (!vigente()) return;
           console.error('[NuevoProtocoloPage] Error en subirDocumento:', err);
           this.documentUploadStatus[requirementCode] = 'error';
           this.snackBar.open('Error al subir documento técnico.', 'Cerrar');
         },
       });
+  }
+
+  /** true mientras la página siga en el mismo protocolo que cuando se llamó. */
+  private mismaGeneracion(): () => boolean {
+    const generacion = this.generacion;
+    return () => generacion === this.generacion;
   }
 
   onBulkUpload(event: Event) {
@@ -523,8 +662,10 @@ export class NuevoProtocoloPage implements OnInit {
     if (!files.length || !this.protocolId) return;
 
     this.isLoading = true;
+    const vigente = this.mismaGeneracion();
     this.protocoloService.subirDocumentosBulk(this.protocolId, files).subscribe({
       next: () => {
+        if (!vigente()) return;
         this.isLoading = false;
         this.snackBar.open('✅ Archivos cargados exitosamente.', 'Cerrar', { duration: 3000 });
 
@@ -535,6 +676,7 @@ export class NuevoProtocoloPage implements OnInit {
         this.loadRequirements(this.protocolId!);
       },
       error: () => {
+        if (!vigente()) return;
         this.isLoading = false;
         this.snackBar.open('❌ Error en la carga masiva.', 'Cerrar');
       },
@@ -565,13 +707,16 @@ export class NuevoProtocoloPage implements OnInit {
     }
 
     this.isLoading = true;
+    const vigente = this.mismaGeneracion();
     this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
       next: () => {
+        if (!vigente()) return;
         this.isLoading = false;
         this.snackBar.open('Protocolo enviado a la Secretaría.', 'Cerrar', { duration: 5000 });
         this.router.navigate(['/dashboard/investigador/mis-protocolos']);
       },
       error: (err: unknown) => {
+        if (!vigente()) return;
         this.isLoading = false;
         this.snackBar.open(
           extractApiErrorMessage(err, 'No se pudo enviar el protocolo a la Secretaría.'),

@@ -113,14 +113,88 @@
   padding: 2.5rem !important;
 }
 
-/* Etiquetas superiores de los campos */
+/* Paso 1 (Datos, F09 D10): CSS propio con tokens; el proyecto no carga Bootstrap. */
+.datos-form {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Etiqueta arriba del campo, asociada con for/id (estilo del canvas) */
 .field-label {
   display: block;
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--c-text);
-  margin-bottom: 8px;
   text-transform: none;
+}
+
+.caracteristicas {
+  margin: 0;
+  padding: 1rem 1.5rem 1.25rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-control);
+  background: var(--c-surface);
+}
+
+.caracteristicas__legend {
+  padding: 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.caracteristicas__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.25rem 1.5rem;
+  color: var(--c-text);
+}
+
+.legal-box__error {
+  display: block;
+  margin-top: 0.5rem;
+  padding-left: 2.5rem;
+  color: var(--tone-rojo-fg);
+}
+
+.step-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+.step-actions__reason {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--c-text-2);
+  text-align: right;
+}
+
+/* Botón principal del paso 1 (estilo del botón principal del canvas) */
+.next-btn {
+  --mat-button-filled-container-color: var(--c-primary);
+  --mat-button-filled-label-text-color: var(--c-surface);
+  --mat-button-filled-disabled-container-color: var(--c-primary-soft);
+  --mat-button-filled-disabled-label-text-color: var(--c-primary-dark);
+  --mat-button-filled-container-shape: var(--radius-control);
+  --mat-button-filled-container-height: var(--min-h-action);
+  --mat-button-filled-label-text-weight: 600;
+  --mat-button-filled-horizontal-padding: 1.5rem;
+  min-height: var(--min-h-action);
+}
+
+.next-btn__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Campos de Material (solo dentro de esta página) */
@@ -136,7 +210,8 @@
   .mdc-notched-outline__leading,
   .mdc-notched-outline__notch,
   .mdc-notched-outline__trailing {
-    border-color: var(--c-border) !important;
+    // Borde del control con --c-text-2 (7,58:1 sobre blanco); --c-border (1,23:1) no llega al 3:1.
+    border-color: var(--c-text-2) !important;
     border-width: 1px !important;
   }
 
@@ -182,6 +257,7 @@ textarea.mat-mdc-input-element {
 }
 
 .legal-box {
+  padding: 1rem 1.5rem;
   background: var(--tone-ambar-bg);
   border-radius: var(--radius-control);
   color: var(--tone-ambar-fg);

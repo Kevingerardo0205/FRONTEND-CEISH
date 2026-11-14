@@ -20,28 +20,31 @@
   <mat-card class="register-stepper-card animate-fade-in">
     <mat-stepper [linear]="true" #stepper class="custom-stepper">
       <!-- PASO 1: INFORMACIÓN GENERAL -->
-      <mat-step [stepControl]="generalForm" [editable]="!isDraftContinuation">
+      <mat-step [stepControl]="generalForm" [editable]="protocolId === null">
         <ng-template matStepLabel>Información General</ng-template>
         <div class="step-content">
-          <form [formGroup]="generalForm" class="row g-4">
+          <form [formGroup]="generalForm" class="datos-form">
             <!-- Título -->
-            <div class="col-12">
-              <label class="field-label"
-                >Título de la investigación (Población, Lugar y Período) *</label
+            <div class="field">
+              <label class="field-label" for="np-titulo" id="np-titulo-label"
+                >Título de la investigación</label
               >
-              <mat-form-field appearance="outline">
+              <mat-form-field appearance="outline" class="field-control">
                 <textarea
                   matInput
+                  id="np-titulo"
                   formControlName="titulo"
+                  required
                   rows="3"
                   [attr.maxlength]="200"
                   placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
                 ></textarea>
+                <mat-hint>Incluya la población, el lugar y el período.</mat-hint>
                 <mat-hint align="end"
                   >{{ generalForm.get('titulo')?.value?.trim()?.length || 0 }}/200</mat-hint
                 >
                 <mat-error *ngIf="generalForm.get('titulo')?.hasError('required')"
-                  >El título es requerido</mat-error
+                  >El título es obligatorio.</mat-error
                 >
                 <mat-error *ngIf="generalForm.get('titulo')?.hasError('minlength')"
                   >El título debe tener al menos 20 caracteres</mat-error
@@ -52,96 +55,90 @@
               </mat-form-field>
             </div>
 
-            <!-- Tipo de Estudio -->
-            <div class="col-md-12">
-              <label class="field-label">Tipo de investigación *</label>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-select formControlName="tipoEstudio" placeholder="--- SELECCIONE ---">
+            <!-- Tipo de investigación -->
+            <div class="field">
+              <label class="field-label" id="np-tipo-label">Tipo de investigación</label>
+              <mat-form-field appearance="outline" class="field-control">
+                <mat-select
+                  id="np-tipo"
+                  formControlName="tipoEstudio"
+                  required
+                  placeholder="Seleccione"
+                  aria-labelledby="np-tipo-label"
+                >
                   <mat-option *ngFor="let t of tiposEstudio" [value]="t.id || t.code || t">
                     {{ t.nombre || t.name || t.description || t }}
                   </mat-option>
                 </mat-select>
                 <mat-error *ngIf="generalForm.get('tipoEstudio')?.hasError('required')"
-                  >El tipo de estudio es obligatorio</mat-error
+                  >El tipo de investigación es obligatorio.</mat-error
                 >
               </mat-form-field>
             </div>
 
-            <!-- Flags de Características del Estudio -->
-            <div class="col-12 mt-3">
-              <div class="flags-box p-4 border rounded-3 bg-light">
-                <h4 class="fw-bold small text-uppercase mb-3 text-primary">
-                  Características del Estudio
-                </h4>
-                <div class="row g-3">
-                  <div class="col-12 col-md-6">
-                    <mat-checkbox formControlName="isIndigenousPopulation" color="primary"
-                      >¿Involucra pueblos o nacionalidades indígenas?</mat-checkbox
-                    >
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <mat-checkbox formControlName="usesBiologicalSamples" color="primary"
-                      >¿Utiliza muestras biológicas humanas?</mat-checkbox
-                    >
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <mat-checkbox formControlName="isVulnerablePopulation" color="primary"
-                      >¿Involucra población vulnerable?</mat-checkbox
-                    >
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <mat-checkbox formControlName="isMulticentric" color="primary"
-                      >¿Es un estudio multicéntrico?</mat-checkbox
-                    >
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <mat-checkbox formControlName="isExternal" color="primary"
-                      >¿Participan instituciones externas?</mat-checkbox
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Declaración Jurada -->
-            <div class="col-12 mt-4">
-              <div class="legal-box p-4 rounded bg-white border shadow-sm text-start">
-                <mat-checkbox formControlName="isAffidavitAccepted" color="primary">
-                  <span class="small fw-bold text-uppercase text-amber"
-                    >DECLARO BAJO JURAMENTO QUE LA INVESTIGACIÓN NO HA INICIADO SU FASE DE CAMPO Y
-                    LA INFORMACIÓN ES VERAZ. *</span
-                  >
-                </mat-checkbox>
-                <mat-error
-                  *ngIf="
-                    generalForm.get('isAffidavitAccepted')?.touched &&
-                    generalForm.get('isAffidavitAccepted')?.hasError('required')
-                  "
+            <!-- Características del estudio -->
+            <fieldset class="caracteristicas">
+              <legend class="caracteristicas__legend">Características del estudio</legend>
+              <div class="caracteristicas__grid">
+                <mat-checkbox formControlName="isIndigenousPopulation" color="primary"
+                  >¿Involucra pueblos o nacionalidades indígenas?</mat-checkbox
                 >
-                  Debe aceptar la declaración jurada para continuar.
-                </mat-error>
+                <mat-checkbox formControlName="usesBiologicalSamples" color="primary"
+                  >¿Utiliza muestras biológicas humanas?</mat-checkbox
+                >
+                <mat-checkbox formControlName="isVulnerablePopulation" color="primary"
+                  >¿Involucra población vulnerable?</mat-checkbox
+                >
+                <mat-checkbox formControlName="isMulticentric" color="primary"
+                  >¿Es un estudio multicéntrico?</mat-checkbox
+                >
+                <mat-checkbox formControlName="isExternal" color="primary"
+                  >¿Participan instituciones externas?</mat-checkbox
+                >
               </div>
+            </fieldset>
+
+            <!-- Declaración jurada -->
+            <div class="legal-box">
+              <mat-checkbox
+                formControlName="isAffidavitAccepted"
+                color="primary"
+                [aria-describedby]="declaracionConError ? 'np-declaracion-error' : ''"
+                >Declaro bajo juramento que la investigación no ha iniciado su fase de campo y la
+                información es veraz.</mat-checkbox
+              >
+              <mat-error
+                *ngIf="declaracionConError"
+                id="np-declaracion-error"
+                class="legal-box__error"
+              >
+                Debe aceptar la declaración jurada para continuar.
+              </mat-error>
             </div>
           </form>
 
-          <div class="step-actions mt-5 d-flex justify-content-end">
+          <div class="step-actions">
             <button
               mat-flat-button
-              color="accent"
+              type="button"
               (click)="guardarInicial()"
-              class="next-btn px-4"
+              class="next-btn"
               [disabled]="isLoading || generalForm.invalid"
-              style="height: 54px; font-weight: 700"
+              [attr.aria-describedby]="motivoPasoDatos ? 'np-paso1-motivo' : null"
             >
-              <span *ngIf="!isLoading"
-                >REGISTRAR Y CONTINUAR <mat-icon>arrow_forward</mat-icon></span
+              <span *ngIf="!isLoading" class="next-btn__label"
+                >Registrar y continuar <mat-icon aria-hidden="true">arrow_forward</mat-icon></span
               >
               <mat-progress-spinner
                 *ngIf="isLoading"
                 diameter="24"
                 mode="indeterminate"
+                aria-label="Guardando"
               ></mat-progress-spinner>
             </button>
+            <p *ngIf="motivoPasoDatos" id="np-paso1-motivo" class="step-actions__reason">
+              {{ motivoPasoDatos }}
+            </p>
           </div>
         </div>
       </mat-step>
