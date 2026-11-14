@@ -1,6 +1,6 @@
 # F09 · Investigador: borrador y envío a la Secretaría — plan
 
-**Versión:** 0.1 · **Fecha:** 10/11/2026 · **Spec:** `spec-ui.md` 0.1
+**Versión:** 0.2 · **Fecha:** 14/11/2026 · **Spec:** `spec-ui.md` 0.3 (0.2: filas C1 a C4 del contenido de la creación, D9 a D12)
 **Patrón:** cambio mínimo sobre las pantallas actuales del investigador (README §3 regla 5 y skill `ciclo-tarea-ceish`: se trabaja sobre lo que ya funciona, sin duplicar). No se crea `src/features/<sección>/`: el flujo vive hoy en `features/investigador`, `features/evaluations` (subsanación), `features/protocols` (espacio actual), `shared/utils` e `infrastructure/interceptors`, y se corrige ahí.
 **Forma de trabajo:** Codex escribe el código de cada T## con el brief que prepara Claude; Claude hace el Paso 0, revisa el diff (con `code-review`), corre las mutaciones, la verificación doble y los commits. Codex no ejecuta git ni toca `specs/`, `package*.json`, `src/environments/` ni `.env*`.
 
@@ -20,6 +20,11 @@
 | application (servicio actual) | MODIFICAR | `protocolo.service.ts` (`:318`, y `:42-56` tipo `RawBackendProtocol.version`); CREAR `protocolo.service.spec.ts` | `versionNumber` desde `versionNumber` numérico o, si no, desde `version` `"N.0"` → `N`; texto no numérico → 1. Tipo de `version`: `string \| number` | T09-6 |
 | presentation + infra | — | `editar-protocolo.page.ts`, `protocolo.service.ts:472-477` | `PUT` → `PATCH` y edición solo en borrador | T09-7 (bloqueada, TSK-001.14) |
 | presentation | — | `mis-protocolos.page.ts`, `nuevo-protocolo.page.ts` | `Se elimina el…`, `Descartar borrador`, `Nuevo protocolo` deshabilitado con un borrador abierto | T09-8 (bloqueada, TSK-001.11) |
+| presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Dentro del marco: sin barra, pie, `100vh` ni fondo; miga y `PageHeader` (reutiliza `shared/ui/page-header`); `::ng-deep` dentro de `:host`; tokens de `_tokens.scss` | C1 |
+| presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Paso 1 con tokens, etiquetas asociadas y motivo del botón | C2 |
+| presentation | MODIFICAR | `nuevo-protocolo.page.{html,ts,spec.ts}` | Sin requisitos inventados; `LoadingState`/`ErrorState`/`EmptyState` (reutiliza `shared/ui/states`) | C3a |
+| presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Lista de documentos del canvas con conteo y nombres accesibles | C3b |
+| presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Sección `3 · Enviar a la Secretaría` con motivo | C4 |
 
 ## 2. Rutas
 
