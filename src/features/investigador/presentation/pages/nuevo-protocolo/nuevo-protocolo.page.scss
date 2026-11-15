@@ -248,6 +248,61 @@
   color: var(--c-text);
 }
 
+/* Tesis (D14): Sí y No con radios nativos */
+.tesis {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  .field-label {
+    margin-bottom: 0.5rem;
+  }
+}
+
+.tesis__opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tesis-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 7rem;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0.5rem 1rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-text-2);
+  border-radius: 10px;
+  color: var(--c-text);
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--c-primary);
+  }
+
+  &:has(.tipo-card__radio:focus-visible) {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.tesis-opcion--selected {
+  // 2 px sin mover el contenido: el padding baja 1 px.
+  padding: calc(0.5rem - 1px) calc(1rem - 1px);
+  background: var(--c-primary-soft);
+  border: 2px solid var(--c-primary);
+}
+
+.tesis__aviso {
+  margin: 0.5rem 0 0;
+  color: var(--c-text-2);
+}
+
 .caracteristicas__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));

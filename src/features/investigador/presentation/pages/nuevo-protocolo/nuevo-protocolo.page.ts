@@ -171,6 +171,8 @@ export class NuevoProtocoloPage implements OnInit {
   generalForm = this.fb.group({
     titulo: ['', trimmedLengthValidator(TITULO_MIN, TITULO_MAX)],
     tipoEstudio: ['', Validators.required],
+    // Tesis (D14): sin respuesta inicial; responder Sí o No es obligatorio.
+    esTesis: [null as boolean | null, Validators.required],
     isAffidavitAccepted: [false, Validators.requiredTrue],
 
     // Characteristics flags
@@ -232,6 +234,7 @@ export class NuevoProtocoloPage implements OnInit {
     this.generalForm.reset({
       titulo: '',
       tipoEstudio: '',
+      esTesis: null,
       isAffidavitAccepted: false,
       usesBiologicalSamples: false,
       isVulnerablePopulation: false,
@@ -327,6 +330,16 @@ export class NuevoProtocoloPage implements OnInit {
     return String(this.generalForm.controls.tipoEstudio.value ?? '') === this.valorTipo(tipo);
   }
 
+  /** Opción de la tesis elegida (Sí = true, No = false); null sin respuesta (D14). */
+  tesisElegida(valor: boolean): boolean {
+    return this.generalForm.controls.esTesis.value === valor;
+  }
+
+  /** Con "Sí" en la tesis se muestra el aviso de los 2 documentos más (D14). */
+  get esTesisSi(): boolean {
+    return this.tesisElegida(true);
+  }
+
   /** Largo del título recortado, como lo cuenta trimmedLengthValidator. */
   get largoTitulo(): number {
     return String(this.generalForm.controls.titulo.value ?? '').trim().length;
@@ -361,10 +374,11 @@ export class NuevoProtocoloPage implements OnInit {
    */
   get motivoPasoDatos(): string | null {
     if (this.isLoading || this.generalForm.valid) return null;
-    const { titulo, tipoEstudio, isAffidavitAccepted } = this.generalForm.controls;
+    const { titulo, tipoEstudio, esTesis, isAffidavitAccepted } = this.generalForm.controls;
     const faltan: string[] = [];
     if (titulo.invalid) faltan.push('el título');
     if (tipoEstudio.invalid) faltan.push('el tipo de estudio');
+    if (esTesis.invalid) faltan.push('si es tesis');
     if (isAffidavitAccepted.invalid) faltan.push('la declaración');
     if (faltan.length === 0) return null;
     const lista =
@@ -400,6 +414,7 @@ export class NuevoProtocoloPage implements OnInit {
       isIndigenousPopulation: !!formVal.isIndigenousPopulation,
       isMulticentric: !!formVal.isMulticentric,
       hasExternalInstitutions: !!formVal.isExternal,
+      isThesis: formVal.esTesis === true,
 
       sponsorRuc: null as unknown as string,
       sponsorPhone: null as unknown as string,
