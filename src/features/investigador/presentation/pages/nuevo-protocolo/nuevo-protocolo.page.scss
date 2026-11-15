@@ -113,10 +113,14 @@
   padding: 2.5rem !important;
 }
 
-/* Paso 1 (Datos, F09 D10): CSS propio con tokens; el proyecto no carga Bootstrap. */
-.datos-form {
+/* Paso 1 (Datos): canvas CrearProtocoloDatos (F09 D13), CSS propio con tokens de F00. */
+.datos-card {
   display: grid;
-  gap: 1.5rem;
+  gap: 20px;
+  padding: 22px 24px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
 }
 
 .field {
@@ -125,27 +129,122 @@
   gap: 0.5rem;
 }
 
-/* Etiqueta arriba del campo, asociada con for/id (estilo del canvas) */
+/* Etiqueta en negrita arriba del campo, asociada con for/id */
 .field-label {
   display: block;
+  padding: 0;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--c-text);
   text-transform: none;
 }
 
-.caracteristicas {
-  margin: 0;
-  padding: 1rem 1.5rem 1.25rem;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-control);
+.field-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 0.875rem;
+  font: inherit;
+  line-height: 1.5;
+  color: var(--c-text);
   background: var(--c-surface);
+  // Borde con --c-text-2 (7,58:1 sobre blanco); --c-border (1,23:1) no llega al 3:1.
+  border: 1px solid var(--c-text-2);
+  border-radius: var(--radius-control);
+  resize: vertical;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 1px;
+    border-color: var(--c-primary);
+  }
 }
 
-.caracteristicas__legend {
-  padding: 0 0.5rem;
-  font-size: 0.95rem;
+/* De 1 a 19 caracteres: borde y contador en ámbar */
+.field-textarea--corto {
+  border-color: var(--tone-ambar-fg);
+}
+
+.field-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--c-text-2);
+}
+
+.field-counter {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-counter--corto {
   font-weight: 600;
+  color: var(--tone-ambar-fg);
+}
+
+/* Tipo de estudio: tarjetas seleccionables (radios nativos) */
+.tipo-estudio,
+.caracteristicas {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tipo-estudio .field-label,
+.caracteristicas .field-label {
+  margin-bottom: 0.5rem;
+}
+
+.tipo-estudio__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+
+  @media (max-width: 599px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tipo-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 76px;
+  box-sizing: border-box;
+  padding: 0.875rem 1rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-text-2);
+  border-radius: 12px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--c-primary);
+  }
+
+  &:has(.tipo-card__radio:focus-visible) {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.tipo-card--selected {
+  // 2 px sin mover el contenido: el padding baja 1 px.
+  padding: calc(0.875rem - 1px) calc(1rem - 1px);
+  background: var(--c-primary-soft);
+  border: 2px solid var(--c-primary);
+}
+
+.tipo-card__radio {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--c-primary);
+}
+
+.tipo-card__nombre {
+  font-weight: 700;
   color: var(--c-text);
 }
 
@@ -156,6 +255,13 @@
   color: var(--c-text);
 }
 
+.legal-box {
+  padding: 1rem 1.25rem;
+  background: var(--tone-ambar-bg);
+  border-radius: var(--radius-control);
+  color: var(--tone-ambar-fg);
+}
+
 .legal-box__error {
   display: block;
   margin-top: 0.5rem;
@@ -163,22 +269,24 @@
   color: var(--tone-rojo-fg);
 }
 
+/* Fila de debajo de la tarjeta: aviso "Falta: …" a la izquierda, botón a la derecha */
 .step-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
-  margin-top: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1.25rem;
 }
 
 .step-actions__reason {
+  flex: 1 1 16rem;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--c-text-2);
-  text-align: right;
 }
 
-/* Botón principal del paso 1 (estilo del botón principal del canvas) */
+/* Botón principal del paso 1 */
 .next-btn {
   --mat-button-filled-container-color: var(--c-primary);
   --mat-button-filled-label-text-color: var(--c-surface);
@@ -197,68 +305,10 @@
   gap: 0.5rem;
 }
 
-/* Campos de Material (solo dentro de esta página) */
-:host ::ng-deep .mat-mdc-form-field {
-  width: 100%;
-  margin-bottom: 4px;
-
-  .mat-mdc-form-field-subscript-wrapper {
-    font-size: 0.75rem;
-    padding-left: 4px;
-  }
-
-  .mdc-notched-outline__leading,
-  .mdc-notched-outline__notch,
-  .mdc-notched-outline__trailing {
-    // Borde del control con --c-text-2 (7,58:1 sobre blanco); --c-border (1,23:1) no llega al 3:1.
-    border-color: var(--c-text-2) !important;
-    border-width: 1px !important;
-  }
-
-  .mat-mdc-text-field-wrapper {
-    background-color: var(--c-surface) !important;
-    border-radius: var(--radius-control) !important;
-    padding-top: 0 !important;
-  }
-
-  &.mat-focused {
-    .mdc-notched-outline__leading,
-    .mdc-notched-outline__notch,
-    .mdc-notched-outline__trailing {
-      border-color: var(--c-primary) !important;
-      border-width: 2px !important;
-    }
-  }
-
-  &.mat-form-field-invalid {
-    .mdc-notched-outline__leading,
-    .mdc-notched-outline__notch,
-    .mdc-notched-outline__trailing {
-      border-color: var(--tone-rojo-fg) !important;
-    }
-  }
-}
-
-textarea.mat-mdc-input-element {
-  line-height: 1.5 !important;
-  padding: 8px 0 !important;
-}
-
-:host ::ng-deep .mat-mdc-form-field-icon-suffix {
-  color: var(--c-text-2);
-}
-
 /* Botón de envío del paso 2 */
 .submit-btn {
   height: 56px;
   font-weight: 800;
   font-size: 1rem;
   border-radius: var(--radius-control);
-}
-
-.legal-box {
-  padding: 1rem 1.5rem;
-  background: var(--tone-ambar-bg);
-  border-radius: var(--radius-control);
-  color: var(--tone-ambar-fg);
 }

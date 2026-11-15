@@ -22,8 +22,6 @@ import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router'
 // Angular Material
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -45,6 +43,10 @@ import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
+
+/** Largo del título (RF-02.2 del backend), contado sobre el texto recortado. */
+const TITULO_MIN = 20;
+const TITULO_MAX = 200;
 
 interface StudyType {
   id: number;
@@ -108,8 +110,6 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
     RouterModule,
     MatStepperModule,
     MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
@@ -158,12 +158,18 @@ export class NuevoProtocoloPage implements OnInit {
   protocolId: number | null = null;
 
   tiposEstudio: StudyType[] = [];
+  /** Paso abierto del stepper: el subtítulo de la página cambia con él (F09 D13). */
+  pasoActual = 0;
+  readonly subtituloDatos =
+    'Primero los datos básicos. Se guarda como borrador; nadie del comité lo ve hasta que lo envíe.';
+  readonly subtituloDocumentos =
+    'Complete la información básica y cargue la documentación requerida por el CEISH.';
   documentosRequeridos: RequiredDocument[] = [];
   documentUploadStatus: { [key: string]: string } = {};
   archivosCargados: { [key: string]: string } = {};
 
   generalForm = this.fb.group({
-    titulo: ['', trimmedLengthValidator(20, 200)],
+    titulo: ['', trimmedLengthValidator(TITULO_MIN, TITULO_MAX)],
     tipoEstudio: ['', Validators.required],
     isAffidavitAccepted: [false, Validators.requiredTrue],
 
@@ -212,6 +218,7 @@ export class NuevoProtocoloPage implements OnInit {
     this.isRequirementsLoading = false;
     this.isDraftContinuation = false;
     this.protocolId = null;
+    this.pasoActual = 0;
     this.documentosRequeridos = [];
     this.documentUploadStatus = {};
     this.archivosCargados = {};
@@ -307,8 +314,39 @@ export class NuevoProtocoloPage implements OnInit {
         this.tiposEstudio = (list || []) as StudyType[];
       },
       error: () =>
-        this.snackBar.open('No se pudieron cargar los tipos de investigación.', 'Cerrar'),
+        this.snackBar.open('No se pudieron cargar los tipos de estudio.', 'Cerrar'),
     });
+  }
+
+  /** Valor del radio del tipo de estudio: el id del catálogo (se envía como studyTypeId). */
+  valorTipo(tipo: StudyType): string {
+    return String(tipo.id);
+  }
+
+  tipoSeleccionado(tipo: StudyType): boolean {
+    return String(this.generalForm.controls.tipoEstudio.value ?? '') === this.valorTipo(tipo);
+  }
+
+  /** Largo del título recortado, como lo cuenta trimmedLengthValidator. */
+  get largoTitulo(): number {
+    return String(this.generalForm.controls.titulo.value ?? '').trim().length;
+  }
+
+  /** Caracteres que faltan para el mínimo de 20; 0 con el campo vacío o con 20 o más. */
+  get faltanTitulo(): number {
+    const largo = this.largoTitulo;
+    return largo > 0 && largo < TITULO_MIN ? TITULO_MIN - largo : 0;
+  }
+
+  get contadorTitulo(): string {
+    const contador = `${this.largoTitulo}/${TITULO_MAX}`;
+    return this.faltanTitulo > 0 ? `${contador} · faltan ${this.faltanTitulo}` : contador;
+  }
+
+  /** Sin texto de error debajo (D13): el estado inválido se anuncia con aria-invalid al tocarlo. */
+  get tituloConError(): boolean {
+    const control = this.generalForm.controls.titulo;
+    return control.touched && control.invalid;
   }
 
   /** El error de la declaración se muestra después de tocar la casilla sin marcarla. */
@@ -318,22 +356,22 @@ export class NuevoProtocoloPage implements OnInit {
   }
 
   /**
-   * Motivo visible del botón "Registrar y continuar" deshabilitado (F00 §5: la acción se
+   * Motivo visible del botón "Guardar borrador y continuar" deshabilitado (F00 §5: la acción se
    * deshabilita mostrando el motivo). Sin motivo mientras se guarda o con el formulario válido.
    */
   get motivoPasoDatos(): string | null {
     if (this.isLoading || this.generalForm.valid) return null;
     const { titulo, tipoEstudio, isAffidavitAccepted } = this.generalForm.controls;
     const faltan: string[] = [];
-    if (titulo.invalid) faltan.push('el título (de 20 a 200 caracteres)');
-    if (tipoEstudio.invalid) faltan.push('el tipo de investigación');
-    if (isAffidavitAccepted.invalid) faltan.push('la declaración jurada');
+    if (titulo.invalid) faltan.push('el título');
+    if (tipoEstudio.invalid) faltan.push('el tipo de estudio');
+    if (isAffidavitAccepted.invalid) faltan.push('la declaración');
     if (faltan.length === 0) return null;
     const lista =
       faltan.length === 1
         ? faltan[0]
         : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`;
-    return `Falta completar: ${lista}.`;
+    return `Falta: ${lista}.`;
   }
 
   guardarInicial(): void {

@@ -66,9 +66,11 @@ describe('NuevoProtocoloPage — template del título', () => {
     return { control, el, textarea: el.querySelector('textarea') as HTMLTextAreaElement };
   }
 
-  it('con 201 caracteres reales muestra "Máximo 200 caracteres"', () => {
-    const { el } = render('a'.repeat(201));
-    expect(el.textContent).toContain('Máximo 200 caracteres');
+  it('con 201 caracteres reales el título queda pendiente en el aviso, sin error debajo (C2b)', () => {
+    const { control, el } = render('a'.repeat(201));
+    expect(control.hasError('maxlength')).toBeTrue();
+    expect(el.querySelector('#np-paso1-motivo')?.textContent).toContain('el título');
+    expect(el.textContent).not.toContain('Máximo 200 caracteres');
   });
 
   it('el textarea limita a 200 en el navegador sin contar los espacios alrededor como error', () => {
@@ -298,11 +300,11 @@ describe('NuevoProtocoloPage — botón del paso 2 (D6)', () => {
 });
 
 describe('NuevoProtocoloPage — dentro del marco (F09-8, C1)', () => {
-  // Copias escritas a mano de specs/F09-investigador-borrador-envio/spec-ui.md §3.2 (v0.3).
+  // Copias escritas a mano de specs/F09-investigador-borrador-envio/spec-ui.md §3.2 y D13 (v0.4).
   const MIS_PROTOCOLOS_HREF = '/dashboard/investigador/mis-protocolos';
   const TITULO = 'Nuevo protocolo';
   const SUBTITULO =
-    'Complete la información básica y cargue la documentación requerida por el CEISH.';
+    'Primero los datos básicos. Se guarda como borrador; nadie del comité lo ve hasta que lo envíe.';
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -346,7 +348,7 @@ describe('NuevoProtocoloPage — dentro del marco (F09-8, C1)', () => {
     expect(actual?.textContent?.trim()).toBe(TITULO);
   });
 
-  it('muestra el título y el subtítulo en PageHeader', () => {
+  it('muestra el título y el subtítulo del paso 1 en PageHeader', () => {
     const el = render();
     const header = el.querySelector('app-page-header');
     expect(header).not.toBeNull();
@@ -356,32 +358,42 @@ describe('NuevoProtocoloPage — dentro del marco (F09-8, C1)', () => {
   });
 });
 
-describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2)', () => {
-  // Copias escritas a mano de la fila C2 de specs/F09-investigador-borrador-envio/tasks.md.
+describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2 y C2b)', () => {
+  // Copias escritas a mano de las filas C2 y C2b de specs/F09-investigador-borrador-envio/tasks.md
+  // (v0.4; C2b reemplaza los textos de C2).
   const ETIQUETA_TITULO = 'Título de la investigación';
-  const ETIQUETA_TIPO = 'Tipo de investigación';
+  const LEYENDA_TIPO = 'Tipo de estudio';
   const LEYENDA = 'Características del estudio';
-  const CARACTERISTICAS = [
-    '¿Involucra pueblos o nacionalidades indígenas?',
-    '¿Utiliza muestras biológicas humanas?',
-    '¿Involucra población vulnerable?',
-    '¿Es un estudio multicéntrico?',
-    '¿Participan instituciones externas?',
+  const CARACTERISTICAS: [string, string][] = [
+    ['Involucra pueblos o nacionalidades indígenas', 'isIndigenousPopulation'],
+    ['Utiliza muestras biológicas humanas', 'usesBiologicalSamples'],
+    ['Involucra población vulnerable', 'isVulnerablePopulation'],
+    ['Es un estudio multicéntrico', 'isMulticentric'],
+    ['Participan instituciones externas', 'isExternal'],
   ];
   const DECLARACION =
-    'Declaro bajo juramento que la investigación no ha iniciado su fase de campo y la información es veraz.';
+    'Declaro bajo juramento que la investigación no ha iniciado su fase de campo y que la información es veraz. Si el CEISH detecta que ya empezó, el protocolo se archiva con el motivo.';
+  const DECLARACION_NEGRITA = 'Declaro bajo juramento';
   const ERROR_DECLARACION = 'Debe aceptar la declaración jurada para continuar.';
-  const BOTON = 'Registrar y continuar';
-  const MOTIVO_TODO =
-    'Falta completar: el título (de 20 a 200 caracteres), el tipo de investigación y la declaración jurada.';
-  const MOTIVO_DECLARACION = 'Falta completar: la declaración jurada.';
+  const BOTON = 'Guardar borrador y continuar';
+  const MOTIVO_TODO = 'Falta: el título, el tipo de estudio y la declaración.';
+  const MOTIVO_TITULO_DECLARACION = 'Falta: el título y la declaración.';
+  const MOTIVO_DECLARACION = 'Falta: la declaración.';
+  const ERROR_TIPOS = 'No se pudieron cargar los tipos de estudio.';
   const MENSAJE_400 = 'El título debe tener entre 20 y 200 caracteres';
   const MENSAJE_SIN_TEXTO = 'No se pudo registrar el protocolo.';
+  // Tipos inventados para la prueba (las opciones salen de getStudyTypes, no de la plantilla).
+  const TIPOS = [
+    { id: 1, code: 'IO', name: 'Tipo de prueba uno' },
+    { id: 2, code: 'EI', name: 'Tipo de prueba dos' },
+  ];
 
   let guardarSpy: jasmine.Spy;
+  let tiposSpy: jasmine.Spy;
 
   beforeEach(async () => {
     guardarSpy = jasmine.createSpy('guardarProtocoloInicial').and.returnValue(NEVER);
+    tiposSpy = jasmine.createSpy('getStudyTypes').and.returnValue(of(TIPOS));
 
     await TestBed.configureTestingModule({
       imports: [NuevoProtocoloPage, NoopAnimationsModule],
@@ -389,7 +401,7 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2)', () => {
         provideRouter([]),
         {
           provide: ProtocoloService,
-          useValue: { guardarProtocoloInicial: guardarSpy, getStudyTypes: () => of([]) },
+          useValue: { guardarProtocoloInicial: guardarSpy, getStudyTypes: tiposSpy },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
       ],
@@ -415,61 +427,121 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2)', () => {
     return el.querySelector('button.next-btn') as HTMLButtonElement;
   }
 
-  it('el título y el tipo se nombran con su etiqueta de arriba', () => {
+  function fieldsetDe(el: HTMLElement, leyenda: string): HTMLFieldSetElement {
+    const fieldset = Array.from(el.querySelectorAll('fieldset')).find(
+      (f) => f.querySelector('legend')?.textContent?.trim() === leyenda,
+    );
+    expect(fieldset).withContext(`fieldset "${leyenda}"`).toBeDefined();
+    return fieldset as HTMLFieldSetElement;
+  }
+
+  function radios(el: HTMLElement): HTMLInputElement[] {
+    return Array.from(
+      fieldsetDe(el, LEYENDA_TIPO).querySelectorAll<HTMLInputElement>('input[type="radio"]'),
+    );
+  }
+
+  function texto(nodo: Element | null | undefined): string | undefined {
+    return nodo?.textContent?.replace(/\s+/g, ' ').trim();
+  }
+
+  it('el título se nombra con su etiqueta de arriba', () => {
     const { el } = render();
 
     const textarea = el.querySelector('textarea') as HTMLTextAreaElement;
-    const etiquetaTitulo = el.querySelector(`label[for="${textarea.id}"]`);
     expect(textarea.id).toBeTruthy();
-    expect(etiquetaTitulo?.textContent?.trim()).toBe(ETIQUETA_TITULO);
-
-    const select = el.querySelector('mat-select') as HTMLElement;
-    const ids = (select.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
-    const textos = ids.map((id) => el.querySelector(`#${id}`)?.textContent?.trim());
-    expect(textos).toContain(ETIQUETA_TIPO);
-  });
-
-  it('las características van en un fieldset con su legend y la declaración en tipo oración', () => {
-    const { el } = render();
-
-    const fieldset = el.querySelector('fieldset') as HTMLFieldSetElement;
-    expect(fieldset.querySelector('legend')?.textContent?.trim()).toBe(LEYENDA);
-    const casillas = Array.from(fieldset.querySelectorAll('mat-checkbox label')).map((l) =>
-      l.textContent?.trim(),
+    expect(el.querySelector(`label[for="${textarea.id}"]`)?.textContent?.trim()).toBe(
+      ETIQUETA_TITULO,
     );
-    expect(casillas).toEqual(CARACTERISTICAS);
-
-    const declaracion = el.querySelector('.legal-box mat-checkbox label');
-    expect(declaracion?.textContent?.replace(/\s+/g, ' ').trim()).toBe(DECLARACION);
   });
 
-  it('no hay textos en mayúsculas y el botón dice "Registrar y continuar"', () => {
-    const { el } = render();
+  it('sin desplegable ni errores debajo del título y del tipo (C2b)', () => {
+    const { fixture, page, el } = render();
+    page.generalForm.markAllAsTouched();
+    fixture.detectChanges();
 
-    expect(el.textContent).not.toContain('REGISTRAR Y CONTINUAR');
-    expect(el.textContent).not.toContain('--- SELECCIONE ---');
-    expect(el.textContent).not.toContain('DECLARO BAJO JURAMENTO');
-    expect(boton(el).textContent).toContain(BOTON);
+    expect(el.querySelector('mat-select')).toBeNull();
+    expect(el.querySelector('[role="listbox"]')).toBeNull();
+    expect(el.querySelector('[role="combobox"]')).toBeNull();
+    expect(el.textContent).not.toContain('El título es obligatorio.');
+    expect(el.textContent).not.toContain('El tipo de investigación es obligatorio.');
+    // Sin texto debajo, el estado sigue accesible: título inválido y radios obligatorios.
+    expect(el.querySelector('textarea')?.getAttribute('aria-invalid')).toBe('true');
+    expect(radios(el).every((r) => r.required)).toBeTrue();
   });
 
-  it('con el formulario vacío el botón deshabilitado muestra el motivo y lo nombra', () => {
+  it('el tipo de estudio es un grupo de radios nativo con su legend, uno por tipo y sin línea de documentos', () => {
     const { el } = render();
 
-    const motivo = el.querySelector('#np-paso1-motivo');
+    const grupo = radios(el);
+    expect(grupo.length).toBe(TIPOS.length);
+    expect(new Set(grupo.map((r) => r.name)).size).toBe(1);
+    expect(grupo[0].name).toBeTruthy();
+    expect(grupo.map((r) => texto(r.closest('label')))).toEqual(TIPOS.map((t) => t.name));
+    expect(fieldsetDe(el, LEYENDA_TIPO).textContent).not.toContain('documentos');
+  });
+
+  it('elegir un tipo con el teclado marca su radio, fija el tipo y selecciona solo esa tarjeta', () => {
+    const { fixture, page, el } = render();
+    const [primero, segundo] = radios(el);
+
+    // La barra espaciadora sobre el radio con foco produce el click; las flechas las maneja el
+    // navegador entre radios nativos con el mismo name (no se simulan con dispatchEvent).
+    segundo.focus();
+    expect(document.activeElement).toBe(segundo);
+    segundo.click();
+    fixture.detectChanges();
+
+    expect(segundo.checked).toBeTrue();
+    expect(primero.checked).toBeFalse();
+    expect(page.generalForm.controls.tipoEstudio.value).toBe('2');
+    expect(segundo.closest('label')?.classList).toContain('tipo-card--selected');
+    expect(primero.closest('label')?.classList).not.toContain('tipo-card--selected');
+  });
+
+  it('el contador dice "N/200" y, de 1 a 19 caracteres, "N/200 · faltan X" en ámbar', () => {
+    const { fixture, page, el } = render();
+    const contador = () => el.querySelector('#np-titulo-contador') as HTMLElement;
+    const textarea = () => el.querySelector('textarea') as HTMLTextAreaElement;
+    const casos: [string, string, boolean][] = [
+      ['', '0/200', false],
+      ['a'.repeat(10), '10/200 · faltan 10', true],
+      ['a'.repeat(25), '25/200', false],
+    ];
+
+    for (const [valor, esperado, ambar] of casos) {
+      page.generalForm.controls.titulo.setValue(valor);
+      fixture.detectChanges();
+      expect(contador().textContent?.trim()).withContext(valor).toBe(esperado);
+      expect(contador().classList.contains('field-counter--corto')).withContext(valor).toBe(ambar);
+      expect(textarea().classList.contains('field-textarea--corto')).withContext(valor).toBe(ambar);
+    }
+  });
+
+  it('con el formulario vacío el aviso dice lo que falta y nombra al botón deshabilitado', () => {
+    const { el } = render();
+
+    const aviso = el.querySelector('#np-paso1-motivo');
     expect(boton(el).disabled).toBeTrue();
-    expect(motivo?.textContent?.trim()).toBe(MOTIVO_TODO);
+    expect(aviso?.textContent?.trim()).toBe(MOTIVO_TODO);
     expect(boton(el).getAttribute('aria-describedby')).toBe('np-paso1-motivo');
   });
 
-  it('con solo la declaración pendiente el motivo dice "Falta completar: la declaración jurada."', () => {
+  it('el aviso nombra solo lo que falta: dos pendientes y uno pendiente', () => {
     const { fixture, page, el } = render();
+    const aviso = () => el.querySelector('#np-paso1-motivo')?.textContent?.trim();
+
+    page.generalForm.patchValue({ tipoEstudio: '1' });
+    fixture.detectChanges();
+    expect(aviso()).toBe(MOTIVO_TITULO_DECLARACION);
+
     llenarSinDeclaracion(page);
     fixture.detectChanges();
-
-    expect(el.querySelector('#np-paso1-motivo')?.textContent?.trim()).toBe(MOTIVO_DECLARACION);
+    expect(aviso()).toBe(MOTIVO_DECLARACION);
+    expect(boton(el).getAttribute('aria-describedby')).toBe('np-paso1-motivo');
   });
 
-  it('con el formulario válido no hay motivo y el botón está habilitado', () => {
+  it('con el formulario válido no hay aviso y el botón está habilitado', () => {
     const { fixture, page, el } = render();
     llenarSinDeclaracion(page);
     page.generalForm.patchValue({ isAffidavitAccepted: true });
@@ -478,6 +550,49 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2)', () => {
     expect(el.querySelector('#np-paso1-motivo')).toBeNull();
     expect(boton(el).disabled).toBeFalse();
     expect(boton(el).hasAttribute('aria-describedby')).toBeFalse();
+  });
+
+  it('la declaración dice el texto del diseño con "Declaro bajo juramento" en negrita', () => {
+    const { el } = render();
+
+    const declaracion = el.querySelector('.legal-box mat-checkbox label');
+    expect(texto(declaracion)).toBe(DECLARACION);
+    expect(texto(declaracion?.querySelector('strong'))).toBe(DECLARACION_NEGRITA);
+  });
+
+  it('las características van en un fieldset con su legend y cada casilla cambia su campo', () => {
+    const { fixture, page, el } = render();
+
+    const casillas = Array.from(fieldsetDe(el, LEYENDA).querySelectorAll('mat-checkbox'));
+    expect(casillas.map((c) => texto(c.querySelector('label')))).toEqual(
+      CARACTERISTICAS.map(([etiqueta]) => etiqueta),
+    );
+
+    casillas.forEach((casilla, i) => {
+      const [etiqueta, campo] = CARACTERISTICAS[i];
+      (casilla.querySelector('input[type="checkbox"]') as HTMLInputElement).click();
+      fixture.detectChanges();
+      const valores = page.generalForm.getRawValue() as Record<string, unknown>;
+      expect(valores[campo]).withContext(etiqueta).toBeTrue();
+    });
+  });
+
+  it('no hay textos en mayúsculas ni los de C2 y el botón dice "Guardar borrador y continuar"', () => {
+    const { el } = render();
+
+    expect(el.textContent).not.toContain('REGISTRAR Y CONTINUAR');
+    expect(el.textContent).not.toContain('Registrar y continuar');
+    expect(el.textContent).not.toContain('--- SELECCIONE ---');
+    expect(el.textContent).not.toContain('DECLARO BAJO JURAMENTO');
+    expect(el.textContent).not.toContain('Falta completar');
+    expect(texto(boton(el))).toContain(BOTON);
+  });
+
+  it('si fallan los tipos de estudio → aviso "No se pudieron cargar los tipos de estudio."', () => {
+    tiposSpy.and.returnValue(throwError(() => new Error('fallo de catálogo')));
+    const { snackSpy } = render();
+
+    expect(snackSpy).toHaveBeenCalledOnceWith(ERROR_TIPOS, 'Cerrar');
   });
 
   it('400 del backend → aviso con su mensaje exacto, sin "❌"', () => {
@@ -628,6 +743,31 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     expect(page.stepper.selectedIndex).toBe(1);
     expect(page.stepper.steps.first.completed).toBeTrue();
     expect(page.stepper.steps.first.editable).toBeFalse();
+  });
+
+  it('el subtítulo de D13 solo se ve en el paso 1; el paso 2 conserva el de C1 (C2b)', async () => {
+    // Copias escritas a mano de la fila C2b de specs/F09-investigador-borrador-envio/tasks.md.
+    const subtituloDatos =
+      'Primero los datos básicos. Se guarda como borrador; nadie del comité lo ve hasta que lo envíe.';
+    const subtituloDocumentos =
+      'Complete la información básica y cargue la documentación requerida por el CEISH.';
+    const subtitulo = (fixture: { nativeElement: unknown }) =>
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('app-page-header p')
+        ?.textContent?.trim();
+
+    const { fixture, page } = render('5', of([protocolo(5, EstadoProtocolo.BORRADOR)]));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.stepper.selectedIndex).toBe(1);
+    expect(subtitulo(fixture)).toBe(subtituloDocumentos);
+
+    queryParams$.next(convertToParamMap({}));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.stepper.selectedIndex).toBe(0);
+    expect(subtitulo(fixture)).toBe(subtituloDatos);
   });
 
   it('?borrador=5 confirmado: la página actual de la miga dice "Borrador" (F09-8)', async () => {
