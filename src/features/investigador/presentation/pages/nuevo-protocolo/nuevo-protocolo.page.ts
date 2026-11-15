@@ -27,7 +27,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTooltip, MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
@@ -368,6 +368,20 @@ export class NuevoProtocoloPage implements OnInit {
 
   tipoSeleccionado(tipo: StudyType): boolean {
     return String(this.generalForm.controls.tipoEstudio.value ?? '') === this.valorTipo(tipo);
+  }
+
+  /**
+   * Clic en el ⓘ de una característica (D15). Con el mouse y con el teclado, Material ya abre el
+   * tooltip al pasar o al enfocar: el clic (o Enter/Espacio) solo lo muestra, porque alternarlo lo
+   * cerraría. Con un toque lo alterna: en pantallas táctiles Material solo lo abre con una
+   * pulsación larga.
+   */
+  clicInfo(tooltip: MatTooltip, evento: MouseEvent): void {
+    if ((evento as PointerEvent).pointerType === 'touch') {
+      tooltip.toggle();
+    } else {
+      tooltip.show();
+    }
   }
 
   /** Opción de la tesis elegida (Sí = true, No = false); null sin respuesta (D14). */

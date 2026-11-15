@@ -133,7 +133,8 @@
           <!-- Características del estudio -->
           <fieldset class="caracteristicas">
             <legend class="field-label">Características del estudio</legend>
-            <!-- Una columna (D15): la explicación se une a su casilla con aria-describedby -->
+            <!-- Una columna (D15). La explicación se ve en el tooltip del ⓘ; oculta a la vista, la
+                 casilla la sigue nombrando con aria-describedby. El ⓘ va fuera del label. -->
             <div class="caracteristicas__grid">
               <div *ngFor="let c of caracteristicas" class="caracteristica">
                 <input
@@ -148,13 +149,22 @@
                     c.nombre
                   }}</label>
                   <ng-container *ngIf="c.descripcion">
-                    <span class="caracteristica__separador" aria-hidden="true">:</span>
-                    <span [id]="'np-car-' + c.campo + '-desc'" class="caracteristica__desc">{{
+                    <span [id]="'np-car-' + c.campo + '-desc'" class="visually-hidden">{{
                       c.descripcion
                     }}</span>
-                    <mat-icon class="caracteristica__info" aria-hidden="true"
-                      >info_outline</mat-icon
+                    <!-- Mouse y teclado lo abren al pasar o enfocar; el toque, con clicInfo -->
+                    <button
+                      type="button"
+                      class="caracteristica__info"
+                      [attr.aria-label]="'Más información: ' + c.nombre"
+                      [matTooltip]="c.descripcion"
+                      matTooltipPosition="above"
+                      matTooltipClass="np-tooltip"
+                      #tooltip="matTooltip"
+                      (click)="clicInfo(tooltip, $event)"
                     >
+                      <mat-icon aria-hidden="true">info_outline</mat-icon>
+                    </button>
                   </ng-container>
                 </div>
               </div>

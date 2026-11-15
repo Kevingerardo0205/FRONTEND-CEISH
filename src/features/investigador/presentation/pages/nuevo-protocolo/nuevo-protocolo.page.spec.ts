@@ -1,7 +1,11 @@
-import { TestBed } from '@angular/core/testing';
+import { DebugElement } from '@angular/core';
+import { fakeAsync, flush, TestBed, tick } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltip } from '@angular/material/tooltip';
+import { FocusMonitor } from '@angular/cdk/a11y';
 import { BehaviorSubject, NEVER, Observable, of, Subject, throwError } from 'rxjs';
 
 import { NuevoProtocoloPage } from './nuevo-protocolo.page';
@@ -900,7 +904,23 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c)', () => {
       expect(getComputedStyle(no.closest('label') as Element).backgroundColor).not.toBe(primario);
     });
 
-    it('las características van en una columna, cada una con su explicación unida y el ícono aria-hidden', () => {
+    /** El botón ⓘ de una característica y su directiva MatTooltip. */
+    function botonInfo(
+      fixture: { debugElement: DebugElement },
+      campo: string,
+    ): { boton: HTMLButtonElement | null; tooltip: MatTooltip | undefined } {
+      const fila = (fixture.debugElement.nativeElement as HTMLElement)
+        .querySelector(`#np-car-${campo}`)
+        ?.closest('.caracteristica');
+      const boton = (fila?.querySelector('.caracteristica__info') as HTMLButtonElement) ?? null;
+      const tooltip = fixture.debugElement
+        .queryAll(By.directive(MatTooltip))
+        .find((d) => d.nativeElement === boton)
+        ?.injector.get(MatTooltip);
+      return { boton, tooltip };
+    }
+
+    it('las características van en una columna; la explicación está oculta a la vista pero unida a su casilla', () => {
       const { el } = render();
 
       const grid = fieldsetDe(el, LEYENDA).querySelector('.caracteristicas__grid') as HTMLElement;
@@ -914,17 +934,122 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c)', () => {
           .toBe(etiqueta);
         const idExplicacion = casilla?.getAttribute('aria-describedby') ?? '';
         expect(idExplicacion).withContext(campo).toBeTruthy();
-        expect(texto(el.querySelector(`[id="${idExplicacion}"]`)))
-          .withContext(campo)
-          .toBe(EXPLICACIONES[campo]);
-        const fila = casilla?.closest('.caracteristica');
-        const icono = fila?.querySelector('mat-icon');
-        expect(texto(icono)).withContext(campo).toBe('info_outline');
-        expect(icono?.getAttribute('aria-hidden')).withContext(campo).toBe('true');
+        const explicacion = el.querySelector(`[id="${idExplicacion}"]`) as HTMLElement;
+        expect(texto(explicacion)).withContext(campo).toBe(EXPLICACIONES[campo]);
+        // Oculta a la vista (visually-hidden), no con display: none: el lector la sigue leyendo.
+        const estilo = getComputedStyle(explicacion);
+        expect(estilo.display).withContext(campo).not.toBe('none');
+        expect(estilo.position).withContext(campo).toBe('absolute');
+        expect(explicacion.getBoundingClientRect().width).withContext(campo).toBeLessThanOrEqual(1);
+        // A la vista solo queda el nombre: sin ":" ni explicación (el ⓘ lleva aria-hidden).
+        const visible = casilla?.closest('.caracteristica')?.cloneNode(true) as Element;
+        visible
+          .querySelectorAll('.visually-hidden, [aria-hidden="true"]')
+          .forEach((n) => n.remove());
+        expect(texto(visible)).withContext(campo).toBe(etiqueta);
       }
     });
 
-    it('si a una característica le falta el texto no se muestran la explicación ni el ícono', () => {
+    it('cada característica tiene un botón ⓘ con su aria-label y la explicación literal en el tooltip', () => {
+      const { fixture } = render();
+
+      for (const [etiqueta, campo] of CARACTERISTICAS) {
+        const { boton, tooltip } = botonInfo(fixture, campo);
+        expect(boton?.tagName).withContext(campo).toBe('BUTTON');
+        expect(boton?.type).withContext(campo).toBe('button');
+        expect(boton?.closest('label')).withContext(`${campo}: fuera del label`).toBeNull();
+        expect(boton?.getAttribute('aria-label'))
+          .withContext(campo)
+          .toBe(`Más información: ${etiqueta}`);
+        const icono = boton?.querySelector('mat-icon');
+        expect(texto(icono)).withContext(campo).toBe('info_outline');
+        expect(icono?.getAttribute('aria-hidden')).withContext(campo).toBe('true');
+        expect(tooltip).withContext(`${campo}: MatTooltip`).toBeDefined();
+        expect(tooltip?.message).withContext(campo).toBe(EXPLICACIONES[campo]);
+        expect(tooltip?.position).withContext(campo).toBe('above');
+        boton?.focus();
+        expect(document.activeElement).withContext(`${campo}: enfocable`).toBe(boton);
+      }
+    });
+
+    /** Texto del tooltip abierto en el overlay, o undefined si no hay ninguno. */
+    function tooltipAbierto(): string | undefined {
+      return texto(document.querySelector('.np-tooltip'));
+    }
+
+    function pulsarEsc(): void {
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          keyCode: 27,
+          bubbles: true,
+        } as KeyboardEventInit),
+      );
+    }
+
+    it('con el mouse: pasar sobre el ⓘ lo abre, el clic no lo cierra ni cambia la casilla y Esc lo cierra', fakeAsync(() => {
+      const { fixture, page, el } = render();
+      const { boton, tooltip } = botonInfo(fixture, 'isMulticentric');
+
+      boton?.dispatchEvent(new MouseEvent('mouseenter'));
+      tick(0);
+      fixture.detectChanges();
+      expect(tooltipAbierto()).toBe(EXPLICACIONES['isMulticentric']);
+      // WCAG 1.4.13: se puede pasar el mouse sobre el tooltip (el panel no es "non-interactive").
+      expect(
+        document.querySelector('.np-tooltip')?.closest('.mat-mdc-tooltip-panel-non-interactive'),
+      ).toBeNull();
+
+      boton?.dispatchEvent(new PointerEvent('click', { pointerType: 'mouse', bubbles: true }));
+      tick(0);
+      fixture.detectChanges();
+      expect(tooltip?._isTooltipVisible()).withContext('sigue abierto tras el clic').toBeTrue();
+      expect(page.generalForm.controls.isMulticentric.value).toBeFalse();
+      expect((el.querySelector('#np-car-isMulticentric') as HTMLInputElement).checked).toBeFalse();
+
+      pulsarEsc();
+      tick(0);
+      fixture.detectChanges();
+      flush();
+      expect(tooltip?._isTooltipVisible()).toBeFalse();
+    }));
+
+    it('con el teclado: enfocar el ⓘ lo abre y Enter (clic sin puntero) no lo cierra', fakeAsync(() => {
+      const { fixture } = render();
+      const { boton, tooltip } = botonInfo(fixture, 'isExternal');
+
+      TestBed.inject(FocusMonitor).focusVia(boton as HTMLElement, 'keyboard');
+      tick(0);
+      fixture.detectChanges();
+      expect(tooltipAbierto()).toBe(EXPLICACIONES['isExternal']);
+
+      boton?.dispatchEvent(new PointerEvent('click', { pointerType: '', bubbles: true }));
+      tick(0);
+      fixture.detectChanges();
+      expect(tooltip?._isTooltipVisible()).withContext('sigue abierto tras Enter').toBeTrue();
+      flush();
+    }));
+
+    it('con un toque: el clic lo abre y otro lo cierra, sin cambiar la casilla', fakeAsync(() => {
+      const { fixture, page } = render();
+      const { boton, tooltip } = botonInfo(fixture, 'usesBiologicalSamples');
+      const tocar = () => {
+        boton?.dispatchEvent(new PointerEvent('click', { pointerType: 'touch', bubbles: true }));
+        tick(0);
+        fixture.detectChanges();
+      };
+
+      tocar();
+      expect(tooltipAbierto()).toBe(EXPLICACIONES['usesBiologicalSamples']);
+      expect(page.generalForm.controls.usesBiologicalSamples.value).toBeFalse();
+
+      tocar();
+      flush();
+      expect(tooltip?._isTooltipVisible()).toBeFalse();
+      expect(page.generalForm.controls.usesBiologicalSamples.value).toBeFalse();
+    }));
+
+    it('si a una característica le falta el texto no hay botón ⓘ ni texto oculto', () => {
       const { fixture, page, el } = render();
       page.caracteristicas = page.caracteristicas.map((c) =>
         c.campo === 'isExternal' ? { ...c, descripcion: undefined } : c,
@@ -934,7 +1059,9 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c)', () => {
       const casilla = el.querySelector('#np-car-isExternal') as HTMLInputElement;
       const fila = casilla.closest('.caracteristica') as HTMLElement;
       expect(casilla.hasAttribute('aria-describedby')).toBeFalse();
+      expect(fila.querySelector('button')).toBeNull();
       expect(fila.querySelector('mat-icon')).toBeNull();
+      expect(el.querySelector('#np-car-isExternal-desc')).toBeNull();
       expect(texto(fila)).toBe('Participan instituciones externas');
     });
 

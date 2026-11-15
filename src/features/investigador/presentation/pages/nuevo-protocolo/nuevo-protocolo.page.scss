@@ -376,6 +376,11 @@
 }
 
 .caracteristica__texto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 24px;
   line-height: 1.45;
 }
 
@@ -385,23 +390,51 @@
   cursor: pointer;
 }
 
-.caracteristica__separador {
-  font-weight: 600;
-  color: var(--c-text);
-}
-
-.caracteristica__desc {
-  margin-left: 0.25rem;
-  color: var(--c-text-2);
-}
-
+/* Botón ⓘ: área de 24 × 24 px, sin borde; abre el tooltip con la explicación (D15) */
 .caracteristica__info {
-  width: 18px;
-  height: 18px;
-  margin-left: 0.25rem;
-  font-size: 18px;
-  vertical-align: -3px;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: var(--c-text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--c-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 1px;
+  }
+
+  .mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+}
+
+/* Tooltip de la explicación: va en el overlay, fuera de :host; la clase es solo de esta página */
+::ng-deep .np-tooltip {
+  // --c-surface sobre --c-text: 17,85:1.
+  --mat-tooltip-container-color: var(--c-text);
+  --mat-tooltip-supporting-text-color: var(--c-surface);
+  --mat-tooltip-supporting-text-size: 13px;
+  --mat-tooltip-supporting-text-line-height: 1.45;
+
+  .mdc-tooltip__surface {
+    max-width: 280px;
+    padding: 8px 10px;
+    text-align: left;
+  }
 }
 
 /* Declaración jurada (D15) */
