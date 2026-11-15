@@ -79,6 +79,45 @@
               </div>
             </fieldset>
 
+            <!-- Tesis (D14): obligatoria y sin respuesta inicial, para todos los tipos de estudio -->
+            <fieldset
+              class="tesis"
+              [attr.aria-describedby]="esTesisSi ? 'np-tesis-aviso' : null"
+            >
+              <legend class="field-label">¿Es un trabajo de titulación (tesis)?</legend>
+              <div class="tesis__opciones">
+                <label class="tesis-opcion" [class.tesis-opcion--selected]="tesisElegida(true)">
+                  <input
+                    type="radio"
+                    class="tipo-card__radio"
+                    name="esTesis"
+                    formControlName="esTesis"
+                    required
+                    [value]="true"
+                  />
+                  Sí
+                </label>
+                <label class="tesis-opcion" [class.tesis-opcion--selected]="tesisElegida(false)">
+                  <input
+                    type="radio"
+                    class="tipo-card__radio"
+                    name="esTesis"
+                    formControlName="esTesis"
+                    required
+                    [value]="false"
+                  />
+                  No
+                </label>
+              </div>
+              <!-- La región viva existe siempre: los lectores solo anuncian cambios dentro de ella -->
+              <div class="tesis__region" aria-live="polite">
+                <p *ngIf="esTesisSi" id="np-tesis-aviso" class="tesis__aviso">
+                  Se piden 2 documentos más: la captura del informe antiplagio y el oficio o
+                  certificado del tutor.
+                </p>
+              </div>
+            </fieldset>
+
             <!-- Características del estudio -->
             <fieldset class="caracteristicas">
               <legend class="field-label">Características del estudio</legend>

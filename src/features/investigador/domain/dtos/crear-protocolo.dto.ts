@@ -64,6 +64,8 @@ export interface CrearProtocoloDto {
   isVulnerablePopulation: boolean;
   isIndigenousPopulation: boolean;
   isMulticentric: boolean;
+  /** Trabajo de titulación (TSK-001.12): con true el checklist suma 2 documentos. */
+  isThesis?: boolean;
 
   hasExternalInstitutions: boolean;
   sponsorRuc: string;

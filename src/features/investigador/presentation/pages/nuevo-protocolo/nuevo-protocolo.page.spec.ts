@@ -35,6 +35,7 @@ const CAMPOS_CREATE_PROTOCOL_DTO = [
   'isMulticentric',
   'hasExternalInstitutions',
   'isIndigenousPopulation',
+  'isThesis',
   'isAffidavitAccepted',
   'investigators',
   'institutions',
@@ -107,6 +108,7 @@ describe('NuevoProtocoloPage — cuerpo de POST /protocols', () => {
     page.generalForm.patchValue({
       titulo: 'ZZ_TEST_ Protocolo de prueba sin nivel de riesgo',
       tipoEstudio: '2',
+      esTesis: false,
       isAffidavitAccepted: true,
       usesBiologicalSamples: true,
     });
@@ -166,6 +168,7 @@ describe('NuevoProtocoloPage — cuerpo de POST /protocols', () => {
       page.generalForm.patchValue({
         titulo: `   ${VEINTE}  \n`,
         tipoEstudio: '2',
+        esTesis: false,
         isAffidavitAccepted: true,
       });
       expect(page.generalForm.controls.titulo.valid).toBeTrue();
@@ -358,9 +361,9 @@ describe('NuevoProtocoloPage — dentro del marco (F09-8, C1)', () => {
   });
 });
 
-describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2 y C2b)', () => {
-  // Copias escritas a mano de las filas C2 y C2b de specs/F09-investigador-borrador-envio/tasks.md
-  // (v0.4; C2b reemplaza los textos de C2).
+describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c)', () => {
+  // Copias escritas a mano de las filas C2, C2b y C2c de specs/F09-investigador-borrador-envio/tasks.md
+  // (v0.5; C2b reemplaza los textos de C2 y C2c suma la tesis, D14).
   const ETIQUETA_TITULO = 'Título de la investigación';
   const LEYENDA_TIPO = 'Tipo de estudio';
   const LEYENDA = 'Características del estudio';
@@ -376,7 +379,11 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2 y C2b)', () => {
   const DECLARACION_NEGRITA = 'Declaro bajo juramento';
   const ERROR_DECLARACION = 'Debe aceptar la declaración jurada para continuar.';
   const BOTON = 'Guardar borrador y continuar';
-  const MOTIVO_TODO = 'Falta: el título, el tipo de estudio y la declaración.';
+  const MOTIVO_TODO = 'Falta: el título, el tipo de estudio, si es tesis y la declaración.';
+  const MOTIVO_TESIS = 'Falta: si es tesis.';
+  const LEYENDA_TESIS = '¿Es un trabajo de titulación (tesis)?';
+  const AVISO_TESIS =
+    'Se piden 2 documentos más: la captura del informe antiplagio y el oficio o certificado del tutor.';
   const MOTIVO_TITULO_DECLARACION = 'Falta: el título y la declaración.';
   const MOTIVO_DECLARACION = 'Falta: la declaración.';
   const ERROR_TIPOS = 'No se pudieron cargar los tipos de estudio.';
@@ -420,6 +427,7 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2 y C2b)', () => {
     page.generalForm.patchValue({
       titulo: 'Estudio de prueba del investigador',
       tipoEstudio: '2',
+      esTesis: false,
     });
   }
 
@@ -531,7 +539,7 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2 y C2b)', () => {
     const { fixture, page, el } = render();
     const aviso = () => el.querySelector('#np-paso1-motivo')?.textContent?.trim();
 
-    page.generalForm.patchValue({ tipoEstudio: '1' });
+    page.generalForm.patchValue({ tipoEstudio: '1', esTesis: true });
     fixture.detectChanges();
     expect(aviso()).toBe(MOTIVO_TITULO_DECLARACION);
 
@@ -631,6 +639,133 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2 y C2b)', () => {
     const error = el.querySelector('#np-declaracion-error');
     expect(error?.textContent?.trim()).toBe(ERROR_DECLARACION);
     expect(input().getAttribute('aria-describedby') ?? '').toContain('np-declaracion-error');
+  });
+
+  describe('tesis (D14, C2c)', () => {
+    function radiosTesis(el: HTMLElement): HTMLInputElement[] {
+      return Array.from(
+        fieldsetDe(el, LEYENDA_TESIS).querySelectorAll<HTMLInputElement>('input[type="radio"]'),
+      );
+    }
+
+    function elegir(fixture: { detectChanges(): void }, el: HTMLElement, etiqueta: string): void {
+      const radio = radiosTesis(el).find((r) => texto(r.closest('label')) === etiqueta);
+      expect(radio).withContext(`radio "${etiqueta}"`).toBeDefined();
+      radio!.click();
+      fixture.detectChanges();
+    }
+
+    it('es un grupo de radios nativo con su legend y las opciones "Sí" y "No", después del tipo de estudio', () => {
+      const { el } = render();
+
+      const grupo = radiosTesis(el);
+      expect(grupo.map((r) => texto(r.closest('label')))).toEqual(['Sí', 'No']);
+      expect(new Set(grupo.map((r) => r.name)).size).toBe(1);
+      expect(grupo[0].name).toBeTruthy();
+      expect(grupo.every((r) => r.required)).toBeTrue();
+      const leyendas = Array.from(el.querySelectorAll('fieldset > legend')).map((l) => texto(l));
+      expect(leyendas.indexOf(LEYENDA_TESIS)).toBe(leyendas.indexOf(LEYENDA_TIPO) + 1);
+    });
+
+    it('al empezar no hay respuesta: ningún radio marcado y el control en null', () => {
+      const { page, el } = render();
+
+      expect(radiosTesis(el).some((r) => r.checked)).toBeFalse();
+      expect(page.generalForm.controls.esTesis.value).toBeNull();
+      expect(page.generalForm.controls.esTesis.invalid).toBeTrue();
+    });
+
+    it('con "Sí" el aviso de 2 documentos entra en una región viva que ya existía y se une al fieldset; con "No" la región queda vacía', () => {
+      const { fixture, el } = render();
+      const fieldset = () => fieldsetDe(el, LEYENDA_TESIS);
+
+      // La región viva está antes de elegir (si se insertara junto con el texto no se anunciaría).
+      const region = fieldset().querySelector('[aria-live="polite"]');
+      expect(region).withContext('región viva antes de elegir').not.toBeNull();
+      expect(texto(region)).toBe('');
+      expect(fieldset().hasAttribute('aria-describedby')).toBeFalse();
+
+      elegir(fixture, el, 'Sí');
+      const aviso = el.querySelector('#np-tesis-aviso');
+      expect(texto(aviso)).toBe(AVISO_TESIS);
+      expect(aviso?.closest('[aria-live="polite"]')).toBe(region);
+      expect(fieldset().querySelector('[aria-live="polite"]')).toBe(region);
+      expect(fieldset().getAttribute('aria-describedby')).toBe('np-tesis-aviso');
+
+      elegir(fixture, el, 'No');
+      expect(el.querySelector('#np-tesis-aviso')).toBeNull();
+      expect(fieldset().querySelector('[aria-live="polite"]')).toBe(region);
+      expect(texto(region)).toBe('');
+      expect(el.textContent).not.toContain('Se piden 2 documentos más');
+      expect(fieldset().hasAttribute('aria-describedby')).toBeFalse();
+    });
+
+    it('el aviso "Falta: …" dice "si es tesis" y, si es lo único pendiente, "Falta: si es tesis."', () => {
+      const { fixture, page, el } = render();
+      const aviso = () => el.querySelector('#np-paso1-motivo')?.textContent?.trim();
+      expect(aviso()).toBe(MOTIVO_TODO);
+
+      page.generalForm.patchValue({
+        titulo: 'Estudio de prueba del investigador',
+        tipoEstudio: '2',
+        isAffidavitAccepted: true,
+      });
+      fixture.detectChanges();
+      expect(aviso()).toBe(MOTIVO_TESIS);
+    });
+
+    it('sin responder la tesis el botón queda deshabilitado y no registra', () => {
+      const { fixture, page, el } = render();
+      page.generalForm.patchValue({
+        titulo: 'Estudio de prueba del investigador',
+        tipoEstudio: '2',
+        isAffidavitAccepted: true,
+      });
+      fixture.detectChanges();
+
+      expect(boton(el).disabled).toBeTrue();
+      expect(boton(el).getAttribute('aria-describedby')).toBe('np-paso1-motivo');
+      page.guardarInicial();
+      expect(guardarSpy).not.toHaveBeenCalled();
+    });
+
+    for (const [etiqueta, esperado] of [
+      ['Sí', true],
+      ['No', false],
+    ] as [string, boolean][]) {
+      it(`con "${etiqueta}" POST /protocols envía isThesis: ${esperado}`, () => {
+        const { fixture, page, el } = render();
+        page.generalForm.patchValue({
+          titulo: 'Estudio de prueba del investigador',
+          tipoEstudio: '2',
+          isAffidavitAccepted: true,
+        });
+        elegir(fixture, el, etiqueta);
+        expect(boton(el).disabled).toBeFalse();
+
+        boton(el).click();
+
+        expect(guardarSpy).toHaveBeenCalledTimes(1);
+        const body = guardarSpy.calls.mostRecent().args[0] as Record<string, unknown>;
+        expect(body['isThesis']).toBe(esperado);
+      });
+    }
+
+    it('elegir una opción la selecciona y deja la otra sin seleccionar', () => {
+      const { fixture, page, el } = render();
+      const [si, no] = radiosTesis(el);
+
+      elegir(fixture, el, 'No');
+      expect(no.checked).toBeTrue();
+      expect(si.checked).toBeFalse();
+      expect(page.generalForm.controls.esTesis.value).toBeFalse();
+      expect(no.closest('label')?.classList).toContain('tesis-opcion--selected');
+      expect(si.closest('label')?.classList).not.toContain('tesis-opcion--selected');
+
+      elegir(fixture, el, 'Sí');
+      expect(si.closest('label')?.classList).toContain('tesis-opcion--selected');
+      expect(no.closest('label')?.classList).not.toContain('tesis-opcion--selected');
+    });
   });
 });
 
@@ -793,6 +928,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     expect(page.generalForm.getRawValue()).toEqual({
       titulo: '',
       tipoEstudio: '',
+      esTesis: null,
       isAffidavitAccepted: false,
       usesBiologicalSamples: false,
       isVulnerablePopulation: false,
@@ -841,6 +977,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     page.generalForm.patchValue({
       titulo: 'Estudio de prueba del investigador',
       tipoEstudio: '2',
+      esTesis: false,
       isAffidavitAccepted: true,
     });
     fixture.detectChanges();
@@ -875,6 +1012,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     page.generalForm.patchValue({
       titulo: 'Segundo estudio de prueba del investigador',
       tipoEstudio: '2',
+      esTesis: false,
       isAffidavitAccepted: true,
     });
     fixture.detectChanges();
@@ -892,6 +1030,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     page.generalForm.patchValue({
       titulo: 'Estudio de prueba del investigador',
       tipoEstudio: '2',
+      esTesis: false,
       isAffidavitAccepted: true,
     });
     fixture.detectChanges();
@@ -931,6 +1070,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     page.generalForm.patchValue({
       titulo: 'Estudio de prueba del investigador',
       tipoEstudio: 'OBSERVACIONAL',
+      esTesis: false,
       isAffidavitAccepted: true,
     });
     fixture.detectChanges();
@@ -971,6 +1111,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     page.generalForm.patchValue({
       titulo: 'Estudio de prueba del investigador',
       tipoEstudio: 'OBSERVACIONAL',
+      esTesis: false,
       isAffidavitAccepted: true,
     });
     fixture.detectChanges();
