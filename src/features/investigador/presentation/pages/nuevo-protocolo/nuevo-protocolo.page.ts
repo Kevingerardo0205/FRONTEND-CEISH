@@ -24,8 +24,6 @@ import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
@@ -47,6 +45,45 @@ import { Subscription } from 'rxjs';
 /** Largo del título (RF-02.2 del backend), contado sobre el texto recortado. */
 const TITULO_MIN = 20;
 const TITULO_MAX = 200;
+
+type CampoCaracteristica =
+  | 'isIndigenousPopulation'
+  | 'usesBiologicalSamples'
+  | 'isVulnerablePopulation'
+  | 'isMulticentric'
+  | 'isExternal';
+
+interface Caracteristica {
+  campo: CampoCaracteristica;
+  nombre: string;
+  /** Sin texto no se muestran ni la explicación ni el ícono (D15). */
+  descripcion?: string;
+}
+
+/**
+ * Explicación de cada característica (F09 D15, C2d). Resumida del PET del CEISH-ESPOCH (secciones
+ * 4.1.2 y 4.2.1.2 y glosario); la Secretaría debe validar estos textos.
+ */
+const DESCRIPCION_CARACTERISTICA: Partial<Record<CampoCaracteristica, string>> = {
+  isIndigenousPopulation:
+    'Pide el consentimiento informado en castellano y traducido a los idiomas ancestrales, y el consentimiento colectivo o comunitario firmado por el líder elegido por la asamblea comunitaria.',
+  usesBiologicalSamples:
+    'Material de origen humano como tejidos, fluidos, células, ADN, ARN o proteínas. Pide la declaratoria de confidencialidad y la declaración de conflicto de interés de todos los investigadores.',
+  isVulnerablePopulation:
+    'Por ejemplo: niños, niñas, adolescentes, embarazadas, adultos mayores, personas con discapacidad o trastornos mentales, grupos étnicos minoritarios o víctimas de conflicto armado. Pide la declaratoria de confidencialidad y la declaración de conflicto de interés.',
+  isMulticentric:
+    'Se realiza en más de un centro de investigación. La declaración de responsabilidad (Anexo 4) debe cubrir al investigador de cada centro.',
+  isExternal:
+    'Pide la carta de interés institucional (Anexo 5) firmada por la máxima autoridad de cada establecimiento, distrito o coordinación zonal.',
+};
+
+const NOMBRE_CARACTERISTICA: [CampoCaracteristica, string][] = [
+  ['isIndigenousPopulation', 'Involucra pueblos o nacionalidades indígenas'],
+  ['usesBiologicalSamples', 'Utiliza muestras biológicas humanas'],
+  ['isVulnerablePopulation', 'Involucra población vulnerable'],
+  ['isMulticentric', 'Es un estudio multicéntrico'],
+  ['isExternal', 'Participan instituciones externas'],
+];
 
 interface StudyType {
   id: number;
@@ -112,8 +149,6 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
     MatFormFieldModule,
     MatButtonModule,
     MatIconModule,
-    MatCardModule,
-    MatCheckboxModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatDividerModule,
@@ -158,12 +193,17 @@ export class NuevoProtocoloPage implements OnInit {
   protocolId: number | null = null;
 
   tiposEstudio: StudyType[] = [];
-  /** Paso abierto del stepper: el subtítulo de la página cambia con él (F09 D13). */
+  /** Paso abierto del stepper (stepper.selectedIndex): marca la barra de pasos y el subtítulo. */
   pasoActual = 0;
-  readonly subtituloDatos =
-    'Primero los datos básicos. Se guarda como borrador; nadie del comité lo ve hasta que lo envíe.';
-  readonly subtituloDocumentos =
-    'Complete la información básica y cargue la documentación requerida por el CEISH.';
+  readonly subtituloDatos = 'Paso 1 de 3: Información básica';
+  readonly subtituloDocumentos = 'Paso 2 de 3: Documentos';
+  /** Barra de pasos propia (D15); el paso 3 queda pendiente hasta C4. */
+  readonly pasos = ['1 · Datos', '2 · Documentos', '3 · Enviar a la Secretaría'];
+  caracteristicas: Caracteristica[] = NOMBRE_CARACTERISTICA.map(([campo, nombre]) => ({
+    campo,
+    nombre,
+    descripcion: DESCRIPCION_CARACTERISTICA[campo],
+  }));
   documentosRequeridos: RequiredDocument[] = [];
   documentUploadStatus: { [key: string]: string } = {};
   archivosCargados: { [key: string]: string } = {};
@@ -369,8 +409,9 @@ export class NuevoProtocoloPage implements OnInit {
   }
 
   /**
-   * Motivo visible del botón "Guardar borrador y continuar" deshabilitado (F00 §5: la acción se
-   * deshabilita mostrando el motivo). Sin motivo mientras se guarda o con el formulario válido.
+   * Motivo visible del botón "Guardar y continuar" deshabilitado (F00 §5: la acción se
+   * deshabilita mostrando el motivo; texto de D15). Sin motivo mientras se guarda o con el
+   * formulario válido.
    */
   get motivoPasoDatos(): string | null {
     if (this.isLoading || this.generalForm.valid) return null;
@@ -385,7 +426,11 @@ export class NuevoProtocoloPage implements OnInit {
       faltan.length === 1
         ? faltan[0]
         : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`;
-    return `Falta: ${lista}.`;
+    const cantidad =
+      faltan.length === 1
+        ? '1 campo obligatorio pendiente'
+        : `${faltan.length} campos obligatorios pendientes`;
+    return `${cantidad}: ${lista}.`;
   }
 
   guardarInicial(): void {
