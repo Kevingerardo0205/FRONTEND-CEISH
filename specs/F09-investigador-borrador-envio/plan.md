@@ -1,6 +1,6 @@
 # F09 · Investigador: borrador y envío a la Secretaría — plan
 
-**Versión:** 0.2 · **Fecha:** 14/11/2026 · **Spec:** `spec-ui.md` 0.3 (0.2: filas C1 a C4 del contenido de la creación, D9 a D12)
+**Versión:** 0.3 · **Fecha:** 14/11/2026 · **Spec:** `spec-ui.md` 0.4 (0.2: filas C1 a C4 del contenido de la creación, D9 a D12; 0.3: fila C2b, D13)
 **Patrón:** cambio mínimo sobre las pantallas actuales del investigador (README §3 regla 5 y skill `ciclo-tarea-ceish`: se trabaja sobre lo que ya funciona, sin duplicar). No se crea `src/features/<sección>/`: el flujo vive hoy en `features/investigador`, `features/evaluations` (subsanación), `features/protocols` (espacio actual), `shared/utils` e `infrastructure/interceptors`, y se corrige ahí.
 **Forma de trabajo:** Codex escribe el código de cada T## con el brief que prepara Claude; Claude hace el Paso 0, revisa el diff (con `code-review`), corre las mutaciones, la verificación doble y los commits. Codex no ejecuta git ni toca `specs/`, `package*.json`, `src/environments/` ni `.env*`.
 
@@ -22,6 +22,7 @@
 | presentation | — | `mis-protocolos.page.ts`, `nuevo-protocolo.page.ts` | `Se elimina el…`, `Descartar borrador`, `Nuevo protocolo` deshabilitado con un borrador abierto | T09-8 (bloqueada, TSK-001.11) |
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Dentro del marco: sin barra, pie, `100vh` ni fondo; miga y `PageHeader` (reutiliza `shared/ui/page-header`); `::ng-deep` dentro de `:host`; tokens de `_tokens.scss` | C1 |
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Paso 1 con tokens, etiquetas asociadas y motivo del botón | C2 |
+| presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Paso 1 como el canvas `CrearProtocoloDatos` (D13): tarjeta, área de texto nativa con contador ámbar, tipo de estudio en tarjetas con radios nativos (sin `mat-select` ni `MatSelectModule`), casillas y declaración del diseño, aviso `Falta: …` | C2b |
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,ts,spec.ts}` | Sin requisitos inventados; `LoadingState`/`ErrorState`/`EmptyState` (reutiliza `shared/ui/states`) | C3a |
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Lista de documentos del canvas con conteo y nombres accesibles | C3b |
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Sección `3 · Enviar a la Secretaría` con motivo | C4 |
@@ -41,6 +42,7 @@ Sin rutas nuevas. `?borrador={id}` es un query param de la ruta existente `nuevo
 | Paso de documentos y envío | paso 2 de `nuevo-protocolo` (`.html:157-340`) | (c) se reutiliza para `Continuar` (D4); no se crea pantalla nueva |
 | Edición del borrador | `editar-protocolo.page.ts` con `PUT` | se corrige en T09-7 |
 | Código muerto (spec-ui P3) | — | tarea de retiro aparte (D1) |
+| Tarjetas del tipo de estudio (C2b, Paso 0 del 14/11/2026) | `shared/ui/button-group` (`ButtonGroupComponent`: botones con `aria-pressed` para cambiar de vista, sin `ControlValueAccessor`); no hay otro grupo de radios en `src/` (`git grep -n -i` de `radio-card`, `choice-card`, `option-card`, `selectable-card` y `type="radio"` sin salida) | (a) no se reutiliza: es un cambio de vista, no un campo de formulario; el grupo de radios nativo va en la plantilla de la página con `formControlName` |
 
 ## 4. Seguridad (angular-security)
 

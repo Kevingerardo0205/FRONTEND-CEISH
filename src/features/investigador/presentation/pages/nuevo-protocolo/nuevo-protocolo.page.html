@@ -14,86 +14,89 @@
 
   <app-page-header
     heading="Nuevo protocolo"
-    subtitle="Complete la información básica y cargue la documentación requerida por el CEISH."
+    [subtitle]="pasoActual === 0 ? subtituloDatos : subtituloDocumentos"
   ></app-page-header>
 
   <mat-card class="register-stepper-card animate-fade-in">
-    <mat-stepper [linear]="true" #stepper class="custom-stepper">
-      <!-- PASO 1: INFORMACIÓN GENERAL -->
+    <mat-stepper
+      [linear]="true"
+      #stepper
+      class="custom-stepper"
+      (selectionChange)="pasoActual = $event.selectedIndex"
+    >
+      <!-- PASO 1: DATOS (canvas CrearProtocoloDatos, F09 D13) -->
       <mat-step [stepControl]="generalForm" [editable]="protocolId === null">
         <ng-template matStepLabel>Información General</ng-template>
         <div class="step-content">
-          <form [formGroup]="generalForm" class="datos-form">
+          <form [formGroup]="generalForm" class="datos-card">
             <!-- Título -->
             <div class="field">
-              <label class="field-label" for="np-titulo" id="np-titulo-label"
-                >Título de la investigación</label
-              >
-              <mat-form-field appearance="outline" class="field-control">
-                <textarea
-                  matInput
-                  id="np-titulo"
-                  formControlName="titulo"
-                  required
-                  rows="3"
-                  [attr.maxlength]="200"
-                  placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
-                ></textarea>
-                <mat-hint>Incluya la población, el lugar y el período.</mat-hint>
-                <mat-hint align="end"
-                  >{{ generalForm.get('titulo')?.value?.trim()?.length || 0 }}/200</mat-hint
+              <label class="field-label" for="np-titulo">Título de la investigación</label>
+              <textarea
+                id="np-titulo"
+                class="field-textarea"
+                [class.field-textarea--corto]="faltanTitulo > 0"
+                formControlName="titulo"
+                required
+                rows="3"
+                [attr.maxlength]="200"
+                aria-describedby="np-titulo-pista np-titulo-contador"
+                [attr.aria-invalid]="tituloConError ? 'true' : null"
+                placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
+              ></textarea>
+              <div class="field-meta">
+                <span id="np-titulo-pista" class="field-hint"
+                  >Incluya la población, el lugar y el período.</span
                 >
-                <mat-error *ngIf="generalForm.get('titulo')?.hasError('required')"
-                  >El título es obligatorio.</mat-error
+                <span
+                  id="np-titulo-contador"
+                  class="field-counter"
+                  [class.field-counter--corto]="faltanTitulo > 0"
+                  >{{ contadorTitulo }}</span
                 >
-                <mat-error *ngIf="generalForm.get('titulo')?.hasError('minlength')"
-                  >El título debe tener al menos 20 caracteres</mat-error
-                >
-                <mat-error *ngIf="generalForm.get('titulo')?.hasError('maxlength')"
-                  >Máximo 200 caracteres</mat-error
-                >
-              </mat-form-field>
+              </div>
             </div>
 
-            <!-- Tipo de investigación -->
-            <div class="field">
-              <label class="field-label" id="np-tipo-label">Tipo de investigación</label>
-              <mat-form-field appearance="outline" class="field-control">
-                <mat-select
-                  id="np-tipo"
-                  formControlName="tipoEstudio"
-                  required
-                  placeholder="Seleccione"
-                  aria-labelledby="np-tipo-label"
+            <!-- Tipo de estudio: grupo de radios nativo (las flechas las maneja el navegador) -->
+            <fieldset class="tipo-estudio">
+              <legend class="field-label">Tipo de estudio</legend>
+              <div class="tipo-estudio__grid">
+                <label
+                  *ngFor="let t of tiposEstudio"
+                  class="tipo-card"
+                  [class.tipo-card--selected]="tipoSeleccionado(t)"
                 >
-                  <mat-option *ngFor="let t of tiposEstudio" [value]="t.id || t.code || t">
-                    {{ t.nombre || t.name || t.description || t }}
-                  </mat-option>
-                </mat-select>
-                <mat-error *ngIf="generalForm.get('tipoEstudio')?.hasError('required')"
-                  >El tipo de investigación es obligatorio.</mat-error
-                >
-              </mat-form-field>
-            </div>
+                  <input
+                    type="radio"
+                    class="tipo-card__radio"
+                    name="tipoEstudio"
+                    formControlName="tipoEstudio"
+                    required
+                    [value]="valorTipo(t)"
+                  />
+                  <span class="tipo-card__nombre">{{ t.nombre || t.name || t.description }}</span>
+                </label>
+              </div>
+            </fieldset>
 
             <!-- Características del estudio -->
             <fieldset class="caracteristicas">
-              <legend class="caracteristicas__legend">Características del estudio</legend>
+              <legend class="field-label">Características del estudio</legend>
               <div class="caracteristicas__grid">
                 <mat-checkbox formControlName="isIndigenousPopulation" color="primary"
-                  >¿Involucra pueblos o nacionalidades indígenas?</mat-checkbox
+                  >Involucra pueblos o nacionalidades indígenas</mat-checkbox
                 >
                 <mat-checkbox formControlName="usesBiologicalSamples" color="primary"
-                  >¿Utiliza muestras biológicas humanas?</mat-checkbox
+                  >Utiliza muestras biológicas humanas</mat-checkbox
                 >
                 <mat-checkbox formControlName="isVulnerablePopulation" color="primary"
-                  >¿Involucra población vulnerable?</mat-checkbox
+                  >Involucra población vulnerable</mat-checkbox
                 >
                 <mat-checkbox formControlName="isMulticentric" color="primary"
-                  >¿Es un estudio multicéntrico?</mat-checkbox
+                  >Es un estudio multicéntrico</mat-checkbox
                 >
                 <mat-checkbox formControlName="isExternal" color="primary"
-                  >¿Participan instituciones externas?</mat-checkbox
+                  >Participan instituciones externas</mat-checkbox
                 >
               </div>
             </fieldset>
@@ -104,8 +107,9 @@
                 formControlName="isAffidavitAccepted"
                 color="primary"
                 [aria-describedby]="declaracionConError ? 'np-declaracion-error' : ''"
-                >Declaro bajo juramento que la investigación no ha iniciado su fase de campo y la
-                información es veraz.</mat-checkbox
+                ><strong>Declaro bajo juramento</strong> que la investigación no ha iniciado su fase
+                de campo y que la información es veraz. Si el CEISH detecta que ya empezó, el
+                protocolo se archiva con el motivo.</mat-checkbox
               >
               <mat-error
                 *ngIf="declaracionConError"
@@ -118,6 +122,9 @@
           </form>
 
           <div class="step-actions">
+            <p *ngIf="motivoPasoDatos" id="np-paso1-motivo" class="step-actions__reason">
+              {{ motivoPasoDatos }}
+            </p>
             <button
               mat-flat-button
               type="button"
@@ -127,7 +134,8 @@
               [attr.aria-describedby]="motivoPasoDatos ? 'np-paso1-motivo' : null"
             >
               <span *ngIf="!isLoading" class="next-btn__label"
-                >Registrar y continuar <mat-icon aria-hidden="true">arrow_forward</mat-icon></span
+                >Guardar borrador y continuar
+                <mat-icon aria-hidden="true">arrow_forward</mat-icon></span
               >
               <mat-progress-spinner
                 *ngIf="isLoading"
@@ -136,9 +144,6 @@
                 aria-label="Guardando"
               ></mat-progress-spinner>
             </button>
-            <p *ngIf="motivoPasoDatos" id="np-paso1-motivo" class="step-actions__reason">
-              {{ motivoPasoDatos }}
-            </p>
           </div>
         </div>
       </mat-step>
