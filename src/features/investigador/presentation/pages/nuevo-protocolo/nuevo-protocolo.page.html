@@ -17,348 +17,389 @@
     [subtitle]="pasoActual === 0 ? subtituloDatos : subtituloDocumentos"
   ></app-page-header>
 
-  <mat-card class="register-stepper-card animate-fade-in">
-    <mat-stepper
-      [linear]="true"
-      #stepper
-      class="custom-stepper"
-      (selectionChange)="pasoActual = $event.selectedIndex"
+  <!-- Barra de pasos propia (D15): mat-stepper sigue por dentro con su cabecera oculta -->
+  <ol class="pasos" aria-label="Pasos">
+    <li
+      *ngFor="let paso of pasos; let i = index"
+      class="pasos__item"
+      [class.pasos__item--hecho]="i <= pasoActual"
+      [class.pasos__item--actual]="i === pasoActual"
+      [attr.aria-current]="i === pasoActual ? 'step' : null"
     >
-      <!-- PASO 1: DATOS (canvas CrearProtocoloDatos, F09 D13) -->
-      <mat-step [stepControl]="generalForm" [editable]="protocolId === null">
-        <ng-template matStepLabel>Información General</ng-template>
-        <div class="step-content">
-          <form [formGroup]="generalForm" class="datos-card">
-            <!-- Título -->
-            <div class="field">
-              <label class="field-label" for="np-titulo">Título de la investigación</label>
-              <textarea
-                id="np-titulo"
-                class="field-textarea"
-                [class.field-textarea--corto]="faltanTitulo > 0"
-                formControlName="titulo"
-                required
-                rows="3"
-                [attr.maxlength]="200"
-                aria-describedby="np-titulo-pista np-titulo-contador"
-                [attr.aria-invalid]="tituloConError ? 'true' : null"
-                placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
-              ></textarea>
-              <div class="field-meta">
-                <span id="np-titulo-pista" class="field-hint"
-                  >Incluya la población, el lugar y el período.</span
-                >
-                <span
-                  id="np-titulo-contador"
-                  class="field-counter"
-                  [class.field-counter--corto]="faltanTitulo > 0"
-                  >{{ contadorTitulo }}</span
-                >
-              </div>
+      <span class="pasos__barra" aria-hidden="true"></span>
+      <span class="pasos__etiqueta">{{ paso }}</span>
+    </li>
+  </ol>
+
+  <mat-stepper
+    [linear]="true"
+    #stepper
+    class="custom-stepper animate-fade-in"
+    (selectionChange)="pasoActual = $event.selectedIndex"
+  >
+    <!-- PASO 1: DATOS (canvas CrearProtocoloDatos, F09 D13) -->
+    <mat-step [stepControl]="generalForm" [editable]="protocolId === null">
+      <!-- La cabecera va oculta, pero su etiqueta nombra el panel del paso: la misma de la barra -->
+      <ng-template matStepLabel>{{ pasos[0] }}</ng-template>
+      <div class="step-content step-content--datos">
+        <form [formGroup]="generalForm" class="datos-card">
+          <!-- Título -->
+          <div class="field">
+            <label class="field-label" for="np-titulo">Título de la investigación</label>
+            <textarea
+              id="np-titulo"
+              class="field-textarea"
+              [class.field-textarea--corto]="faltanTitulo > 0"
+              formControlName="titulo"
+              required
+              rows="3"
+              [attr.maxlength]="200"
+              aria-describedby="np-titulo-pista np-titulo-contador"
+              [attr.aria-invalid]="tituloConError ? 'true' : null"
+              placeholder="Ej: Frecuencia de anemia en niños menores de 5 años en Riobamba 2026..."
+            ></textarea>
+            <div class="field-meta">
+              <span id="np-titulo-pista" class="field-hint"
+                >Incluya la población, el lugar y el período.</span
+              >
+              <span
+                id="np-titulo-contador"
+                class="field-counter"
+                [class.field-counter--corto]="faltanTitulo > 0"
+                >{{ contadorTitulo }}</span
+              >
             </div>
-
-            <!-- Tipo de estudio: grupo de radios nativo (las flechas las maneja el navegador) -->
-            <fieldset class="tipo-estudio">
-              <legend class="field-label">Tipo de estudio</legend>
-              <div class="tipo-estudio__grid">
-                <label
-                  *ngFor="let t of tiposEstudio"
-                  class="tipo-card"
-                  [class.tipo-card--selected]="tipoSeleccionado(t)"
-                >
-                  <input
-                    type="radio"
-                    class="tipo-card__radio"
-                    name="tipoEstudio"
-                    formControlName="tipoEstudio"
-                    required
-                    [value]="valorTipo(t)"
-                  />
-                  <span class="tipo-card__nombre">{{ t.nombre || t.name || t.description }}</span>
-                </label>
-              </div>
-            </fieldset>
-
-            <!-- Tesis (D14): obligatoria y sin respuesta inicial, para todos los tipos de estudio -->
-            <fieldset
-              class="tesis"
-              [attr.aria-describedby]="esTesisSi ? 'np-tesis-aviso' : null"
-            >
-              <legend class="field-label">¿Es un trabajo de titulación (tesis)?</legend>
-              <div class="tesis__opciones">
-                <label class="tesis-opcion" [class.tesis-opcion--selected]="tesisElegida(true)">
-                  <input
-                    type="radio"
-                    class="tipo-card__radio"
-                    name="esTesis"
-                    formControlName="esTesis"
-                    required
-                    [value]="true"
-                  />
-                  Sí
-                </label>
-                <label class="tesis-opcion" [class.tesis-opcion--selected]="tesisElegida(false)">
-                  <input
-                    type="radio"
-                    class="tipo-card__radio"
-                    name="esTesis"
-                    formControlName="esTesis"
-                    required
-                    [value]="false"
-                  />
-                  No
-                </label>
-              </div>
-              <!-- La región viva existe siempre: los lectores solo anuncian cambios dentro de ella -->
-              <div class="tesis__region" aria-live="polite">
-                <p *ngIf="esTesisSi" id="np-tesis-aviso" class="tesis__aviso">
-                  Se piden 2 documentos más: la captura del informe antiplagio y el oficio o
-                  certificado del tutor.
-                </p>
-              </div>
-            </fieldset>
-
-            <!-- Características del estudio -->
-            <fieldset class="caracteristicas">
-              <legend class="field-label">Características del estudio</legend>
-              <div class="caracteristicas__grid">
-                <mat-checkbox formControlName="isIndigenousPopulation" color="primary"
-                  >Involucra pueblos o nacionalidades indígenas</mat-checkbox
-                >
-                <mat-checkbox formControlName="usesBiologicalSamples" color="primary"
-                  >Utiliza muestras biológicas humanas</mat-checkbox
-                >
-                <mat-checkbox formControlName="isVulnerablePopulation" color="primary"
-                  >Involucra población vulnerable</mat-checkbox
-                >
-                <mat-checkbox formControlName="isMulticentric" color="primary"
-                  >Es un estudio multicéntrico</mat-checkbox
-                >
-                <mat-checkbox formControlName="isExternal" color="primary"
-                  >Participan instituciones externas</mat-checkbox
-                >
-              </div>
-            </fieldset>
-
-            <!-- Declaración jurada -->
-            <div class="legal-box">
-              <mat-checkbox
-                formControlName="isAffidavitAccepted"
-                color="primary"
-                [aria-describedby]="declaracionConError ? 'np-declaracion-error' : ''"
-                ><strong>Declaro bajo juramento</strong> que la investigación no ha iniciado su fase
-                de campo y que la información es veraz. Si el CEISH detecta que ya empezó, el
-                protocolo se archiva con el motivo.</mat-checkbox
-              >
-              <mat-error
-                *ngIf="declaracionConError"
-                id="np-declaracion-error"
-                class="legal-box__error"
-              >
-                Debe aceptar la declaración jurada para continuar.
-              </mat-error>
-            </div>
-          </form>
-
-          <div class="step-actions">
-            <p *ngIf="motivoPasoDatos" id="np-paso1-motivo" class="step-actions__reason">
-              {{ motivoPasoDatos }}
-            </p>
-            <button
-              mat-flat-button
-              type="button"
-              (click)="guardarInicial()"
-              class="next-btn"
-              [disabled]="isLoading || generalForm.invalid"
-              [attr.aria-describedby]="motivoPasoDatos ? 'np-paso1-motivo' : null"
-            >
-              <span *ngIf="!isLoading" class="next-btn__label"
-                >Guardar borrador y continuar
-                <mat-icon aria-hidden="true">arrow_forward</mat-icon></span
-              >
-              <mat-progress-spinner
-                *ngIf="isLoading"
-                diameter="24"
-                mode="indeterminate"
-                aria-label="Guardando"
-              ></mat-progress-spinner>
-            </button>
           </div>
-        </div>
-      </mat-step>
 
-      <!-- PASO 2: CARGA DE DOCUMENTOS -->
-      <mat-step>
-        <ng-template matStepLabel>Subir Documentos</ng-template>
-        <div class="step-content">
-          <div class="section-info mb-4 d-flex align-items-center gap-3">
-            <mat-icon
-              class="section-icon text-primary"
-              style="font-size: 36px; width: 36px; height: 36px"
-              >cloud_upload</mat-icon
-            >
-            <div>
-              <h3 class="fw-bold mb-0">Carga de Documentos Técnicos</h3>
-              <p class="text-muted small mb-0">
-                Por favor suba los archivos PDF correspondientes a cada requisito generado por el
-                CEISH.
+          <!-- Tipo de estudio: grupo de radios nativo (las flechas las maneja el navegador) -->
+          <fieldset class="tipo-estudio">
+            <!-- El legend nombra al grupo; la maqueta no lo muestra (D15) -->
+            <legend class="visually-hidden">Tipo de estudio</legend>
+            <div class="tipo-estudio__grid">
+              <label
+                *ngFor="let t of tiposEstudio"
+                class="tipo-card"
+                [class.tipo-card--selected]="tipoSeleccionado(t)"
+              >
+                <input
+                  type="radio"
+                  class="tipo-card__radio"
+                  name="tipoEstudio"
+                  formControlName="tipoEstudio"
+                  required
+                  [value]="valorTipo(t)"
+                />
+                <span class="tipo-card__nombre">{{ t.nombre || t.name || t.description }}</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Tesis (D14): obligatoria y sin respuesta inicial, para todos los tipos de estudio -->
+          <fieldset class="tesis" [attr.aria-describedby]="esTesisSi ? 'np-tesis-aviso' : null">
+            <legend class="field-label">¿Es un trabajo de titulación (tesis)?</legend>
+            <div class="tesis__opciones">
+              <label class="tesis-opcion" [class.tesis-opcion--selected]="tesisElegida(true)">
+                <input
+                  type="radio"
+                  class="tesis-opcion__radio"
+                  name="esTesis"
+                  formControlName="esTesis"
+                  required
+                  [value]="true"
+                />
+                Sí
+              </label>
+              <label class="tesis-opcion" [class.tesis-opcion--selected]="tesisElegida(false)">
+                <input
+                  type="radio"
+                  class="tesis-opcion__radio"
+                  name="esTesis"
+                  formControlName="esTesis"
+                  required
+                  [value]="false"
+                />
+                No
+              </label>
+            </div>
+            <!-- La región viva existe siempre: los lectores solo anuncian cambios dentro de ella -->
+            <div class="tesis__region" aria-live="polite">
+              <p *ngIf="esTesisSi" id="np-tesis-aviso" class="tesis__aviso">
+                Se piden 2 documentos más: la captura del informe antiplagio y el oficio o
+                certificado del tutor.
               </p>
             </div>
-          </div>
+          </fieldset>
 
-          <!-- Upload Normal -->
-          <div class="requirements-list mt-4" *ngIf="documentosRequeridos.length > 0">
-            <div
-              *ngFor="let doc of documentosRequeridos"
-              class="doc-card p-3 mb-3 border rounded bg-white shadow-soft animate-fade-in"
+          <!-- Características del estudio -->
+          <fieldset class="caracteristicas">
+            <legend class="field-label">Características del estudio</legend>
+            <!-- Una columna (D15). La explicación se ve en el tooltip del ⓘ; oculta a la vista, la
+                 casilla la sigue nombrando con aria-describedby. El ⓘ va fuera del label. -->
+            <div class="caracteristicas__grid">
+              <div *ngFor="let c of caracteristicas" class="caracteristica">
+                <input
+                  type="checkbox"
+                  class="casilla"
+                  [id]="'np-car-' + c.campo"
+                  [formControlName]="c.campo"
+                  [attr.aria-describedby]="c.descripcion ? 'np-car-' + c.campo + '-desc' : null"
+                />
+                <div class="caracteristica__texto">
+                  <label class="caracteristica__nombre" [for]="'np-car-' + c.campo">{{
+                    c.nombre
+                  }}</label>
+                  <ng-container *ngIf="c.descripcion">
+                    <span [id]="'np-car-' + c.campo + '-desc'" class="visually-hidden">{{
+                      c.descripcion
+                    }}</span>
+                    <!-- Mouse y teclado lo abren al pasar o enfocar; el toque, con clicInfo -->
+                    <button
+                      type="button"
+                      class="caracteristica__info"
+                      [attr.aria-label]="'Más información: ' + c.nombre"
+                      [matTooltip]="c.descripcion"
+                      matTooltipPosition="above"
+                      matTooltipClass="np-tooltip"
+                      #tooltip="matTooltip"
+                      (click)="clicInfo(tooltip, $event)"
+                    >
+                      <mat-icon aria-hidden="true">info_outline</mat-icon>
+                    </button>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Declaración jurada: todo el texto forma el nombre accesible de la casilla (D15) -->
+          <div class="legal-box">
+            <div class="legal-box__fila">
+              <input
+                type="checkbox"
+                id="np-declaracion"
+                class="casilla"
+                formControlName="isAffidavitAccepted"
+                required
+                [attr.aria-describedby]="declaracionConError ? 'np-declaracion-error' : null"
+              />
+              <label class="legal-box__texto" for="np-declaracion">
+                <span class="legal-box__titulo"
+                  ><strong>Declaro bajo juramento</strong>&ngsp;<span class="legal-box__obligatorio"
+                    >(obligatorio)</span
+                  ></span
+                >
+                <span class="legal-box__detalle"
+                  ><mat-icon class="legal-box__icono" aria-hidden="true">warning</mat-icon> La
+                  investigación no ha iniciado su fase de campo y la información es veraz. Si el
+                  CEISH detecta que ya empezó, el protocolo se archiva con el motivo.</span
+                >
+              </label>
+            </div>
+            <mat-error
+              *ngIf="declaracionConError"
+              id="np-declaracion-error"
+              class="legal-box__error"
             >
-              <div class="row align-items-center">
-                <div class="col-auto">
-                  <div class="doc-icon-box" [ngClass]="doc.color">
-                    <mat-icon>{{ doc.icon }}</mat-icon>
-                  </div>
-                </div>
-                <div class="col">
-                  <div class="doc-main-info">
-                    <span class="fw-bold d-block text-dark">{{ doc.nombre }}</span>
-                    <span class="small text-muted">{{ doc.code }}</span>
-                    <div class="mt-1" *ngIf="doc.alert">
-                      <span class="badge bg-light text-primary border"
-                        ><mat-icon
-                          style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle"
-                          >info</mat-icon
-                        >
-                        {{ doc.alert }}</span
-                      >
-                    </div>
-                    <div class="mt-2 text-danger small fw-bold" *ngIf="doc.status === 'OBSERVADO'">
-                      <mat-icon
-                        style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle"
-                        >warning</mat-icon
-                      >
-                      OBSERVACIÓN: {{ doc.observations }}
-                    </div>
-                  </div>
-                </div>
-                <div class="col-auto">
-                  <div class="doc-actions d-flex align-items-center gap-3">
-                    <input
-                      type="file"
-                      #docIn
-                      hidden
-                      (change)="onDocumentSelected($event, doc.code)"
-                      accept="application/pdf"
-                    />
+              Debe aceptar la declaración jurada para continuar.
+            </mat-error>
+          </div>
+        </form>
 
-                    <!-- Indicador de Estado Dinámico -->
-                    <div [ngSwitch]="documentUploadStatus[doc.code]">
-                      <button
-                        *ngSwitchCase="'pendiente'"
-                        mat-flat-button
-                        color="primary"
-                        (click)="docIn.click()"
+        <div class="step-actions">
+          <div *ngIf="motivoPasoDatos" class="step-actions__reason">
+            <mat-icon class="step-actions__icono" aria-hidden="true">info_outline</mat-icon>
+            <p id="np-paso1-motivo" class="step-actions__texto">{{ motivoPasoDatos }}</p>
+          </div>
+          <button
+            mat-flat-button
+            type="button"
+            (click)="guardarInicial()"
+            class="next-btn"
+            [disabled]="isLoading || generalForm.invalid"
+            [attr.aria-describedby]="motivoPasoDatos ? 'np-paso1-motivo' : null"
+          >
+            <span *ngIf="!isLoading">Guardar y continuar</span>
+            <mat-progress-spinner
+              *ngIf="isLoading"
+              diameter="24"
+              mode="indeterminate"
+              aria-label="Guardando"
+            ></mat-progress-spinner>
+          </button>
+        </div>
+      </div>
+    </mat-step>
+
+    <!-- PASO 2: CARGA DE DOCUMENTOS -->
+    <mat-step>
+      <ng-template matStepLabel>{{ pasos[1] }}</ng-template>
+      <div class="step-content step-content--documentos">
+        <div class="section-info mb-4 d-flex align-items-center gap-3">
+          <mat-icon
+            class="section-icon text-primary"
+            style="font-size: 36px; width: 36px; height: 36px"
+            >cloud_upload</mat-icon
+          >
+          <div>
+            <h3 class="fw-bold mb-0">Carga de Documentos Técnicos</h3>
+            <p class="text-muted small mb-0">
+              Por favor suba los archivos PDF correspondientes a cada requisito generado por el
+              CEISH.
+            </p>
+          </div>
+        </div>
+
+        <!-- Upload Normal -->
+        <div class="requirements-list mt-4" *ngIf="documentosRequeridos.length > 0">
+          <div
+            *ngFor="let doc of documentosRequeridos"
+            class="doc-card p-3 mb-3 border rounded bg-white shadow-soft animate-fade-in"
+          >
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <div class="doc-icon-box" [ngClass]="doc.color">
+                  <mat-icon>{{ doc.icon }}</mat-icon>
+                </div>
+              </div>
+              <div class="col">
+                <div class="doc-main-info">
+                  <span class="fw-bold d-block text-dark">{{ doc.nombre }}</span>
+                  <span class="small text-muted">{{ doc.code }}</span>
+                  <div class="mt-1" *ngIf="doc.alert">
+                    <span class="badge bg-light text-primary border"
+                      ><mat-icon
+                        style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle"
+                        >info</mat-icon
                       >
-                        <mat-icon>upload</mat-icon> SUBIR
-                      </button>
-                      <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled>
-                        <mat-progress-spinner
-                          diameter="18"
-                          mode="indeterminate"
-                          class="d-inline-block me-2"
-                        ></mat-progress-spinner>
-                        CARGANDO
-                      </button>
-                      <button
-                        *ngSwitchCase="'exito'"
-                        mat-flat-button
-                        class="bg-success text-white"
-                        (click)="docIn.click()"
-                      >
-                        <mat-icon>check_circle</mat-icon> PRESENTADO
-                      </button>
-                      <button
-                        *ngSwitchCase="'error'"
-                        mat-flat-button
-                        color="warn"
-                        (click)="docIn.click()"
-                      >
-                        <mat-icon>error</mat-icon> REINTENTAR
-                      </button>
-                    </div>
+                      {{ doc.alert }}</span
+                    >
+                  </div>
+                  <div class="mt-2 text-danger small fw-bold" *ngIf="doc.status === 'OBSERVADO'">
+                    <mat-icon
+                      style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle"
+                      >warning</mat-icon
+                    >
+                    OBSERVACIÓN: {{ doc.observations }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="doc-actions d-flex align-items-center gap-3">
+                  <input
+                    type="file"
+                    #docIn
+                    hidden
+                    (change)="onDocumentSelected($event, doc.code)"
+                    accept="application/pdf"
+                  />
+
+                  <!-- Indicador de Estado Dinámico -->
+                  <div [ngSwitch]="documentUploadStatus[doc.code]">
+                    <button
+                      *ngSwitchCase="'pendiente'"
+                      mat-flat-button
+                      color="primary"
+                      (click)="docIn.click()"
+                    >
+                      <mat-icon>upload</mat-icon> SUBIR
+                    </button>
+                    <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled>
+                      <mat-progress-spinner
+                        diameter="18"
+                        mode="indeterminate"
+                        class="d-inline-block me-2"
+                      ></mat-progress-spinner>
+                      CARGANDO
+                    </button>
+                    <button
+                      *ngSwitchCase="'exito'"
+                      mat-flat-button
+                      class="bg-success text-white"
+                      (click)="docIn.click()"
+                    >
+                      <mat-icon>check_circle</mat-icon> PRESENTADO
+                    </button>
+                    <button
+                      *ngSwitchCase="'error'"
+                      mat-flat-button
+                      color="warn"
+                      (click)="docIn.click()"
+                    >
+                      <mat-icon>error</mat-icon> REINTENTAR
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Fallback Upload Resiliente (Bulk) -->
-          <div
-            class="no-requirements p-4 border rounded bg-light mt-4 text-center animate-fade-in"
-            *ngIf="documentosRequeridos.length === 0 && !isLoading && protocolId"
+        <!-- Fallback Upload Resiliente (Bulk) -->
+        <div
+          class="no-requirements p-4 border rounded bg-light mt-4 text-center animate-fade-in"
+          *ngIf="documentosRequeridos.length === 0 && !isLoading && protocolId"
+        >
+          <mat-icon
+            color="accent"
+            style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px"
+            >cloud_upload</mat-icon
           >
-            <mat-icon
-              color="accent"
-              style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px"
-              >cloud_upload</mat-icon
-            >
-            <h4>Carga de Documentos (Modo Contingencia)</h4>
-            <p class="text-muted small mb-4">
-              El sistema no pudo generar la lista específica de requisitos para su tipo de estudio.
-              Sin embargo, puede cargar todos sus documentos (PDF) a continuación para que sean
-              revisados por el CEISH.
-            </p>
+          <h4>Carga de Documentos (Modo Contingencia)</h4>
+          <p class="text-muted small mb-4">
+            El sistema no pudo generar la lista específica de requisitos para su tipo de estudio.
+            Sin embargo, puede cargar todos sus documentos (PDF) a continuación para que sean
+            revisados por el CEISH.
+          </p>
 
-            <button mat-flat-button color="primary" (click)="bulkIn.click()" [disabled]="isLoading">
-              <mat-icon>upload_file</mat-icon> SELECCIONAR ARCHIVOS (PDF)
-            </button>
-            <input
-              type="file"
-              #bulkIn
-              hidden
-              multiple
-              (change)="onBulkUpload($event)"
-              accept="application/pdf"
-            />
+          <button mat-flat-button color="primary" (click)="bulkIn.click()" [disabled]="isLoading">
+            <mat-icon>upload_file</mat-icon> SELECCIONAR ARCHIVOS (PDF)
+          </button>
+          <input
+            type="file"
+            #bulkIn
+            hidden
+            multiple
+            (change)="onBulkUpload($event)"
+            accept="application/pdf"
+          />
 
-            <div
-              class="mt-4 text-start"
-              *ngIf="archivosCargados && (archivosCargados | keyvalue).length > 0"
-            >
-              <h5 class="fw-bold">Archivos Cargados Exitosamente:</h5>
-              <ul class="list-group">
-                <li
-                  class="list-group-item text-success"
-                  *ngFor="let file of archivosCargados | keyvalue"
+          <div
+            class="mt-4 text-start"
+            *ngIf="archivosCargados && (archivosCargados | keyvalue).length > 0"
+          >
+            <h5 class="fw-bold">Archivos Cargados Exitosamente:</h5>
+            <ul class="list-group">
+              <li
+                class="list-group-item text-success"
+                *ngFor="let file of archivosCargados | keyvalue"
+              >
+                <mat-icon style="vertical-align: middle; font-size: 18px; width: 18px; height: 18px"
+                  >check_circle</mat-icon
                 >
-                  <mat-icon
-                    style="vertical-align: middle; font-size: 18px; width: 18px; height: 18px"
-                    >check_circle</mat-icon
-                  >
-                  {{ file.value }}
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="step-actions mt-5 d-flex gap-3 justify-content-end">
-            <button
-              mat-flat-button
-              color="primary"
-              class="submit-btn flex-grow-1"
-              [disabled]="isLoading || !protocolId"
-              (click)="onEnviarFinal()"
-            >
-              <span *ngIf="!isLoading">Enviar a la Secretaría <mat-icon>send</mat-icon></span>
-              <mat-progress-spinner
-                *ngIf="isLoading"
-                diameter="24"
-                mode="indeterminate"
-                class="mx-auto"
-              ></mat-progress-spinner>
-            </button>
+                {{ file.value }}
+              </li>
+            </ul>
           </div>
         </div>
-      </mat-step>
-    </mat-stepper>
-  </mat-card>
+
+        <div class="step-actions mt-5 d-flex gap-3 justify-content-end">
+          <button
+            mat-flat-button
+            color="primary"
+            class="submit-btn flex-grow-1"
+            [disabled]="isLoading || !protocolId"
+            (click)="onEnviarFinal()"
+          >
+            <span *ngIf="!isLoading">Enviar a la Secretaría <mat-icon>send</mat-icon></span>
+            <mat-progress-spinner
+              *ngIf="isLoading"
+              diameter="24"
+              mode="indeterminate"
+              class="mx-auto"
+            ></mat-progress-spinner>
+          </button>
+        </div>
+      </div>
+    </mat-step>
+  </mat-stepper>
 </div>
