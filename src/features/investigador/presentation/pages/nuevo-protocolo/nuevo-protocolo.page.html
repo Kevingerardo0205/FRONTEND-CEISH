@@ -16,6 +16,9 @@
     heading="Nuevo protocolo"
     [subtitle]="pasoActual === 0 ? subtituloDatos : subtituloDocumentos"
   ></app-page-header>
+  <p *ngIf="pasoActual === 1 && listaConDocumentos" class="progreso-texto">
+    Progreso de carga: {{ documentosPresentados }} de {{ totalDocumentos }} documentos presentados.
+  </p>
 
   <!-- Barra de pasos propia (D15): mat-stepper sigue por dentro con su cabecera oculta -->
   <ol class="pasos" aria-label="Pasos">
@@ -230,172 +233,126 @@
       </div>
     </mat-step>
 
-    <!-- PASO 2: CARGA DE DOCUMENTOS -->
+    <!-- PASO 2: DOCUMENTOS (D16): solo requisitos del checklist del backend -->
     <mat-step>
       <ng-template matStepLabel>{{ pasos[1] }}</ng-template>
       <div class="step-content step-content--documentos">
-        <div class="section-info mb-4 d-flex align-items-center gap-3">
-          <mat-icon
-            class="section-icon text-primary"
-            style="font-size: 36px; width: 36px; height: 36px"
-            >cloud_upload</mat-icon
-          >
-          <div>
-            <h3 class="fw-bold mb-0">Carga de Documentos Técnicos</h3>
-            <p class="text-muted small mb-0">
-              Por favor suba los archivos PDF correspondientes a cada requisito generado por el
-              CEISH.
-            </p>
-          </div>
-        </div>
+        <div class="docs-card">
+          <app-loading-state
+            *ngIf="estadoChecklist === 'cargando'"
+            message="Cargando los documentos requeridos…"
+          ></app-loading-state>
 
-        <!-- Upload Normal -->
-        <div class="requirements-list mt-4" *ngIf="documentosRequeridos.length > 0">
-          <div
-            *ngFor="let doc of documentosRequeridos"
-            class="doc-card p-3 mb-3 border rounded bg-white shadow-soft animate-fade-in"
-          >
-            <div class="row align-items-center">
-              <div class="col-auto">
-                <div class="doc-icon-box" [ngClass]="doc.color">
-                  <mat-icon>{{ doc.icon }}</mat-icon>
-                </div>
-              </div>
-              <div class="col">
-                <div class="doc-main-info">
-                  <span class="fw-bold d-block text-dark">{{ doc.nombre }}</span>
-                  <span class="small text-muted">{{ doc.code }}</span>
-                  <div class="mt-1" *ngIf="doc.alert">
-                    <span class="badge bg-light text-primary border"
-                      ><mat-icon
-                        style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle"
-                        >info</mat-icon
-                      >
-                      {{ doc.alert }}</span
-                    >
-                  </div>
-                  <div class="mt-2 text-danger small fw-bold" *ngIf="doc.status === 'OBSERVADO'">
-                    <mat-icon
-                      style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle"
-                      >warning</mat-icon
-                    >
-                    OBSERVACIÓN: {{ doc.observations }}
-                  </div>
-                </div>
-              </div>
-              <div class="col-auto">
-                <div class="doc-actions d-flex align-items-center gap-3">
-                  <input
-                    type="file"
-                    #docIn
-                    hidden
-                    (change)="onDocumentSelected($event, doc.code)"
-                    accept="application/pdf"
-                  />
+          <app-error-state
+            *ngIf="estadoChecklist === 'error'"
+            message="No pudimos cargar la lista de documentos."
+            (retry)="reintentarChecklist()"
+          ></app-error-state>
 
-                  <!-- Indicador de Estado Dinámico -->
-                  <div [ngSwitch]="documentUploadStatus[doc.code]">
-                    <button
-                      *ngSwitchCase="'pendiente'"
-                      mat-flat-button
-                      color="primary"
-                      (click)="docIn.click()"
-                    >
-                      <mat-icon>upload</mat-icon> SUBIR
-                    </button>
-                    <button *ngSwitchCase="'subiendo'" mat-flat-button color="primary" disabled>
-                      <mat-progress-spinner
-                        diameter="18"
-                        mode="indeterminate"
-                        class="d-inline-block me-2"
-                      ></mat-progress-spinner>
-                      CARGANDO
-                    </button>
-                    <button
-                      *ngSwitchCase="'exito'"
-                      mat-flat-button
-                      class="bg-success text-white"
-                      (click)="docIn.click()"
-                    >
-                      <mat-icon>check_circle</mat-icon> PRESENTADO
-                    </button>
-                    <button
-                      *ngSwitchCase="'error'"
-                      mat-flat-button
-                      color="warn"
-                      (click)="docIn.click()"
-                    >
-                      <mat-icon>error</mat-icon> REINTENTAR
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <app-empty-state
+            *ngIf="estadoChecklist === 'listo' && documentosRequeridos.length === 0"
+            message="No encontramos documentos requeridos para este protocolo."
+          ></app-empty-state>
+
+          <ng-container *ngIf="listaConDocumentos">
+            <div
+              class="progreso"
+              role="progressbar"
+              aria-label="Progreso de carga"
+              aria-valuemin="0"
+              [attr.aria-valuemax]="totalDocumentos"
+              [attr.aria-valuenow]="documentosPresentados"
+            >
+              <span
+                class="progreso__valor"
+                [style.width.%]="
+                  totalDocumentos ? (documentosPresentados / totalDocumentos) * 100 : 0
+                "
+              ></span>
             </div>
-          </div>
-        </div>
 
-        <!-- Fallback Upload Resiliente (Bulk) -->
-        <div
-          class="no-requirements p-4 border rounded bg-light mt-4 text-center animate-fade-in"
-          *ngIf="documentosRequeridos.length === 0 && !isLoading && protocolId"
-        >
-          <mat-icon
-            color="accent"
-            style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px"
-            >cloud_upload</mat-icon
-          >
-          <h4>Carga de Documentos (Modo Contingencia)</h4>
-          <p class="text-muted small mb-4">
-            El sistema no pudo generar la lista específica de requisitos para su tipo de estudio.
-            Sin embargo, puede cargar todos sus documentos (PDF) a continuación para que sean
-            revisados por el CEISH.
-          </p>
-
-          <button mat-flat-button color="primary" (click)="bulkIn.click()" [disabled]="isLoading">
-            <mat-icon>upload_file</mat-icon> SELECCIONAR ARCHIVOS (PDF)
-          </button>
-          <input
-            type="file"
-            #bulkIn
-            hidden
-            multiple
-            (change)="onBulkUpload($event)"
-            accept="application/pdf"
-          />
-
-          <div
-            class="mt-4 text-start"
-            *ngIf="archivosCargados && (archivosCargados | keyvalue).length > 0"
-          >
-            <h5 class="fw-bold">Archivos Cargados Exitosamente:</h5>
-            <ul class="list-group">
-              <li
-                class="list-group-item text-success"
-                *ngFor="let file of archivosCargados | keyvalue"
-              >
-                <mat-icon style="vertical-align: middle; font-size: 18px; width: 18px; height: 18px"
-                  >check_circle</mat-icon
-                >
-                {{ file.value }}
+            <ul class="docs-lista">
+              <li *ngFor="let doc of documentosRequeridos" class="doc">
+                <mat-icon class="doc__icono" aria-hidden="true">description</mat-icon>
+                <div class="doc__texto">
+                  <span class="doc__nombre">{{ doc.nombre }}</span>
+                  <span *ngIf="doc.observaciones" class="doc__observaciones"
+                    >Con observaciones: {{ doc.observaciones }}</span
+                  >
+                  <span
+                    *ngIf="errorSubida[doc.id]"
+                    [id]="'np-doc-' + doc.id + '-error'"
+                    class="doc__error"
+                    role="alert"
+                    >{{ errorSubida[doc.id] }}</span
+                  >
+                </div>
+                <div class="doc__acciones">
+                  <span *ngIf="estaPresentado(doc)" class="doc__estado doc__estado--presentado">
+                    <mat-icon aria-hidden="true">check_circle</mat-icon>Presentado
+                  </span>
+                  <span *ngIf="noAplica(doc)" class="doc__estado doc__estado--no-aplica"
+                    >No aplica</span
+                  >
+                  <ng-container *ngIf="admiteSubida(doc)">
+                    <input
+                      type="file"
+                      #docIn
+                      hidden
+                      accept="application/pdf"
+                      (change)="onDocumentSelected($event, doc)"
+                    />
+                    <button
+                      type="button"
+                      class="doc__boton"
+                      [class.doc__boton--cambiar]="estaPresentado(doc)"
+                      [disabled]="subiendo[doc.id]"
+                      [attr.aria-label]="etiquetaBoton(doc)"
+                      [attr.aria-describedby]="
+                        errorSubida[doc.id] ? 'np-doc-' + doc.id + '-error' : null
+                      "
+                      (click)="docIn.click()"
+                    >
+                      <mat-icon aria-hidden="true">upload</mat-icon>{{ textoBoton(doc) }}
+                    </button>
+                  </ng-container>
+                  <a
+                    *ngIf="doc.plantillaUrl"
+                    class="doc__formato"
+                    [href]="doc.plantillaUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Descargar formato</a
+                  >
+                </div>
               </li>
             </ul>
-          </div>
+          </ng-container>
         </div>
 
-        <div class="step-actions mt-5 d-flex gap-3 justify-content-end">
+        <div class="step-actions">
+          <p
+            *ngIf="listaConDocumentos"
+            id="np-envio-motivo"
+            class="envio-motivo"
+            [class.envio-motivo--completo]="faltanDocumentos === 0"
+          >
+            {{ motivoEnvio }}
+          </p>
           <button
             mat-flat-button
-            color="primary"
-            class="submit-btn flex-grow-1"
-            [disabled]="isLoading || !protocolId"
+            type="button"
+            class="next-btn submit-btn"
+            [disabled]="envioDeshabilitado"
+            [attr.aria-describedby]="listaConDocumentos ? 'np-envio-motivo' : null"
             (click)="onEnviarFinal()"
           >
-            <span *ngIf="!isLoading">Enviar a la Secretaría <mat-icon>send</mat-icon></span>
+            <span *ngIf="!isLoading">Enviar a la Secretaría</span>
             <mat-progress-spinner
               *ngIf="isLoading"
               diameter="24"
               mode="indeterminate"
-              class="mx-auto"
+              aria-label="Enviando"
             ></mat-progress-spinner>
           </button>
         </div>

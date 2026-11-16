@@ -146,18 +146,28 @@ export class ProtocoloService extends BaseApiService {
     ).pipe(map((res) => unwrap<RiskLevel[]>(res) ?? []));
   }
 
-  /**
-   * 1. Obtener lista dinámica de documentos requeridos (Checklist Personal del Investigador)
-   * Estrategia de Resiliencia: Si es investigador o el endpoint falla, intenta desde detalle.
-   */
-  getChecklist(protocolId: number): Observable<ChecklistRequirement[]> {
-    // Definido por Mapeo Investigador: GET /protocols/checklist/:id
-    const url = this.isInvestigador
+  /** Definido por Mapeo Investigador: GET /protocols/checklist/:id. */
+  private checklistUrl(protocolId: number): string {
+    return this.isInvestigador
       ? `/protocols/checklist/${protocolId}`
       : ENDPOINTS.PROTOCOLS.CHECKLIST(protocolId.toString());
+  }
 
-    return this.get<ApiEnvelope<ChecklistRequirement[]> | ChecklistRequirement[]>(url).pipe(
-      map((res) => unwrap<ChecklistRequirement[]>(res) ?? []),
+  /**
+   * 1. Lista de documentos requeridos del protocolo, sin respaldo (F09 D16, C3): si la petición
+   * falla, propaga el error para que la pantalla muestre su estado de error en vez de una lista
+   * vacía.
+   */
+  obtenerChecklist(protocolId: number): Observable<ChecklistRequirement[]> {
+    return this.get<ApiEnvelope<ChecklistRequirement[]> | ChecklistRequirement[]>(
+      this.checklistUrl(protocolId),
+    ).pipe(map((res) => unwrap<ChecklistRequirement[]>(res) ?? []));
+  }
+
+  /** Checklist con respaldo: si falla, lo busca en el detalle del protocolo (subsanación). */
+  getChecklist(protocolId: number): Observable<ChecklistRequirement[]> {
+    const url = this.checklistUrl(protocolId);
+    return this.obtenerChecklist(protocolId).pipe(
       catchError((err) => {
         console.warn(
           `[ProtocoloService] Error en checklist oficial (${url}), intentando desde detalle...`,

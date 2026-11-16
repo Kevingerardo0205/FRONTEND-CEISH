@@ -232,8 +232,11 @@ describe('NuevoProtocoloPage — envío a la Secretaría (F09-2, F09-3)', () => 
     snackSpy = spyOn(fixture.debugElement.injector.get(MatSnackBar), 'open');
     const page = fixture.componentInstance;
     page.protocolId = 7;
-    page.documentosRequeridos = [];
-    page.archivosCargados = { 'zz-test-documento.pdf': 'zz-test-documento.pdf' };
+    // Lista real con todo presentado (D16): ya no hay envío con cualquier archivo.
+    page.estadoChecklist = 'listo';
+    page.documentosRequeridos = [
+      { id: 1, nombre: 'Documento de prueba presentado', status: 'PRESENTADO', observaciones: '' },
+    ];
     return page;
   }
 
@@ -1137,7 +1140,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
           provide: ProtocoloService,
           useValue: {
             misProtocolos: misProtocolosSpy,
-            getChecklist: getChecklistSpy,
+            obtenerChecklist: getChecklistSpy,
             guardarProtocoloInicial: guardarSpy,
             getStudyTypes: () => of([]),
           },
@@ -1445,5 +1448,438 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     expect(page.generalForm.valid).toBeTrue();
     expect(page.stepper.selectedIndex).toBe(1);
     expect(page.stepper.steps.first.completed).toBeTrue();
+  });
+});
+
+describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16, C3)', () => {
+  // Copias escritas a mano de D16 en specs/F09-investigador-borrador-envio/spec-ui.md (v0.7).
+  const TEXTO_CARGANDO = 'Cargando los documentos requeridos…';
+  const TEXTO_ERROR = 'No pudimos cargar la lista de documentos.';
+  const TEXTO_VACIO = 'No encontramos documentos requeridos para este protocolo.';
+  const TODOS_PRESENTADOS = 'Todos los documentos están presentados.';
+  const MENSAJE_PDF = 'El archivo debe tener formato PDF';
+  const NOMBRES_INVENTADOS = [
+    'Protocolo de Investigación (Requerido)',
+    'Formulario de Consentimiento Informado',
+    'Hojas de Vida del Equipo',
+    'Carta de Compromiso Ético',
+  ];
+
+  let queryParams$: BehaviorSubject<ParamMap>;
+  let obtenerChecklistSpy: jasmine.Spy;
+  let subirSpy: jasmine.Spy;
+  let subirBulkSpy: jasmine.Spy;
+  let finalizarSpy: jasmine.Spy;
+
+  /** Requisito con la forma del backend (entidad sin mapear, protocol-requirement.entity.orm.ts). */
+  function requisito(id: number, nombre: string, status: string, observations?: string) {
+    return {
+      id,
+      requirementCode: `ZZ_TEST_CODIGO_${id}`,
+      requirementName: nombre,
+      status,
+      pageCount: 0,
+      protocolId: 5,
+      observations,
+    };
+  }
+
+  const CHECKLIST_2_DE_3 = [
+    requisito(11, 'Documento de prueba uno', 'PRESENTADO'),
+    requisito(12, 'Documento de prueba dos', 'NO_PRESENTADO', 'Falta la firma del tutor'),
+    requisito(13, 'Documento de prueba tres', 'PRESENTADO'),
+  ];
+
+  beforeEach(async () => {
+    queryParams$ = new BehaviorSubject<ParamMap>(convertToParamMap({ borrador: '5' }));
+    obtenerChecklistSpy = jasmine.createSpy('obtenerChecklist').and.returnValue(of([]));
+    subirSpy = jasmine.createSpy('subirDocumento').and.returnValue(NEVER);
+    subirBulkSpy = jasmine.createSpy('subirDocumentosBulk').and.returnValue(of([]));
+    finalizarSpy = jasmine.createSpy('finalizarProtocolo').and.returnValue(NEVER);
+
+    await TestBed.configureTestingModule({
+      imports: [NuevoProtocoloPage, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            queryParamMap: queryParams$.asObservable(),
+            get snapshot() {
+              return { queryParamMap: queryParams$.value };
+            },
+          },
+        },
+        {
+          provide: ProtocoloService,
+          useValue: {
+            misProtocolos: () =>
+              of([
+                {
+                  id: 5,
+                  codigoCeish: 'CEISH-TEST-5',
+                  titulo: 'Estudio de prueba del investigador',
+                  estado: EstadoProtocolo.BORRADOR,
+                  fechaCreacion: '2026-01-01',
+                },
+              ]),
+            obtenerChecklist: obtenerChecklistSpy,
+            getChecklist: () => of([requisito(9001, NOMBRES_INVENTADOS[0], 'NO_PRESENTADO')]),
+            subirDocumento: subirSpy,
+            subirDocumentosBulk: subirBulkSpy,
+            finalizarProtocolo: finalizarSpy,
+            guardarProtocoloInicial: () => NEVER,
+            getStudyTypes: () => of([]),
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+      ],
+    }).compileComponents();
+  });
+
+  async function abrir(checklist: Observable<unknown[]>) {
+    obtenerChecklistSpy.and.returnValue(checklist);
+    const fixture = TestBed.createComponent(NuevoProtocoloPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    return { fixture, page: fixture.componentInstance, el };
+  }
+
+  const texto = (nodo: Element | null | undefined) =>
+    (nodo?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const filas = (el: HTMLElement) => Array.from(el.querySelectorAll('.docs-lista > li'));
+  const botonEnviar = (el: HTMLElement) =>
+    el.querySelector('button.submit-btn') as HTMLButtonElement;
+  const fila = (el: HTMLElement, nombre: string) =>
+    filas(el).find((li) => texto(li.querySelector('.doc__nombre')) === nombre) as HTMLElement;
+
+  it('(1) si el checklist falla: ErrorState con Reintentar, que lo vuelve a pedir, y envío deshabilitado', async () => {
+    const { fixture, page, el } = await abrir(throwError(() => new Error('Error 500')));
+
+    expect(page.stepper.selectedIndex).toBe(1);
+    expect(texto(el.querySelector('app-error-state .state__message'))).toBe(TEXTO_ERROR);
+    expect(filas(el).length).toBe(0);
+    expect(botonEnviar(el).disabled).toBeTrue();
+
+    obtenerChecklistSpy.and.returnValue(of(CHECKLIST_2_DE_3));
+    const reintentar = el.querySelector('app-error-state button') as HTMLButtonElement;
+    expect(texto(reintentar)).toBe('Reintentar');
+    reintentar.click();
+    fixture.detectChanges();
+
+    expect(obtenerChecklistSpy).toHaveBeenCalledTimes(2);
+    expect(obtenerChecklistSpy.calls.mostRecent().args).toEqual([5]);
+    expect(el.querySelector('app-error-state')).toBeNull();
+    expect(filas(el).length).toBe(3);
+  });
+
+  it('(2) vacío: EmptyState y envío deshabilitado', async () => {
+    const { el } = await abrir(of([]));
+
+    expect(texto(el.querySelector('app-empty-state .state__message'))).toBe(TEXTO_VACIO);
+    expect(filas(el).length).toBe(0);
+    expect(botonEnviar(el).disabled).toBeTrue();
+    expect(el.querySelector('#np-envio-motivo')).toBeNull();
+  });
+
+  it('(3) cargando: LoadingState y envío deshabilitado', async () => {
+    const { el } = await abrir(NEVER);
+
+    expect(texto(el.querySelector('app-loading-state .state__message'))).toBe(TEXTO_CARGANDO);
+    expect(botonEnviar(el).disabled).toBeTrue();
+  });
+
+  it('(4) sin requisitos inventados, "Modo de emergencia" ni "Modo Contingencia", con error o vacío', async () => {
+    for (const respuesta of [of([]), throwError(() => new Error('Error 500'))]) {
+      const { page, el } = await abrir(respuesta);
+      const todo = texto(el);
+
+      expect(page.documentosRequeridos).toEqual([]);
+      expect(todo).not.toContain('Modo de emergencia');
+      expect(todo).not.toContain('Modo Contingencia');
+      expect(todo).not.toContain('SELECCIONAR ARCHIVOS');
+      for (const nombre of NOMBRES_INVENTADOS) expect(todo).not.toContain(nombre);
+      for (const id of ['9001', '9002', '9003', '9004']) expect(todo).not.toContain(id);
+    }
+  });
+
+  it('(5) una fila por requisito con su nombre literal y sin código interno', async () => {
+    const { el } = await abrir(of(CHECKLIST_2_DE_3));
+
+    expect(filas(el).map((li) => texto(li.querySelector('.doc__nombre')))).toEqual([
+      'Documento de prueba uno',
+      'Documento de prueba dos',
+      'Documento de prueba tres',
+    ]);
+    expect(texto(el)).not.toContain('ZZ_TEST_CODIGO');
+    expect(
+      filas(el).every(
+        (li) => li.querySelector('mat-icon.doc__icono')?.getAttribute('aria-hidden') === 'true',
+      ),
+    ).toBeTrue();
+    expect(texto(fila(el, 'Documento de prueba dos').querySelector('.doc__observaciones'))).toBe(
+      'Con observaciones: Falta la firma del tutor',
+    );
+    expect(fila(el, 'Documento de prueba uno').querySelector('.doc__observaciones')).toBeNull();
+  });
+
+  it('(6) "Presentado" solo en los presentados; los demás dicen "Subir"', async () => {
+    const { el } = await abrir(of(CHECKLIST_2_DE_3));
+
+    const presentado = (nombre: string) =>
+      texto(fila(el, nombre).querySelector('.doc__estado--presentado')) || null;
+    expect(presentado('Documento de prueba uno')).toBe('check_circlePresentado');
+    expect(presentado('Documento de prueba dos')).toBeNull();
+    expect(presentado('Documento de prueba tres')).toBe('check_circlePresentado');
+    expect(texto(fila(el, 'Documento de prueba dos').querySelector('.doc__boton'))).toBe(
+      'uploadSubir',
+    );
+    expect(texto(el)).not.toMatch(/SUBIR|PRESENTADO|REINTENTAR|CARGANDO/);
+  });
+
+  it('(7) con plantilla el orden es Subir → Descargar formato; (8) sin plantilla no hay enlace', async () => {
+    const { fixture, page, el } = await abrir(of(CHECKLIST_2_DE_3));
+    expect(el.querySelector('a.doc__formato')).toBeNull();
+    expect(texto(el)).not.toContain('Descargar formato');
+
+    page.documentosRequeridos[1].plantillaUrl = 'https://zz-test.invalid/plantilla.docx';
+    fixture.detectChanges();
+
+    const acciones = fila(el, 'Documento de prueba dos').querySelector('.doc__acciones')!;
+    const orden = Array.from(acciones.querySelectorAll('button, a')).map((n) => texto(n));
+    expect(orden).toEqual(['uploadSubir', 'Descargar formato']);
+    expect(el.querySelectorAll('a.doc__formato').length).toBe(1);
+    expect(fila(el, 'Documento de prueba uno').querySelector('a')).toBeNull();
+  });
+
+  it('(9) aria-label "Subir {nombre}" / "Cambiar {nombre}" y el ícono con aria-hidden', async () => {
+    const { el } = await abrir(of(CHECKLIST_2_DE_3));
+
+    const etiqueta = (nombre: string) =>
+      fila(el, nombre).querySelector('.doc__boton')?.getAttribute('aria-label');
+    expect(etiqueta('Documento de prueba uno')).toBe('Cambiar Documento de prueba uno');
+    expect(etiqueta('Documento de prueba dos')).toBe('Subir Documento de prueba dos');
+    expect(
+      fila(el, 'Documento de prueba dos')
+        .querySelector('.doc__boton mat-icon')
+        ?.getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
+
+  it('(10) "Progreso de carga: 2 de 3 documentos presentados." y el progressbar con sus valores', async () => {
+    const { el } = await abrir(of(CHECKLIST_2_DE_3));
+
+    expect(texto(el.querySelector('.progreso-texto'))).toBe(
+      'Progreso de carga: 2 de 3 documentos presentados.',
+    );
+    const barra = el.querySelector('[role="progressbar"]')!;
+    expect(barra.getAttribute('aria-label')).toBe('Progreso de carga');
+    expect(barra.getAttribute('aria-valuemin')).toBe('0');
+    expect(barra.getAttribute('aria-valuemax')).toBe('3');
+    expect(barra.getAttribute('aria-valuenow')).toBe('2');
+    expect(el.querySelector('ol[aria-label="Pasos"] [aria-current="step"]')?.textContent).toContain(
+      '2 · Documentos',
+    );
+  });
+
+  it('(11) "Falta 1 documento." (no "Faltan 1"), "Faltan 2 documentos." y todo presentado, unidos al botón', async () => {
+    const motivo = (el: HTMLElement) => texto(el.querySelector('#np-envio-motivo'));
+
+    let { el } = await abrir(of(CHECKLIST_2_DE_3));
+    expect(motivo(el)).toBe('Falta 1 documento.');
+    expect(texto(el)).not.toContain('Faltan 1');
+    expect(botonEnviar(el).getAttribute('aria-describedby')).toBe('np-envio-motivo');
+    expect(botonEnviar(el).disabled).toBeTrue();
+
+    ({ el } = await abrir(
+      of([
+        requisito(21, 'Documento de prueba A', 'NO_PRESENTADO'),
+        requisito(22, 'Documento de prueba B', 'RECHAZADO'),
+        requisito(23, 'Documento de prueba C', 'PRESENTADO'),
+      ]),
+    ));
+    expect(motivo(el)).toBe('Faltan 2 documentos.');
+    expect(botonEnviar(el).disabled).toBeTrue();
+
+    ({ el } = await abrir(of([requisito(31, 'Documento de prueba listo', 'PRESENTADO')])));
+    expect(motivo(el)).toBe(TODOS_PRESENTADOS);
+    expect(el.querySelector('#np-envio-motivo')?.classList).toContain('envio-motivo--completo');
+    expect(botonEnviar(el).disabled).toBeFalse();
+    expect(texto(botonEnviar(el))).toBe('Enviar a la Secretaría');
+  });
+
+  it('con faltantes, onEnviarFinal no llama al backend ni a la carga masiva', async () => {
+    const { page } = await abrir(of(CHECKLIST_2_DE_3));
+
+    page.onEnviarFinal();
+
+    expect(finalizarSpy).not.toHaveBeenCalled();
+    expect(subirBulkSpy).not.toHaveBeenCalled();
+  });
+
+  it('con todo presentado, Enviar llama a finalizarProtocolo con el id del borrador', async () => {
+    const { el } = await abrir(of([requisito(31, 'Documento de prueba listo', 'PRESENTADO')]));
+
+    botonEnviar(el).click();
+
+    expect(finalizarSpy).toHaveBeenCalledOnceWith(5);
+  });
+
+  it('(12) error de subida: el mensaje del backend en la fila de ese documento, unido a su botón', async () => {
+    const subida = new Subject<unknown>();
+    subirSpy.and.returnValue(subida);
+    const { fixture, el } = await abrir(of(CHECKLIST_2_DE_3));
+    const filaDos = fila(el, 'Documento de prueba dos');
+    const input = filaDos.querySelector('input[type="file"]') as HTMLInputElement;
+    const archivo = new File(['zz'], 'zz-test-documento.txt', { type: 'text/plain' });
+    Object.defineProperty(input, 'files', { value: [archivo] });
+
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(subirSpy).toHaveBeenCalledOnceWith(archivo, 5, 12);
+    const boton = filaDos.querySelector('.doc__boton') as HTMLButtonElement;
+    expect(texto(boton)).toBe('uploadSubiendo…');
+    expect(boton.disabled).toBeTrue();
+    expect(botonEnviar(el).disabled).toBeTrue();
+
+    subida.error(new Error(MENSAJE_PDF));
+    fixture.detectChanges();
+
+    const error = filaDos.querySelector('#np-doc-12-error');
+    expect(texto(error)).toBe(MENSAJE_PDF);
+    expect(boton.getAttribute('aria-describedby')).toBe('np-doc-12-error');
+    expect(boton.disabled).toBeFalse();
+    expect(texto(boton)).toBe('uploadSubir');
+    expect(fila(el, 'Documento de prueba uno').querySelector('.doc__error')).toBeNull();
+    expect(texto(el)).not.toContain('Error al subir documento');
+  });
+
+  it('después de subir vuelve a pedir el checklist y la fila pasa a "Presentado" con "Cambiar"', async () => {
+    subirSpy.and.returnValue(of({}));
+    const { fixture, el } = await abrir(of(CHECKLIST_2_DE_3));
+    obtenerChecklistSpy.and.returnValue(
+      of(CHECKLIST_2_DE_3.map((r) => ({ ...r, status: 'PRESENTADO' }))),
+    );
+    const input = fila(el, 'Documento de prueba dos').querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      value: [new File(['zz'], 'zz-test-documento.pdf', { type: 'application/pdf' })],
+    });
+
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(obtenerChecklistSpy).toHaveBeenCalledTimes(2);
+    expect(
+      fila(el, 'Documento de prueba dos').querySelector('.doc__boton')?.getAttribute('aria-label'),
+    ).toBe('Cambiar Documento de prueba dos');
+    expect(texto(el.querySelector('#np-envio-motivo'))).toBe(TODOS_PRESENTADOS);
+  });
+
+  it('dos subidas seguidas: una recarga vieja que llega tarde no pisa la nueva (code-review)', async () => {
+    subirSpy.and.returnValue(of({}));
+    const { fixture, el } = await abrir(
+      of([
+        requisito(61, 'Documento de prueba A', 'NO_PRESENTADO'),
+        requisito(62, 'Documento de prueba B', 'NO_PRESENTADO'),
+      ]),
+    );
+    const recargaVieja = new Subject<unknown[]>();
+    const recargaNueva = new Subject<unknown[]>();
+    obtenerChecklistSpy.and.returnValues(recargaVieja, recargaNueva);
+    const elegir = (nombre: string) => {
+      const input = fila(el, nombre).querySelector('input[type="file"]') as HTMLInputElement;
+      Object.defineProperty(input, 'files', {
+        value: [new File(['zz'], 'zz-test-documento.pdf', { type: 'application/pdf' })],
+      });
+      input.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+
+    elegir('Documento de prueba A');
+    elegir('Documento de prueba B');
+    recargaNueva.next([
+      requisito(61, 'Documento de prueba A', 'PRESENTADO'),
+      requisito(62, 'Documento de prueba B', 'PRESENTADO'),
+    ]);
+    recargaVieja.next([
+      requisito(61, 'Documento de prueba A', 'PRESENTADO'),
+      requisito(62, 'Documento de prueba B', 'NO_PRESENTADO'),
+    ]);
+    fixture.detectChanges();
+
+    expect(texto(el.querySelector('#np-envio-motivo'))).toBe(TODOS_PRESENTADOS);
+    expect(botonEnviar(el).disabled).toBeFalse();
+  });
+
+  it('(13) APROBADO: "Presentado" sin botón Cambiar', async () => {
+    const { el } = await abrir(
+      of([
+        requisito(41, 'Documento de prueba aprobado', 'APROBADO'),
+        requisito(42, 'Documento de prueba pendiente', 'PENDIENTE'),
+      ]),
+    );
+
+    const aprobado = fila(el, 'Documento de prueba aprobado');
+    expect(texto(aprobado.querySelector('.doc__estado--presentado'))).toBe(
+      'check_circlePresentado',
+    );
+    expect(aprobado.querySelector('button')).toBeNull();
+    expect(aprobado.querySelector('input[type="file"]')).toBeNull();
+    expect(texto(el.querySelector('.progreso-texto'))).toBe(
+      'Progreso de carga: 1 de 2 documentos presentados.',
+    );
+    expect(
+      fila(el, 'Documento de prueba pendiente')
+        .querySelector('.doc__boton')
+        ?.getAttribute('aria-label'),
+    ).toBe('Subir Documento de prueba pendiente');
+  });
+
+  it('(14) NO_APLICA: "No aplica" sin botón; no cuenta en el total ni bloquea el envío', async () => {
+    const { el } = await abrir(
+      of([
+        requisito(51, 'Documento de prueba presentado', 'PRESENTADO'),
+        requisito(52, 'Documento de prueba que no aplica', 'NO_APLICA'),
+      ]),
+    );
+
+    const noAplica = fila(el, 'Documento de prueba que no aplica');
+    expect(texto(noAplica.querySelector('.doc__estado--no-aplica'))).toBe('No aplica');
+    expect(noAplica.querySelector('.doc__estado--presentado')).toBeNull();
+    expect(noAplica.querySelector('button')).toBeNull();
+    expect(texto(el.querySelector('.progreso-texto'))).toBe(
+      'Progreso de carga: 1 de 1 documentos presentados.',
+    );
+    expect(el.querySelector('[role="progressbar"]')?.getAttribute('aria-valuemax')).toBe('1');
+    expect(texto(el.querySelector('#np-envio-motivo'))).toBe(TODOS_PRESENTADOS);
+    expect(botonEnviar(el).disabled).toBeFalse();
+  });
+
+  it('el paso 2 no usa clases de Bootstrap ni avisos con ⚠️, ✅ o ❌', async () => {
+    const { el } = await abrir(of(CHECKLIST_2_DE_3));
+    const paso2 = el.querySelector('.step-content--documentos')!;
+
+    for (const clase of [
+      'row',
+      'col',
+      'col-auto',
+      'd-flex',
+      'fw-bold',
+      'badge',
+      'text-muted',
+      'bg-success',
+      'list-group',
+    ]) {
+      expect(paso2.querySelector('.' + clase))
+        .withContext(clase)
+        .toBeNull();
+    }
+    expect(paso2.querySelector('[style]:not(.progreso__valor)')).toBeNull();
+    expect(texto(paso2)).not.toMatch(/⚠️|✅|❌/);
   });
 });
