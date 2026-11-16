@@ -133,12 +133,9 @@
   padding: 0;
 }
 
-/* Paso 2: la misma tarjeta, sin tocar su contenido (C3b) */
+/* Paso 2: la misma tarjeta del paso 1 (D15, D16) */
 .step-content--documentos {
-  padding: 2.5rem;
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-card);
+  padding: 0;
 }
 
 /* Paso 1 (Datos): diseño D15, CSS propio con tokens de F00. */
@@ -538,10 +535,176 @@
   min-height: var(--min-h-action);
 }
 
-/* Botón de envío del paso 2 */
-.submit-btn {
-  height: 56px;
-  font-weight: 800;
-  font-size: 1rem;
+/* ---------- Paso 2 (Documentos): diseño D16, CSS propio con tokens de F00 ---------- */
+
+/* Debajo del subtítulo de PageHeader */
+.progreso-texto {
+  margin: -0.5rem 0 1rem;
+  font-size: 13px;
+  color: var(--c-text-2);
+}
+
+.docs-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+}
+
+.progreso {
+  height: 8px;
+  overflow: hidden;
+  background: var(--c-border);
+  border-radius: 4px;
+}
+
+.progreso__valor {
+  display: block;
+  height: 100%;
+  background: var(--c-primary);
+  border-radius: inherit;
+}
+
+.docs-lista {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 14px 16px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--c-text) 8%, transparent);
+}
+
+.doc__icono {
+  flex-shrink: 0;
+  color: var(--c-text-2);
+}
+
+.doc__texto {
+  display: grid;
+  flex: 1 1 14rem;
+  gap: 4px;
+  min-width: 0;
+}
+
+.doc__nombre {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+
+.doc__observaciones {
+  font-size: 0.875rem;
+  color: var(--tone-ambar-fg);
+}
+
+.doc__error {
+  font-size: 0.875rem;
+  color: var(--tone-rojo-fg);
+}
+
+.doc__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.doc__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+
+  .mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+}
+
+.doc__estado--presentado {
+  padding: 4px 10px;
+  color: var(--tone-verde-fg);
+  border: 1px solid var(--tone-verde-fg);
+  border-radius: 999px;
+}
+
+.doc__estado--no-aplica {
+  color: var(--c-text-2);
+}
+
+.doc__boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--min-h-action);
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--c-surface);
+  background: var(--c-primary);
+  border: 1px solid var(--c-primary);
   border-radius: var(--radius-control);
+  cursor: pointer;
+
+  .mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    background: color-mix(in srgb, var(--c-primary) 60%, var(--c-surface));
+    border-color: transparent;
+    cursor: default;
+  }
+}
+
+.doc__boton--cambiar {
+  color: var(--c-primary);
+  background: var(--c-surface);
+
+  &:disabled {
+    color: var(--c-surface);
+  }
+}
+
+.doc__formato {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-primary);
+}
+
+/* Motivo del envío, a la izquierda del botón */
+.envio-motivo {
+  flex: 1 1 16rem;
+  margin: 0;
+  font-size: 0.875rem;
+  text-align: right;
+  // --tone-rojo-fg sobre --c-bg: 7,94:1.
+  color: var(--tone-rojo-fg);
+}
+
+.envio-motivo--completo {
+  color: var(--tone-verde-fg);
 }

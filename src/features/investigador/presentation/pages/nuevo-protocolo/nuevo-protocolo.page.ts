@@ -31,15 +31,15 @@ import { MatTooltip, MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
-import {
-  CrearProtocoloDto,
-  RequirementStatus,
-  ChecklistRequirement,
-} from '../../../domain/dtos/crear-protocolo.dto';
+import { CrearProtocoloDto, ChecklistRequirement } from '../../../domain/dtos/crear-protocolo.dto';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { finalize } from 'rxjs/operators';
+import {
+  EmptyStateComponent,
+  ErrorStateComponent,
+  LoadingStateComponent,
+} from '@shared/ui/states/states.component';
 import { Subscription } from 'rxjs';
 
 /** Largo del título (RF-02.2 del backend), contado sobre el texto recortado. */
@@ -93,20 +93,29 @@ interface StudyType {
   description?: string;
 }
 
-interface RequiredDocument {
-  id?: number;
-  code: string;
+/** Fila del paso 2 (D16): un requisito del checklist del backend, sin código interno a la vista. */
+interface DocumentoRequerido {
+  id: number;
   nombre: string;
-  isRequired: boolean;
-  status: RequirementStatus;
-  observations: string;
-  icon: string;
-  alert: string | null;
-  color: string;
-  _resolvedCode?: string;
-  _resolvedName?: string;
-  _resolvedId?: number;
+  /** `status` del backend (requirement-status.enum.ts), tal como llega. */
+  status: string;
+  /** Texto de la Secretaría; vacío si no hay. */
+  observaciones: string;
+  /**
+   * Plantilla del requisito para "Descargar formato". Hoy el backend no relaciona el requisito con
+   * su plantilla (TSK-001.18): no llega y no se muestra el enlace.
+   */
+  plantillaUrl?: string;
 }
+
+/** Estado de la lista del paso 2; null mientras no hay protocolo. */
+type EstadoChecklist = 'cargando' | 'error' | 'listo' | null;
+
+/** Estados que ya no faltan (D16). Con APROBADO no se puede cambiar el archivo. */
+const ESTADOS_PRESENTADO = ['PRESENTADO', 'APROBADO'];
+const ESTADO_APROBADO = 'APROBADO';
+/** No falta, no bloquea el envío ni cuenta en el total (D16). */
+const ESTADO_NO_APLICA = 'NO_APLICA';
 
 // --- Validadores Técnicos ---
 
@@ -153,6 +162,9 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
     MatProgressSpinnerModule,
     MatDividerModule,
     PageHeaderComponent,
+    LoadingStateComponent,
+    ErrorStateComponent,
+    EmptyStateComponent,
     MatTooltipModule,
     MatProgressBarModule,
   ],
@@ -184,11 +196,14 @@ export class NuevoProtocoloPage implements OnInit {
   private queryParamsVistos = false;
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.trabajos.unsubscribe());
+    this.destroyRef.onDestroy(() => {
+      this.trabajos.unsubscribe();
+      // Las subidas en curso no se cancelan; su respuesta se ignora (mismaGeneracion).
+      this.generacion++;
+    });
   }
 
   isLoading = false;
-  isRequirementsLoading = false;
   isDraftContinuation = false;
   protocolId: number | null = null;
 
@@ -204,9 +219,15 @@ export class NuevoProtocoloPage implements OnInit {
     nombre,
     descripcion: DESCRIPCION_CARACTERISTICA[campo],
   }));
-  documentosRequeridos: RequiredDocument[] = [];
-  documentUploadStatus: { [key: string]: string } = {};
-  archivosCargados: { [key: string]: string } = {};
+  documentosRequeridos: DocumentoRequerido[] = [];
+  estadoChecklist: EstadoChecklist = null;
+  /** Después de una subida se vuelve a pedir el checklist sin quitar la lista de la vista. */
+  recargandoChecklist = false;
+  /** Subidas en curso y último error de subida, por id del requisito. */
+  subiendo: Record<number, boolean> = {};
+  errorSubida: Record<number, string> = {};
+  /** Última petición del checklist: una nueva cancela la anterior (sin respuestas fuera de orden). */
+  private cargaChecklist?: Subscription;
 
   generalForm = this.fb.group({
     titulo: ['', trimmedLengthValidator(TITULO_MIN, TITULO_MAX)],
@@ -257,13 +278,14 @@ export class NuevoProtocoloPage implements OnInit {
     this.generacion++;
 
     this.isLoading = false;
-    this.isRequirementsLoading = false;
     this.isDraftContinuation = false;
     this.protocolId = null;
     this.pasoActual = 0;
     this.documentosRequeridos = [];
-    this.documentUploadStatus = {};
-    this.archivosCargados = {};
+    this.estadoChecklist = null;
+    this.recargandoChecklist = false;
+    this.subiendo = {};
+    this.errorSubida = {};
 
     if (this.stepper) {
       this.stepper.reset();
@@ -299,23 +321,10 @@ export class NuevoProtocoloPage implements OnInit {
 
           this.protocolId = id;
           this.isDraftContinuation = true;
-          this.isRequirementsLoading = true;
-          trabajo.add(
-            this.protocoloService.getChecklist(id).subscribe({
-              next: (res) => {
-                this.processRequirements(this.extractList(res));
-                this.isRequirementsLoading = false;
-                this.isLoading = false;
-                this.abrirPasoRequisitos();
-              },
-              error: () => {
-                this.processRequirements([]);
-                this.isRequirementsLoading = false;
-                this.isLoading = false;
-                this.abrirPasoRequisitos();
-              },
-            }),
-          );
+          this.isLoading = false;
+          // El paso 2 se abre ya: sus estados de carga, error y vacío los muestra la lista (D16).
+          this.cargarChecklist(id);
+          this.abrirPasoRequisitos();
         },
         error: () => this.rechazarContinuacionBorrador(),
       }),
@@ -506,25 +515,10 @@ export class NuevoProtocoloPage implements OnInit {
               duration: 3000,
             });
 
-            trabajo.add(
-              this.protocoloService.getChecklist(id).subscribe({
-                next: (checklistRes) => {
-                  this.isLoading = false;
-                  const list = this.extractList(checklistRes);
-                  this.processRequirements(list);
-                  this.stepper.next(); // Avanza al Paso 2 (Documentos)
-                },
-                error: () => {
-                  this.isLoading = false;
-                  this.snackBar.open(
-                    '⚠️ Protocolo creado, pero hubo un problema al generar la lista oficial.',
-                    'Cerrar',
-                  );
-                  this.processRequirements([]);
-                  this.stepper.next();
-                },
-              }),
-            );
+            this.isLoading = false;
+            // Si el checklist falla, el paso 2 muestra su ErrorState con Reintentar (D11, D16).
+            this.cargarChecklist(id);
+            this.stepper.next(); // Avanza al Paso 2 (Documentos)
           } else {
             this.isLoading = false;
             this.snackBar.open(
@@ -545,221 +539,146 @@ export class NuevoProtocoloPage implements OnInit {
     );
   }
 
-  public loadRequirements(protocolId?: number) {
-    const idToUse = protocolId || this.protocolId;
-
-    if (idToUse) {
-      this.isRequirementsLoading = true;
-      this.trabajos.add(
-        this.protocoloService
-          .getChecklist(Number(idToUse))
-          .pipe(finalize(() => (this.isRequirementsLoading = false)))
-          .subscribe({
-            next: (res) => {
-              const list = this.extractList(res);
-              this.processRequirements(list);
-            },
-            error: (err) => {
-              console.warn('[DEBUG] Error en checklist oficial...', err);
-              this.processRequirements([]);
-            },
-          }),
-      );
+  /**
+   * Pide el checklist real del protocolo (D11, D16) sin respaldo: si falla, ErrorState. Con
+   * `silencioso` (después de una subida) la lista sigue a la vista mientras llega la nueva.
+   */
+  cargarChecklist(id: number, silencioso = false): void {
+    if (silencioso) {
+      this.recargandoChecklist = true;
+    } else {
+      this.estadoChecklist = 'cargando';
     }
-  }
-
-  private extractList(data: unknown): unknown[] {
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-
-    const obj = data as Record<string, unknown>;
-    const possibleKeys = [
-      'data',
-      'results',
-      'checklist',
-      'requirements',
-      'protocolo_requisitos',
-      'items',
-      'list',
-    ];
-    for (const key of possibleKeys) {
-      if (obj[key] && Array.isArray(obj[key])) {
-        return obj[key] as unknown[];
-      }
-    }
-
-    for (const key in obj) {
-      if (Array.isArray(obj[key])) return obj[key] as unknown[];
-    }
-
-    return [];
-  }
-
-  private processRequirements(list: unknown[]) {
-    let isEmergencyMode = false;
-    if (list.length === 0) {
-      isEmergencyMode = true;
-      list = [
-        {
-          id: 9001,
-          code: 'PROTOCOLO_FINAL',
-          name: 'Protocolo de Investigación (Requerido)',
-          isRequired: true,
-        },
-        {
-          id: 9002,
-          code: 'CONSENTIMIENTO',
-          name: 'Formulario de Consentimiento Informado',
-          isRequired: true,
-        },
-        { id: 9003, code: 'CV_INVESTIGADORES', name: 'Hojas de Vida del Equipo', isRequired: true },
-        { id: 9004, code: 'COMPROMISO_ETICO', name: 'Carta de Compromiso Ético', isRequired: true },
-      ];
-    }
-
-    const uniqueMap = new Map<string, Record<string, unknown>>();
-    list.forEach((rawItem, index) => {
-      const item = (typeof rawItem === 'object' && rawItem !== null ? rawItem : {}) as Record<
-        string,
-        unknown
-      >;
-      const requirementObj = (item['requirement'] || item['requisito']) as
-        Record<string, unknown> | undefined;
-      const code = (item['code'] ||
-        item['requirementCode'] ||
-        item['codigo_requisito'] ||
-        requirementObj?.['code'] ||
-        requirementObj?.['codigo'] ||
-        `GENERIC_${index}`) as string;
-      const name = (item['name'] ||
-        item['requirementName'] ||
-        item['nombre_requisito'] ||
-        requirementObj?.['name'] ||
-        requirementObj?.['description'] ||
-        requirementObj?.['nombre'] ||
-        'Documento') as string;
-      const id = (item['id'] ||
-        item['requirementId'] ||
-        requirementObj?.['id'] ||
-        requirementObj?.['id']) as number | undefined;
-
-      item['_resolvedCode'] = code;
-      item['_resolvedName'] = name;
-      item['_resolvedId'] = id;
-
-      if (!uniqueMap.has(code) || item['status'] === RequirementStatus.PRESENTADO) {
-        uniqueMap.set(code, item);
-      }
+    this.cargaChecklist?.unsubscribe();
+    this.cargaChecklist = this.protocoloService.obtenerChecklist(id).subscribe({
+      next: (lista) => {
+        this.recargandoChecklist = false;
+        this.documentosRequeridos = (Array.isArray(lista) ? lista : []).map((r) =>
+          this.aDocumento(r),
+        );
+        this.estadoChecklist = 'listo';
+      },
+      error: () => {
+        this.recargandoChecklist = false;
+        this.documentosRequeridos = [];
+        this.estadoChecklist = 'error';
+      },
     });
-
-    const dedupedList = Array.from(uniqueMap.values());
-
-    this.documentosRequeridos = dedupedList.map((r) => ({
-      id: r['_resolvedId'] as number | undefined,
-      code: r['_resolvedCode'] as string,
-      nombre: isEmergencyMode ? `⚠️ ${r['_resolvedName']}` : (r['_resolvedName'] as string),
-      isRequired: r['isRequired'] !== undefined ? (r['isRequired'] as boolean) : true,
-      status: (r['status'] || r['estado'] || RequirementStatus.NO_PRESENTADO) as RequirementStatus,
-      observations: (r['observations'] || r['observaciones'] || '') as string,
-      icon: this.getTechnicalIcon(r['_resolvedCode'] as string),
-      alert: isEmergencyMode
-        ? 'Modo de emergencia: El servidor no envió requisitos oficiales.'
-        : this.getTechnicalAlert(r['_resolvedCode'] as string),
-      color: this.getStatusColor((r['status'] || r['estado']) as RequirementStatus),
-    }));
-
-    this.documentosRequeridos.forEach((doc) => {
-      this.documentUploadStatus[doc.code] =
-        doc.status === RequirementStatus.PRESENTADO
-          ? 'exito'
-          : doc.status === RequirementStatus.OBSERVADO
-            ? 'error'
-            : 'pendiente';
-    });
+    this.trabajos.add(this.cargaChecklist);
   }
 
-  private getStatusColor(status: RequirementStatus): string {
-    switch (status) {
-      case RequirementStatus.PRESENTADO:
-        return 'success';
-      case RequirementStatus.OBSERVADO:
-        return 'warn';
-      default:
-        return 'primary';
-    }
+  /** Reintentar del ErrorState del paso 2. */
+  reintentarChecklist(): void {
+    if (this.protocolId !== null) this.cargarChecklist(this.protocolId);
   }
 
-  private getTechnicalIcon(code: string): string {
-    if (!code) return 'description';
-    const map: Record<string, string> = {
-      TRADUCCION_ANCESTRAL: 'translate',
-      POLIZA_SEGURO: 'security',
-      CONTRATO_PROMOTOR: 'gavel',
-      CONSENTIMIENTO: 'verified',
-      CV_INVESTIGADORES: 'account_circle',
-      CV_IP: 'account_circle',
-      PROTOCOLO_FINAL: 'history_edu',
-      PROTOCOLO_COMPLETO: 'history_edu',
-      GENERIC: 'description',
+  /** El backend envía la entidad sin mapear (requirementName); GET /protocols/:id usa name. */
+  private aDocumento(requisito: ChecklistRequirement): DocumentoRequerido {
+    const r = requisito as ChecklistRequirement & { name?: string };
+    return {
+      id: Number(r.id),
+      nombre: r.requirementName ?? r.name ?? '',
+      status: String(r.status ?? ''),
+      observaciones: typeof r.observations === 'string' ? r.observations.trim() : '',
     };
-    return map[code] || 'description';
   }
 
-  private getTechnicalAlert(code: string): string | null {
-    if (!code) return null;
-    const map: Record<string, string> = {
-      TRADUCCION_ANCESTRAL: 'Requisito mandatorio por población indígena.',
-      POLIZA_SEGURO: 'Obligatorio para Ensayos Clínicos (AM 0005-2022).',
-      CONTRATO_PROMOTOR: 'Acuerdo legal de patrocinio requerido.',
-      CONSENTIMIENTO: 'Documento crítico de cumplimiento ético.',
-    };
-    return map[code] || null;
+  estaPresentado(doc: DocumentoRequerido): boolean {
+    return ESTADOS_PRESENTADO.includes(doc.status);
   }
 
-  onDocumentSelected(event: Event, requirementCode: string) {
+  noAplica(doc: DocumentoRequerido): boolean {
+    return doc.status === ESTADO_NO_APLICA;
+  }
+
+  /** Sin botón con APROBADO (el backend no deja reemplazarlo) ni con NO_APLICA (D16). */
+  admiteSubida(doc: DocumentoRequerido): boolean {
+    return doc.status !== ESTADO_APROBADO && !this.noAplica(doc);
+  }
+
+  textoBoton(doc: DocumentoRequerido): string {
+    if (this.subiendo[doc.id]) return 'Subiendo…';
+    return this.estaPresentado(doc) ? 'Cambiar' : 'Subir';
+  }
+
+  /** Nombre accesible del botón: incluye el nombre del documento (F09-11). */
+  etiquetaBoton(doc: DocumentoRequerido): string {
+    return `${this.textoBoton(doc)} ${doc.nombre}`;
+  }
+
+  /** Total M de "N de M": todos menos NO_APLICA (D16). */
+  get totalDocumentos(): number {
+    return this.documentosRequeridos.filter((d) => !this.noAplica(d)).length;
+  }
+
+  get documentosPresentados(): number {
+    return this.documentosRequeridos.filter((d) => this.estaPresentado(d)).length;
+  }
+
+  get faltanDocumentos(): number {
+    return this.totalDocumentos - this.documentosPresentados;
+  }
+
+  /** Lista cargada y con al menos un requisito: se muestran el progreso y el motivo del envío. */
+  get listaConDocumentos(): boolean {
+    return this.estadoChecklist === 'listo' && this.documentosRequeridos.length > 0;
+  }
+
+  get motivoEnvio(): string {
+    const faltan = this.faltanDocumentos;
+    if (faltan === 0) return 'Todos los documentos están presentados.';
+    return faltan === 1 ? 'Falta 1 documento.' : `Faltan ${faltan} documentos.`;
+  }
+
+  get haySubidaEnCurso(): boolean {
+    return Object.values(this.subiendo).some(Boolean);
+  }
+
+  /**
+   * El envío queda deshabilitado mientras la lista carga, falla o llega vacía, falta algún
+   * documento o hay una subida en curso (D11, D16). onEnviarFinal repite la misma condición.
+   */
+  get envioDeshabilitado(): boolean {
+    return (
+      this.isLoading ||
+      this.protocolId === null ||
+      !this.listaConDocumentos ||
+      this.recargandoChecklist ||
+      this.faltanDocumentos > 0 ||
+      this.haySubidaEnCurso
+    );
+  }
+
+  onDocumentSelected(event: Event, doc: DocumentoRequerido): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file || !this.protocolId) return;
-
-    const requirement = this.documentosRequeridos.find((d) => d.code === requirementCode);
+    // Permite volver a elegir el mismo archivo después de un error.
+    input.value = '';
+    const protocolId = this.protocolId;
+    if (!file || protocolId === null || this.subiendo[doc.id] || !this.admiteSubida(doc)) return;
 
     const vigente = this.mismaGeneracion();
+    this.subiendo = { ...this.subiendo, [doc.id]: true };
+    const sinError = { ...this.errorSubida };
+    delete sinError[doc.id];
+    this.errorSubida = sinError;
 
-    if (!requirement || !requirement.id) {
-      this.documentUploadStatus[requirementCode] = 'subiendo';
-      this.protocoloService.subirDocumentosBulk(this.protocolId, [file]).subscribe({
-        next: () => {
-          if (!vigente()) return;
-          this.documentUploadStatus[requirementCode] = 'exito';
-          this.archivosCargados[requirementCode] = file.name;
-        },
-        error: () => {
-          if (!vigente()) return;
-          this.documentUploadStatus[requirementCode] = 'error';
-          this.snackBar.open('Error al subir documento.', 'Cerrar');
-        },
-      });
-      return;
-    }
-
-    this.documentUploadStatus[requirementCode] = 'subiendo';
-
-    this.protocoloService
-      .subirDocumento(file, this.protocolId, requirement.id, requirementCode)
-      .subscribe({
-        next: () => {
-          if (!vigente()) return;
-          this.documentUploadStatus[requirementCode] = 'exito';
-          this.archivosCargados[requirementCode] = file.name;
-          this.loadRequirements();
-        },
-        error: (err) => {
-          if (!vigente()) return;
-          console.error('[NuevoProtocoloPage] Error en subirDocumento:', err);
-          this.documentUploadStatus[requirementCode] = 'error';
-          this.snackBar.open('Error al subir documento técnico.', 'Cerrar');
-        },
-      });
+    this.protocoloService.subirDocumento(file, protocolId, doc.id).subscribe({
+      next: () => {
+        if (!vigente()) return;
+        this.subiendo = { ...this.subiendo, [doc.id]: false };
+        this.cargarChecklist(protocolId, true);
+      },
+      error: (err: unknown) => {
+        if (!vigente()) return;
+        this.subiendo = { ...this.subiendo, [doc.id]: false };
+        // Mensaje del backend (por ejemplo "El archivo debe tener formato PDF"), como texto.
+        this.errorSubida = {
+          ...this.errorSubida,
+          [doc.id]: extractApiErrorMessage(err, 'No se pudo subir el documento.'),
+        };
+      },
+    });
   }
 
   /** true mientras la página siga en el mismo protocolo que cuando se llamó. */
@@ -768,59 +687,13 @@ export class NuevoProtocoloPage implements OnInit {
     return () => generacion === this.generacion;
   }
 
-  onBulkUpload(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const files: File[] = Array.from(input.files || []);
-    if (!files.length || !this.protocolId) return;
-
-    this.isLoading = true;
-    const vigente = this.mismaGeneracion();
-    this.protocoloService.subirDocumentosBulk(this.protocolId, files).subscribe({
-      next: () => {
-        if (!vigente()) return;
-        this.isLoading = false;
-        this.snackBar.open('✅ Archivos cargados exitosamente.', 'Cerrar', { duration: 3000 });
-
-        files.forEach((f) => {
-          this.archivosCargados[f.name] = f.name;
-        });
-
-        this.loadRequirements(this.protocolId!);
-      },
-      error: () => {
-        if (!vigente()) return;
-        this.isLoading = false;
-        this.snackBar.open('❌ Error en la carga masiva.', 'Cerrar');
-      },
-    });
-  }
-
   onEnviarFinal(): void {
-    if (!this.protocolId) return;
-
-    const hasFormalRequirements = this.documentosRequeridos.some((d) => !!d.id);
-
-    if (hasFormalRequirements) {
-      const pendingMandatory = this.documentosRequeridos.some(
-        (d) => d.isRequired && d.status !== RequirementStatus.PRESENTADO,
-      );
-
-      if (pendingMandatory) {
-        this.snackBar.open('Debe subir todos los documentos marcados como obligatorios.', 'Cerrar');
-        return;
-      }
-    } else {
-      if (Object.keys(this.archivosCargados).length === 0) {
-        this.snackBar.open('⚠️ Debe subir al menos un documento antes de enviar.', 'Cerrar', {
-          duration: 5000,
-        });
-        return;
-      }
-    }
+    const protocolId = this.protocolId;
+    if (this.envioDeshabilitado || protocolId === null) return;
 
     this.isLoading = true;
     const vigente = this.mismaGeneracion();
-    this.protocoloService.finalizarProtocolo(this.protocolId).subscribe({
+    this.protocoloService.finalizarProtocolo(protocolId).subscribe({
       next: () => {
         if (!vigente()) return;
         this.isLoading = false;
