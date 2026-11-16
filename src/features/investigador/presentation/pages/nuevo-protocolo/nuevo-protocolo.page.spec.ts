@@ -240,48 +240,47 @@ describe('NuevoProtocoloPage — envío a la Secretaría (F09-2, F09-3)', () => 
     return page;
   }
 
-  it('201 → aviso "Protocolo enviado a la Secretaría." sin código CEISH y va a Mis protocolos', () => {
+  // Desde C4 (D17) el aviso va en la tarjeta del paso 3, sin snackbar ni navegación automática.
+  it('201 → queda enviado, sin snackbar ni navegación (D3, D17)', () => {
     finalizarSpy.and.returnValue(of({}));
     const page = paginaListaParaEnviar();
 
     page.onEnviarFinal();
 
     expect(finalizarSpy).toHaveBeenCalledOnceWith(7);
-    expect(snackSpy).toHaveBeenCalledTimes(1);
-    const texto = snackSpy.calls.mostRecent().args[0] as string;
-    expect(texto).toBe('Protocolo enviado a la Secretaría.');
-    expect(texto).not.toContain('CEISH-GEN-001');
-    expect(navigateSpy).toHaveBeenCalledOnceWith(['/dashboard/investigador/mis-protocolos']);
-    expect(page.isLoading).toBeFalse();
+    expect(page.enviado).toBeTrue();
+    expect(page.enviando).toBeFalse();
+    expect(page.errorEnvio).toBeNull();
+    expect(snackSpy).not.toHaveBeenCalled();
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('error con mensaje del backend → aviso con ese texto exacto, no navega y libera el botón', () => {
+  it('error con mensaje del backend → errorEnvio con ese texto exacto, no navega y libera el botón', () => {
     finalizarSpy.and.returnValue(throwError(() => new Error(MENSAJE_ESTADO)));
     const page = paginaListaParaEnviar();
 
     page.onEnviarFinal();
 
-    expect(snackSpy).toHaveBeenCalledTimes(1);
-    expect(snackSpy.calls.mostRecent().args[0]).toBe(MENSAJE_ESTADO);
+    expect(page.errorEnvio).toBe(MENSAJE_ESTADO);
+    expect(snackSpy).not.toHaveBeenCalled();
     expect(navigateSpy).not.toHaveBeenCalled();
-    expect(page.isLoading).toBeFalse();
+    expect(page.enviando).toBeFalse();
+    expect(page.enviado).toBeFalse();
   });
 
-  it('error sin mensaje → aviso "No se pudo enviar el protocolo a la Secretaría."', () => {
+  it('error sin mensaje → "No se pudo enviar el protocolo a la Secretaría."', () => {
     finalizarSpy.and.returnValue(throwError(() => new Error('')));
     const page = paginaListaParaEnviar();
 
     page.onEnviarFinal();
 
-    expect(snackSpy.calls.mostRecent().args[0]).toBe(
-      'No se pudo enviar el protocolo a la Secretaría.',
-    );
+    expect(page.errorEnvio).toBe('No se pudo enviar el protocolo a la Secretaría.');
     expect(navigateSpy).not.toHaveBeenCalled();
-    expect(page.isLoading).toBeFalse();
+    expect(page.enviando).toBeFalse();
   });
 });
 
-describe('NuevoProtocoloPage — botón del paso 2 (D6)', () => {
+describe('NuevoProtocoloPage — botón de envío (D6; en el paso 3 desde D17)', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [NuevoProtocoloPage, NoopAnimationsModule],
@@ -832,7 +831,12 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c)', () => {
     it('la barra de pasos tiene las 3 etiquetas y marca el paso abierto con aria-current', () => {
       const { fixture, page, el } = render();
 
-      expect(pasos(el).map((li) => texto(li))).toEqual(PASOS);
+      // Desde C4 (D19) cada paso suma su estado en texto oculto.
+      expect(pasos(el).map((li) => texto(li))).toEqual([
+        `${PASOS[0]}, paso actual`,
+        `${PASOS[1]}, pendiente`,
+        `${PASOS[2]}, pendiente`,
+      ]);
       expect(pasos(el).map((li) => li.getAttribute('aria-current'))).toEqual(['step', null, null]);
 
       llenarTodo(page);
@@ -1110,7 +1114,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
 
   beforeEach(async () => {
     queryParams$ = new BehaviorSubject<ParamMap>(convertToParamMap({}));
-    misProtocolosSpy = jasmine.createSpy('misProtocolos').and.returnValue(of([]));
+    misProtocolosSpy = jasmine.createSpy('obtenerMisProtocolos').and.returnValue(of([]));
     getChecklistSpy = jasmine.createSpy('getChecklist').and.returnValue(
       of([
         {
@@ -1139,7 +1143,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
         {
           provide: ProtocoloService,
           useValue: {
-            misProtocolos: misProtocolosSpy,
+            obtenerMisProtocolos: misProtocolosSpy,
             obtenerChecklist: getChecklistSpy,
             guardarProtocoloInicial: guardarSpy,
             getStudyTypes: () => of([]),
@@ -1387,9 +1391,54 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
     await expectRechazado('5', of([protocolo(6, EstadoProtocolo.BORRADOR)]));
   });
 
-  it('?borrador=5 cuando falla Mis protocolos rechaza la continuacion', async () => {
+  it('?borrador=5 cuando Mis protocolos falla sin status rechaza la continuacion (D8)', async () => {
     await expectRechazado('5', throwError(() => new Error('fallo de consulta')));
   });
+
+  it('(C4-8) D18: un 404 al comprobar ?borrador=5 sigue D8 y vuelve a Mis protocolos', async () => {
+    await expectRechazado(
+      '5',
+      throwError(() => Object.assign(new Error('Not Found'), { status: 404 })),
+    );
+  });
+
+  for (const status of [0, 500]) {
+    it(`(C4-9) D18: estado ${status} muestra ErrorState sin navegar y Reintentar sigue hasta el checklist`, async () => {
+      // Copia escrita a mano de D18 en specs/F09-investigador-borrador-envio/spec-ui.md (v0.8).
+      const textoError = 'No se pudo cargar el borrador. Revise su conexión e intente de nuevo.';
+      const { fixture, page } = render(
+        '5',
+        throwError(() => Object.assign(new Error('fallo'), { status })),
+      );
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(getChecklistSpy).not.toHaveBeenCalled();
+      expect(
+        el.querySelector('app-error-state .state__message')?.textContent?.trim(),
+      ).toBe(textoError);
+      expect(el.querySelector('ol[aria-label="Pasos"]')).toBeNull();
+      expect(el.querySelector('mat-stepper')).toBeNull();
+      expect(el.querySelector('.datos-card')).toBeNull();
+
+      misProtocolosSpy.and.returnValue(of([protocolo(5, EstadoProtocolo.BORRADOR)]));
+      const reintentar = el.querySelector('app-error-state button') as HTMLButtonElement;
+      expect(reintentar.textContent?.trim()).toBe('Reintentar');
+      reintentar.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(misProtocolosSpy).toHaveBeenCalledTimes(2);
+      expect(el.querySelector('app-error-state')).toBeNull();
+      expect(el.querySelector('ol[aria-label="Pasos"]')).not.toBeNull();
+      expect(getChecklistSpy).toHaveBeenCalledOnceWith(5);
+      expect(page.stepper.selectedIndex).toBe(1);
+      expect(navigateSpy).not.toHaveBeenCalled();
+    });
+  }
 
   it('mientras comprueba ?borrador=5 el boton de guardar del paso 1 queda deshabilitado', () => {
     const { fixture, page } = render('5', NEVER);
@@ -1513,7 +1562,7 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
         {
           provide: ProtocoloService,
           useValue: {
-            misProtocolos: () =>
+            obtenerMisProtocolos: () =>
               of([
                 {
                   id: 5,
@@ -1550,8 +1599,9 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
   const texto = (nodo: Element | null | undefined) =>
     (nodo?.textContent ?? '').replace(/\s+/g, ' ').trim();
   const filas = (el: HTMLElement) => Array.from(el.querySelectorAll('.docs-lista > li'));
+  // Desde C4 (D17) el botón de debajo de la tarjeta del paso 2 es "Siguiente paso".
   const botonEnviar = (el: HTMLElement) =>
-    el.querySelector('button.submit-btn') as HTMLButtonElement;
+    el.querySelector('button.siguiente-btn') as HTMLButtonElement;
   const fila = (el: HTMLElement, nombre: string) =>
     filas(el).find((li) => texto(li.querySelector('.doc__nombre')) === nombre) as HTMLElement;
 
@@ -1707,7 +1757,7 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
     expect(motivo(el)).toBe(TODOS_PRESENTADOS);
     expect(el.querySelector('#np-envio-motivo')?.classList).toContain('envio-motivo--completo');
     expect(botonEnviar(el).disabled).toBeFalse();
-    expect(texto(botonEnviar(el))).toBe('Enviar a la Secretaría');
+    expect(texto(botonEnviar(el))).toBe('Siguiente paso');
   });
 
   it('con faltantes, onEnviarFinal no llama al backend ni a la carga masiva', async () => {
@@ -1719,10 +1769,14 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
     expect(subirBulkSpy).not.toHaveBeenCalled();
   });
 
-  it('con todo presentado, Enviar llama a finalizarProtocolo con el id del borrador', async () => {
-    const { el } = await abrir(of([requisito(31, 'Documento de prueba listo', 'PRESENTADO')]));
+  it('con todo presentado, Siguiente paso y Enviar llaman a finalizarProtocolo con el id del borrador', async () => {
+    const { fixture, el } = await abrir(
+      of([requisito(31, 'Documento de prueba listo', 'PRESENTADO')]),
+    );
 
     botonEnviar(el).click();
+    fixture.detectChanges();
+    (el.querySelector('button.submit-btn') as HTMLButtonElement).click();
 
     expect(finalizarSpy).toHaveBeenCalledOnceWith(5);
   });
@@ -1733,7 +1787,7 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
     const { fixture, el } = await abrir(of(CHECKLIST_2_DE_3));
     const filaDos = fila(el, 'Documento de prueba dos');
     const input = filaDos.querySelector('input[type="file"]') as HTMLInputElement;
-    const archivo = new File(['zz'], 'zz-test-documento.txt', { type: 'text/plain' });
+    const archivo = new File(['zz'], 'zz-test-documento.pdf', { type: 'application/pdf' });
     Object.defineProperty(input, 'files', { value: [archivo] });
 
     input.dispatchEvent(new Event('change'));
@@ -1858,6 +1912,265 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
     expect(el.querySelector('[role="progressbar"]')?.getAttribute('aria-valuemax')).toBe('1');
     expect(texto(el.querySelector('#np-envio-motivo'))).toBe(TODOS_PRESENTADOS);
     expect(botonEnviar(el).disabled).toBeFalse();
+  });
+
+  describe('C4: paso 3 Enviar a la Secretaría y revisión del archivo (D17, D19)', () => {
+    // Copias escritas a mano de D17 y D19 en specs/F09-investigador-borrador-envio/spec-ui.md (v0.8).
+    const SUBTITULO_ENVIO = 'Paso 3 de 3: Enviar a la Secretaría';
+    const TEXTO_ENVIO_3 =
+      'Los 3 documentos están presentados. Al enviar ya no puede cambiarlos hasta que la Secretaría los revise.';
+    const TEXTO_ENVIO_1 =
+      'El documento está presentado. Al enviar ya no puede cambiarlo hasta que la Secretaría lo revise.';
+    const EXITO_TITULO = 'Protocolo enviado a la Secretaría.';
+    const EXITO_CORREO = 'Le llegará un correo del CEISH con el resultado de la revisión.';
+    const NO_PDF = 'El archivo debe estar en formato PDF.';
+    const MENSAJE_BACKEND =
+      'El protocolo no se puede enviar en su estado actual: solo se envía un borrador o un protocolo con documentación incompleta o por subsanar.';
+
+    const TRES_PRESENTADOS = [
+      requisito(71, 'Documento de prueba uno', 'PRESENTADO'),
+      requisito(72, 'Documento de prueba dos', 'APROBADO'),
+      requisito(73, 'Documento de prueba tres', 'PRESENTADO'),
+      requisito(74, 'Documento de prueba que no aplica', 'NO_APLICA'),
+    ];
+
+    const tarjetaEnvio = (el: HTMLElement) => el.querySelector('section.envio-card') as HTMLElement;
+    const botonEnvio = (el: HTMLElement) =>
+      el.querySelector('section.envio-card button.submit-btn') as HTMLButtonElement;
+    const botonAtras = (el: HTMLElement) =>
+      el.querySelector('section.envio-card button.atras-btn') as HTMLButtonElement;
+    const subtitulo = (el: HTMLElement) => texto(el.querySelector('app-page-header p'));
+
+    async function irAlPaso3(checklist: unknown[] = TRES_PRESENTADOS) {
+      const r = await abrir(of(checklist));
+      botonEnviar(r.el).click();
+      r.fixture.detectChanges();
+      await r.fixture.whenStable();
+      r.fixture.detectChanges();
+      return r;
+    }
+
+    function elegirArchivo(input: HTMLInputElement, nombre: string): () => string {
+      // El navegador no deja escribir el value de un input de archivo: se simula para ver si se vacía.
+      let valor = 'C:\\fakepath\\' + nombre;
+      Object.defineProperty(input, 'value', {
+        configurable: true,
+        get: () => valor,
+        set: (v: string) => (valor = v),
+      });
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [new File(['zz'], nombre, { type: 'application/octet-stream' })],
+      });
+      input.dispatchEvent(new Event('change'));
+      return () => valor;
+    }
+
+    it('(1) en el paso 2 no está "Enviar a la Secretaría": está "Siguiente paso", deshabilitado con faltantes y unido al motivo', async () => {
+      const { el } = await abrir(of(CHECKLIST_2_DE_3));
+      const paso2 = el.querySelector('.step-content--documentos') as HTMLElement;
+
+      const textos = Array.from(paso2.querySelectorAll('button')).map((b) => texto(b));
+      expect(textos).not.toContain('Enviar a la Secretaría');
+      expect(paso2.querySelector('.atras-btn')).toBeNull();
+      const siguiente = paso2.querySelector('button.siguiente-btn') as HTMLButtonElement;
+      expect(texto(siguiente)).toBe('Siguiente paso');
+      expect(siguiente.disabled).toBeTrue();
+      expect(siguiente.getAttribute('aria-describedby')).toBe('np-envio-motivo');
+      expect(texto(el.querySelector('#np-envio-motivo'))).toBe('Falta 1 documento.');
+    });
+
+    it('(2) con todo presentado, "Siguiente paso" abre el paso 3: subtítulo, aria-current y foco en el h2', async () => {
+      const { page, el } = await irAlPaso3();
+
+      expect(page.stepper.selectedIndex).toBe(2);
+      expect(subtitulo(el)).toBe(SUBTITULO_ENVIO);
+      const actual = el.querySelector('ol[aria-label="Pasos"] [aria-current="step"]');
+      expect(texto(actual)).toBe('3 · Enviar a la Secretaría, paso actual');
+      expect(actual?.classList).toContain('pasos__item--hecho');
+      const titulo = tarjetaEnvio(el).querySelector('h2') as HTMLElement;
+      expect(texto(titulo)).toBe('Enviar a la Secretaría');
+      expect(titulo.getAttribute('tabindex')).toBe('-1');
+      expect(document.activeElement).toBe(titulo);
+      expect(tarjetaEnvio(el).getAttribute('aria-label')).toBe('Enviar a la Secretaría');
+    });
+
+    it('(3) el texto del paso 3 con M = 3 (sin NO_APLICA) y con M = 1 en singular', async () => {
+      let { el } = await irAlPaso3();
+      expect(texto(tarjetaEnvio(el).querySelector('.envio-card__texto'))).toBe(TEXTO_ENVIO_3);
+      expect(texto(el)).not.toContain('La fecha de recepción');
+
+      ({ el } = await irAlPaso3([requisito(81, 'Documento de prueba solo', 'PRESENTADO')]));
+      expect(texto(tarjetaEnvio(el).querySelector('.envio-card__texto'))).toBe(TEXTO_ENVIO_1);
+    });
+
+    it('(4) "Atrás" vuelve al paso 2 con la lista intacta y sin pedir otra vez el checklist', async () => {
+      const { fixture, page, el } = await irAlPaso3();
+      const pedidos = obtenerChecklistSpy.calls.count();
+
+      expect(texto(botonAtras(el))).toBe('Atrás');
+      botonAtras(el).click();
+      fixture.detectChanges();
+
+      expect(page.stepper.selectedIndex).toBe(1);
+      expect(obtenerChecklistSpy.calls.count()).toBe(pedidos);
+      expect(filas(el).length).toBe(4);
+      expect(subtitulo(el)).toBe('Paso 2 de 3: Documentos');
+    });
+
+    it('(5) envío exitoso: aviso role="status" con los textos y el enlace; botones deshabilitados; sin snackbar ni navegación', async () => {
+      finalizarSpy.and.returnValue(of({}));
+      const { fixture, el } = await irAlPaso3();
+      const snackSpy = spyOn(fixture.debugElement.injector.get(MatSnackBar), 'open');
+      const navigateSpy = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+      const region = tarjetaEnvio(el).querySelector('[role="status"]') as HTMLElement;
+      expect(region).withContext('contenedor role="status" antes de enviar').not.toBeNull();
+      expect(texto(region)).toBe('');
+
+      botonEnvio(el).click();
+      fixture.detectChanges();
+
+      expect(tarjetaEnvio(el).querySelector('[role="status"]')).toBe(region);
+      expect(texto(region.querySelector('strong'))).toBe(EXITO_TITULO);
+      expect(texto(region)).toContain(EXITO_CORREO);
+      const enlace = region.querySelector('a') as HTMLAnchorElement;
+      expect(texto(enlace)).toBe('Ir a Mis protocolos');
+      expect(enlace.getAttribute('href')).toBe('/dashboard/investigador/mis-protocolos');
+      expect(botonEnvio(el).disabled).toBeTrue();
+      expect(botonAtras(el).disabled).toBeTrue();
+      expect(snackSpy).not.toHaveBeenCalled();
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(tarjetaEnvio(el).querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('(6) envío con error: role="alert" con el mensaje del backend y los botones habilitados otra vez', async () => {
+      finalizarSpy.and.returnValue(throwError(() => new Error(MENSAJE_BACKEND)));
+      const { fixture, el } = await irAlPaso3();
+
+      botonEnvio(el).click();
+      fixture.detectChanges();
+
+      const alerta = tarjetaEnvio(el).querySelector('[role="alert"]');
+      expect(texto(alerta)).toBe(MENSAJE_BACKEND);
+      expect(alerta?.querySelector('*')).toBeNull();
+      expect(botonEnvio(el).disabled).toBeFalse();
+      expect(botonAtras(el).disabled).toBeFalse();
+      expect(texto(botonEnvio(el))).toBe('Enviar a la Secretaría');
+      expect(texto(tarjetaEnvio(el).querySelector('[role="status"]'))).toBe('');
+
+      // Al volver al paso 2 y regresar, el error anterior ya no se muestra (code-review).
+      botonAtras(el).click();
+      fixture.detectChanges();
+      botonEnviar(el).click();
+      fixture.detectChanges();
+      expect(tarjetaEnvio(el).querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('(7) mientras se envía: "Enviando…" y los dos botones deshabilitados', async () => {
+      finalizarSpy.and.returnValue(NEVER);
+      const { fixture, el } = await irAlPaso3();
+
+      botonEnvio(el).click();
+      fixture.detectChanges();
+
+      expect(texto(botonEnvio(el))).toBe('Enviando…');
+      expect(botonEnvio(el).disabled).toBeTrue();
+      expect(botonAtras(el).disabled).toBeTrue();
+      botonEnvio(el).click();
+      expect(finalizarSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('(10) un archivo que no es PDF: "El archivo debe estar en formato PDF." en su fila, unido al botón, sin llamar a la subida', async () => {
+      const { fixture, el } = await abrir(of(CHECKLIST_2_DE_3));
+      const filaDos = fila(el, 'Documento de prueba dos');
+
+      elegirArchivo(filaDos.querySelector('input[type="file"]') as HTMLInputElement, 'zz-test-documento.docx');
+      fixture.detectChanges();
+
+      expect(subirSpy).not.toHaveBeenCalled();
+      expect(texto(filaDos.querySelector('#np-doc-12-error'))).toBe(NO_PDF);
+      expect(filaDos.querySelector('.doc__boton')?.getAttribute('aria-describedby')).toBe(
+        'np-doc-12-error',
+      );
+
+      // Misma regla que el backend: el nombre en minúsculas termina en .pdf.
+      elegirArchivo(filaDos.querySelector('input[type="file"]') as HTMLInputElement, 'ZZ-TEST.PDF');
+      fixture.detectChanges();
+      expect(subirSpy).toHaveBeenCalledTimes(1);
+      expect(filaDos.querySelector('#np-doc-12-error')).toBeNull();
+    });
+
+    it('(11) después de un error el input de archivo queda vacío', async () => {
+      const subida = new Subject<unknown>();
+      subirSpy.and.returnValue(subida);
+      const { fixture, el } = await abrir(of(CHECKLIST_2_DE_3));
+      const input = () =>
+        fila(el, 'Documento de prueba dos').querySelector('input[type="file"]') as HTMLInputElement;
+
+      const valorNoPdf = elegirArchivo(input(), 'zz-test-documento.txt');
+      fixture.detectChanges();
+      expect(valorNoPdf()).toBe('');
+
+      const valorPdf = elegirArchivo(input(), 'zz-test-documento.pdf');
+      subida.error(new Error(MENSAJE_PDF));
+      fixture.detectChanges();
+      expect(texto(el.querySelector('#np-doc-12-error'))).toBe(MENSAJE_PDF);
+      expect(valorPdf()).toBe('');
+    });
+
+    it('(12) la región viva del progreso existe antes de la lista y su texto cambia después de una subida', async () => {
+      const checklist = new Subject<unknown[]>();
+      subirSpy.and.returnValue(of({}));
+      const { fixture, el } = await abrir(checklist);
+      const region = el.querySelector('.progreso-region') as HTMLElement;
+
+      expect(region).withContext('región presente mientras carga').not.toBeNull();
+      expect(region.getAttribute('aria-live')).toBe('polite');
+      expect(texto(region)).toBe('');
+
+      checklist.next(CHECKLIST_2_DE_3);
+      fixture.detectChanges();
+      expect(el.querySelector('.progreso-region')).toBe(region);
+      expect(texto(region)).toBe('Progreso de carga: 2 de 3 documentos presentados.');
+
+      obtenerChecklistSpy.and.returnValue(
+        of(CHECKLIST_2_DE_3.map((r) => ({ ...r, status: 'PRESENTADO' }))),
+      );
+      elegirArchivo(
+        fila(el, 'Documento de prueba dos').querySelector('input[type="file"]') as HTMLInputElement,
+        'zz-test-documento.pdf',
+      );
+      fixture.detectChanges();
+      expect(el.querySelector('.progreso-region')).toBe(region);
+      expect(texto(region)).toBe('Progreso de carga: 3 de 3 documentos presentados.');
+    });
+
+    it('(13) la barra del paso 2 dice con texto oculto "completado", "paso actual" y "pendiente"', async () => {
+      const { el } = await abrir(of(CHECKLIST_2_DE_3));
+      const items = Array.from(el.querySelectorAll('ol[aria-label="Pasos"] > li'));
+
+      expect(items.map((li) => texto(li))).toEqual([
+        '1 · Datos, completado',
+        '2 · Documentos, paso actual',
+        '3 · Enviar a la Secretaría, pendiente',
+      ]);
+      expect(items.map((li) => texto(li.querySelector('.visually-hidden')))).toEqual([
+        ', completado',
+        ', paso actual',
+        ', pendiente',
+      ]);
+      expect(items.map((li) => li.getAttribute('aria-current'))).toEqual([null, 'step', null]);
+    });
+
+    it('(16) con "Siguiente paso" deshabilitado no se abre el paso 3 ni se llama a finalizarProtocolo', async () => {
+      const { page } = await abrir(of(CHECKLIST_2_DE_3));
+
+      page.siguientePaso();
+      page.onEnviarFinal();
+
+      expect(page.stepper.selectedIndex).toBe(1);
+      expect(finalizarSpy).not.toHaveBeenCalled();
+    });
   });
 
   it('el paso 2 no usa clases de Bootstrap ni avisos con ⚠️, ✅ o ❌', async () => {

@@ -2,6 +2,7 @@ import {
   afterNextRender,
   Component,
   DestroyRef,
+  ElementRef,
   inject,
   Injector,
   OnInit,
@@ -32,8 +33,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { CrearProtocoloDto, ChecklistRequirement } from '../../../domain/dtos/crear-protocolo.dto';
+import { sanitizeFilename } from '@domain/entities/storage.interface';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
-import { extractApiErrorMessage } from '@shared/utils/api-error-message.util';
+import { apiErrorStatus, extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import {
   EmptyStateComponent,
@@ -117,6 +119,23 @@ const ESTADO_APROBADO = 'APROBADO';
 /** No falta, no bloquea el envío ni cuenta en el total (D16). */
 const ESTADO_NO_APLICA = 'NO_APLICA';
 
+/** Error de la fila cuando el archivo no es PDF (D19). */
+const MENSAJE_NO_PDF = 'El archivo debe estar en formato PDF.';
+
+/**
+ * Misma regla que el backend (`isValidPdfExtension` sobre el nombre saneado que se envía): el
+ * nombre en minúsculas termina en `.pdf`. Sin tipo MIME ni tamaño (D19).
+ */
+export function esNombrePdf(nombre: string): boolean {
+  return sanitizeFilename(nombre).toLowerCase().endsWith('.pdf');
+}
+
+/** Sin conexión (0) o error del servidor (5xx): el borrador se puede volver a pedir (D18). */
+function esFallaDeConexion(err: unknown): boolean {
+  const status = apiErrorStatus(err);
+  return status === 0 || (status !== null && status >= 500);
+}
+
 // --- Validadores Técnicos ---
 
 export function ecuadorianPhoneValidator(control: AbstractControl): ValidationErrors | null {
@@ -173,6 +192,8 @@ export function ecuadorianIdValidator(control: AbstractControl): ValidationError
 })
 export class NuevoProtocoloPage implements OnInit {
   @ViewChild('stepper') stepper!: MatStepper;
+  /** h2 del paso 3: recibe el foco al llegar con "Siguiente paso" (D17). */
+  @ViewChild('tituloEnvio') tituloEnvio?: ElementRef<HTMLElement>;
 
   private readonly fb = inject(FormBuilder);
   private readonly protocoloService = inject(ProtocoloService);
@@ -212,8 +233,18 @@ export class NuevoProtocoloPage implements OnInit {
   pasoActual = 0;
   readonly subtituloDatos = 'Paso 1 de 3: Información básica';
   readonly subtituloDocumentos = 'Paso 2 de 3: Documentos';
-  /** Barra de pasos propia (D15); el paso 3 queda pendiente hasta C4. */
+  readonly subtituloEnvio = 'Paso 3 de 3: Enviar a la Secretaría';
+  /** Barra de pasos propia (D15, D17). */
   readonly pasos = ['1 · Datos', '2 · Documentos', '3 · Enviar a la Secretaría'];
+  /**
+   * La comprobación de ?borrador falló sin conexión o con un 5xx (D18): ErrorState con
+   * Reintentar, sin barra de pasos ni tarjetas. Guarda el id para volver a pedirlo.
+   */
+  borradorSinCargar: number | null = null;
+  /** Envío del paso 3 (D17): en curso, hecho y último error del backend. */
+  enviando = false;
+  enviado = false;
+  errorEnvio: string | null = null;
   caracteristicas: Caracteristica[] = NOMBRE_CARACTERISTICA.map(([campo, nombre]) => ({
     campo,
     nombre,
@@ -286,6 +317,10 @@ export class NuevoProtocoloPage implements OnInit {
     this.recargandoChecklist = false;
     this.subiendo = {};
     this.errorSubida = {};
+    this.borradorSinCargar = null;
+    this.enviando = false;
+    this.enviado = false;
+    this.errorEnvio = null;
 
     if (this.stepper) {
       this.stepper.reset();
@@ -311,7 +346,7 @@ export class NuevoProtocoloPage implements OnInit {
     this.isLoading = true;
     const trabajo = this.trabajos;
     trabajo.add(
-      this.protocoloService.misProtocolos().subscribe({
+      this.protocoloService.obtenerMisProtocolos().subscribe({
         next: (protocolos) => {
           const borrador = protocolos.find((protocolo) => protocolo.id === id);
           if (!borrador || borrador.estado !== 'BORRADOR') {
@@ -319,6 +354,8 @@ export class NuevoProtocoloPage implements OnInit {
             return;
           }
 
+          // Con Reintentar (D18) el ErrorState sigue hasta aquí: sin mostrar antes el paso 1 vacío.
+          this.borradorSinCargar = null;
           this.protocolId = id;
           this.isDraftContinuation = true;
           this.isLoading = false;
@@ -326,9 +363,22 @@ export class NuevoProtocoloPage implements OnInit {
           this.cargarChecklist(id);
           this.abrirPasoRequisitos();
         },
-        error: () => this.rechazarContinuacionBorrador(),
+        error: (err: unknown) => {
+          if (esFallaDeConexion(err)) {
+            // D18: sin navegar; Reintentar vuelve a pedir la lista.
+            this.isLoading = false;
+            this.borradorSinCargar = id;
+            return;
+          }
+          this.rechazarContinuacionBorrador();
+        },
       }),
     );
+  }
+
+  /** Reintentar del ErrorState del borrador (D18). */
+  reintentarBorrador(): void {
+    if (this.borradorSinCargar !== null) this.continuarBorrador(this.borradorSinCargar);
   }
 
   private rechazarContinuacionBorrador(): void {
@@ -634,9 +684,35 @@ export class NuevoProtocoloPage implements OnInit {
     return Object.values(this.subiendo).some(Boolean);
   }
 
+  /** Subtítulo de la cabecera según el paso abierto (D15, D16, D17). */
+  get subtitulo(): string {
+    if (this.pasoActual === 2) return this.subtituloEnvio;
+    return this.pasoActual === 1 ? this.subtituloDocumentos : this.subtituloDatos;
+  }
+
+  /** Estado de cada paso en texto oculto de la barra (D19). */
+  estadoPaso(indice: number): string {
+    if (indice < this.pasoActual) return 'completado';
+    return indice === this.pasoActual ? 'paso actual' : 'pendiente';
+  }
+
+  /** Texto del paso 3 con M de D16 (D17); singular con un documento. */
+  get textoEnvio(): string {
+    const total = this.totalDocumentos;
+    return total === 1
+      ? 'El documento está presentado. Al enviar ya no puede cambiarlo hasta que la Secretaría lo revise.'
+      : `Los ${total} documentos están presentados. Al enviar ya no puede cambiarlos hasta que la Secretaría los revise.`;
+  }
+
+  /** "Atrás" y "Enviar a la Secretaría" del paso 3: deshabilitados al enviar y después (D17). */
+  get accionesEnvioDeshabilitadas(): boolean {
+    return this.enviando || this.enviado;
+  }
+
   /**
-   * El envío queda deshabilitado mientras la lista carga, falla o llega vacía, falta algún
-   * documento o hay una subida en curso (D11, D16). onEnviarFinal repite la misma condición.
+   * "Siguiente paso" (y el envío) quedan deshabilitados mientras la lista carga, falla o llega
+   * vacía, falta algún documento o hay una subida en curso (D11, D16, D17). siguientePaso y
+   * onEnviarFinal repiten la misma condición.
    */
   get envioDeshabilitado(): boolean {
     return (
@@ -656,6 +732,11 @@ export class NuevoProtocoloPage implements OnInit {
     input.value = '';
     const protocolId = this.protocolId;
     if (!file || protocolId === null || this.subiendo[doc.id] || !this.admiteSubida(doc)) return;
+    if (!esNombrePdf(file.name)) {
+      // D19: sin ninguna petición; el error va en la fila, unido al botón.
+      this.errorSubida = { ...this.errorSubida, [doc.id]: MENSAJE_NO_PDF };
+      return;
+    }
 
     const vigente = this.mismaGeneracion();
     this.subiendo = { ...this.subiendo, [doc.id]: true };
@@ -687,25 +768,42 @@ export class NuevoProtocoloPage implements OnInit {
     return () => generacion === this.generacion;
   }
 
+  /** "Siguiente paso" del paso 2: abre el paso 3 y lleva el foco a su h2 (D17). */
+  siguientePaso(): void {
+    if (this.envioDeshabilitado) return;
+    // Un error de un envío anterior ya no vale después de volver al paso 2.
+    this.errorEnvio = null;
+    this.stepper.next();
+    afterNextRender(() => this.tituloEnvio?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  /** "Atrás" del paso 3: vuelve al paso 2 sin pedir nada otra vez (D17). */
+  volverADocumentos(): void {
+    if (this.accionesEnvioDeshabilitadas) return;
+    this.stepper.previous();
+  }
+
   onEnviarFinal(): void {
     const protocolId = this.protocolId;
-    if (this.envioDeshabilitado || protocolId === null) return;
+    if (this.envioDeshabilitado || this.accionesEnvioDeshabilitadas || protocolId === null) return;
 
-    this.isLoading = true;
+    this.enviando = true;
+    this.errorEnvio = null;
     const vigente = this.mismaGeneracion();
     this.protocoloService.finalizarProtocolo(protocolId).subscribe({
       next: () => {
         if (!vigente()) return;
-        this.isLoading = false;
-        this.snackBar.open('Protocolo enviado a la Secretaría.', 'Cerrar', { duration: 5000 });
-        this.router.navigate(['/dashboard/investigador/mis-protocolos']);
+        // D17: aviso role="status" en la tarjeta con el enlace a Mis protocolos; sin navegar.
+        this.enviando = false;
+        this.enviado = true;
       },
       error: (err: unknown) => {
         if (!vigente()) return;
-        this.isLoading = false;
-        this.snackBar.open(
-          extractApiErrorMessage(err, 'No se pudo enviar el protocolo a la Secretaría.'),
-          'Cerrar',
+        this.enviando = false;
+        // Mensaje del backend solo como texto (interpolación, sin innerHTML).
+        this.errorEnvio = extractApiErrorMessage(
+          err,
+          'No se pudo enviar el protocolo a la Secretaría.',
         );
       },
     });
