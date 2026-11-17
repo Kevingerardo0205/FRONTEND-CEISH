@@ -48,7 +48,11 @@
                           @if (aceptados().has(p.id)) {
                             <app-status-chip tone="verde" label="Tiempos aceptados" />
                           } @else {
-                            <app-status-chip tone="azul" label="Recepción completa · acepte los tiempos" />
+                            <app-status-chip
+                              tone="azul"
+                              label="Recepción completa · acepte los tiempos"
+                              [partir]="true"
+                            />
                           }
                         }
                         @case ('observaciones') {

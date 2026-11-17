@@ -300,6 +300,13 @@
                     role="alert"
                     >{{ errorSubida[doc.id] }}</span
                   >
+                  <span
+                    *ngIf="errorFormato[doc.id]"
+                    [id]="'np-doc-' + doc.id + '-formato-error'"
+                    class="doc__error"
+                    role="alert"
+                    >{{ errorFormato[doc.id] }}</span
+                  >
                 </div>
                 <div class="doc__acciones">
                   <span *ngIf="estaPresentado(doc)" class="doc__estado doc__estado--presentado">
@@ -330,14 +337,20 @@
                       <mat-icon aria-hidden="true">upload</mat-icon>{{ textoBoton(doc) }}
                     </button>
                   </ng-container>
-                  <a
-                    *ngIf="doc.plantillaUrl"
+                  <!-- D28: la URL se pide en cada clic; la pestaña se abre antes de pedirla -->
+                  <button
+                    *ngIf="doc.codigoFormato"
+                    type="button"
                     class="doc__formato"
-                    [href]="doc.plantillaUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >Descargar formato</a
+                    [disabled]="descargandoFormato[doc.id]"
+                    [attr.aria-label]="etiquetaFormato(doc)"
+                    [attr.aria-describedby]="
+                      errorFormato[doc.id] ? 'np-doc-' + doc.id + '-formato-error' : null
+                    "
+                    (click)="descargarFormato(doc)"
                   >
+                    {{ descargandoFormato[doc.id] ? 'Descargando…' : 'Descargar formato' }}
+                  </button>
                 </div>
               </li>
             </ul>
@@ -372,8 +385,10 @@
     <mat-step>
       <ng-template matStepLabel>{{ pasos[2] }}</ng-template>
       <div class="step-content step-content--envio">
-        <section class="envio-card" aria-label="Enviar a la Secretaría">
-          <h2 #tituloEnvio class="envio-card__titulo" tabindex="-1">Enviar a la Secretaría</h2>
+        <section class="envio-card" aria-labelledby="np-envio-titulo">
+          <h2 #tituloEnvio id="np-envio-titulo" class="envio-card__titulo" tabindex="-1">
+            Enviar a la Secretaría
+          </h2>
           <p class="envio-card__texto">{{ textoEnvio }}</p>
 
           <div class="envio-card__acciones">

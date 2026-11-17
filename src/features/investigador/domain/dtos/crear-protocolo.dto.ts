@@ -28,6 +28,8 @@ export interface ChecklistRequirement {
   requirementName: string;
   status: RequirementStatus;
   observations?: string;
+  /** Código del formato (TSK-001.18); null sin formato, inactivo o sin archivo (F09 D28). */
+  templateCode?: string | null;
 }
 
 export interface InvestigadorEquipo {

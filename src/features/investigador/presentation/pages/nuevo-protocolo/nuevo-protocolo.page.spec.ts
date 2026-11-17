@@ -6,11 +6,12 @@ import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router } fr
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { FocusMonitor } from '@angular/cdk/a11y';
-import { BehaviorSubject, NEVER, Observable, of, Subject, throwError } from 'rxjs';
+import { BehaviorSubject, defer, EMPTY, NEVER, Observable, of, Subject, throwError } from 'rxjs';
 
 import { NuevoProtocoloPage } from './nuevo-protocolo.page';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { ProtocoloResumen, EstadoProtocolo } from '../../../domain/dtos/crear-protocolo.dto';
 
 /**
@@ -56,6 +57,7 @@ describe('NuevoProtocoloPage — template del título', () => {
           useValue: { guardarProtocoloInicial: () => NEVER, getStudyTypes: () => NEVER },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: {} },
       ],
     }).compileComponents();
   });
@@ -101,6 +103,7 @@ describe('NuevoProtocoloPage — cuerpo de POST /protocols', () => {
           useValue: { guardarProtocoloInicial: guardarSpy, getStudyTypes: () => NEVER },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: {} },
       ],
     })
       .overrideComponent(NuevoProtocoloPage, { set: { template: '' } })
@@ -218,6 +221,7 @@ describe('NuevoProtocoloPage — envío a la Secretaría (F09-2, F09-3)', () => 
           },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: {} },
       ],
     })
       .overrideComponent(NuevoProtocoloPage, { set: { template: '' } })
@@ -235,7 +239,13 @@ describe('NuevoProtocoloPage — envío a la Secretaría (F09-2, F09-3)', () => 
     // Lista real con todo presentado (D16): ya no hay envío con cualquier archivo.
     page.estadoChecklist = 'listo';
     page.documentosRequeridos = [
-      { id: 1, nombre: 'Documento de prueba presentado', status: 'PRESENTADO', observaciones: '' },
+      {
+        id: 1,
+        nombre: 'Documento de prueba presentado',
+        status: 'PRESENTADO',
+        observaciones: '',
+        codigoFormato: null,
+      },
     ];
     return page;
   }
@@ -291,6 +301,7 @@ describe('NuevoProtocoloPage — botón de envío (D6; en el paso 3 desde D17)',
           useValue: { guardarProtocoloInicial: () => NEVER, getStudyTypes: () => NEVER },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: {} },
       ],
     }).compileComponents();
   });
@@ -324,6 +335,7 @@ describe('NuevoProtocoloPage — dentro del marco (F09-8, C1)', () => {
           useValue: { guardarProtocoloInicial: () => NEVER, getStudyTypes: () => NEVER },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: {} },
       ],
     }).compileComponents();
   });
@@ -434,6 +446,7 @@ describe('NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c)', () => {
           useValue: { guardarProtocoloInicial: guardarSpy, getStudyTypes: tiposSpy },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: {} },
       ],
     }).compileComponents();
   });
@@ -1150,6 +1163,7 @@ describe('NuevoProtocoloPage - continuar borrador', () => {
           },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: {} },
       ],
     }).compileComponents();
 
@@ -1519,6 +1533,7 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
   let subirSpy: jasmine.Spy;
   let subirBulkSpy: jasmine.Spy;
   let finalizarSpy: jasmine.Spy;
+  let downloadTemplateSpy: jasmine.Spy;
 
   /** Requisito con la forma del backend (entidad sin mapear, protocol-requirement.entity.orm.ts). */
   function requisito(id: number, nombre: string, status: string, observations?: string) {
@@ -1545,6 +1560,7 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
     subirSpy = jasmine.createSpy('subirDocumento').and.returnValue(NEVER);
     subirBulkSpy = jasmine.createSpy('subirDocumentosBulk').and.returnValue(of([]));
     finalizarSpy = jasmine.createSpy('finalizarProtocolo').and.returnValue(NEVER);
+    downloadTemplateSpy = jasmine.createSpy('downloadTemplate').and.returnValue(NEVER);
 
     await TestBed.configureTestingModule({
       imports: [NuevoProtocoloPage, NoopAnimationsModule],
@@ -1582,6 +1598,7 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
           },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30 }) } },
+        { provide: IDocumentRepositoryPort, useValue: { downloadTemplate: downloadTemplateSpy } },
       ],
     }).compileComponents();
   });
@@ -1689,19 +1706,10 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
     expect(texto(el)).not.toMatch(/SUBIR|PRESENTADO|REINTENTAR|CARGANDO/);
   });
 
-  it('(7) con plantilla el orden es Subir → Descargar formato; (8) sin plantilla no hay enlace', async () => {
-    const { fixture, page, el } = await abrir(of(CHECKLIST_2_DE_3));
-    expect(el.querySelector('a.doc__formato')).toBeNull();
-    expect(texto(el)).not.toContain('Descargar formato');
-
-    page.documentosRequeridos[1].plantillaUrl = 'https://zz-test.invalid/plantilla.docx';
-    fixture.detectChanges();
-
-    const acciones = fila(el, 'Documento de prueba dos').querySelector('.doc__acciones')!;
-    const orden = Array.from(acciones.querySelectorAll('button, a')).map((n) => texto(n));
-    expect(orden).toEqual(['uploadSubir', 'Descargar formato']);
-    expect(el.querySelectorAll('a.doc__formato').length).toBe(1);
-    expect(fila(el, 'Documento de prueba uno').querySelector('a')).toBeNull();
+  it('(7) con templateCode el orden es Subir → Descargar formato; (8) sin templateCode no hay botón (D28)', async () => {
+    const { el: sinCodigo } = await abrir(of(CHECKLIST_2_DE_3));
+    expect(sinCodigo.querySelector('.doc__formato')).toBeNull();
+    expect(texto(sinCodigo)).not.toContain('Descargar formato');
   });
 
   it('(9) aria-label "Subir {nombre}" / "Cambiar {nombre}" y el ícono con aria-hidden', async () => {
@@ -1992,7 +2000,10 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
       expect(texto(titulo)).toBe('Enviar a la Secretaría');
       expect(titulo.getAttribute('tabindex')).toBe('-1');
       expect(document.activeElement).toBe(titulo);
-      expect(tarjetaEnvio(el).getAttribute('aria-label')).toBe('Enviar a la Secretaría');
+      // D29 (C5): la tarjeta se nombra con su h2, sin repetir el texto en aria-label.
+      expect(tarjetaEnvio(el).getAttribute('aria-label')).toBeNull();
+      expect(tarjetaEnvio(el).getAttribute('aria-labelledby')).toBe('np-envio-titulo');
+      expect(titulo.id).toBe('np-envio-titulo');
     });
 
     it('(3) el texto del paso 3 con M = 3 (sin NO_APLICA) y con M = 1 en singular', async () => {
@@ -2170,6 +2181,254 @@ describe('NuevoProtocoloPage — paso 2 Documentos (F09-10, F09-11, F09-12; D16,
 
       expect(page.stepper.selectedIndex).toBe(1);
       expect(finalizarSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('C5: Descargar formato con templateCode (D28, F09-22)', () => {
+    // Copias escritas a mano de D28 (spec-ui v1.0).
+    const NO_DISPONIBLE = 'Este formato no está disponible.';
+    const ERROR_FORMATO = 'No pudimos descargar el formato. Intente de nuevo.';
+    const CODIGO = 'ZZ_TEST_FORMATO';
+    const URL_BUENA = 'https://zz-test.invalid/formatos/zz-test.docx';
+
+    const CON_FORMATO = [
+      requisito(11, 'Documento de prueba uno', 'PRESENTADO'),
+      { ...requisito(12, 'Documento de prueba dos', 'NO_PRESENTADO'), templateCode: CODIGO },
+      { ...requisito(13, 'Documento de prueba tres', 'PRESENTADO'), templateCode: null },
+      { ...requisito(14, 'Documento de prueba cuatro', 'PRESENTADO'), templateCode: '  ' },
+      { ...requisito(15, 'Documento de prueba cinco', 'PRESENTADO'), templateCode: ` ${CODIGO}_5 ` },
+    ];
+
+    interface PestanaFalsa {
+      opener: unknown;
+      location: { href: string };
+      close: jasmine.Spy;
+    }
+
+    let orden: string[];
+    let pestana: PestanaFalsa;
+    let abrirSpy: jasmine.Spy;
+
+    beforeEach(() => {
+      orden = [];
+      pestana = { opener: {}, location: { href: '' }, close: jasmine.createSpy('close') };
+      abrirSpy = spyOn(window, 'open').and.callFake(() => {
+        orden.push('abrir');
+        return pestana as unknown as Window;
+      });
+    });
+
+    /** La petición se cuenta al suscribirse (cuando sale de verdad), no al llamar al método. */
+    function responder(respuesta: Observable<unknown>): void {
+      downloadTemplateSpy.and.callFake(() =>
+        defer(() => {
+          orden.push('pedir');
+          return respuesta;
+        }),
+      );
+    }
+
+    const botonFormato = (el: HTMLElement, nombre = 'Documento de prueba dos') =>
+      fila(el, nombre).querySelector('button.doc__formato') as HTMLButtonElement | null;
+    const errorDe = (el: HTMLElement) =>
+      el.querySelector('#np-doc-12-formato-error') as HTMLElement | null;
+
+    it('solo la fila con templateCode tiene el botón, después de Subir, con su aria-label', async () => {
+      const { page, el } = await abrir(of(CON_FORMATO));
+
+      expect(page.documentosRequeridos.map((d) => d.codigoFormato)).toEqual([
+        null,
+        CODIGO,
+        null,
+        null,
+        `${CODIGO}_5`,
+      ]);
+      expect(el.querySelectorAll('button.doc__formato').length).toBe(2);
+      expect(botonFormato(el, 'Documento de prueba tres')).toBeNull();
+      expect(botonFormato(el, 'Documento de prueba cuatro')).toBeNull();
+      const acciones = fila(el, 'Documento de prueba dos').querySelector('.doc__acciones')!;
+      expect(Array.from(acciones.querySelectorAll('button')).map((n) => texto(n))).toEqual([
+        'uploadSubir',
+        'Descargar formato',
+      ]);
+      expect(botonFormato(el)!.getAttribute('aria-label')).toBe(
+        'Descargar formato de Documento de prueba dos',
+      );
+      expect(botonFormato(el)!.getAttribute('aria-describedby')).toBeNull();
+      expect(el.querySelector('a.doc__formato')).toBeNull();
+    });
+
+    it('la pestaña se abre en el clic antes de pedir la URL, sin opener, y luego va a la URL', async () => {
+      const respuesta$ = new Subject<{ downloadUrl: string }>();
+      responder(respuesta$);
+      const { fixture, el } = await abrir(of(CON_FORMATO));
+
+      botonFormato(el)!.click();
+      fixture.detectChanges();
+
+      expect(orden).toEqual(['abrir', 'pedir']);
+      expect(abrirSpy).toHaveBeenCalledOnceWith('', '_blank');
+      expect(pestana.opener).toBeNull();
+      expect(downloadTemplateSpy).toHaveBeenCalledOnceWith(CODIGO);
+      expect(texto(botonFormato(el))).toBe('Descargando…');
+      expect(botonFormato(el)!.disabled).toBeTrue();
+      expect(pestana.location.href).toBe('');
+
+      respuesta$.next({ downloadUrl: URL_BUENA });
+      respuesta$.complete();
+      fixture.detectChanges();
+
+      expect(pestana.location.href).toBe(URL_BUENA);
+      expect(pestana.close).not.toHaveBeenCalled();
+      expect(texto(botonFormato(el))).toBe('Descargar formato');
+      expect(botonFormato(el)!.disabled).toBeFalse();
+      expect(errorDe(el)).toBeNull();
+    });
+
+    it('cada clic vuelve a pedir la URL (no se guarda)', async () => {
+      responder(of({ downloadUrl: URL_BUENA }));
+      const { fixture, el } = await abrir(of(CON_FORMATO));
+
+      botonFormato(el)!.click();
+      fixture.detectChanges();
+      botonFormato(el)!.click();
+      fixture.detectChanges();
+
+      expect(downloadTemplateSpy).toHaveBeenCalledTimes(2);
+      expect(orden).toEqual(['abrir', 'pedir', 'abrir', 'pedir']);
+    });
+
+    it('acepta http solo con localhost o 127.0.0.1', async () => {
+      const { fixture, el } = await abrir(of(CON_FORMATO));
+      for (const url of ['http://localhost:9000/zz-test.docx', 'http://127.0.0.1/zz-test.docx']) {
+        pestana.location.href = '';
+        responder(of({ downloadUrl: url }));
+        botonFormato(el)!.click();
+        fixture.detectChanges();
+        expect(pestana.location.href).withContext(url).toBe(url);
+      }
+      expect(pestana.close).not.toHaveBeenCalled();
+      expect(errorDe(el)).toBeNull();
+    });
+
+    for (const [caso, respuesta] of [
+      ['http externo', { downloadUrl: 'http://zz-test.invalid/zz-test.docx' }],
+      ['javascript:', { downloadUrl: 'javascript:alert(1)' }],
+      ['URL vacía', { downloadUrl: '' }],
+      ['sin downloadUrl', {}],
+      ['URL que no se puede leer', { downloadUrl: 'no es una url' }],
+    ] as const) {
+      it(`URL que no pasa la comprobación (${caso}): cierra la pestaña y muestra el error genérico`, async () => {
+        responder(of(respuesta));
+        const { fixture, el } = await abrir(of(CON_FORMATO));
+
+        botonFormato(el)!.click();
+        fixture.detectChanges();
+
+        expect(pestana.close).toHaveBeenCalledTimes(1);
+        expect(pestana.location.href).toBe('');
+        expect(texto(errorDe(el))).toBe(ERROR_FORMATO);
+        expect(errorDe(el)!.getAttribute('role')).toBe('alert');
+        expect(botonFormato(el)!.getAttribute('aria-describedby')).toBe('np-doc-12-formato-error');
+        expect(botonFormato(el)!.disabled).toBeFalse();
+      });
+    }
+
+    for (const [status, esperado] of [
+      [404, NO_DISPONIBLE],
+      [500, ERROR_FORMATO],
+      [0, ERROR_FORMATO],
+    ] as const) {
+      it(`petición con error ${status}: cierra la pestaña y muestra "${esperado}" sin el mensaje del backend`, async () => {
+        responder(
+          throwError(() => ({
+            status,
+            error: { error: { message: `Plantilla con código ${CODIGO} no encontrada o sin archivo asignado.` } },
+          })),
+        );
+        const { fixture, el } = await abrir(of(CON_FORMATO));
+
+        botonFormato(el)!.click();
+        fixture.detectChanges();
+
+        expect(pestana.close).toHaveBeenCalledTimes(1);
+        expect(texto(errorDe(el))).toBe(esperado);
+        expect(texto(el)).not.toContain(CODIGO);
+      });
+    }
+
+    it('el código se manda recortado', async () => {
+      responder(of({ downloadUrl: URL_BUENA }));
+      const { fixture, el } = await abrir(of(CON_FORMATO));
+
+      botonFormato(el, 'Documento de prueba cinco')!.click();
+      fixture.detectChanges();
+
+      expect(downloadTemplateSpy).toHaveBeenCalledOnceWith(`${CODIGO}_5`);
+    });
+
+    it('si la petición termina sin respuesta: cierra la pestaña, error genérico y el botón vuelve', async () => {
+      responder(EMPTY);
+      const { fixture, el } = await abrir(of(CON_FORMATO));
+
+      botonFormato(el)!.click();
+      fixture.detectChanges();
+
+      expect(pestana.close).toHaveBeenCalledTimes(1);
+      expect(texto(errorDe(el))).toBe(ERROR_FORMATO);
+      expect(texto(botonFormato(el))).toBe('Descargar formato');
+      expect(botonFormato(el)!.disabled).toBeFalse();
+    });
+
+    it('si el navegador no abre la pestaña: error genérico y no se pide la URL', async () => {
+      abrirSpy.and.returnValue(null);
+      const { fixture, el } = await abrir(of(CON_FORMATO));
+
+      botonFormato(el)!.click();
+      fixture.detectChanges();
+
+      expect(downloadTemplateSpy).not.toHaveBeenCalled();
+      expect(texto(errorDe(el))).toBe(ERROR_FORMATO);
+      expect(texto(botonFormato(el))).toBe('Descargar formato');
+    });
+
+    it('el error de la descarga va en su propia región, separado del error de subida', async () => {
+      responder(throwError(() => ({ status: 404 })));
+      const { fixture, page, el } = await abrir(of(CON_FORMATO));
+
+      botonFormato(el)!.click();
+      fixture.detectChanges();
+      const subir = fila(el, 'Documento de prueba dos').querySelector('.doc__boton')!;
+      expect(subir.getAttribute('aria-describedby')).toBeNull();
+      expect(el.querySelector('#np-doc-12-error')).toBeNull();
+
+      const evento = {
+        target: { files: [new File(['x'], 'zz-test-documento.docx')], value: '' },
+      } as unknown as Event;
+      page.onDocumentSelected(evento, page.documentosRequeridos[1]);
+      fixture.detectChanges();
+
+      const alertas = Array.from(
+        fila(el, 'Documento de prueba dos').querySelectorAll('[role="alert"]'),
+      ).map((n) => [n.id, texto(n)]);
+      expect(alertas).toEqual([
+        ['np-doc-12-error', 'El archivo debe estar en formato PDF.'],
+        ['np-doc-12-formato-error', NO_DISPONIBLE],
+      ]);
+      expect(subir.getAttribute('aria-describedby')).toBe('np-doc-12-error');
+      expect(botonFormato(el)!.getAttribute('aria-describedby')).toBe('np-doc-12-formato-error');
+    });
+
+    it('si la página se destruye antes de la respuesta, la pestaña vacía se cierra', async () => {
+      responder(NEVER);
+      const { fixture, el } = await abrir(of(CON_FORMATO));
+
+      botonFormato(el)!.click();
+      fixture.detectChanges();
+      expect(pestana.close).not.toHaveBeenCalled();
+
+      fixture.destroy();
+      expect(pestana.close).toHaveBeenCalledTimes(1);
     });
   });
 

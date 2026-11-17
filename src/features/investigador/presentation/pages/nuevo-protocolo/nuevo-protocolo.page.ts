@@ -35,6 +35,7 @@ import { ProtocoloService } from '../../../application/services/protocolo.servic
 import { CrearProtocoloDto, ChecklistRequirement } from '../../../domain/dtos/crear-protocolo.dto';
 import { sanitizeFilename } from '@domain/entities/storage.interface';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { apiErrorStatus, extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import {
@@ -103,11 +104,8 @@ interface DocumentoRequerido {
   status: string;
   /** Texto de la Secretaría; vacío si no hay. */
   observaciones: string;
-  /**
-   * Plantilla del requisito para "Descargar formato". Hoy el backend no relaciona el requisito con
-   * su plantilla (TSK-001.18): no llega y no se muestra el enlace.
-   */
-  plantillaUrl?: string;
+  /** `templateCode` del checklist (TSK-001.18, D28); null si el requisito no tiene formato. */
+  codigoFormato: string | null;
 }
 
 /** Estado de la lista del paso 2; null mientras no hay protocolo. */
@@ -121,6 +119,24 @@ const ESTADO_NO_APLICA = 'NO_APLICA';
 
 /** Error de la fila cuando el archivo no es PDF (D19). */
 const MENSAJE_NO_PDF = 'El archivo debe estar en formato PDF.';
+
+/** Textos de `Descargar formato` (D28). No se muestra el mensaje del backend: trae el código. */
+const FORMATO_NO_DISPONIBLE = 'Este formato no está disponible.';
+const FORMATO_ERROR = 'No pudimos descargar el formato. Intente de nuevo.';
+const HOSTS_LOCALES = ['localhost', '127.0.0.1'];
+
+/** La URL del formato solo se abre si es `https:`, o `http:` en `localhost`/`127.0.0.1` (D28). */
+export function esUrlDeFormatoValida(url: unknown): url is string {
+  if (typeof url !== 'string' || url.trim() === '') return false;
+  let destino: URL;
+  try {
+    destino = new URL(url);
+  } catch {
+    return false;
+  }
+  if (destino.protocol === 'https:') return true;
+  return destino.protocol === 'http:' && HOSTS_LOCALES.includes(destino.hostname);
+}
 
 /**
  * Misma regla que el backend (`isValidPdfExtension` sobre el nombre saneado que se envía): el
@@ -203,6 +219,7 @@ export class NuevoProtocoloPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly documentRepo = inject(IDocumentRepositoryPort);
 
   /**
    * Peticiones del protocolo en pantalla (comprobación del borrador, creación, checklist,
@@ -257,6 +274,9 @@ export class NuevoProtocoloPage implements OnInit {
   /** Subidas en curso y último error de subida, por id del requisito. */
   subiendo: Record<number, boolean> = {};
   errorSubida: Record<number, string> = {};
+  /** `Descargar formato` en curso y su último error, por id del requisito (D28). */
+  descargandoFormato: Record<number, boolean> = {};
+  errorFormato: Record<number, string> = {};
   /** Última petición del checklist: una nueva cancela la anterior (sin respuestas fuera de orden). */
   private cargaChecklist?: Subscription;
 
@@ -317,6 +337,8 @@ export class NuevoProtocoloPage implements OnInit {
     this.recargandoChecklist = false;
     this.subiendo = {};
     this.errorSubida = {};
+    this.descargandoFormato = {};
+    this.errorFormato = {};
     this.borradorSinCargar = null;
     this.enviando = false;
     this.enviado = false;
@@ -630,6 +652,7 @@ export class NuevoProtocoloPage implements OnInit {
       nombre: r.requirementName ?? r.name ?? '',
       status: String(r.status ?? ''),
       observaciones: typeof r.observations === 'string' ? r.observations.trim() : '',
+      codigoFormato: typeof r.templateCode === 'string' ? r.templateCode.trim() || null : null,
     };
   }
 
@@ -760,6 +783,67 @@ export class NuevoProtocoloPage implements OnInit {
         };
       },
     });
+  }
+
+  /**
+   * `Descargar formato` (D28). La pestaña se abre en el mismo clic, antes de pedir la URL, para que
+   * el navegador no la bloquee; la URL se pide en cada clic y nunca se guarda.
+   */
+  descargarFormato(doc: DocumentoRequerido): void {
+    const codigo = doc.codigoFormato;
+    if (codigo === null || this.descargandoFormato[doc.id]) return;
+    const sinError = { ...this.errorFormato };
+    delete sinError[doc.id];
+    this.errorFormato = sinError;
+
+    const pestana = window.open('', '_blank');
+    if (!pestana) {
+      this.errorFormato = { ...this.errorFormato, [doc.id]: FORMATO_ERROR };
+      return;
+    }
+    pestana.opener = null;
+
+    this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: true };
+    let terminado = false;
+    const trabajo = this.documentRepo.downloadTemplate(codigo).subscribe({
+      next: (respuesta) => {
+        terminado = true;
+        this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: false };
+        const url: unknown = respuesta?.downloadUrl;
+        if (esUrlDeFormatoValida(url)) {
+          pestana.location.href = url;
+        } else {
+          this.fallarFormato(doc.id, pestana, FORMATO_ERROR);
+        }
+      },
+      error: (err: unknown) => {
+        terminado = true;
+        this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: false };
+        const texto = apiErrorStatus(err) === 404 ? FORMATO_NO_DISPONIBLE : FORMATO_ERROR;
+        this.fallarFormato(doc.id, pestana, texto);
+      },
+      complete: () => {
+        if (terminado) return;
+        // Terminó sin respuesta: no hay URL que abrir.
+        terminado = true;
+        this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: false };
+        this.fallarFormato(doc.id, pestana, FORMATO_ERROR);
+      },
+    });
+    // Si la página cambia de protocolo o se destruye antes de la respuesta, la pestaña vacía se cierra.
+    trabajo.add(() => {
+      if (!terminado) pestana.close();
+    });
+    this.trabajos.add(trabajo);
+  }
+
+  private fallarFormato(id: number, pestana: Window, texto: string): void {
+    pestana.close();
+    this.errorFormato = { ...this.errorFormato, [id]: texto };
+  }
+
+  etiquetaFormato(doc: DocumentoRequerido): string {
+    return `${this.descargandoFormato[doc.id] ? 'Descargando formato de' : 'Descargar formato de'} ${doc.nombre}`;
   }
 
   /** true mientras la página siga en el mismo protocolo que cuando se llamó. */
