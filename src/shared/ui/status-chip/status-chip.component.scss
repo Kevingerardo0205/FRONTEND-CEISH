@@ -9,6 +9,13 @@
   white-space: nowrap;
 }
 
+/* F09 D29: chips con texto largo que deben partirse en pantallas angostas */
+.chip--partir {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .chip--verde {
   background: var(--tone-verde-bg);
   color: var(--tone-verde-fg);

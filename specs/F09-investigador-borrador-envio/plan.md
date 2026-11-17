@@ -1,6 +1,6 @@
 # F09 · Investigador: borrador y envío a la Secretaría — plan
 
-**Versión:** 0.4 · **Fecha:** 17/11/2026 · **Spec:** `spec-ui.md` 0.9 (0.2: filas C1 a C4 del contenido de la creación, D9 a D12; 0.3: fila C2b, D13; 0.4: filas, equivalencias y duplicados temporales de MP1, D20 a D27)
+**Versión:** 0.5 · **Fecha:** 17/11/2026 · **Spec:** `spec-ui.md` 1.0 (0.5: filas de C5, D28 y D29; 0.2: filas C1 a C4 del contenido de la creación, D9 a D12; 0.3: fila C2b, D13; 0.4: filas, equivalencias y duplicados temporales de MP1, D20 a D27)
 **Patrón:** cambio mínimo sobre las pantallas actuales del investigador (README §3 regla 5 y skill `ciclo-tarea-ceish`: se trabaja sobre lo que ya funciona, sin duplicar). No se crea `src/features/<sección>/`: el flujo vive hoy en `features/investigador`, `features/evaluations` (subsanación), `features/protocols` (espacio actual), `shared/utils` e `infrastructure/interceptors`, y se corrige ahí.
 **Forma de trabajo:** Codex escribe el código de cada T## con el brief que prepara Claude; Claude hace el Paso 0, revisa el diff (con `code-review`), corre las mutaciones, la verificación doble y los commits. Codex no ejecuta git ni toca `specs/`, `package*.json`, `src/environments/` ni `.env*`.
 
@@ -29,6 +29,8 @@
 | domain | CREAR | `src/features/investigador/domain/mis-protocolos.rules.ts` + spec | Funciones puras sin Angular (D21 a D24): sección de cada protocolo, N de M (D16), observados, línea y etapa de `En el comité`, fecha de la aceptación desde la respuesta | MP1 |
 | application (servicio actual) | MODIFICAR | `protocolo.service.ts` (mapeo de `obtenerMisProtocolos`), `crear-protocolo.dto.ts` (`ProtocoloResumen`) + `protocolo.service.spec.ts` | Agrega `etapa`, `statusId`, `checklist`, `submissionDeadline`, `principalInvestigatorId`; `versionNumber` desde `currentVersion` (D26, T09-6) | MP1 |
 | presentation | MODIFICAR / CREAR | `mis-protocolos.page.ts` + spec; CREAR `mis-protocolos.page.{html,scss}` | Rediseño según el canvas (D20 a D25): secciones, tarjetas, aceptación de los tiempos con `IProtocolRepositoryPort.acceptTimeline`, estados y estilos con tokens | MP1 |
+| presentation + dto | MODIFICAR | `nuevo-protocolo.page.{ts,html,scss,spec.ts}`, `crear-protocolo.dto.ts` (`templateCode`) | `Descargar formato` con `templateCode`, la pestaña abierta en el clic y los textos de D28; `aria-labelledby` en la tarjeta del paso 3 (D29). La URL se pide con `IDocumentRepositoryPort.downloadTemplate` (port de `@domain`, ya registrado en la raíz): no se crea un método en `ProtocoloService` ni se importa el caso de uso de `features/documents` | C5 |
+| shared | MODIFICAR | `status-chip.component.{ts,scss}` + spec; `mis-protocolos.page.{html,spec.ts}` | Entrada opcional `partir` (por defecto igual que hoy) para el chip `Recepción completa · acepte los tiempos` (D29) | C5 |
 
 ## 2. Rutas
 

@@ -540,4 +540,29 @@ describe('MisProtocolosPage (F09 MP1)', () => {
     expect(texto(el(fixture).querySelector('app-empty-state'))).toBe(TXT_VACIO);
     expect(el(fixture).querySelector('[data-seccion]')).toBeNull();
   });
+
+  it('(C5, D29) a 320 px la tarjeta de recepción completa no se desborda y su chip se parte en varias líneas', () => {
+    const fixture = render();
+    const host = el(fixture);
+    // Ventana de 320 px: el marco deja 2.5rem a cada lado (.shell-content, app-shell.component.scss),
+    // así que la página tiene 320 - 2 × 40 = 240 px.
+    host.style.display = 'block';
+    host.style.width = '240px';
+    fixture.detectChanges();
+
+    const t = tarjeta(fixture, 2);
+    const chips = Array.from(t.querySelectorAll<HTMLElement>('app-status-chip .chip'));
+    const chipLargo = chips.find((c) => texto(c) === 'Recepción completa · acepte los tiempos');
+    const chipCodigo = chips.find((c) => texto(c) === 'CEISH-PRUEBA-002');
+    expect(chipLargo).withContext('chip largo').toBeDefined();
+    expect(chipCodigo).withContext('chip del código').toBeDefined();
+
+    expect(getComputedStyle(chipLargo!).whiteSpace).toBe('normal');
+    expect(chipLargo!.offsetHeight).toBeGreaterThan(chipCodigo!.offsetHeight * 1.5);
+    expect(chipLargo!.getBoundingClientRect().right).toBeLessThanOrEqual(
+      t.getBoundingClientRect().right,
+    );
+    expect(t.scrollWidth).toBeLessThanOrEqual(t.clientWidth);
+    expect(host.scrollWidth).toBeLessThanOrEqual(240);
+  });
 });
