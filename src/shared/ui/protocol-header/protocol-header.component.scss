@@ -1,0 +1,82 @@
+// Encabezado del protocolo (F00 spec-ui §5, EP1). Solo tokens de F00.
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.protocol-header {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 20px 24px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+  font-family: var(--font-content);
+}
+
+.protocol-header__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.protocol-header__identity {
+  display: flex;
+  flex: 1 1 20rem;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.protocol-header__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.protocol-header__title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+
+.protocol-header__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-text-2);
+  overflow-wrap: anywhere;
+}
+
+.protocol-header__action {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 100%;
+
+  &:empty {
+    display: none;
+  }
+}
+
+@container (max-width: 599.98px) {
+  .protocol-header {
+    padding: 16px;
+  }
+
+  .protocol-header__action {
+    align-items: stretch;
+    width: 100%;
+  }
+}

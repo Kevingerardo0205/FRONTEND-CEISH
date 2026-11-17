@@ -8,20 +8,18 @@
       [attr.aria-current]="step.status === 'current' ? 'step' : null"
       [attr.data-stage]="step.stage.code"
     >
-      <span class="step__marker" aria-hidden="true">
-        {{ step.status === 'done' ? '✓' : step.stage.order }}
-      </span>
-      <span class="step__text">
+      <span class="step__bar" aria-hidden="true"></span>
+      <!-- El estado de cada etapa se dice con texto oculto (F00 §5, como F09 D19) -->
+      <span class="step__name">
         <span class="step__label">{{ step.stage.label }}</span>
         @if (step.status === 'done') {
-          <span class="visually-hidden">(completada)</span>
-        } @else if (step.status === 'pending') {
-          <span class="visually-hidden">(pendiente)</span>
+          <span class="step__check" aria-hidden="true">✓</span>
         }
-        @if (step.status === 'current' && detail()) {
-          <span class="step__detail">{{ detail() }}</span>
-        }
+        <span class="visually-hidden">, {{ statusText[step.status] }}</span>
       </span>
+      @if (step.status === 'current' && detail()) {
+        <span class="step__detail">{{ detail() }}</span>
+      }
     </li>
   }
 </ol>

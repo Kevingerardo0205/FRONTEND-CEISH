@@ -4,7 +4,8 @@ import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { EvaluationEntity } from '@domain/entities/evaluation.entity';
 import { apiErrorStatus } from '@shared/utils/api-error-message.util';
-import { defer, finalize, tap, Observable, Subscription } from 'rxjs';
+import { ProtocolHeaderData, ProtocolHeaderPort } from '../../domain/protocol-header';
+import { defer, finalize, forkJoin, map, tap, Observable, Subscription } from 'rxjs';
 
 /** Error de carga del espacio del protocolo (F10 D14): no encontrado (404 y 400) o cualquier otro. */
 export type WorkspaceLoadError = 'not-found' | 'failed';
@@ -16,8 +17,11 @@ const NOT_FOUND_STATUSES: readonly number[] = [400, 404];
 export class ProtocolWorkspaceService {
   private repository = inject(IProtocolRepositoryPort);
   private evaluationRepo = inject(IEvaluationRepositoryPort);
+  private headerPort = inject(ProtocolHeaderPort);
 
   private protocolSignal = signal<ProtocolEntity | null>(null);
+  /** Encabezado sin rellenos (F10 D18), del mismo `:id` que `protocol`. */
+  private headerSignal = signal<ProtocolHeaderData | null>(null);
   private evaluationsSignal = signal<EvaluationEntity[]>([]);
   private loadingSignal = signal<boolean>(false);
   private errorSignal = signal<WorkspaceLoadError | null>(null);
@@ -30,6 +34,7 @@ export class ProtocolWorkspaceService {
 
   // Read-only signals
   public protocol = this.protocolSignal.asReadonly();
+  public header = this.headerSignal.asReadonly();
   public evaluations = this.evaluationsSignal.asReadonly();
   public isLoading = this.loadingSignal.asReadonly();
   public error = this.errorSignal.asReadonly();
@@ -43,7 +48,9 @@ export class ProtocolWorkspaceService {
   /**
    * Carga el protocolo al suscribirse (D14). Con otro `:id`, vacía el protocolo y las evaluaciones
    * antes de pedirlo; con el mismo (recarga después de Asignar Pares), conserva los datos. Las
-   * evaluaciones ya no se piden aquí: las pide el Resumen (EARS 28).
+   * evaluaciones ya no se piden aquí: las pide el Resumen (EARS 28). El encabezado (D18) se pide
+   * junto con el protocolo: si falla cualquiera de los dos, se aplica D14; con otro `:id` se vacía
+   * y, si falla la recarga del mismo, se conserva.
    */
   public loadProtocol(id: string): Observable<ProtocolEntity> {
     return defer(() => {
@@ -51,6 +58,7 @@ export class ProtocolWorkspaceService {
         this.currentId = id;
         this.evaluationsSub?.unsubscribe();
         this.protocolSignal.set(null);
+        this.headerSignal.set(null);
         this.evaluationsSignal.set([]);
         this.evaluationsLoadingSignal.set(false);
         this.evaluationsErrorSignal.set(false);
@@ -58,9 +66,15 @@ export class ProtocolWorkspaceService {
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
 
-      return this.repository.getById(id).pipe(
+      return forkJoin({
+        protocol: this.repository.getById(id),
+        header: this.headerPort.get(id),
+      }).pipe(
         tap({
-          next: (data) => this.protocolSignal.set(data),
+          next: ({ protocol, header }) => {
+            this.protocolSignal.set(protocol);
+            this.headerSignal.set(header);
+          },
           error: (err) => {
             console.error('[ProtocolWorkspaceService] Error loading protocol:', err);
             const status = apiErrorStatus(err);
@@ -69,6 +83,7 @@ export class ProtocolWorkspaceService {
             );
           },
         }),
+        map(({ protocol }) => protocol),
         finalize(() => this.loadingSignal.set(false)),
       );
     });

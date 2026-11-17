@@ -1,0 +1,41 @@
+<header class="protocol-header">
+  <div class="protocol-header__top">
+    <div class="protocol-header__identity">
+      @if (identity() || status()) {
+        <div class="protocol-header__chips">
+          @if (identity(); as identidad) {
+            <app-status-chip
+              class="protocol-header__code"
+              tone="gris"
+              [label]="identidad"
+              [partir]="true"
+            />
+          }
+          @if (status(); as estado) {
+            <app-status-chip
+              class="protocol-header__status"
+              [tone]="estado.tone"
+              [label]="estado.label"
+              [partir]="true"
+            />
+          }
+        </div>
+      }
+      <h1 class="protocol-header__title">{{ heading() }}</h1>
+      @if (visibleFacts().length) {
+        <p class="protocol-header__facts">
+          @for (fact of visibleFacts(); track $index; let last = $last) {
+            <span class="protocol-header__fact">{{ fact.label }}: {{ fact.value }}</span>
+            @if (!last) {
+              <span class="protocol-header__sep" aria-hidden="true">·</span>
+            }
+          }
+        </p>
+      }
+    </div>
+    <div class="protocol-header__action"><ng-content select="[protocolHeaderAction]" /></div>
+  </div>
+  @if (stage(); as etapa) {
+    <app-stage-bar class="protocol-header__stages" [stage]="etapa" />
+  }
+</header>

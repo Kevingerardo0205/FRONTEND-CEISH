@@ -4,7 +4,7 @@ import { ActivatedRoute, provideRouter, Router, UrlTree } from '@angular/router'
 import { RouterTestingHarness } from '@angular/router/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { of, Subject } from 'rxjs';
+import { map, of, Subject } from 'rxjs';
 
 import { ProtocolWorkspaceComponent } from './protocol-workspace.component';
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
@@ -15,6 +15,7 @@ import { Role, RoleCode } from '@domain/value-objects/role.vo';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
+import { ProtocolHeaderData, ProtocolHeaderPort } from '../../../domain/protocol-header';
 
 const PROTOCOL_TITLE = 'Estudio de prueba del investigador';
 
@@ -94,9 +95,21 @@ function createProtocol(
   } as unknown as ProtocolEntity;
 }
 
-function workspaceMock(protocolSignal: WritableSignal<ProtocolEntity | null>) {
+/** Encabezado ficticio sin rellenos (F10 D18). */
+const HEADER: ProtocolHeaderData = {
+  code: 'CEISH-PRUEBA-005',
+  version: '2.0',
+  title: PROTOCOL_TITLE,
+  riskLevel: null,
+};
+
+function workspaceMock(
+  protocolSignal: WritableSignal<ProtocolEntity | null>,
+  headerSignal: WritableSignal<ProtocolHeaderData | null> = signal<ProtocolHeaderData | null>(HEADER),
+) {
   return {
     protocol: protocolSignal,
+    header: headerSignal,
     evaluations: signal([]),
     error: signal<string | null>(null),
     loadProtocol: jasmine.createSpy('loadProtocol').and.returnValue(of(null)),
@@ -393,12 +406,14 @@ describe('ProtocolWorkspaceComponent - sin pestaña Evaluación (F10 D11, S-1c)'
 
 describe('ProtocolWorkspaceComponent - template real', () => {
   let protocolSignal: WritableSignal<ProtocolEntity | null>;
+  let headerSignal: WritableSignal<ProtocolHeaderData | null>;
   let activeRoleSignal: WritableSignal<RoleCode | null>;
 
   beforeEach(async () => {
     protocolSignal = signal<ProtocolEntity | null>(createProtocol(STATE.RECEPCION_APROBADA, true));
+    headerSignal = signal<ProtocolHeaderData | null>(HEADER);
     activeRoleSignal = signal<RoleCode | null>('SECRETARIA');
-    const workspace = workspaceMock(protocolSignal);
+    const workspace = workspaceMock(protocolSignal, headerSignal);
 
     await TestBed.configureTestingModule({
       imports: [ProtocolWorkspaceComponent],
@@ -427,7 +442,7 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     fixture.detectChanges();
 
     const buttons = fixture.nativeElement.querySelectorAll(
-      'header .action-registry button',
+      'app-protocol-header .protocol-header__action .header-action__button',
     ) as NodeListOf<HTMLButtonElement>;
     const buttonLabels = Array.from(buttons, (button) =>
       button.querySelector('span')?.textContent?.trim(),
@@ -443,7 +458,9 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('.status-indicator')?.textContent?.trim()).toBe('Recepción aprobada');
+    expect(root.querySelector('.protocol-header__status .chip')?.textContent?.trim()).toBe(
+      'Recepción aprobada',
+    );
     expect(root.querySelectorAll('app-stage-bar li').length).toBe(6);
     expect(root.querySelector('app-stage-bar [aria-current="step"]')?.getAttribute('data-stage')).toBe(
       'ASIGNACION',
@@ -457,7 +474,123 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     const root = fixture.nativeElement as HTMLElement;
 
     expect(root.querySelector('app-stage-bar')).toBeNull();
-    expect(root.querySelector('.status-indicator')?.textContent?.trim()).toBe('Estado no reconocido');
+    expect(root.querySelector('.protocol-header__status .chip')?.textContent?.trim()).toBe(
+      'Estado no reconocido',
+    );
+    expect(root.querySelector('.protocol-header__status .chip')?.classList).toContain('chip--gris');
+  });
+
+  it('D18: el encabezado es app-protocol-header, sin premium-header', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('.premium-header')).toBeNull();
+    expect(root.querySelector('.progress-scaffold')).toBeNull();
+    expect(root.querySelector('app-protocol-header h1')?.textContent?.trim()).toBe(PROTOCOL_TITLE);
+  });
+
+  it('D18: chip neutro con el código y la versión "2.0" como v2, y el estado con su tono', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('.protocol-header__code .chip')?.textContent?.trim()).toBe(
+      'CEISH-PRUEBA-005 · v2',
+    );
+    // COMPLETO: ProtocolUI.class → pending → ámbar (regla T14b de F00).
+    expect(root.querySelector('.protocol-header__status .chip')?.classList).toContain('chip--ambar');
+  });
+
+  it('D18: sin código y con una versión que no se puede leer, no hay chip neutro ni relleno', () => {
+    headerSignal.set({ ...HEADER, code: null, version: '2.5' });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('.protocol-header__code')).toBeNull();
+    expect(root.textContent).not.toContain('S/C');
+    expect(root.textContent).not.toContain('v1');
+  });
+
+  it('D18: la línea de datos muestra el nivel de riesgo solo si llega', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.protocol-header__facts')).toBeNull();
+
+    headerSignal.set({ ...HEADER, riskLevel: 'Riesgo mínimo' });
+    fixture.detectChanges();
+    expect(root.querySelector('.protocol-header__facts')?.textContent?.trim()).toBe(
+      'Nivel de riesgo: Riesgo mínimo',
+    );
+  });
+
+  it('D18: sin título muestra el aviso con Reintentar en lugar del encabezado, y las pestañas siguen', () => {
+    headerSignal.set({ ...HEADER, title: null });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('app-protocol-header')).toBeNull();
+    expect(root.querySelector('.workspace-header app-error-state')?.textContent).toContain(
+      'No pudimos leer el título de este protocolo.',
+    );
+    expect(root.textContent).not.toContain('Sin título');
+    expect(root.querySelectorAll('.tab-strip .tab-item').length).toBeGreaterThan(0);
+  });
+
+  it('D18: Asignar Pares va en la ranura de acción del encabezado', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const action = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-protocol-header .protocol-header__action',
+    ) as HTMLElement;
+
+    expect(action.querySelector('[protocolHeaderAction]')).not.toBeNull();
+    expect(action.textContent).toContain('Asignar Pares');
+    expect(action.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('D18: sin acción ni aviso, la ranura de acción queda vacía', () => {
+    protocolSignal.set(createProtocol(STATE.EN_EVALUACION, true));
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const action = (fixture.nativeElement as HTMLElement).querySelector(
+      '.protocol-header__action',
+    ) as HTMLElement;
+
+    expect(action.children.length).toBe(0);
+  });
+
+  it('D18: el espacio no agrega otro <main> (el del AppShell es el único landmark main)', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('main, [role="main"]')).toBeNull();
+    expect(root.querySelector('.content-viewport router-outlet')).not.toBeNull();
+  });
+
+  it('D18: el nav de las pestañas tiene aria-label "Pestañas del protocolo"', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('nav')?.getAttribute('aria-label'),
+    ).toBe('Pestañas del protocolo');
+  });
+
+  it('D18 (EARS 51): los estilos del espacio no tienen colores hexadecimales ni rgba', () => {
+    // Estilos ya compilados del componente (metadatos de Angular).
+    const css = (
+      (ProtocolWorkspaceComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles ?? []
+    ).join('\n');
+
+    expect(css.length).toBeGreaterThan(0);
+    expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(css).not.toMatch(/rgba?\(/i);
+    expect(css).toContain('var(--c-');
   });
 });
 
@@ -526,6 +659,20 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
       requests.push({ id, response });
       return response;
     });
+    const headerFromLastRequest = (id: string) => {
+      const last = requests[requests.length - 1];
+      expect(last.id).toBe(id);
+      return last.response.pipe(
+        map(
+          (p): ProtocolHeaderData => ({
+            code: p.code || null,
+            version: '1.0',
+            title: p.title,
+            riskLevel: null,
+          }),
+        ),
+      );
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -537,6 +684,8 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
           },
         ]),
         { provide: IProtocolRepositoryPort, useValue: { getById } },
+        // F10 D18: el encabezado responde con la misma respuesta (y el mismo error) del protocolo.
+        { provide: ProtocolHeaderPort, useValue: { get: headerFromLastRequest } },
         {
           provide: IEvaluationRepositoryPort,
           useValue: { getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])) },
@@ -585,7 +734,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(requests.map((r) => r.id)).toEqual(['5', '5']);
     expect(root().textContent).toContain(LOADING_TEXT);
     respond(1, protocolWith('5', 'Estudio de prueba cinco'));
-    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
+    expect(root().querySelector('.protocol-header__title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
   });
 
   it('un 404 muestra "No encontramos este protocolo." sin el texto del backend, y Volver al inicio usa RoleHome', async () => {
@@ -621,7 +770,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(root().textContent).not.toContain('Estudio de prueba cinco');
     expect(root().textContent).toContain(LOADING_TEXT);
     respond(1, protocolWith('6', 'Estudio de prueba seis'));
-    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba seis');
+    expect(root().querySelector('.protocol-header__title')?.textContent?.trim()).toBe('Estudio de prueba seis');
     expect(TabPruebaComponent.created).toBe(2);
   });
 
@@ -633,7 +782,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     respond(0, protocolWith('5', 'Estudio de prueba cinco'));
 
     expect(requests.map((r) => r.id)).toEqual(['5', '6']);
-    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba seis');
+    expect(root().querySelector('.protocol-header__title')?.textContent?.trim()).toBe('Estudio de prueba seis');
   });
 
   it('al recargar el mismo :id después de Asignar Pares conserva cabecera, pestañas y pestaña abierta, sin "Cargando"', async () => {
@@ -645,7 +794,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
 
     expect(requests.map((r) => r.id)).toEqual(['5', '5']);
     expect(root().textContent).not.toContain(LOADING_TEXT);
-    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
+    expect(root().querySelector('.protocol-header__title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
     expect(root().querySelectorAll('.tab-strip .tab-item').length).toBeGreaterThan(0);
     expect(root().querySelector('.tab-prueba')).not.toBeNull();
     expect(router.url).toBe('/workspace/5/info');
@@ -677,7 +826,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     spyOn(console, 'error');
     fail(1, 'fallo de red', 500);
 
-    expect(root().querySelector('.protocol-title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
+    expect(root().querySelector('.protocol-header__title')?.textContent?.trim()).toBe('Estudio de prueba cinco');
     expect(root().querySelector('.tab-prueba')).not.toBeNull();
     expect(root().querySelector('.refresh-error')?.textContent).toContain('No pudimos actualizar el protocolo.');
     expect(root().textContent).not.toContain(FAILED_TEXT);
@@ -725,15 +874,13 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(data.principalInvestigatorRecord.fullName).toBe('Investigador Prueba');
   });
 
-  it('sin investigador principal no muestra el chip; con investigador, sí', async () => {
-    await harness.navigateByUrl('/workspace/5/info');
-    respond(0, protocolWith('5', 'Estudio de prueba cinco', ''));
-
-    expect(root().querySelector('.owner-chip')).toBeNull();
-    expect(root().textContent).not.toContain('Cargando...');
-
+  it('el encabezado no muestra el investigador principal: GET /protocols/:id no lo trae (F10 D18)', async () => {
     await harness.navigateByUrl('/workspace/6/info');
-    respond(1, protocolWith('6', 'Estudio de prueba seis'));
-    expect(root().querySelector('.owner-chip')?.textContent).toContain('Investigador Prueba');
+    respond(0, protocolWith('6', 'Estudio de prueba seis'));
+
+    const header = root().querySelector('app-protocol-header') as HTMLElement;
+    expect(header.textContent).not.toContain('Investigador Prueba');
+    expect(header.textContent).not.toContain('Cargando...');
+    expect(root().querySelector('.owner-chip')).toBeNull();
   });
 });
