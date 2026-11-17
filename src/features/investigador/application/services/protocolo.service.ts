@@ -11,6 +11,7 @@ import {
   ChecklistRequirement,
   EstadoProtocolo,
 } from '../../domain/dtos/crear-protocolo.dto';
+import { numeroDeVersion } from '../../domain/mis-protocolos.rules';
 import { ENDPOINTS } from '@infrastructure/api/endpoints.constant';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -51,6 +52,12 @@ interface RawBackendProtocol {
   timelineTermsAcceptedIp?: string | null;
   versionNumber?: number;
   version?: number;
+  /** Versión actual como número (`protocol.mapper.ts:78` del backend). */
+  currentVersion?: number;
+  etapa?: string | null;
+  statusId?: number | null;
+  submissionDeadline?: string | null;
+  principalInvestigator?: { id?: number } | null;
   checklist?: ChecklistRequirement[];
   requirements?: ChecklistRequirement[];
   protocolo_requisitos?: ChecklistRequirement[];
@@ -351,7 +358,14 @@ export class ProtocoloService extends BaseApiService {
           isTimelineTermsAccepted: p.isTimelineTermsAccepted ?? false,
           timelineTermsAcceptedAt: p.timelineTermsAcceptedAt || null,
           timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
-          versionNumber: p.versionNumber || p.version || 1,
+          // F09 D26 (T09-6): `currentVersion` es número; `version` llega como "1.0" y nunca era 1.
+          versionNumber: numeroDeVersion(p.currentVersion),
+          // F09 D21 a D24 (MP1): datos de las secciones de Mis protocolos.
+          etapa: p.etapa ?? null,
+          statusId: p.statusId ?? null,
+          checklist: (p.checklist ?? []).map((r) => ({ status: String(r.status) })),
+          submissionDeadline: p.submissionDeadline ?? null,
+          principalInvestigatorId: p.principalInvestigator?.id ?? null,
         })) as ProtocoloResumen[];
       }),
     );

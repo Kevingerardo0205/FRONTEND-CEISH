@@ -1,0 +1,330 @@
+/* Mis protocolos (F09 D20 a D25): CSS propio con los tokens de F00, sin Material ni animaciones */
+
+:host {
+  display: block;
+}
+
+.mp {
+  display: grid;
+  gap: 16px;
+  max-width: 976px;
+  font-family: var(--font-content);
+  color: var(--c-text);
+}
+
+/* ---------- Cabecera ---------- */
+
+.mp-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 8px;
+}
+
+.mp-cabecera__titulo {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--c-text);
+}
+
+.mp-cabecera__subtitulo {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--c-text-2);
+}
+
+/* ---------- Botones ---------- */
+
+.mp-boton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--min-h-action);
+  padding: 0 22px;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.mp-boton--primario {
+  color: var(--c-surface);
+  background: var(--c-primary);
+
+  &:hover:not(:disabled) {
+    background: var(--c-primary-dark);
+  }
+
+  // Deshabilitado como en D15: el motivo es la casilla sin marcar, justo al lado.
+  &:disabled {
+    background: color-mix(in srgb, var(--c-primary) 60%, var(--c-surface));
+    border-color: transparent;
+    cursor: default;
+  }
+}
+
+.mp-boton--secundario {
+  color: var(--c-primary);
+  background: var(--c-surface);
+
+  &:hover {
+    background: var(--c-primary-soft);
+  }
+}
+
+/* ---------- Necesita su acción ---------- */
+
+.mp-seccion {
+  display: grid;
+  gap: 12px;
+}
+
+.mp-seccion__titulo,
+.mp-lista__titulo {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--c-text);
+}
+
+.mp-tarjeta {
+  --mp-tono: var(--c-border);
+
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--c-surface);
+  // Borde decorativo del caso; el chip con texto es la señal (F09-1).
+  border: 1px solid color-mix(in srgb, var(--mp-tono) 45%, var(--c-surface));
+  border-radius: var(--radius-card);
+}
+
+.mp-tarjeta--borrador,
+.mp-tarjeta--correcciones {
+  --mp-tono: var(--tone-ambar-fg);
+}
+
+.mp-tarjeta--tiempos {
+  --mp-tono: var(--tone-azul-fg);
+}
+
+.mp-tarjeta--observaciones {
+  --mp-tono: var(--tone-rojo-fg);
+}
+
+.mp-tarjeta__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+
+.mp-tarjeta__cuerpo {
+  display: grid;
+  flex: 1 1 20rem;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mp-plazo {
+  font-size: 0.8rem;
+  font-weight: 700;
+  // --tone-rojo-fg sobre --c-surface: 8,3:1.
+  color: var(--tone-rojo-fg);
+}
+
+.mp-tarjeta__titulo {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+
+  a {
+    color: var(--c-text);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--c-primary);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+}
+
+.mp-linea {
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-text-2);
+}
+
+/* Aceptación de los tiempos (D23) */
+.mp-aceptacion {
+  display: grid;
+  gap: 8px;
+}
+
+.mp-aceptacion__controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 12px 14px;
+  background: var(--c-bg);
+  border-radius: var(--radius-control);
+}
+
+.mp-casilla {
+  display: flex;
+  flex: 1 1 20rem;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--c-text);
+  cursor: pointer;
+}
+
+.mp-casilla__input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--c-primary);
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.mp-aceptacion__estado:empty {
+  display: none;
+}
+
+.mp-exito {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tone-verde-fg);
+  background: var(--tone-verde-bg);
+  border-radius: var(--radius-control);
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.mp-error {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tone-rojo-fg);
+}
+
+/* ---------- En el comité y Archivados (D24) ---------- */
+
+.mp-lista {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+
+  .mp-lista__titulo {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--c-border);
+  }
+}
+
+.mp-lista__filas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mp-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 12px 20px;
+
+  & + & {
+    border-top: 1px solid var(--c-border);
+  }
+}
+
+.mp-fila__cuerpo {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mp-fila__titulo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.mp-fila__linea {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-text-2);
+}
+
+.mp-fila__etapa {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text-2);
+}
+
+@media (max-width: 600px) {
+  .mp-tarjeta,
+  .mp-fila {
+    padding-inline: 16px;
+  }
+
+  .mp-tarjeta__fila > .mp-boton,
+  .mp-aceptacion__controles > .mp-boton {
+    width: 100%;
+  }
+}

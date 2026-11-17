@@ -1,0 +1,218 @@
+<div class="mp">
+  <!-- Cabecera (F09 D22); Nuevo protocolo siempre habilitado hasta TSK-001.11 (D5, D27) -->
+  <header class="mp-cabecera">
+    <div>
+      <h1 class="mp-cabecera__titulo">Mis protocolos</h1>
+      <p class="mp-cabecera__subtitulo">Lo que necesita algo de usted aparece primero.</p>
+    </div>
+    <a class="mp-boton mp-boton--primario" routerLink="/dashboard/investigador/nuevo-protocolo">
+      Nuevo protocolo
+    </a>
+  </header>
+
+  @switch (estado()) {
+    @case ('cargando') {
+      <app-loading-state message="Cargando sus protocolos…" />
+    }
+    @case ('error') {
+      <app-error-state message="No pudimos cargar sus protocolos." (retry)="cargar()" />
+    }
+    @default {
+      @if (protocolos().length === 0) {
+        <app-empty-state message="Todavía no tiene protocolos." />
+      } @else {
+        <!-- Necesita su acción (D21, D22, D23) -->
+        @if (grupos().accion.length > 0) {
+          <section class="mp-seccion" aria-labelledby="mp-h-accion" data-seccion="accion">
+            <h2 id="mp-h-accion" class="mp-seccion__titulo">Necesita su acción</h2>
+
+            @for (item of grupos().accion; track item.protocolo.id) {
+              @let p = item.protocolo;
+              <article
+                [class]="'mp-tarjeta mp-tarjeta--' + item.tipo"
+                [attr.data-tipo]="item.tipo"
+                [attr.data-id]="p.id"
+                [attr.aria-labelledby]="'mp-t-' + p.id"
+              >
+                <div class="mp-tarjeta__fila">
+                  <div class="mp-tarjeta__cuerpo">
+                    <div class="mp-chips">
+                      @switch (item.tipo) {
+                        @case ('borrador') {
+                          <app-status-chip tone="ambar" label="Borrador" />
+                        }
+                        @case ('tiempos') {
+                          @if (p.codigoCeish) {
+                            <app-status-chip tone="gris" [label]="p.codigoCeish" />
+                          }
+                          @if (aceptados().has(p.id)) {
+                            <app-status-chip tone="verde" label="Tiempos aceptados" />
+                          } @else {
+                            <app-status-chip tone="azul" label="Recepción completa · acepte los tiempos" />
+                          }
+                        }
+                        @case ('observaciones') {
+                          <app-status-chip tone="rojo" label="Con observaciones" />
+                          @if (textoPlazoCorreccion(p.submissionDeadline); as plazo) {
+                            <span class="mp-plazo">{{ plazo }}</span>
+                          }
+                        }
+                        @case ('correcciones') {
+                          @if (p.codigoCeish) {
+                            <app-status-chip tone="gris" [label]="p.codigoCeish" />
+                          }
+                          <app-status-chip tone="ambar" [label]="etiquetaRecepcion(p)" />
+                        }
+                      }
+                    </div>
+
+                    <h3 class="mp-tarjeta__titulo" [id]="'mp-t-' + p.id">
+                      <a [routerLink]="['/dashboard/protocols/workspace', p.id, 'info']">{{ p.titulo }}</a>
+                    </h3>
+
+                    @switch (item.tipo) {
+                      @case ('borrador') {
+                        <p class="mp-linea">{{ textoDocumentosBorrador(p.checklist) }}</p>
+                      }
+                      @case ('tiempos') {
+                        <p class="mp-linea">Si no acepta los tiempos en 20 días, el proceso se archiva.</p>
+                        <p class="mp-linea">La Secretaría le envía la constancia de recepción por correo.</p>
+                      }
+                      @case ('observaciones') {
+                        <p class="mp-linea">{{ textoObservados(p.checklist) }}</p>
+                      }
+                    }
+                  </div>
+
+                  @switch (item.tipo) {
+                    @case ('borrador') {
+                      <a
+                        class="mp-boton mp-boton--primario"
+                        [routerLink]="['/dashboard/investigador/nuevo-protocolo']"
+                        [queryParams]="{ borrador: p.id }"
+                        [attr.aria-label]="'Continuar borrador: ' + p.titulo"
+                      >
+                        Continuar
+                      </a>
+                    }
+                    @case ('observaciones') {
+                      <button
+                        type="button"
+                        class="mp-boton mp-boton--secundario"
+                        [attr.aria-label]="'Ver y corregir: ' + p.titulo"
+                        (click)="onSubirCorrecciones(p)"
+                      >
+                        Ver y corregir
+                      </button>
+                    }
+                    @case ('correcciones') {
+                      <button
+                        type="button"
+                        class="mp-boton mp-boton--secundario"
+                        [attr.aria-label]="'Subir correcciones: ' + p.titulo"
+                        (click)="onSubirCorrecciones(p)"
+                      >
+                        Subir correcciones
+                      </button>
+                    }
+                  }
+                </div>
+
+                @if (item.tipo === 'tiempos') {
+                  <div class="mp-aceptacion">
+                    @if (!aceptados().has(p.id)) {
+                      @if (esPrincipal(p)) {
+                        <div class="mp-aceptacion__controles">
+                          <label class="mp-casilla">
+                            <input
+                              type="checkbox"
+                              class="mp-casilla__input"
+                              [checked]="casillas().has(p.id)"
+                              [disabled]="aceptando() === p.id"
+                              (change)="cambiarCasilla(p.id, $event)"
+                            />
+                            <span>
+                              Acepto los tiempos de evaluación y las reglas del comité indicados en la
+                              constancia de recepción.
+                            </span>
+                          </label>
+                          <button
+                            type="button"
+                            class="mp-boton mp-boton--primario"
+                            [disabled]="!casillas().has(p.id) || aceptando() !== null"
+                            (click)="aceptarTiempos(p)"
+                          >
+                            {{ aceptando() === p.id ? 'Enviando…' : 'Aceptar tiempos' }}
+                          </button>
+                        </div>
+                      } @else {
+                        <p class="mp-linea">El investigador principal debe aceptar los tiempos.</p>
+                      }
+                    }
+
+                    <!-- Existe siempre: el mensaje se inserta dentro para que se anuncie (D23) -->
+                    <div class="mp-aceptacion__estado" role="status">
+                      @if (aceptados().get(p.id); as fecha) {
+                        <p class="mp-exito" tabindex="-1" [id]="'mp-aceptado-' + p.id">
+                          {{ textoAceptacion(fecha) }}
+                        </p>
+                      }
+                    </div>
+
+                    @if (erroresAceptacion().get(p.id); as error) {
+                      <p class="mp-error" role="alert">{{ error }}</p>
+                    }
+                  </div>
+                }
+              </article>
+            }
+          </section>
+        }
+
+        <!-- En el comité (D24) -->
+        @if (grupos().comite.length > 0) {
+          <section class="mp-lista" aria-labelledby="mp-h-comite" data-seccion="comite">
+            <h2 id="mp-h-comite" class="mp-lista__titulo">En el comité</h2>
+            <ul class="mp-lista__filas">
+              @for (p of grupos().comite; track p.id) {
+                @let fila = filaComite(p);
+                <li class="mp-fila" [attr.data-id]="p.id">
+                  <div class="mp-fila__cuerpo">
+                    <a class="mp-fila__titulo" [routerLink]="['/dashboard/protocols/workspace', p.id, 'info']">
+                      {{ p.codigoCeish ? p.codigoCeish + ' · ' + p.titulo : p.titulo }}
+                    </a>
+                    <p class="mp-fila__linea">{{ fila.linea }}</p>
+                  </div>
+                  @if (fila.etapa) {
+                    <span class="mp-fila__etapa">
+                      <span class="visually-hidden">Etapa: </span>{{ fila.etapa }}
+                    </span>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <!-- Archivados: solo si hay alguno (D24) -->
+        @if (grupos().archivados.length > 0) {
+          <section class="mp-lista" aria-labelledby="mp-h-archivados" data-seccion="archivados">
+            <h2 id="mp-h-archivados" class="mp-lista__titulo">Archivados</h2>
+            <ul class="mp-lista__filas">
+              @for (p of grupos().archivados; track p.id) {
+                <li class="mp-fila" [attr.data-id]="p.id">
+                  <div class="mp-fila__cuerpo">
+                    <a class="mp-fila__titulo" [routerLink]="['/dashboard/protocols/workspace', p.id, 'info']">
+                      {{ p.codigoCeish ? p.codigoCeish + ' · ' + p.titulo : p.titulo }}
+                    </a>
+                    <p class="mp-fila__linea">{{ etiquetaRecepcion(p) }}</p>
+                  </div>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    }
+  }
+</div>

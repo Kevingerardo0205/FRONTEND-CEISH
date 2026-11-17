@@ -137,4 +137,66 @@ describe('ProtocoloService — Mis protocolos (F09 D18, C4)', () => {
       jasmine.objectContaining({ id: 5, titulo: 'Estudio de prueba', estado: 'BORRADOR' }),
     ]);
   });
+
+  it('(MP1, T09-6) versionNumber sale de currentVersion y no del texto "N.0" de version', () => {
+    let lista: { id: number; versionNumber?: number }[] = [];
+    service.obtenerMisProtocolos().subscribe((valor) => (lista = valor));
+
+    http.expectOne((req) => req.url.endsWith('/mis-protocolos?limit=100')).flush({
+      data: {
+        data: [
+          { id: 1, receptionStatus: 'INCOMPLETO', version: '1.0', currentVersion: 1 },
+          { id: 2, receptionStatus: 'INCOMPLETO', version: '2.0', currentVersion: 2 },
+          { id: 3, receptionStatus: 'INCOMPLETO', version: '1.0' },
+        ],
+      },
+    });
+
+    expect(lista.map((p) => p.versionNumber)).toEqual([1, 2, 1]);
+  });
+
+  it('(MP1) mapea etapa, statusId, checklist, submissionDeadline e investigador principal', () => {
+    let lista: unknown;
+    service.obtenerMisProtocolos().subscribe((valor) => (lista = valor));
+
+    http.expectOne((req) => req.url.endsWith('/mis-protocolos?limit=100')).flush({
+      data: {
+        data: [
+          {
+            id: 7,
+            title: 'Estudio de prueba con observaciones',
+            receptionStatus: 'INCOMPLETO',
+            etapa: 'RECEPCION',
+            statusId: null,
+            submissionDeadline: '2026-12-04',
+            principalInvestigator: { id: 30, fullName: 'Persona de prueba' },
+            checklist: [
+              { id: 1, code: 'A', name: 'Documento A', status: 'RECHAZADO', observations: 'x' },
+              { id: 2, code: 'B', name: 'Documento B', status: 'APROBADO', observations: null },
+            ],
+          },
+          { id: 8, title: 'Estudio de prueba sin datos extra', receptionStatus: 'BORRADOR' },
+        ],
+      },
+    });
+
+    expect(lista).toEqual([
+      jasmine.objectContaining({
+        id: 7,
+        etapa: 'RECEPCION',
+        statusId: null,
+        submissionDeadline: '2026-12-04',
+        principalInvestigatorId: 30,
+        checklist: [{ status: 'RECHAZADO' }, { status: 'APROBADO' }],
+      }),
+      jasmine.objectContaining({
+        id: 8,
+        etapa: null,
+        statusId: null,
+        submissionDeadline: null,
+        principalInvestigatorId: null,
+        checklist: [],
+      }),
+    ]);
+  });
 });

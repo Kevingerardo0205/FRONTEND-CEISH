@@ -1,6 +1,6 @@
 # F09 · Investigador: borrador y envío a la Secretaría — plan
 
-**Versión:** 0.3 · **Fecha:** 14/11/2026 · **Spec:** `spec-ui.md` 0.4 (0.2: filas C1 a C4 del contenido de la creación, D9 a D12; 0.3: fila C2b, D13)
+**Versión:** 0.4 · **Fecha:** 17/11/2026 · **Spec:** `spec-ui.md` 0.9 (0.2: filas C1 a C4 del contenido de la creación, D9 a D12; 0.3: fila C2b, D13; 0.4: filas, equivalencias y duplicados temporales de MP1, D20 a D27)
 **Patrón:** cambio mínimo sobre las pantallas actuales del investigador (README §3 regla 5 y skill `ciclo-tarea-ceish`: se trabaja sobre lo que ya funciona, sin duplicar). No se crea `src/features/<sección>/`: el flujo vive hoy en `features/investigador`, `features/evaluations` (subsanación), `features/protocols` (espacio actual), `shared/utils` e `infrastructure/interceptors`, y se corrige ahí.
 **Forma de trabajo:** Codex escribe el código de cada T## con el brief que prepara Claude; Claude hace el Paso 0, revisa el diff (con `code-review`), corre las mutaciones, la verificación doble y los commits. Codex no ejecuta git ni toca `specs/`, `package*.json`, `src/environments/` ni `.env*`.
 
@@ -26,6 +26,9 @@
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,ts,spec.ts}` | Sin requisitos inventados; `LoadingState`/`ErrorState`/`EmptyState` (reutiliza `shared/ui/states`) | C3a |
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Lista de documentos del canvas con conteo y nombres accesibles | C3b |
 | presentation | MODIFICAR | `nuevo-protocolo.page.{html,scss,ts,spec.ts}` | Sección `3 · Enviar a la Secretaría` con motivo | C4 |
+| domain | CREAR | `src/features/investigador/domain/mis-protocolos.rules.ts` + spec | Funciones puras sin Angular (D21 a D24): sección de cada protocolo, N de M (D16), observados, línea y etapa de `En el comité`, fecha de la aceptación desde la respuesta | MP1 |
+| application (servicio actual) | MODIFICAR | `protocolo.service.ts` (mapeo de `obtenerMisProtocolos`), `crear-protocolo.dto.ts` (`ProtocoloResumen`) + `protocolo.service.spec.ts` | Agrega `etapa`, `statusId`, `checklist`, `submissionDeadline`, `principalInvestigatorId`; `versionNumber` desde `currentVersion` (D26, T09-6) | MP1 |
+| presentation | MODIFICAR / CREAR | `mis-protocolos.page.ts` + spec; CREAR `mis-protocolos.page.{html,scss}` | Rediseño según el canvas (D20 a D25): secciones, tarjetas, aceptación de los tiempos con `IProtocolRepositoryPort.acceptTimeline`, estados y estilos con tokens | MP1 |
 
 ## 2. Rutas
 
@@ -43,6 +46,19 @@ Sin rutas nuevas. `?borrador={id}` es un query param de la ruta existente `nuevo
 | Edición del borrador | `editar-protocolo.page.ts` con `PUT` | se corrige en T09-7 |
 | Código muerto (spec-ui P3) | — | tarea de retiro aparte (D1) |
 | Tarjetas del tipo de estudio (C2b, Paso 0 del 14/11/2026) | `shared/ui/button-group` (`ButtonGroupComponent`: botones con `aria-pressed` para cambiar de vista, sin `ControlValueAccessor`); no hay otro grupo de radios en `src/` (`git grep -n -i` de `radio-card`, `choice-card`, `option-card`, `selectable-card` y `type="radio"` sin salida) | (a) no se reutiliza: es un cambio de vista, no un campo de formulario; el grupo de radios nativo va en la plantilla de la página con `formControlName` |
+
+**Mapa de equivalencias de MP1 (Paso 0, 17/11/2026):**
+
+| Pieza | Equivalente existente | Clasificación |
+|---|---|---|
+| Aceptar los tiempos | `IProtocolRepositoryPort.acceptTimeline` (`protocol-api.adapter.ts:278-280`, raíz en `app.config.ts:65`), usado por `timeline-acceptance-modal.component.ts:401`; `ProtocoloService.acceptTimeline` (`protocolo.service.ts:500-507`) no lo usa nadie | (c) se reutiliza el port (D23); el método sin uso de `ProtocoloService` va a la tarea de retiro |
+| Texto de respaldo del error de la aceptación | `ACCEPT_TIMELINE_ERROR` (`timeline-acceptance-modal.component.ts:9`), dentro de `features/protocols/presentation` | se copia el texto (README §2.2 regla 5: una sección no importa el interior de otra); unificar en `shared/` en la tarea de retiro |
+| Etiqueta de la etapa | `Stage.fromBackend` (`stage.vo.ts:17-36`) | (c) se reutiliza |
+| Etiqueta del estado | `ProtocolUI.label` (`protocol-ui.util.ts:32-39`) y `estadoById` (`estado.resolver.ts:13-18`) | (c) se reutiliza |
+| Fechas en hora de Ecuador | `fechaCalendario`, `fechaEcuador` (`fecha-ecuador.util.ts:15,27`) | (c) se reutiliza |
+| Chips, estados de la página | `StatusChip` (`shared/ui/status-chip`), `LoadingState`/`ErrorState`/`EmptyState` (`shared/ui/states`) | (c) se reutilizan |
+| N de M del checklist (D16) | constantes privadas de `nuevo-protocolo.page.ts:116-120` | duplicado temporal en `mis-protocolos.rules.ts` (§8) |
+| Usuario actual | `AuthFacade.currentUser()`, como `nuevo-protocolo.page.ts:200,520` | (c) se reutiliza |
 
 ## 4. Seguridad (angular-security)
 
@@ -75,7 +91,13 @@ Sin rutas nuevas. `?borrador={id}` es un query param de la ruta existente `nuevo
 3. INVESTIGADOR: enviar dos veces el mismo protocolo (dos pestañas) → la segunda muestra el mensaje del backend `El protocolo no se puede enviar en su estado actual…` (desde T09-3).
 4. INVESTIGADOR con una subsanación en curso → chip `Correcciones sin enviar` y `Subir correcciones` (desde T09-2).
 5. SECRETARIA: `/pendientes` y `/protocolos` siguen igual (el borrador no aparece; RF-02.3 b).
+6. INVESTIGADOR (desde MP1): Mis protocolos con un borrador, un `COMPLETO` sin aceptar (aceptar los tiempos y recargar: pasa a `En el comité`, Asignación), un `INCOMPLETO` (`Ver y corregir`) y uno en revisión; el aviso del espacio (`timeline-acceptance-modal`) sigue igual.
 
 ## 8. Duplicados temporales
 
 Ninguno: F09 no crea piezas que dupliquen otras. El código muerto anotado en `spec-ui.md` P3 va a la tarea de retiro (D1).
+
+Desde MP1 (17/11/2026), con la tarea de retiro de D1:
+- los estados de D16 (`PRESENTADO`/`APROBADO` y `NO_APLICA`) están en `nuevo-protocolo.page.ts:116-120` y en `mis-protocolos.rules.ts`: `nuevo-protocolo` pasa a usar las del dominio;
+- el texto `No pudimos registrar su aceptación. Intente de nuevo.` está en `timeline-acceptance-modal.component.ts:9` y en `mis-protocolos.rules.ts`: va a `shared/`;
+- `ProtocoloService.acceptTimeline` (`protocolo.service.ts:500-507`) no tiene llamadores: se borra.
