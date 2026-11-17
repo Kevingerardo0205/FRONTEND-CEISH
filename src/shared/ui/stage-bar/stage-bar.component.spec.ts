@@ -1,3 +1,4 @@
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Stage } from '@domain/value-objects/stage.vo';
 import { StageBarComponent } from './stage-bar.component';
@@ -16,6 +17,10 @@ describe('StageBarComponent', () => {
     return el.querySelector(`li[data-stage="${code}"]`) as HTMLElement;
   }
 
+  function hiddenText(li: HTMLElement): string | undefined {
+    return li.querySelector('.visually-hidden')?.textContent?.trim();
+  }
+
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [StageBarComponent] });
     fixture = TestBed.createComponent(StageBarComponent);
@@ -27,6 +32,7 @@ describe('StageBarComponent', () => {
       n.textContent?.trim(),
     );
 
+    expect(el.querySelector('ol')?.getAttribute('aria-label')).toBe('Etapas del protocolo');
     expect(labels).toEqual([
       'Recepción',
       'Asignación',
@@ -42,31 +48,58 @@ describe('StageBarComponent', () => {
 
     for (const code of ['RECEPCION', 'ASIGNACION']) {
       expect(item(el, code).classList).toContain('step--done');
-      expect(item(el, code).querySelector('.step__marker')?.textContent?.trim()).toBe('✓');
+      expect(item(el, code).querySelector('.step__check')?.textContent?.trim()).toBe('✓');
     }
 
     const current = item(el, 'EVALUACION');
     expect(current.classList).toContain('step--current');
     expect(current.getAttribute('aria-current')).toBe('step');
-    expect(current.querySelector('.step__marker')?.textContent?.trim()).toBe('3');
+    expect(current.querySelector('.step__check')).toBeNull();
 
     for (const code of ['RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
       expect(item(el, code).classList).toContain('step--pending');
       expect(item(el, code).hasAttribute('aria-current')).toBeFalse();
+      expect(item(el, code).querySelector('.step__check')).toBeNull();
     }
+  });
+
+  it('cada etapa tiene su barra, oculta para lectores de pantalla', () => {
+    const el = render('RESOLUCION');
+    const bars = el.querySelectorAll('li > .step__bar');
+
+    expect(bars.length).toBe(6);
+    bars.forEach((bar) => expect(bar.getAttribute('aria-hidden')).toBe('true'));
   });
 
   it('solo una etapa tiene aria-current', () => {
     const el = render('SEGUIMIENTO');
 
     expect(el.querySelectorAll('[aria-current]').length).toBe(1);
+    expect(el.querySelector('[aria-current="step"]')?.getAttribute('data-stage')).toBe('SEGUIMIENTO');
   });
 
-  it('anuncia el estado de cada etapa para lectores de pantalla', () => {
+  it('anuncia con texto oculto "completada", "etapa actual" o "pendiente"', () => {
     const el = render('ASIGNACION');
 
-    expect(item(el, 'RECEPCION').textContent).toContain('(completada)');
-    expect(item(el, 'RESOLUCION').textContent).toContain('(pendiente)');
+    expect(hiddenText(item(el, 'RECEPCION'))).toBe(', completada');
+    expect(hiddenText(item(el, 'ASIGNACION'))).toBe(', etapa actual');
+    for (const code of ['EVALUACION', 'RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
+      expect(hiddenText(item(el, code))).withContext(code).toBe(', pendiente');
+    }
+  });
+
+  it('con RECEPCION ninguna etapa está completada', () => {
+    const el = render('RECEPCION');
+
+    expect(el.querySelectorAll('.step--done').length).toBe(0);
+    expect(hiddenText(item(el, 'RECEPCION'))).toBe(', etapa actual');
+  });
+
+  it('con RENOVACION las 5 anteriores están completadas', () => {
+    const el = render('RENOVACION');
+
+    expect(el.querySelectorAll('.step--done').length).toBe(5);
+    expect(el.querySelectorAll('.step--pending').length).toBe(0);
   });
 
   it('muestra el texto corto solo bajo la etapa actual', () => {
@@ -83,5 +116,63 @@ describe('StageBarComponent', () => {
     const el = render('EVALUACION');
 
     expect(el.querySelector('.step__detail')).toBeNull();
+  });
+});
+
+@Component({
+  standalone: true,
+  imports: [StageBarComponent],
+  template: `<div class="ancho" [style.width.px]="ancho()"><app-stage-bar [stage]="stage" /></div>`,
+})
+class AnchoHostComponent {
+  readonly ancho = signal(1000);
+  readonly stage = Stage.fromBackend('EVALUACION');
+}
+
+describe('StageBarComponent - rejilla sin desplazamiento horizontal (F00 §5, EP1)', () => {
+  let fixture: ComponentFixture<AnchoHostComponent>;
+
+  function columnasAncho(ancho: number): { columnas: number; ol: HTMLElement; host: HTMLElement } {
+    fixture.componentInstance.ancho.set(ancho);
+    fixture.detectChanges();
+    const host = fixture.nativeElement.querySelector('.ancho') as HTMLElement;
+    const ol = host.querySelector('ol') as HTMLElement;
+    const columnas = getComputedStyle(ol).gridTemplateColumns.trim().split(/\s+/).length;
+    return { columnas, ol, host };
+  }
+
+  function sinDesbordar(ol: HTMLElement, host: HTMLElement): void {
+    expect(ol.scrollWidth).toBeLessThanOrEqual(ol.clientWidth);
+    const limite = host.getBoundingClientRect().right + 0.5;
+    ol.querySelectorAll('li').forEach((li) => {
+      expect(li.getBoundingClientRect().right).toBeLessThanOrEqual(limite);
+      expect(li.scrollWidth).toBeLessThanOrEqual(li.clientWidth);
+    });
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [AnchoHostComponent] });
+    fixture = TestBed.createComponent(AnchoHostComponent);
+  });
+
+  it('desde 768 px: 6 columnas', () => {
+    const { columnas, ol, host } = columnasAncho(1000);
+    expect(columnas).toBe(6);
+    sinDesbordar(ol, host);
+    expect(columnasAncho(768).columnas).toBe(6);
+  });
+
+  it('por debajo de 768 px: 3×2 sin desbordar', () => {
+    const { columnas, ol, host } = columnasAncho(767);
+    expect(columnas).toBe(3);
+    sinDesbordar(ol, host);
+    expect(columnasAncho(400).columnas).toBe(3);
+  });
+
+  it('por debajo de 400 px: 2×3 sin desbordar, comprobado a 320 px', () => {
+    expect(columnasAncho(399).columnas).toBe(2);
+    const { columnas, ol, host } = columnasAncho(320);
+    expect(columnas).toBe(2);
+    sinDesbordar(ol, host);
   });
 });

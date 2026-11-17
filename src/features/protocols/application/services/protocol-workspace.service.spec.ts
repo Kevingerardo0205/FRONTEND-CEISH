@@ -4,12 +4,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { Subject, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { ProtocolWorkspaceService } from './protocol-workspace.service';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { EvaluationEntity } from '@domain/entities/evaluation.entity';
+import { ProtocolHeaderData, ProtocolHeaderPort } from '../../domain/protocol-header';
+import { ContractError } from '@infrastructure/mappers/contract-readers';
 import { ProtocolApiAdapter } from '@infrastructure/adapters/protocol-api.adapter';
 import { ErrorInterceptor } from '@infrastructure/interceptors/error.interceptor';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
@@ -48,13 +50,21 @@ function protocolBody(id: number, title: string) {
   return { id, title, receptionStatus: 'COMPLETO', statusId: null };
 }
 
+/** Encabezado ficticio del `:id` (F10 D18). */
+function headerOf(id: string): ProtocolHeaderData {
+  return { code: `CEISH-PRUEBA-${id}`, version: '1.0', title: `Encabezado ${id}`, riskLevel: null };
+}
+
 describe('ProtocolWorkspaceService - carga y errores (F10 D14, S-1g)', () => {
   let service: ProtocolWorkspaceService;
   let http: HttpTestingController;
   let evaluationRepo: { getByProtocolId: jasmine.Spy };
+  /** F10 D18: el encabezado sale de su propio port; aquí, sin HTTP. */
+  let headerPort: { get: jasmine.Spy<(id: string) => Observable<ProtocolHeaderData>> };
 
   beforeEach(() => {
     evaluationRepo = { getByProtocolId: jasmine.createSpy('getByProtocolId') };
+    headerPort = { get: jasmine.createSpy('get').and.callFake((id: string) => of(headerOf(id))) };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptorsFromDi()),
@@ -62,6 +72,7 @@ describe('ProtocolWorkspaceService - carga y errores (F10 D14, S-1g)', () => {
         { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
         { provide: IProtocolRepositoryPort, useClass: ProtocolApiAdapter },
         { provide: IEvaluationRepositoryPort, useValue: evaluationRepo },
+        { provide: ProtocolHeaderPort, useValue: headerPort },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
         { provide: MatDialog, useValue: { open: jasmine.createSpy('open'), openDialogs: [] } },
         { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl']) },
@@ -166,5 +177,54 @@ describe('ProtocolWorkspaceService - carga y errores (F10 D14, S-1g)', () => {
 
     expect(service.evaluations()).toEqual(list);
     expect(service.evaluationsLoading()).toBeFalse();
+  });
+
+  it('D18: el encabezado se pide junto con el protocolo y queda con el mismo :id', () => {
+    load('5');
+    expect(headerPort.get).toHaveBeenCalledOnceWith('5');
+    expect(service.header()).toBeNull();
+
+    http.expectOne(url('5')).flush(protocolBody(5, 'Estudio de prueba cinco'));
+
+    expect(service.header()).toEqual(headerOf('5'));
+    expect(service.protocol()?.id).toBe('5');
+  });
+
+  it('D18: al cambiar de :id no queda el encabezado anterior mientras carga el nuevo', () => {
+    load('5');
+    http.expectOne(url('5')).flush(protocolBody(5, 'Estudio de prueba cinco'));
+
+    load('6');
+
+    expect(service.header()).toBeNull();
+    http.expectOne(url('6')).flush(protocolBody(6, 'Estudio de prueba seis'));
+    expect(service.header()).toEqual(headerOf('6'));
+  });
+
+  it('D18: si falla la recarga del mismo :id, se conservan el protocolo y el encabezado', () => {
+    load('5');
+    http.expectOne(url('5')).flush(protocolBody(5, 'Estudio de prueba cinco'));
+
+    load('5');
+    http
+      .expectOne(url('5'))
+      .flush(SERVER_ERROR_BODY, { status: 500, statusText: 'Internal Server Error' });
+
+    expect(service.error()).toBe('failed');
+    expect(service.protocol()?.title).toBe('Estudio de prueba cinco');
+    expect(service.header()).toEqual(headerOf('5'));
+  });
+
+  it('D18: si el encabezado no se puede leer, la carga falla como cualquier error (D14)', () => {
+    headerPort.get.and.returnValue(throwError(() => new ContractError('response.title', 'string | null')));
+
+    load('5');
+    // La petición del protocolo ya salió; su respuesta no cambia el resultado.
+    http.match(url('5'));
+
+    expect(service.error()).toBe('failed');
+    expect(service.protocol()).toBeNull();
+    expect(service.header()).toBeNull();
+    expect(service.isLoading()).toBeFalse();
   });
 });

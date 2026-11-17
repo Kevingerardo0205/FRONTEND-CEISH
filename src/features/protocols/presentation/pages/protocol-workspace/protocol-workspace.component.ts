@@ -14,12 +14,15 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { Stage } from '@domain/value-objects/stage.vo';
-import { StageBarComponent } from '@shared/ui/stage-bar/stage-bar.component';
+import {
+  ProtocolHeaderComponent,
+  ProtocolHeaderFact,
+} from '@shared/ui/protocol-header/protocol-header.component';
+import { protocolStatusTone } from '@shared/utils/protocol-status-tone';
+import { ProtocolUI } from '@shared/utils/protocol-ui.util';
 import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/states.component';
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
@@ -28,7 +31,7 @@ import {
   workspaceStatusCode,
   workspaceStatusLabel,
 } from '../../../domain/workspace-status';
-import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
+import { protocolVersionLabel } from '../../../domain/protocol-header';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -48,13 +51,10 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
     MatTabsModule,
     MatIconModule,
     MatButtonModule,
-    MatChipsModule,
-    MatTooltipModule,
-    ProtocolCodePipe,
     MatSnackBarModule,
     TimelineAcceptanceModalComponent,
     MatDialogModule,
-    StageBarComponent,
+    ProtocolHeaderComponent,
     LoadingStateComponent,
     ErrorStateComponent,
   ],
@@ -81,57 +81,52 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
       >
       </app-timeline-acceptance-modal>
 
-      <!-- 1. Header Premium: Identidad y Acciones Rápidas -->
-      <header class="premium-header">
-        <div class="header-main">
-          <div class="identity-block">
-            <div class="meta-row">
-              <span class="protocol-id">{{ protocol()?.code | protocolCode }}</span>
-              <span class="status-indicator" [attr.data-status]="statusCode()">
-                {{ statusLabel() }}
-              </span>
-            </div>
-            <h1 class="protocol-title" [matTooltip]="protocol()?.title">
-              {{ protocol()?.title }}
-            </h1>
-            @if (protocol()?.principalInvestigator; as investigator) {
-              <div class="owner-chip">
-                <mat-icon>account_circle</mat-icon>
-                <span>{{ investigator }}</span>
+      <!-- 1. Encabezado del protocolo (F10 D18, F00 §5): sin datos inventados -->
+      @if (header(); as h) {
+        @if (h.title) {
+          <app-protocol-header
+            class="workspace-header"
+            [code]="h.code"
+            [version]="versionLabel()"
+            [status]="statusChip()"
+            [heading]="h.title"
+            [facts]="facts()"
+            [stage]="workspaceStage()"
+          >
+            @if (contextualActions().length || awaitingTimelineAcceptance()) {
+              <div protocolHeaderAction class="header-action">
+                @for (action of contextualActions(); track action.id) {
+                  <button
+                    type="button"
+                    class="header-action__button"
+                    (click)="onExecuteAction(action.id)"
+                  >
+                    <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+                    <span>{{ action.label }}</span>
+                  </button>
+                }
+                <!-- F10 D15: Asignar Pares espera la aceptación de tiempos del investigador -->
+                @if (awaitingTimelineAcceptance()) {
+                  <p class="header-notice" role="status">
+                    El investigador aún no acepta los tiempos del comité.
+                  </p>
+                }
               </div>
             }
-          </div>
-
-          <div class="action-registry">
-            <button
-              class="action-btn primary"
-              *ngFor="let action of contextualActions()"
-              (click)="onExecuteAction(action.id)"
-              matRipple
-            >
-              <mat-icon>{{ action.icon }}</mat-icon>
-              <span>{{ action.label }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- F10 D15: Asignar Pares espera la aceptación de tiempos del investigador -->
-        @if (awaitingTimelineAcceptance()) {
-          <p class="header-notice" role="status">
-            El investigador aún no acepta los tiempos del comité.
-          </p>
-        }
-
-        <!-- 2. Etapas del protocolo (F10 D13): sin estado reconocido no hay barra (F02 §5.3) -->
-        @if (workspaceStage(); as stage) {
-          <div class="progress-scaffold">
-            <app-stage-bar [stage]="stage"></app-stage-bar>
+          </app-protocol-header>
+        } @else {
+          <!-- F10 D18 (3): sin título no se inventa uno; las pestañas siguen disponibles -->
+          <div class="workspace-header">
+            <app-error-state
+              message="No pudimos leer el título de este protocolo."
+              (retry)="reload()"
+            ></app-error-state>
           </div>
         }
-      </header>
+      }
 
-      <!-- 3. Navegación Tabular Estilizada -->
-      <nav class="navigation-scaffold">
+      <!-- 2. Pestañas del protocolo (fuera del encabezado; componente propio en EP-T) -->
+      <nav class="navigation-scaffold" aria-label="Pestañas del protocolo">
         <div class="tab-strip">
           <a
             class="tab-item"
@@ -140,19 +135,19 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
             routerLinkActive="active"
             #rla="routerLinkActive"
           >
-            <mat-icon>{{ tab.icon }}</mat-icon>
+            <mat-icon aria-hidden="true">{{ tab.icon }}</mat-icon>
             <span>{{ tab.label }}</span>
             <div class="active-indicator" *ngIf="rla.isActive"></div>
           </a>
         </div>
       </nav>
 
-      <!-- 4. Contenedor de Contenido con Scroll Suave -->
-      <main class="content-viewport">
+      <!-- 3. Contenido de la pestaña (sin otro <main>: el del AppShell es el único, D18) -->
+      <div class="content-viewport">
         <div class="viewport-canvas">
           <router-outlet></router-outlet>
         </div>
-      </main>
+      </div>
     </div>
     } @else if (loadError() === 'not-found') {
       <div class="state-viewport">
@@ -174,211 +169,124 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
   `,
   styles: [
     `
-      :host {
-        --primary: #0f172a;
-        --accent: #3b82f6;
-        --success: #10b981;
-        --border: #e2e8f0;
-        --bg: #f8fafc;
-      }
-
+      /* F10 D18: solo tokens de F00, sin colores fijos */
       .workspace-shell {
         display: flex;
         flex-direction: column;
         height: calc(100vh - 64px);
-        background: var(--bg);
-        font-family:
-          'Inter',
-          -apple-system,
-          sans-serif;
+        background: var(--c-bg);
+        font-family: var(--font-content);
       }
 
-      /* Header Aesthetics */
-      .premium-header {
-        background: white;
-        border-bottom: 1px solid var(--border);
-        padding: 1.5rem 2.5rem 0;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+      .workspace-header {
+        display: block;
+        padding: clamp(16px, 3vw, 24px) clamp(16px, 3vw, 24px) 0;
       }
 
-      .header-main {
+      /* Acción principal y su aviso (ranura del encabezado) */
+      .header-action {
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 2rem;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
       }
-
-      .identity-block {
-        max-width: 60%;
-        .meta-row {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          margin-bottom: 0.5rem;
-        }
-        .protocol-id {
-          font-weight: 800;
-          color: #64748b;
-          font-size: 0.85rem;
-          letter-spacing: 0.05em;
-        }
-        .status-indicator {
-          font-size: 0.65rem;
-          font-weight: 700;
-          padding: 2px 8px;
-          border-radius: 4px;
-          text-transform: uppercase;
-          &[data-status='INICIADO'] {
-            background: #f1f5f9;
-            color: #475569;
-          }
-          &[data-status='EN_REVISION_SECRETARIA'] {
-            background: #ecfdf5;
-            color: #065f46;
-          }
-          &[data-status='EN_EVALUACION'] {
-            background: #eff6ff;
-            color: #1e40af;
-          }
-          &[data-status='DISCREPANCIA_RIESGO'] {
-            background: #fff7ed;
-            color: #c2410c;
-          }
-        }
-        .protocol-title {
-          margin: 0 0 0.75rem;
-          font-size: 1.5rem;
-          color: var(--primary);
-          font-weight: 700;
-          line-height: 1.2;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        .owner-chip {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          color: #64748b;
-          font-size: 0.85rem;
-          mat-icon {
-            font-size: 18px;
-            width: 18px;
-            height: 18px;
-            color: #94a3b8;
-          }
-        }
-      }
-
-      /* Action Registry Styling */
-      .action-registry {
-        display: flex;
+      .header-action__button {
+        display: inline-flex;
         align-items: center;
-        gap: 0.75rem;
-        background: #f1f5f9;
-        padding: 0.5rem;
-        border-radius: 12px;
-        .action-btn {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.6rem 1rem;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 0.85rem;
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          mat-icon {
-            font-size: 18px;
-            width: 18px;
-            height: 18px;
-          }
-          &.primary {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            &:hover {
-              transform: translateY(-1px);
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-            }
-          }
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--min-h-action);
+        padding: 0 16px;
+        border: none;
+        border-radius: var(--radius-control);
+        background: var(--c-primary);
+        color: var(--c-surface);
+        font-family: var(--font-content);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
         }
-      }
-
-      /* Avisos de la cabecera (F10 D15) */
-      .refresh-error {
-        padding: 1rem 2.5rem 0;
-        background: white;
+        &:hover {
+          background: var(--c-primary-dark);
+        }
+        &:focus-visible {
+          outline: 2px solid var(--c-primary-dark);
+          outline-offset: 2px;
+        }
       }
       .header-notice {
-        margin: -1rem 0 1.5rem;
-        color: #92400e;
-        font-size: 0.9rem;
+        margin: 0;
+        max-width: 22rem;
+        color: var(--tone-ambar-fg);
+        font-size: 14px;
         font-weight: 600;
       }
 
-      /* Etapas del protocolo (app-stage-bar) */
-      .progress-scaffold {
-        padding: 0 1rem 1.5rem;
-        max-width: 900px;
+      /* Aviso de la recarga fallida (F10 D15) */
+      .refresh-error {
+        padding: 16px clamp(16px, 3vw, 24px) 0;
       }
 
-      /* Navigation Aesthetic */
+      /* Pestañas */
       .navigation-scaffold {
-        background: white;
-        border-bottom: 1px solid var(--border);
-        padding: 0 2.5rem;
+        margin-top: 16px;
+        padding: 0 clamp(16px, 3vw, 24px);
+        border-bottom: 1px solid var(--c-border);
       }
       .tab-strip {
         display: flex;
-        gap: 2rem;
+        flex-wrap: wrap;
+        gap: 0 24px;
       }
       .tab-item {
+        position: relative;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 1rem 0.25rem;
-        color: #64748b;
+        gap: 8px;
+        padding: 12px 4px;
+        color: var(--c-text-2);
         text-decoration: none;
         font-weight: 600;
-        font-size: 0.9rem;
-        position: relative;
-        transition: color 0.2s ease;
+        font-size: 14px;
         mat-icon {
           font-size: 20px;
           width: 20px;
           height: 20px;
         }
         &:hover {
-          color: var(--primary);
+          color: var(--c-text);
+        }
+        &:focus-visible {
+          outline: 2px solid var(--c-primary);
+          outline-offset: 2px;
         }
         &.active {
-          color: var(--accent);
+          color: var(--c-primary);
         }
         .active-indicator {
           position: absolute;
+          right: 0;
           bottom: 0;
           left: 0;
-          right: 0;
           height: 3px;
-          background: var(--accent);
           border-radius: 3px 3px 0 0;
-          animation: scaleIn 0.2s ease;
+          background: var(--c-primary);
         }
       }
 
-      /* Viewport Aesthetics */
+      /* Contenido */
       .content-viewport {
         flex: 1;
         overflow-y: auto;
-        scroll-behavior: smooth;
       }
       .viewport-canvas {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 2.5rem;
+        padding: clamp(16px, 3vw, 24px);
       }
 
       /* Cargando y errores (F10 D14) */
@@ -386,25 +294,6 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
         max-width: 640px;
         margin: 0 auto;
         padding: 2.5rem 1rem;
-      }
-
-      @keyframes scaleIn {
-        from {
-          transform: scaleX(0);
-        }
-        to {
-          transform: scaleX(1);
-        }
-      }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
       }
     `,
   ],
@@ -424,6 +313,8 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private reload$ = new Subject<void>();
 
   protocol = this.workspaceService.protocol;
+  /** Encabezado sin rellenos (F10 D18). */
+  header = this.workspaceService.header;
   loadError = this.workspaceService.error;
 
   protocolIdNumber = computed(() => Number(this.protocol()?.id || 0));
@@ -447,6 +338,31 @@ export class ProtocolWorkspaceComponent implements OnInit {
   });
 
   statusLabel = computed(() => workspaceStatusLabel(this.statusCode(), this.isDraft()));
+
+  /**
+   * Chip de estado del encabezado (D18): la etiqueta de D13 y el tono de la regla T14b de F00
+   * (`protocolStatusTone(ProtocolUI.class(estado))`); sin estado reconocido, gris.
+   */
+  statusChip = computed(() => {
+    const code = this.statusCode();
+    const cssClass = this.isDraft()
+      ? ProtocolUI.class('BORRADOR')
+      : code
+        ? ProtocolUI.class(code)
+        : null;
+    return { label: this.statusLabel(), tone: protocolStatusTone(cssClass) };
+  });
+
+  /** Versión del encabezado (D18): `"2.0"` → `v2`; si no se lee un número, no se muestra. */
+  versionLabel = computed(() => protocolVersionLabel(this.header()?.version ?? null));
+
+  /**
+   * Línea de datos del encabezado (D18): solo lo que trae `GET /protocols/:id`. El investigador
+   * principal y la sesión no llegan (F00 §8); el nivel de riesgo, solo si llega.
+   */
+  facts = computed<readonly ProtocolHeaderFact[]>(() => [
+    { label: 'Nivel de riesgo', value: this.header()?.riskLevel ?? null },
+  ]);
 
   showAcceptanceModal = computed(() => {
     const p = this.protocol();

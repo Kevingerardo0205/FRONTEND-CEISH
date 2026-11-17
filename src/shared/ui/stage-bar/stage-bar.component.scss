@@ -1,73 +1,84 @@
+// Barra de las 6 etapas según el canvas (F00 spec-ui §5, EP1). Solo tokens de F00.
+// Sin desplazamiento horizontal: 6 columnas; 3×2 cuando la barra mide menos de 768 px y 2×3
+// cuando mide menos de 400 px. Se mide el ancho de la barra (consulta de contenedor).
 :host {
   display: block;
-  overflow-x: auto;
+  container-type: inline-size;
 }
 
 .stage-bar {
-  display: flex;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px 8px;
   margin: 0;
   padding: 0;
   list-style: none;
   font-family: var(--font-content);
 }
 
+@container (max-width: 767.98px) {
+  .stage-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 399.98px) {
+  .stage-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .step {
   display: flex;
-  flex: 1 1 0;
-  align-items: flex-start;
-  gap: 0.5rem;
-  min-width: 8rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-control);
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
   color: var(--c-text-2);
 }
 
-.step__marker {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 50%;
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
-  font-size: 0.85rem;
-  font-weight: 600;
+.step__bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--c-border);
 }
 
-.step__text {
+.step__name {
   display: flex;
-  flex-direction: column;
-}
-
-.step__label {
-  line-height: 1.75rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  overflow-wrap: anywhere;
 }
 
 .step__detail {
-  font-size: 0.8rem;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--c-text-2);
 }
 
-.step--done .step__marker {
-  border-color: var(--tone-verde-bg);
-  background: var(--tone-verde-bg);
-  color: var(--tone-verde-fg);
-}
+.step--done {
+  color: var(--c-text);
 
-.step--current {
-  background: var(--c-primary-soft);
-  color: var(--c-primary-dark);
-
-  .step__marker {
-    border-color: var(--c-primary);
+  .step__bar {
     background: var(--c-primary);
-    color: var(--c-surface);
   }
 
-  .step__label {
-    font-weight: 600;
+  .step__check {
+    color: var(--c-primary);
+    font-weight: 700;
+  }
+}
+
+// Actual: tono más suave que las terminadas; el borde de 1 px la separa de las pendientes.
+.step--current {
+  color: var(--c-text);
+  font-weight: 700;
+
+  .step__bar {
+    background: var(--c-primary-soft);
+    box-shadow: inset 0 0 0 1px var(--c-primary);
   }
 }

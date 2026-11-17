@@ -3,8 +3,15 @@ import { Stage } from '@domain/value-objects/stage.vo';
 
 export type StageStatus = 'done' | 'current' | 'pending';
 
+/** Texto oculto con el estado de cada etapa (F00 §5, EP1). */
+const STATUS_TEXT: Readonly<Record<StageStatus, string>> = {
+  done: 'completada',
+  current: 'etapa actual',
+  pending: 'pendiente',
+};
+
 /**
- * Barra de las 6 etapas del protocolo (spec-ui F00 §5).
+ * Barra de las 6 etapas del protocolo (spec-ui F00 §5; aspecto del canvas desde EP1).
  * Recibe la etapa actual tal como la devuelve el backend; no la calcula.
  */
 @Component({
@@ -18,6 +25,8 @@ export class StageBarComponent {
   readonly stage = input.required<Stage>();
   /** Texto corto bajo la etapa actual, por ejemplo "Riesgo fijado · 3 de 4 dictámenes". */
   readonly detail = input<string>();
+
+  protected readonly statusText = STATUS_TEXT;
 
   readonly steps = computed(() => {
     const current = this.stage().order;

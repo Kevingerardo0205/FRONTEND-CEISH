@@ -9,6 +9,7 @@ import { redirectToFirstWorkspaceTab } from '@infrastructure/guards/workspace-en
 
 import { ProtocolWorkspaceComponent } from './presentation/pages/protocol-workspace/protocol-workspace.component';
 import { WORKSPACE_TAB_ROLES } from './domain/workspace-tab-roles';
+import { PROTOCOL_HEADER_PROVIDERS } from './protocol-header.providers';
 
 export const PROTOCOL_ROUTES: Routes = [
   {
@@ -24,6 +25,8 @@ export const PROTOCOL_ROUTES: Routes = [
       {
         path: 'workspace/:id',
         component: ProtocolWorkspaceComponent,
+        // F10 D18: el encabezado del protocolo tiene su propio port (sin rellenos).
+        providers: PROTOCOL_HEADER_PROVIDERS,
         children: [
           {
             path: 'info',

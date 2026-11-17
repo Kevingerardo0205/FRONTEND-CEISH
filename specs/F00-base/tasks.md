@@ -28,6 +28,58 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 | T15 | arquitectura | Regla o prueba de capas (presentation sin HttpClient ni infrastructure; domain sin @angular), con la única excepción de plan §2 | eslint no-restricted-imports o spec | Romper la regla hace fallar el lint o la prueba | Hecho (1eb90e8) |
 | T16 | — | Revisión final: build prod, pruebas, lint, visto bueno contra el canvas | — | Capturas del AppShell y StageBar comparadas con el diseño | Pendiente |
 
+## Encabezado del protocolo (EP, desde el 17/11/2026)
+
+Rama de EP1: `feat/f00-ep1-encabezado-protocolo` (desde `dev` `2b9b451`). Spec: spec-ui §5 (v0.8) y criterios 9 a 11; la adopción en el espacio, F10 D18. Cada EP2 a EP8 es una tarea y un PR aparte, en este orden.
+
+| # | Capa | Tarea | Archivos | Terminado cuando… | Estado |
+|---|---|---|---|---|---|
+| EP1 | shared + protocols | `ProtocolHeaderComponent`, rediseño de `StageBar`, `protocolStatusTone` (regla T14b), mapper estricto del encabezado y adopción en el espacio del protocolo (sin `premium-header` ni colores fijos; el `<nav>` de las pestañas con `aria-label="Pestañas del protocolo"`) | plan §2 (EP1) | Criterios 9 a 11 de spec-ui y EARS 46 a 51 de F10; pruebas y mutaciones en verde | Hecho (`16f3b8e`) |
+| EP2 | presentation | Validación de documentos: `ProtocolHeader` en `protocol-validation-detail` y retiro del `official-header` con sus rellenos (coordinar con TSK-F02-3) | `protocols/presentation/pages/protocol-validation-detail/*` | Sin `'TRÁMITE EN PROCESO'`, `'1.0'` ni `'No especificado'` | Por hacer |
+| EP3 | presentation | Dictámenes / consolidación (`evaluation-consolidation`) | `evaluations/presentation/pages/evaluation-consolidation/*` | Encabezado común y sin el encabezado propio | Por hacer |
+| EP4 | presentation | Emitir resolución (`resolution-generator`), con la acción y su motivo (canvas EmitirResolucion) | `resolutions/presentation/pages/resolution-generator/*` | Sin `'PRT-' + id` | Por hacer |
+| EP5 | presentation | Subsanación (detalle) | `evaluations/presentation/pages/subsanacion/*` | Sin `'Protocolo de Investigación'` | Por hacer |
+| EP6 | presentation | Evaluador: `evaluation-form` y `peer-risk-assessment` (se retira la barra fija de 5 pasos, `peer-risk-assessment.page.ts:90-130`) | `evaluations/presentation/pages/{evaluation-form,peer-risk-assessment}/*` | La etapa sale de la regla común | Por hacer |
+| EP7 | presentation | Reasignación de evaluadores | `evaluations/presentation/pages/reassignment/*` | Encabezado común | Por hacer |
+| EP8 | presentation | Seguimiento y Renovación: hoy no cargan el protocolo; necesitan su `:id` y sus datos | `follow-up/*`, `renewals/*`, `investigador/.../renovaciones/*` | Encabezado común con datos reales | Por hacer |
+| EP-T | shared | Componente de pestañas por enlaces para las pestañas propias de cada pantalla de un protocolo: `<nav aria-label="Pestañas del protocolo">` con enlaces y `aria-current="page"` en la activa (`Tabs` es un `tablist` de botones y no sirve para rutas) | `src/shared/ui/` (nuevo) | Lo usa el espacio en lugar de su `tab-strip` | Por hacer |
+
+**Resultados de EP1 (17/11/2026):**
+- Línea base (`ep1-base-20261117-1039`): 1410 pruebas; `tsc` de app y de spec con exit 0; `npx eslint` con 0 errores y 68 avisos; build de producción con exit 0 y 19 avisos.
+- Después (verificación 3, tras la revisión impeccable): **1462 pruebas** (+52: StageBar +6, ProtocolHeader 14, `protocolStatusTone` 3, `protocolVersionLabel` 3, mapper 8, adapter 4, servicio +4, espacio +10); `tsc` de app y de spec con exit 0; `npx eslint` con 0 errores y 68 avisos (ninguno en el código cambiado); build de producción con exit 0 y 19 avisos.
+- Mutaciones (cada una revertida editando y comprobada con `cmp`; M1 a M5 con las 8 specs de EP1, M6 a M19 en primer plano con solo las specs que las cubren; M6 se repitió desde cero porque la primera corrida se cortó por memoria):
+
+| Mutación | Qué se rompió | Resultado |
+|---|---|---|
+| M1 | StageBar: texto oculto como antes, sin "etapa actual" | 2 fallan |
+| M2 | StageBar: sin consulta de contenedor (`overflow-x: auto`) | 2 fallan (3×2 y 2×3) |
+| M3 | StageBar: sin "✓" en las terminadas | 1 falla |
+| M4 | StageBar: sin `aria-current` | 4 fallan |
+| M5 | ProtocolHeader: muestra también los pares sin valor | 3 fallan |
+| M6 | ProtocolHeader: relleno `'S/C'` sin código ni versión | 1 falla |
+| M7 | ProtocolHeader: ranura sin `select` | 1 falla |
+| M8 | `protocolVersionLabel`: `v` + el texto tal cual | 5 fallan |
+| M9 | Mapper: `'Sin título'` | 2 fallan |
+| M10 | Mapper: versión 1 por defecto | 2 fallan |
+| M11 | Servicio: no vacía el encabezado al cambiar de `:id` | 1 falla |
+| M12 | Servicio: no guarda el encabezado | 3 fallan |
+| M13 | Espacio: color fijo en las pestañas | 1 falla |
+| M14 | Espacio: `<nav>` sin `aria-label` | 1 falla |
+| M15 | Espacio: `'Sin título'` en el encabezado | 1 falla |
+| M16 | Espacio: chip de estado siempre gris | 1 falla |
+| M17 | Espacio: versión sin `protocolVersionLabel` | 2 fallan |
+| M18 | `protocolStatusTone`: `pending` en gris | 3 fallan |
+| M19 | Espacio: vuelve el `<main>` anidado | 1 falla |
+
+- Revisión impeccable (audit): un hallazgo P1 corregido, el espacio tenía un `<main>` dentro del `<main>` del AppShell (dos landmarks main); ahora es un `<div>`, con su prueba y la mutación M19. Contraste revisado con los tokens: `--c-text-2` (#475569) sobre `--c-surface` da más de 7:1; la barra de las pendientes (`--c-border`) es de bajo contraste, pero el estado también se dice con el "✓", el peso del texto y el texto oculto (P3, sin cambio).
+- Prueba de humo en el navegador contra el backend: NO EJECUTADO.
+
+**Pendientes anotados en EP1 (17/11/2026):**
+- La pestaña Resumen muestra `'Cargando...'` para siempre en el investigador principal (`protocol-detail-tab.component.ts:58`), porque `GET /protocols/:id` no lo trae.
+- Diferencia de etapa entre el espacio y el listado para APROBADO con resolución (spec-ui §10); la resuelve la etapa en `GET /protocols/:id` (TSK-001.3).
+- Datos del encabezado que faltan en el backend: investigador principal, nivel de riesgo, sesión y fecha (spec-ui §8).
+- Dos `GET /protocols/:id` por carga del espacio (plan §10).
+
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
