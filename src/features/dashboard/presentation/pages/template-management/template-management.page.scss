@@ -5,6 +5,7 @@
 }
 
 .fmt {
+  position: relative;
   display: grid;
   gap: 20px;
   max-width: 1080px;
@@ -12,15 +13,22 @@
   color: var(--c-text);
 }
 
-/* Aviso de éxito: vacío no ocupa lugar, pero la región existe */
+/* Aviso de éxito: la región role="status" existe siempre (sin display: none, para que el lector
+   de pantalla anuncie el primer aviso); vacía no ocupa lugar: sin padding ni borde, alto 0 y
+   fuera del flujo de la grilla (no suma su espacio). Se usa una clase y no :empty porque Angular
+   deja un nodo de texto vacío dentro */
 .fmt-aviso {
   margin: 0;
+  padding: 0;
+  border: 0;
   font-weight: 600;
   // --tone-verde-fg sobre --c-bg: 7,1:1.
   color: var(--tone-verde-fg);
 
-  &:empty {
-    display: none;
+  &.fmt-aviso--vacio {
+    position: absolute;
+    height: 0;
+    overflow: hidden;
   }
 }
 

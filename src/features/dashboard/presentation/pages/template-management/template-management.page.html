@@ -7,7 +7,7 @@
   />
 
   <!-- Aviso de éxito: la región existe siempre para que el lector de pantalla lo anuncie. -->
-  <p class="fmt-aviso" role="status">{{ aviso() }}</p>
+  <p class="fmt-aviso" role="status" [class.fmt-aviso--vacio]="!aviso()">{{ aviso() }}</p>
 
   @switch (estado()) {
     @case ('cargando') {
@@ -117,7 +117,9 @@
                 formControlName="code"
                 maxlength="100"
                 autocomplete="off"
-                aria-describedby="fmt-codigo-ayuda"
+                [attr.aria-describedby]="
+                  errorCampo('code') ? 'fmt-codigo-ayuda fmt-codigo-error' : 'fmt-codigo-ayuda'
+                "
                 [attr.aria-invalid]="errorCampo('code') ? true : null"
                 [attr.aria-errormessage]="errorCampo('code') ? 'fmt-codigo-error' : null"
                 (input)="onCodigo($event)"
@@ -138,6 +140,7 @@
                 formControlName="name"
                 maxlength="200"
                 autocomplete="off"
+                [attr.aria-describedby]="errorCampo('name') ? 'fmt-nombre-error' : null"
                 [attr.aria-invalid]="errorCampo('name') ? true : null"
                 [attr.aria-errormessage]="errorCampo('name') ? 'fmt-nombre-error' : null"
               />
@@ -152,6 +155,7 @@
                 id="fmt-archivo"
                 type="file"
                 accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                [attr.aria-describedby]="errorArchivoNuevo() ? 'fmt-archivo-error' : null"
                 [attr.aria-invalid]="errorArchivoNuevo() ? true : null"
                 [attr.aria-errormessage]="errorArchivoNuevo() ? 'fmt-archivo-error' : null"
                 (change)="onArchivoNuevo($event)"

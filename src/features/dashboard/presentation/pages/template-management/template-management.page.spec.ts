@@ -137,6 +137,24 @@ describe('TemplateManagementPage — Formatos (F08 CF1)', () => {
       expect(boton(grupo, 'Usuarios').getAttribute('aria-pressed')).toBe('false');
     });
 
+    it('el aviso role="status" existe siempre, sin display: none, y vacío no ocupa lugar', () => {
+      const aviso = el.querySelector('.fmt-aviso') as HTMLElement;
+      expect(aviso.getAttribute('role')).toBe('status');
+      expect(aviso.textContent).toBe('');
+      const estilo = getComputedStyle(aviso);
+      expect(estilo.display).not.toBe('none');
+      expect(estilo.paddingTop).toBe('0px');
+      expect(estilo.borderTopWidth).toBe('0px');
+      expect(aviso.getBoundingClientRect().height).toBe(0);
+      // El espacio de la grilla se descuenta: la sección siguiente queda donde estaría sin el aviso.
+      const anterior = aviso.previousElementSibling as HTMLElement;
+      const siguiente = aviso.nextElementSibling as HTMLElement;
+      const gap = parseFloat(getComputedStyle(el.querySelector('.fmt') as HTMLElement).rowGap);
+      expect(
+        siguiente.getBoundingClientRect().top - anterior.getBoundingClientRect().bottom,
+      ).toBeCloseTo(gap, 0);
+    });
+
     it('no trae lo que se quitó (D8): tarjetas de números, buscador, Cloudflare ni estilos en línea', () => {
       expect(el.querySelector('input[type="search"], input[placeholder]')).toBeNull();
       expect(el.textContent).not.toMatch(/Cloudflare|R2/);
@@ -336,6 +354,22 @@ describe('TemplateManagementPage — Formatos (F08 CF1)', () => {
       expect(texto(el.querySelector('[role="status"]'))).toBe('Formato Formato nuevo de prueba guardado.');
       expect(el.querySelector('form')).toBeNull();
       expect(load).toHaveBeenCalledTimes(2);
+    });
+
+    it('el id del error de cada campo se suma a su aria-describedby', () => {
+      abrirFormulario();
+      const describe = (id: string) =>
+        (el.querySelector(`#${id}`) as HTMLElement).getAttribute('aria-describedby') ?? '';
+      expect(describe('fmt-codigo').split(' ')).toEqual(['fmt-codigo-ayuda']);
+      expect(describe('fmt-nombre')).toBe('');
+      guardar();
+      expect(describe('fmt-codigo').split(' ')).toEqual(['fmt-codigo-ayuda', 'fmt-codigo-error']);
+      expect(describe('fmt-nombre')).toBe('fmt-nombre-error');
+      elegirArchivo(el.querySelector('#fmt-archivo') as HTMLInputElement, 'zz.doc');
+      expect(describe('fmt-archivo')).toBe('fmt-archivo-error');
+      for (const id of ['fmt-codigo-error', 'fmt-nombre-error', 'fmt-archivo-error']) {
+        expect(el.querySelector(`#${id}`)).withContext(id).not.toBeNull();
+      }
     });
 
     it('el cursor no salta al final al pasar a mayúsculas', () => {
