@@ -102,6 +102,21 @@ export interface ProtocoloResumen {
   timelineTermsAcceptedAt?: string | null;
   timelineTermsAcceptedIp?: string | null;
   versionNumber?: number;
+  /** Etapa del backend (`RECEPCION`, `ASIGNACION`, …; F09 D24). */
+  etapa?: string | null;
+  /** Estado del protocolo (id del catálogo); null mientras no entra al comité (F09 D24). */
+  statusId?: number | null;
+  /** Estado de cada requisito del checklist, para N de M y los observados (F09 D22). */
+  checklist?: readonly RequisitoResumen[];
+  /** Fecha límite para corregir (`YYYY-MM-DD`, sin hora; F09 D22). */
+  submissionDeadline?: string | null;
+  /** Id del investigador principal; el listado también trae protocolos de coinvestigadores (F09 D23). */
+  principalInvestigatorId?: number | null;
+}
+
+/** Requisito del checklist que trae `GET /protocols/mis-protocolos` (solo su estado). */
+export interface RequisitoResumen {
+  status: string;
 }
 
 export interface ProtocoloDetalle extends CrearProtocoloDto {
