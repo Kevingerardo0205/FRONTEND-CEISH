@@ -28,6 +28,28 @@ Cada tarea: un commit pequeño, `npm test` en verde, `npm run lint` sin adverten
 | T15 | arquitectura | Regla o prueba de capas (presentation sin HttpClient ni infrastructure; domain sin @angular), con la única excepción de plan §2 | eslint no-restricted-imports o spec | Romper la regla hace fallar el lint o la prueba | Hecho (1eb90e8) |
 | T16 | — | Revisión final: build prod, pruebas, lint, visto bueno contra el canvas | — | Capturas del AppShell y StageBar comparadas con el diseño | Pendiente |
 
+## Encabezado del protocolo (EP, desde el 17/11/2026)
+
+Rama de EP1: `feat/f00-ep1-encabezado-protocolo` (desde `dev` `2b9b451`). Spec: spec-ui §5 (v0.8) y criterios 9 a 11; la adopción en el espacio, F10 D18. Cada EP2 a EP8 es una tarea y un PR aparte, en este orden.
+
+| # | Capa | Tarea | Archivos | Terminado cuando… | Estado |
+|---|---|---|---|---|---|
+| EP1 | shared + protocols | `ProtocolHeaderComponent`, rediseño de `StageBar`, `protocolStatusTone` (regla T14b), mapper estricto del encabezado y adopción en el espacio del protocolo (sin `premium-header` ni colores fijos; el `<nav>` de las pestañas con `aria-label="Pestañas del protocolo"`) | plan §2 (EP1) | Criterios 9 a 11 de spec-ui y EARS 46 a 51 de F10; pruebas y mutaciones en verde | En curso |
+| EP2 | presentation | Validación de documentos: `ProtocolHeader` en `protocol-validation-detail` y retiro del `official-header` con sus rellenos (coordinar con TSK-F02-3) | `protocols/presentation/pages/protocol-validation-detail/*` | Sin `'TRÁMITE EN PROCESO'`, `'1.0'` ni `'No especificado'` | Por hacer |
+| EP3 | presentation | Dictámenes / consolidación (`evaluation-consolidation`) | `evaluations/presentation/pages/evaluation-consolidation/*` | Encabezado común y sin el encabezado propio | Por hacer |
+| EP4 | presentation | Emitir resolución (`resolution-generator`), con la acción y su motivo (canvas EmitirResolucion) | `resolutions/presentation/pages/resolution-generator/*` | Sin `'PRT-' + id` | Por hacer |
+| EP5 | presentation | Subsanación (detalle) | `evaluations/presentation/pages/subsanacion/*` | Sin `'Protocolo de Investigación'` | Por hacer |
+| EP6 | presentation | Evaluador: `evaluation-form` y `peer-risk-assessment` (se retira la barra fija de 5 pasos, `peer-risk-assessment.page.ts:90-130`) | `evaluations/presentation/pages/{evaluation-form,peer-risk-assessment}/*` | La etapa sale de la regla común | Por hacer |
+| EP7 | presentation | Reasignación de evaluadores | `evaluations/presentation/pages/reassignment/*` | Encabezado común | Por hacer |
+| EP8 | presentation | Seguimiento y Renovación: hoy no cargan el protocolo; necesitan su `:id` y sus datos | `follow-up/*`, `renewals/*`, `investigador/.../renovaciones/*` | Encabezado común con datos reales | Por hacer |
+| EP-T | shared | Componente de pestañas por enlaces para las pestañas propias de cada pantalla de un protocolo: `<nav aria-label="Pestañas del protocolo">` con enlaces y `aria-current="page"` en la activa (`Tabs` es un `tablist` de botones y no sirve para rutas) | `src/shared/ui/` (nuevo) | Lo usa el espacio en lugar de su `tab-strip` | Por hacer |
+
+**Pendientes anotados en EP1 (17/11/2026):**
+- La pestaña Resumen muestra `'Cargando...'` para siempre en el investigador principal (`protocol-detail-tab.component.ts:58`), porque `GET /protocols/:id` no lo trae.
+- Diferencia de etapa entre el espacio y el listado para APROBADO con resolución (spec-ui §10); la resuelve la etapa en `GET /protocols/:id` (TSK-001.3).
+- Datos del encabezado que faltan en el backend: investigador principal, nivel de riesgo, sesión y fecha (spec-ui §8).
+- Dos `GET /protocols/:id` por carga del espacio (plan §10).
+
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
