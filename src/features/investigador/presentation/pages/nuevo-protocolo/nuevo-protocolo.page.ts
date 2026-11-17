@@ -36,6 +36,7 @@ import { CrearProtocoloDto, ChecklistRequirement } from '../../../domain/dtos/cr
 import { sanitizeFilename } from '@domain/entities/storage.interface';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
+import { abrirEnPestana } from '@shared/utils/descarga-en-pestana.util';
 import { apiErrorStatus, extractApiErrorMessage } from '@shared/utils/api-error-message.util';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import {
@@ -123,20 +124,6 @@ const MENSAJE_NO_PDF = 'El archivo debe estar en formato PDF.';
 /** Textos de `Descargar formato` (D28). No se muestra el mensaje del backend: trae el código. */
 const FORMATO_NO_DISPONIBLE = 'Este formato no está disponible.';
 const FORMATO_ERROR = 'No pudimos descargar el formato. Intente de nuevo.';
-const HOSTS_LOCALES = ['localhost', '127.0.0.1'];
-
-/** La URL del formato solo se abre si es `https:`, o `http:` en `localhost`/`127.0.0.1` (D28). */
-export function esUrlDeFormatoValida(url: unknown): url is string {
-  if (typeof url !== 'string' || url.trim() === '') return false;
-  let destino: URL;
-  try {
-    destino = new URL(url);
-  } catch {
-    return false;
-  }
-  if (destino.protocol === 'https:') return true;
-  return destino.protocol === 'http:' && HOSTS_LOCALES.includes(destino.hostname);
-}
 
 /**
  * Misma regla que el backend (`isValidPdfExtension` sobre el nombre saneado que se envía): el
@@ -796,50 +783,17 @@ export class NuevoProtocoloPage implements OnInit {
     delete sinError[doc.id];
     this.errorFormato = sinError;
 
-    const pestana = window.open('', '_blank');
-    if (!pestana) {
-      this.errorFormato = { ...this.errorFormato, [doc.id]: FORMATO_ERROR };
-      return;
-    }
-    pestana.opener = null;
-
+    // F08 D6: la pestaña, la comprobación de la URL y el cierre están en la función compartida.
     this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: true };
-    let terminado = false;
-    const trabajo = this.documentRepo.downloadTemplate(codigo).subscribe({
-      next: (respuesta) => {
-        terminado = true;
+    const trabajo = abrirEnPestana(() => this.documentRepo.downloadTemplate(codigo)).subscribe(
+      (resultado) => {
         this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: false };
-        const url: unknown = respuesta?.downloadUrl;
-        if (esUrlDeFormatoValida(url)) {
-          pestana.location.href = url;
-        } else {
-          this.fallarFormato(doc.id, pestana, FORMATO_ERROR);
-        }
+        if (resultado === 'abierta') return;
+        const texto = resultado === 'no-disponible' ? FORMATO_NO_DISPONIBLE : FORMATO_ERROR;
+        this.errorFormato = { ...this.errorFormato, [doc.id]: texto };
       },
-      error: (err: unknown) => {
-        terminado = true;
-        this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: false };
-        const texto = apiErrorStatus(err) === 404 ? FORMATO_NO_DISPONIBLE : FORMATO_ERROR;
-        this.fallarFormato(doc.id, pestana, texto);
-      },
-      complete: () => {
-        if (terminado) return;
-        // Terminó sin respuesta: no hay URL que abrir.
-        terminado = true;
-        this.descargandoFormato = { ...this.descargandoFormato, [doc.id]: false };
-        this.fallarFormato(doc.id, pestana, FORMATO_ERROR);
-      },
-    });
-    // Si la página cambia de protocolo o se destruye antes de la respuesta, la pestaña vacía se cierra.
-    trabajo.add(() => {
-      if (!terminado) pestana.close();
-    });
+    );
     this.trabajos.add(trabajo);
-  }
-
-  private fallarFormato(id: number, pestana: Window, texto: string): void {
-    pestana.close();
-    this.errorFormato = { ...this.errorFormato, [id]: texto };
   }
 
   etiquetaFormato(doc: DocumentoRequerido): string {

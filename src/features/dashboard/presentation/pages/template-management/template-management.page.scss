@@ -1,0 +1,187 @@
+/* Formatos de la Secretaría (F08 D4 a D8): CSS propio con los tokens de F00, sin Material ni animaciones */
+
+:host {
+  display: block;
+}
+
+.fmt {
+  position: relative;
+  display: grid;
+  gap: 20px;
+  max-width: 1080px;
+  font-family: var(--font-content);
+  color: var(--c-text);
+}
+
+/* Aviso de éxito: la región role="status" existe siempre (sin display: none, para que el lector
+   de pantalla anuncie el primer aviso); vacía no ocupa lugar: sin padding ni borde, alto 0 y
+   fuera del flujo de la grilla (no suma su espacio). Se usa una clase y no :empty porque Angular
+   deja un nodo de texto vacío dentro */
+.fmt-aviso {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-weight: 600;
+  // --tone-verde-fg sobre --c-bg: 7,1:1.
+  color: var(--tone-verde-fg);
+
+  &.fmt-aviso--vacio {
+    position: absolute;
+    height: 0;
+    overflow: hidden;
+  }
+}
+
+.fmt-tabla-marco {
+  overflow-x: auto;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+}
+
+.fmt-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+
+  th,
+  td {
+    padding: 12px 16px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  th {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--c-text-2);
+    background: var(--c-bg);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.fmt-codigo {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.fmt-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fmt-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  // --tone-rojo-fg sobre --c-surface: 8,3:1.
+  color: var(--tone-rojo-fg);
+}
+
+/* Botones: altura mínima de F00 y foco visible */
+.fmt-boton {
+  min-height: var(--min-h-action);
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 700;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.fmt-boton--subir,
+.fmt-boton--principal {
+  color: var(--c-surface);
+  background: var(--c-primary);
+  border: 1px solid var(--c-primary);
+}
+
+.fmt-boton--descargar,
+.fmt-boton--nuevo,
+.fmt-boton--secundario {
+  color: var(--c-primary);
+  background: var(--c-surface);
+  border: 1px solid var(--c-primary);
+}
+
+.fmt-nuevo {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.fmt-formulario {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 560px;
+  padding: 20px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+}
+
+.fmt-formulario__titulo {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.fmt-campo {
+  display: grid;
+  gap: 6px;
+
+  label {
+    font-weight: 600;
+  }
+
+  input[type='text'] {
+    min-height: var(--min-h-action);
+    padding: 0 12px;
+    font: inherit;
+    color: var(--c-text);
+    background: var(--c-surface);
+    border: 1px solid var(--c-text-2);
+    border-radius: var(--radius-control);
+
+    &:focus-visible {
+      outline: 2px solid var(--c-primary);
+      outline-offset: 1px;
+    }
+
+    &[aria-invalid='true'] {
+      border-color: var(--tone-rojo-fg);
+    }
+  }
+
+  input[type='file']:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.fmt-campo__ayuda {
+  font-size: 0.875rem;
+  color: var(--c-text-2);
+}
+
+.fmt-formulario__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}

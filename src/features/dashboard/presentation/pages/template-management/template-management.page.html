@@ -1,0 +1,190 @@
+<div class="fmt">
+  <app-config-secciones activa="formatos" />
+
+  <app-page-header
+    heading="Formatos"
+    subtitle="Documentos que el investigador descarga desde su lista de requisitos."
+  />
+
+  <!-- Aviso de éxito: la región existe siempre para que el lector de pantalla lo anuncie. -->
+  <p class="fmt-aviso" role="status" [class.fmt-aviso--vacio]="!aviso()">{{ aviso() }}</p>
+
+  @switch (estado()) {
+    @case ('cargando') {
+      <app-loading-state message="Cargando los formatos…" />
+    }
+    @case ('error') {
+      <app-error-state message="No pudimos cargar los formatos." (retry)="cargar()" />
+    }
+    @default {
+      @if (formatos().length === 0) {
+        <app-empty-state message="Todavía no hay formatos." />
+      } @else {
+        <div class="fmt-tabla-marco">
+          <table class="fmt-tabla">
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Archivo</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of formatos(); track f.code) {
+                <tr [attr.data-codigo]="f.code">
+                  <td class="fmt-codigo">{{ f.code }}</td>
+                  <td>
+                    {{ f.name }}
+                    @if (error(f); as texto) {
+                      <span [id]="idError(f)" class="fmt-error" role="alert">{{ texto }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (tieneArchivo(f)) {
+                      <app-status-chip tone="verde" label="Con archivo" />
+                    } @else {
+                      <app-status-chip tone="gris" label="Sin archivo" />
+                    }
+                  </td>
+                  <td>
+                    <div class="fmt-acciones">
+                      <input
+                        #archivo
+                        type="file"
+                        hidden
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        (change)="onArchivoElegido($event, f)"
+                      />
+                      <button
+                        type="button"
+                        class="fmt-boton fmt-boton--subir"
+                        [disabled]="subiendo().has(f.code)"
+                        [attr.aria-label]="etiquetaSubir(f)"
+                        [attr.aria-describedby]="error(f) ? idError(f) : null"
+                        (click)="archivo.click()"
+                      >
+                        {{ textoSubir(f) }}
+                      </button>
+                      @if (tieneArchivo(f)) {
+                        <button
+                          type="button"
+                          class="fmt-boton fmt-boton--descargar"
+                          [disabled]="descargando().has(f.code)"
+                          [attr.aria-label]="'Descargar ' + f.name"
+                          [attr.aria-describedby]="error(f) ? idError(f) : null"
+                          (click)="descargar(f)"
+                        >
+                          {{ descargando().has(f.code) ? 'Descargando…' : 'Descargar' }}
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="fmt-nuevo">
+        <button
+          type="button"
+          class="fmt-boton fmt-boton--nuevo"
+          aria-controls="fmt-formulario"
+          [attr.aria-expanded]="formularioAbierto()"
+          (click)="abrirFormulario()"
+        >
+          Nuevo formato
+        </button>
+
+        @if (formularioAbierto()) {
+          <form
+            id="fmt-formulario"
+            class="fmt-formulario"
+            aria-labelledby="fmt-formulario-titulo"
+            novalidate
+            [formGroup]="form"
+            (ngSubmit)="guardar()"
+          >
+            <h2 id="fmt-formulario-titulo" class="fmt-formulario__titulo">Nuevo formato</h2>
+
+            <div class="fmt-campo">
+              <label for="fmt-codigo">Código</label>
+              <input
+                id="fmt-codigo"
+                type="text"
+                formControlName="code"
+                maxlength="100"
+                autocomplete="off"
+                [attr.aria-describedby]="
+                  errorCampo('code') ? 'fmt-codigo-ayuda fmt-codigo-error' : 'fmt-codigo-ayuda'
+                "
+                [attr.aria-invalid]="errorCampo('code') ? true : null"
+                [attr.aria-errormessage]="errorCampo('code') ? 'fmt-codigo-error' : null"
+                (input)="onCodigo($event)"
+              />
+              <span id="fmt-codigo-ayuda" class="fmt-campo__ayuda"
+                >Solo mayúsculas, números y guion bajo (_).</span
+              >
+              @if (errorCampo('code'); as texto) {
+                <span id="fmt-codigo-error" class="fmt-error" role="alert">{{ texto }}</span>
+              }
+            </div>
+
+            <div class="fmt-campo">
+              <label for="fmt-nombre">Nombre</label>
+              <input
+                id="fmt-nombre"
+                type="text"
+                formControlName="name"
+                maxlength="200"
+                autocomplete="off"
+                [attr.aria-describedby]="errorCampo('name') ? 'fmt-nombre-error' : null"
+                [attr.aria-invalid]="errorCampo('name') ? true : null"
+                [attr.aria-errormessage]="errorCampo('name') ? 'fmt-nombre-error' : null"
+              />
+              @if (errorCampo('name'); as texto) {
+                <span id="fmt-nombre-error" class="fmt-error" role="alert">{{ texto }}</span>
+              }
+            </div>
+
+            <div class="fmt-campo">
+              <label for="fmt-archivo">Archivo (.docx, opcional)</label>
+              <input
+                id="fmt-archivo"
+                type="file"
+                accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                [attr.aria-describedby]="errorArchivoNuevo() ? 'fmt-archivo-error' : null"
+                [attr.aria-invalid]="errorArchivoNuevo() ? true : null"
+                [attr.aria-errormessage]="errorArchivoNuevo() ? 'fmt-archivo-error' : null"
+                (change)="onArchivoNuevo($event)"
+              />
+              @if (errorArchivoNuevo(); as texto) {
+                <span id="fmt-archivo-error" class="fmt-error" role="alert">{{ texto }}</span>
+              }
+            </div>
+
+            @if (errorFormulario(); as texto) {
+              <p id="fmt-formulario-error" class="fmt-error" role="alert">{{ texto }}</p>
+            }
+
+            <div class="fmt-formulario__acciones">
+              <button type="button" class="fmt-boton fmt-boton--secundario" (click)="cancelar()">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="fmt-boton fmt-boton--principal"
+                [disabled]="guardando()"
+                [attr.aria-describedby]="errorFormulario() ? 'fmt-formulario-error' : null"
+              >
+                {{ guardando() ? 'Guardando…' : 'Guardar formato' }}
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    }
+  }
+</div>

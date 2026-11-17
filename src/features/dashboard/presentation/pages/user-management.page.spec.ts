@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -120,6 +121,20 @@ describe('UserManagementPage', () => {
     fixture = TestBed.createComponent(UserManagementPage);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
+
+  it('F08 D2: muestra Usuarios · Formatos con Usuarios activo y Formatos navega a su ruta', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const grupo = el.querySelector('[aria-label="Secciones de Configuración"]') as HTMLElement;
+    expect(grupo).not.toBeNull();
+    const botones = Array.from(grupo.querySelectorAll('button'));
+    const usuarios = botones.find((b) => b.textContent?.trim() === 'Usuarios') as HTMLButtonElement;
+    const formatos = botones.find((b) => b.textContent?.trim() === 'Formatos') as HTMLButtonElement;
+    expect(usuarios.getAttribute('aria-pressed')).toBe('true');
+    expect(formatos.getAttribute('aria-pressed')).toBe('false');
+    const navegar = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    formatos.click();
+    expect(navegar).toHaveBeenCalledOnceWith(['/configuracion', 'formatos']);
   });
 
   it('debe inicializarse y cargar los usuarios categorizados', () => {
