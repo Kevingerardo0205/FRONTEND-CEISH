@@ -287,8 +287,34 @@ export class ProtocoloService extends BaseApiService {
     );
   }
 
+  /** Mis protocolos con respaldo: si falla, avisa con un snackbar y devuelve []. */
   misProtocolos(): Observable<ProtocoloResumen[]> {
-    return this.get<ApiEnvelope<RawBackendProtocol[]> | RawBackendProtocol[]>(
+    return this.obtenerMisProtocolos().pipe(
+      catchError((err) => {
+        console.error(
+          '[ProtocoloService] Error crítico al obtener mis-protocolos desde la base de datos:',
+          err,
+        );
+        this.snackBar.open(
+          '⚠️ Error de conexión con la base de datos al cargar sus protocolos.',
+          'Entendido',
+          {
+            duration: 5000,
+            panelClass: ['snackbar-error'],
+          },
+        );
+        return of([]);
+      }),
+    );
+  }
+
+  /**
+   * Mis protocolos sin respaldo (F09 D18, C4): propaga el error con su `status` para distinguir
+   * la falta de conexión o un 5xx de los demás casos. Usa `apiClient.get` directo porque
+   * `BaseApiService.handleError` cambia el error por un `Error` sin `status`.
+   */
+  obtenerMisProtocolos(): Observable<ProtocoloResumen[]> {
+    return this.apiClient.get<ApiEnvelope<RawBackendProtocol[]> | RawBackendProtocol[]>(
       `${ENDPOINTS.PROTOCOLS.BASE}/mis-protocolos?limit=100`,
     ).pipe(
       map((res) => {
@@ -327,21 +353,6 @@ export class ProtocoloService extends BaseApiService {
           timelineTermsAcceptedIp: p.timelineTermsAcceptedIp || null,
           versionNumber: p.versionNumber || p.version || 1,
         })) as ProtocoloResumen[];
-      }),
-      catchError((err) => {
-        console.error(
-          '[ProtocoloService] Error crítico al obtener mis-protocolos desde la base de datos:',
-          err,
-        );
-        this.snackBar.open(
-          '⚠️ Error de conexión con la base de datos al cargar sus protocolos.',
-          'Entendido',
-          {
-            duration: 5000,
-            panelClass: ['snackbar-error'],
-          },
-        );
-        return of([]);
       }),
     );
   }

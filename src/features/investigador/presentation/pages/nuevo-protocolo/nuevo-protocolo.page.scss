@@ -537,9 +537,10 @@
 
 /* ---------- Paso 2 (Documentos): diseño D16, CSS propio con tokens de F00 ---------- */
 
-/* Debajo del subtítulo de PageHeader */
+/* Debajo del subtítulo de PageHeader, dentro de .cabecera con la región viva (D19): vacía no
+   ocupa lugar ni suma el espacio entre bloques de .nuevo-protocolo */
 .progreso-texto {
-  margin: -0.5rem 0 1rem;
+  margin: 1rem 0;
   font-size: 13px;
   color: var(--c-text-2);
 }
@@ -706,5 +707,97 @@
 }
 
 .envio-motivo--completo {
+  color: var(--tone-verde-fg);
+}
+
+/* ---------- Paso 3 (Enviar a la Secretaría): D17, CSS propio con tokens de F00 ---------- */
+
+.step-content--envio {
+  padding: 0;
+}
+
+/* La misma tarjeta de los pasos 1 y 2 (D15, D16) */
+.envio-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+}
+
+.envio-card__titulo {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--c-text);
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.envio-card__texto {
+  margin: 0;
+  color: var(--c-text-2);
+}
+
+.envio-card__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Botón secundario: blanco con borde y texto --c-primary (como Cambiar, D16) */
+.atras-btn {
+  min-height: var(--min-h-action);
+  padding: 0 22px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--c-primary);
+  background: var(--c-surface);
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    color: color-mix(in srgb, var(--c-primary) 60%, var(--c-surface));
+    border-color: color-mix(in srgb, var(--c-primary) 60%, var(--c-surface));
+    cursor: default;
+  }
+}
+
+.envio-card__error {
+  margin: 0;
+  font-size: 0.875rem;
+  // --tone-rojo-fg sobre --c-surface.
+  color: var(--tone-rojo-fg);
+}
+
+.envio-exito {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  color: var(--tone-verde-fg);
+  background: var(--tone-verde-bg);
+  border-radius: 12px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.envio-exito__enlace {
+  justify-self: start;
+  margin-top: 4px;
+  font-weight: 700;
   color: var(--tone-verde-fg);
 }

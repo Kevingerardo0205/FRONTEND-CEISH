@@ -12,16 +12,26 @@
     </ol>
   </nav>
 
-  <app-page-header
-    heading="Nuevo protocolo"
-    [subtitle]="pasoActual === 0 ? subtituloDatos : subtituloDocumentos"
-  ></app-page-header>
-  <p *ngIf="pasoActual === 1 && listaConDocumentos" class="progreso-texto">
-    Progreso de carga: {{ documentosPresentados }} de {{ totalDocumentos }} documentos presentados.
-  </p>
+  <div class="cabecera">
+    <app-page-header heading="Nuevo protocolo" [subtitle]="subtitulo"></app-page-header>
+    <!-- Región viva del progreso (D19): existe siempre; el texto se inserta dentro en el paso 2 -->
+    <div class="progreso-region" aria-live="polite">
+      <p *ngIf="pasoActual === 1 && listaConDocumentos" class="progreso-texto">
+        Progreso de carga: {{ documentosPresentados }} de {{ totalDocumentos }} documentos
+        presentados.
+      </p>
+    </div>
+  </div>
+
+  <!-- D18: el borrador no se pudo comprobar (sin conexión o 5xx); sin barra ni tarjetas -->
+  <app-error-state
+    *ngIf="borradorSinCargar !== null"
+    message="No se pudo cargar el borrador. Revise su conexión e intente de nuevo."
+    (retry)="reintentarBorrador()"
+  ></app-error-state>
 
   <!-- Barra de pasos propia (D15): mat-stepper sigue por dentro con su cabecera oculta -->
-  <ol class="pasos" aria-label="Pasos">
+  <ol *ngIf="borradorSinCargar === null" class="pasos" aria-label="Pasos">
     <li
       *ngFor="let paso of pasos; let i = index"
       class="pasos__item"
@@ -30,11 +40,15 @@
       [attr.aria-current]="i === pasoActual ? 'step' : null"
     >
       <span class="pasos__barra" aria-hidden="true"></span>
-      <span class="pasos__etiqueta">{{ paso }}</span>
+      <!-- El estado de cada paso se dice con texto oculto (D19) -->
+      <span class="pasos__etiqueta"
+        >{{ paso }}<span class="visually-hidden">, {{ estadoPaso(i) }}</span></span
+      >
     </li>
   </ol>
 
   <mat-stepper
+    *ngIf="borradorSinCargar === null"
     [linear]="true"
     #stepper
     class="custom-stepper animate-fade-in"
@@ -330,6 +344,7 @@
           </ng-container>
         </div>
 
+        <!-- D17: sin Atrás a la izquierda; el envío está en el paso 3 -->
         <div class="step-actions">
           <p
             *ngIf="listaConDocumentos"
@@ -342,20 +357,61 @@
           <button
             mat-flat-button
             type="button"
-            class="next-btn submit-btn"
+            class="next-btn siguiente-btn"
             [disabled]="envioDeshabilitado"
             [attr.aria-describedby]="listaConDocumentos ? 'np-envio-motivo' : null"
-            (click)="onEnviarFinal()"
+            (click)="siguientePaso()"
           >
-            <span *ngIf="!isLoading">Enviar a la Secretaría</span>
-            <mat-progress-spinner
-              *ngIf="isLoading"
-              diameter="24"
-              mode="indeterminate"
-              aria-label="Enviando"
-            ></mat-progress-spinner>
+            Siguiente paso
           </button>
         </div>
+      </div>
+    </mat-step>
+
+    <!-- PASO 3: ENVIAR A LA SECRETARÍA (D17) -->
+    <mat-step>
+      <ng-template matStepLabel>{{ pasos[2] }}</ng-template>
+      <div class="step-content step-content--envio">
+        <section class="envio-card" aria-label="Enviar a la Secretaría">
+          <h2 #tituloEnvio class="envio-card__titulo" tabindex="-1">Enviar a la Secretaría</h2>
+          <p class="envio-card__texto">{{ textoEnvio }}</p>
+
+          <div class="envio-card__acciones">
+            <button
+              type="button"
+              class="atras-btn"
+              [disabled]="accionesEnvioDeshabilitadas"
+              (click)="volverADocumentos()"
+            >
+              Atrás
+            </button>
+            <button
+              mat-flat-button
+              type="button"
+              class="next-btn submit-btn"
+              [disabled]="accionesEnvioDeshabilitadas || envioDeshabilitado"
+              (click)="onEnviarFinal()"
+            >
+              {{ enviando ? 'Enviando…' : 'Enviar a la Secretaría' }}
+            </button>
+          </div>
+
+          <!-- Mensaje del backend solo como texto (sin innerHTML) -->
+          <p *ngIf="errorEnvio" class="envio-card__error" role="alert">{{ errorEnvio }}</p>
+
+          <!-- El contenedor existe siempre; el aviso de éxito se inserta dentro -->
+          <div class="envio-exito-region" role="status">
+            <div *ngIf="enviado" class="envio-exito">
+              <p class="envio-exito__titulo"><strong>Protocolo enviado a la Secretaría.</strong></p>
+              <p class="envio-exito__texto">
+                Le llegará un correo del CEISH con el resultado de la revisión.
+              </p>
+              <a class="envio-exito__enlace" routerLink="/dashboard/investigador/mis-protocolos"
+                >Ir a Mis protocolos</a
+              >
+            </div>
+          </div>
+        </section>
       </div>
     </mat-step>
   </mat-stepper>
