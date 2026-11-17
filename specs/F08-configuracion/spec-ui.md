@@ -1,8 +1,9 @@
 # F08 · Configuración — spec-ui
 
-**Versión:** 0.1 · **Fecha:** 17/11/2026 · **Rama:** `feat/f08-cf1-formatos`
+**Versión:** 0.2 · **Fecha:** 17/11/2026 · **Rama:** `feat/f08-cf1-formatos`
 **Historial:**
 - 0.1 (17/11/2026) Paso 0 de CF1 (frontend `dev` `685914a`, con C5 de F09 mergeada; backend en solo lectura, `dev` `e0c5dec`, leído con `git show dev:<ruta>`) y decisiones de la usuaria del 17/11/2026: D1 (ruta `/configuracion/formatos` y la vieja redirige), D2 (`ButtonGroup` `Usuarios · Formatos`), D3 (nombre y subtítulo), D4 (lista de formatos), D5 (subir o cambiar el archivo), D6 (descargar con la función compartida), D7 (nuevo formato y código repetido), D8 (lo que se quita), D9 (la descarga de `subsanacion`), D10 (lo que espera al backend). La tarea CF1 venía anotada en `specs/F09-investigador-borrador-envio/tasks.md` (Paso 0 de C5) y pasa a esta spec.
+- 0.2 (17/11/2026) CF1 hecha. Ajustes del `code-review` dentro de D2, D5 y D7: el botón de secciones vuelve a la página abierta si la navegación no se completa; después de subir o crear, la fila cambia en la lista a la vista antes de la recarga; el cursor del código no se mueve al pasar a mayúsculas.
 
 **Cubre:** la sección `Configuración` de la Secretaría (`specs/README.md` §4, F08): por ahora solo `Formatos` (CF1). Plazos y reportes quedan para otras tareas de F08.
 **Depende de:** F00 (tokens, `AppShell`, `PageHeader`, `ButtonGroup`, `StatusChip`, estados) y F10 (menú por rol: `Configuración` ya está en el menú de la SECRETARIA).
