@@ -38,15 +38,8 @@ export const DASHBOARD_ROUTES: Routes = [
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['SECRETARIA'], permissions: ['CONFIG_PLANTILLAS'] },
   },
-  {
-    path: 'admin/templates',
-    loadComponent: () =>
-      import('./presentation/pages/template-management/template-management.page').then(
-        (m) => m.TemplateManagementPage,
-      ),
-    canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['SECRETARIA'], permissions: ['CONFIG_PLANTILLAS'] },
-  },
+  // F08 D1 (CF1): Formatos pasó a /configuracion/formatos.
+  { path: 'admin/templates', redirectTo: '/configuracion/formatos' },
   {
     path: 'protocols',
     loadChildren: () => import('@features/protocols/routes').then((m) => m.PROTOCOL_ROUTES),

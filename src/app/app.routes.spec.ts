@@ -569,7 +569,8 @@ describe('Rutas por rol activo (T13d)', () => {
 
     it('cada ruta nueva usa loadComponent y no component', () => {
       const pages = leaves(SECRETARIA_ROUTES);
-      expect(pages.length).toBe(6);
+      // F08 D1: configuracion tiene usuarios y formatos.
+      expect(pages.length).toBe(7);
       for (const page of pages) {
         expect(page.loadComponent).withContext(String(page.path)).toBeDefined();
         expect(page.component).withContext(String(page.path)).toBeUndefined();
@@ -606,6 +607,47 @@ describe('Rutas por rol activo (T13d)', () => {
 
       expect(router.url).toBe('/configuracion/usuarios');
       expect(has('app-shell')).toBeTrue();
+    });
+  });
+
+  describe('F08 D1: /configuracion/formatos', () => {
+    const formatos = () =>
+      SECRETARIA_ROUTES.find((r) => r.path === 'configuracion')?.children?.find(
+        (r) => r.path === 'formatos',
+      );
+
+    it('exige SECRETARIA y CONFIG_PLANTILLAS con RoleGuard y AuthGuard', () => {
+      const ruta = formatos();
+      expect(ruta?.loadComponent).toBeDefined();
+      expect(ruta?.data).toEqual({ roles: ['SECRETARIA'], permissions: ['CONFIG_PLANTILLAS'] });
+      expect(ruta?.canActivate).toEqual([RoleGuard, AuthGuard]);
+    });
+
+    it('la SECRETARIA con CONFIG_PLANTILLAS entra a Formatos', async () => {
+      await start(['SECRETARIA'], undefined, ['CONFIG_PLANTILLAS']);
+
+      await harness.navigateByUrl('/configuracion/formatos');
+
+      expect(router.url).toBe('/configuracion/formatos');
+      expect(has('app-template-management')).toBeTrue();
+    });
+
+    it('la SECRETARIA sin CONFIG_PLANTILLAS (solo USUARIOS_VER) no entra', async () => {
+      await start(['SECRETARIA'], undefined, ['USUARIOS_VER']);
+
+      await harness.navigateByUrl('/configuracion/formatos');
+
+      expect(router.url).not.toBe('/configuracion/formatos');
+      expect(has('app-template-management')).toBeFalse();
+    });
+
+    it('/dashboard/admin/templates lleva a /configuracion/formatos', async () => {
+      await start(['SECRETARIA'], undefined, ['CONFIG_PLANTILLAS']);
+
+      await harness.navigateByUrl('/dashboard/admin/templates');
+
+      expect(router.url).toBe('/configuracion/formatos');
+      expect(has('app-template-management')).toBeTrue();
     });
   });
 });

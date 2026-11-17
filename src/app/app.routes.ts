@@ -66,6 +66,16 @@ export const SECRETARIA_ROUTES: Routes = [
         canActivate: [RoleGuard, AuthGuard],
         data: { roles: ['SECRETARIA'], permissions: ['USUARIOS_VER'] },
       },
+      {
+        // F08 D1 (CF1): Formatos; /dashboard/admin/templates redirige aquí.
+        path: 'formatos',
+        loadComponent: () =>
+          import(
+            '@features/dashboard/presentation/pages/template-management/template-management.page'
+          ).then((m) => m.TemplateManagementPage),
+        canActivate: [RoleGuard, AuthGuard],
+        data: { roles: ['SECRETARIA'], permissions: ['CONFIG_PLANTILLAS'] },
+      },
     ],
   },
   {

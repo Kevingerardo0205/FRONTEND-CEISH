@@ -87,7 +87,7 @@ describe('Route role codes (T13a)', () => {
       'protocols|workspace/:id/validation': ['SECRETARIA', 'INVESTIGADOR'],
       'protocols|workspace/:id/follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
       'dashboard|admin/users': ['SECRETARIA'],
-      'dashboard|admin/templates': ['SECRETARIA'],
+      // F08 D1: admin/templates es un redirect a /configuracion/formatos (app.routes.spec.ts).
       'dashboard|admin/ai-assistant': ['SECRETARIA'],
       'dashboard|audit': ['SECRETARIA', 'PRESIDENTE'],
     };

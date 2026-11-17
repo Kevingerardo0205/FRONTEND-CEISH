@@ -19,7 +19,6 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 
-import { environment } from 'src/environments/environment';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { LoadSubsanacionDetailUseCase } from '../../../application/load-subsanacion-detail.use-case';
 import { UploadCorrectionUseCase } from '../../../application/upload-correction.use-case';
@@ -31,6 +30,7 @@ import { ProtocoloService } from '@features/investigador/application/services/pr
 import { LoadReceptionProtocolsUseCase } from '@features/protocols/application/use-cases/load-reception-protocols.use-case';
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
+import { abrirEnPestana } from '@shared/utils/descarga-en-pestana.util';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 import {
@@ -498,10 +498,18 @@ interface ProtocolDocument {
                     <mat-icon class="open-icon" style="align-self: center;">open_in_new</mat-icon>
                   </div>
 
-                  <div class="ev-doc-link" (click)="downloadResponseTemplate()">
+                  <!-- F08 D9: botón con la descarga compartida (pestaña abierta en el clic) -->
+                  <button
+                    type="button"
+                    class="ev-doc-link ev-doc-link--boton"
+                    [disabled]="descargandoFormato()"
+                    [attr.aria-describedby]="errorFormato() ? 'sub-formato-error' : null"
+                    (click)="downloadResponseTemplate()"
+                  >
                     <mat-icon
                       class="text-primary"
                       style="color: #0284c7 !important; margin-top: 2px;"
+                      aria-hidden="true"
                       >description</mat-icon
                     >
                     <div class="d-flex flex-column align-items-start" style="flex: 1;">
@@ -511,12 +519,20 @@ interface ProtocolDocument {
                       <span
                         class="text-muted small"
                         style="font-size: 11px; margin-top: 2px; text-align: left;"
-                        >Descargue la plantilla de Word (DOCX) obligatoria para responder punto por
-                        punto a las observaciones.</span
+                        >{{
+                          descargandoFormato()
+                            ? 'Descargando…'
+                            : 'Descargue la plantilla de Word (DOCX) obligatoria para responder punto por punto a las observaciones.'
+                        }}</span
                       >
                     </div>
-                    <mat-icon class="open-icon" style="align-self: center;">download</mat-icon>
-                  </div>
+                    <mat-icon class="open-icon" style="align-self: center;" aria-hidden="true"
+                      >download</mat-icon
+                    >
+                  </button>
+                  @if (errorFormato(); as texto) {
+                    <p id="sub-formato-error" class="ev-doc-error" role="alert">{{ texto }}</p>
+                  }
                 </div>
               </div>
             </div>
@@ -984,6 +1000,30 @@ interface ProtocolDocument {
         gap: 6px;
         padding: 4px 0;
       }
+      /* F08 D9: el formato de respuesta es un botón; sin estilos del navegador */
+      .ev-doc-link--boton {
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        background: none;
+        border: 0;
+        border-bottom: 1px solid var(--c-border);
+
+        &:focus-visible {
+          outline: 2px solid var(--c-primary);
+          outline-offset: 2px;
+        }
+
+        &:disabled {
+          cursor: default;
+        }
+      }
+      .ev-doc-error {
+        margin: 4px 12px 0;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--tone-rojo-fg);
+      }
       .ev-doc-link {
         display: flex;
         align-items: flex-start;
@@ -1440,25 +1480,24 @@ export class SubsanacionPage implements OnInit {
     });
   }
 
-  downloadResponseTemplate() {
-    this.downloadTemplateUC.execute('RESPUESTA_OBSERVACIONES').subscribe({
-      next: (res) => {
-        if (res && res.downloadUrl) {
-          window.open(res.downloadUrl, '_blank');
-        } else {
-          window.open(
-            `${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`,
-            '_blank',
-          );
-        }
-      },
-      error: (err) => {
-        console.warn('Error downloading template via repository, trying direct fallback:', err);
-        window.open(
-          `${environment.apiUrl}/documents/templates/RESPUESTA_OBSERVACIONES/download`,
-          '_blank',
+  /** F08 D9: misma descarga que Formatos (D6), sin abrir el backend sin la sesión. */
+  readonly descargandoFormato = signal(false);
+  readonly errorFormato = signal<string | null>(null);
+
+  downloadResponseTemplate(): void {
+    if (this.descargandoFormato()) return;
+    this.errorFormato.set(null);
+    this.descargandoFormato.set(true);
+    abrirEnPestana(() => this.downloadTemplateUC.execute('RESPUESTA_OBSERVACIONES'))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((resultado) => {
+        this.descargandoFormato.set(false);
+        if (resultado === 'abierta') return;
+        this.errorFormato.set(
+          resultado === 'no-disponible'
+            ? 'Este formato no está disponible.'
+            : 'No pudimos descargar el formato. Intente de nuevo.',
         );
-      },
-    });
+      });
   }
 }

@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { StatCardComponent } from '../components/stat-card/stat-card.component';
 import { UserTableComponent } from '../components/user-table/user-table.component';
 import { UserRegistrationFormComponent } from '../components/user-form/user-form.component';
+import { ConfigSeccionesComponent } from '../components/config-secciones/config-secciones.component';
 import {
   GetUsersAdminUseCase,
   RegisterUserAdminUseCase,
@@ -32,9 +33,12 @@ import { SuspendRoleDialogComponent } from '../components/suspend-role-dialog/su
     StatCardComponent,
     UserTableComponent,
     UserRegistrationFormComponent,
+    ConfigSeccionesComponent,
   ],
   template: `
     <div class="dashboard-admin-container animate-fade-in">
+      <!-- F08 D2: secciones de Configuración -->
+      <app-config-secciones activa="usuarios" />
       <header class="main-header">
         <div class="header-info">
           <div class="breadcrumb-chip">Administración / Usuarios</div>

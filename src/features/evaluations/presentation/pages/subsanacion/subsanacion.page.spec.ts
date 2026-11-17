@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SubsanacionPage } from './subsanacion.page';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { of } from 'rxjs';
+import { Subject, defer, of, throwError } from 'rxjs';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
@@ -233,6 +233,84 @@ describe('SubsanacionPage', () => {
 
       expect(component.pendingRequirementsCount()).toBe(0);
       expect(component.isReadyToSubmit()).toBeTrue();
+    });
+  });
+
+  describe('F08 D9: Formato de Respuestas a Evaluadores con la descarga compartida', () => {
+    const URL_BUENA = 'https://zz-test.invalid/formatos/zz-test.docx';
+    let orden: string[];
+    let pestana: { opener: unknown; location: { href: string }; close: jasmine.Spy };
+    let abrirSpy: jasmine.Spy;
+    let downloadTemplate: jasmine.Spy;
+
+    beforeEach(() => {
+      orden = [];
+      pestana = { opener: {}, location: { href: '' }, close: jasmine.createSpy('close') };
+      abrirSpy = spyOn(window, 'open').and.callFake(() => {
+        orden.push('abrir');
+        return pestana as unknown as Window;
+      });
+      downloadTemplate = jasmine.createSpy('downloadTemplate').and.callFake(() =>
+        defer(() => {
+          orden.push('pedir');
+          return of({ downloadUrl: URL_BUENA });
+        }),
+      );
+      (mockDocumentRepo as unknown as { downloadTemplate: jasmine.Spy }).downloadTemplate =
+        downloadTemplate;
+      fixture.detectChanges();
+    });
+
+    const el = () => fixture.nativeElement as HTMLElement;
+    const botonFormato = () =>
+      Array.from(el().querySelectorAll('.ev-doc-link')).find((e) =>
+        e.textContent?.includes('Formato de Respuestas a Evaluadores'),
+      ) as HTMLElement;
+    const alerta = () => el().querySelector('#sub-formato-error') as HTMLElement | null;
+
+    it('es un <button type="button">', () => {
+      const b = botonFormato();
+      expect(b).toBeDefined();
+      expect(b.tagName).toBe('BUTTON');
+      expect(b.getAttribute('type')).toBe('button');
+    });
+
+    it('abre la pestaña antes de pedir la URL, sin opener, y nunca abre el backend sin la sesión', () => {
+      botonFormato().click();
+      fixture.detectChanges();
+      expect(orden).toEqual(['abrir', 'pedir']);
+      expect(abrirSpy).toHaveBeenCalledOnceWith('', '_blank');
+      expect(downloadTemplate).toHaveBeenCalledOnceWith('RESPUESTA_OBSERVACIONES');
+      expect(pestana.opener).toBeNull();
+      expect(pestana.location.href).toBe(URL_BUENA);
+      expect(alerta()).toBeNull();
+    });
+
+    it('Descargando… y deshabilitado mientras espera', () => {
+      downloadTemplate.and.returnValue(new Subject());
+      botonFormato().click();
+      fixture.detectChanges();
+      expect((botonFormato() as HTMLButtonElement).disabled).toBeTrue();
+      expect(botonFormato().textContent).toContain('Descargando…');
+    });
+
+    it('404: el error va en la tarjeta, unido al botón, y la pestaña se cierra', () => {
+      downloadTemplate.and.returnValue(throwError(() => ({ status: 404 })));
+      botonFormato().click();
+      fixture.detectChanges();
+      expect(pestana.close).toHaveBeenCalledTimes(1);
+      expect(alerta()?.textContent?.trim()).toBe('Este formato no está disponible.');
+      expect(alerta()?.getAttribute('role')).toBe('alert');
+      expect(botonFormato().getAttribute('aria-describedby')).toBe('sub-formato-error');
+      expect(abrirSpy.calls.allArgs().every(([url]) => url === '')).toBeTrue();
+    });
+
+    it('otro error: No pudimos descargar el formato. y ningún window.open al backend', () => {
+      downloadTemplate.and.returnValue(throwError(() => ({ status: 500 })));
+      botonFormato().click();
+      fixture.detectChanges();
+      expect(alerta()?.textContent?.trim()).toBe('No pudimos descargar el formato. Intente de nuevo.');
+      expect(abrirSpy).toHaveBeenCalledOnceWith('', '_blank');
     });
   });
 });
