@@ -1,6 +1,6 @@
 # F00 · Base del rediseño — spec-ui
 
-**Versión:** 0.8 · **Fecha:** 17/11/2026 · **Rama:** `feat/f00-ep1-encabezado-protocolo`
+**Versión:** 0.9 · **Fecha:** 17/11/2026 · **Rama:** `feat/f00-sh1-margen-movil`
 **Cubre:** spec-001 RF-EST.1, RF-EST.2, RF-EST.3 y HU-001 (roles fijos) · spec-003 RF-ALR.f (solo la entrada del menú)
 **Actualización 31/10/2026:** F00b se limita al módulo de la SECRETARIA (decisiones D1, D3, D4, D6 y D7).
 **Actualización 10/11/2026 (v0.3):** el menú lateral de los 4 roles se define en F10 (`specs/F10-menu-por-rol/`). D1, §2, §4 y §10 remiten a F10.
@@ -9,6 +9,7 @@
 **Actualización 13/11/2026 (v0.6):** las partes T10-5b, T10-5c y T10-5d se unen en una sola tarea, T10-5b (F10 D16 (11)): PRESIDENTE, EVALUADOR e INVESTIGADOR pasan al AppShell y se borra `DashboardPage` en la misma tarea. Cambian D1, D9 (rutas), D14, §2 y §4. Cambian D1, D9 (rutas), D14, §2 (selector) y §4 (armazón).
 **Actualización 14/11/2026 (v0.7):** §2 con la regla de negocio de F10 D17 (1): INVESTIGADOR es exclusivo; la única cuenta con dos roles posible hoy es PRESIDENTE + EVALUADOR.
 **Actualización 17/11/2026 (v0.8, EP1):** Paso 0 de EP1 (frontend `dev` `2b9b451`; backend en solo lectura, `dev` `2d5cc0a`) y decisiones de la usuaria del 17/11/2026. §5: nuevo `ProtocolHeader` (encabezado del protocolo con las 6 etapas, para todas las pantallas de un protocolo y los 4 roles) y `StageBar` rediseñado según el canvas (barras, texto oculto con el estado de cada etapa, sin desplazamiento horizontal). §8 y §10 con los datos que faltan en `GET /protocols/:id`. Criterios 9 a 11. La adopción en el espacio del protocolo está en F10 D18.
+**Actualización 17/11/2026 (v0.9, SH1):** §3 con el token `--shell-gutter` y §4 con D16, el margen lateral del contenido del AppShell según el ancho de la ventana (decisión de la usuaria; hallazgo de C5: con 2.5rem fijo, a 320 px el contenido quedaba en 240 px). Criterio 12.
 
 ---
 
@@ -74,6 +75,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 | Tipografía | Roboto (contenido) · Outfit (menú) | |
 | Radios | 10 px (controles) · 16 px (tarjetas) | |
 | Alto mínimo | 44 px en botones de acción · 40 px en filtros y botones de grupo | Accesibilidad |
+| `--shell-gutter` | 2.5rem desde 1024 px · 1.5rem de 600 a 1023 px · 16 px por debajo de 600 px | Margen lateral del contenido del AppShell (D16 de F00, SH1) |
 
 ## 4. Armazón (AppShell)
 
@@ -85,6 +87,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 - **F10 (10/11/2026):** las opciones de los 4 roles, la regla "ninguna opción lleva a una página que no existe", los íconos decorativos y "Cerrar sesión" en gris están en `specs/F10-menu-por-rol/spec-ui.md`. La Secretaría conserva estas 5 entradas (D1 de F10).
 - **D7 (31/10/2026):** la búsqueda global se oculta hasta que exista el endpoint; la campana lleva a `notifications/center`, y el contador de no leídas solo se muestra cuando ya exista una fuente. Se implementa en T13b.
 - **Aspecto (13/11/2026, F10 D16):** el armazón toma el aspecto del marco del Investigador: menú de 280 px, barra superior de 64 px con el botón del menú, "Panel de Gestión" con la fecha, la campana (D7) y el avatar cuadrado sin nombre; la marca es solo el texto "CEISH Espoch". El detalle está en F10 D16. Sigue sin búsqueda (D7).
+- **D16 — Margen lateral del contenido (SH1, 17/11/2026, decisión de la usuaria; no es la D16 de F10).** El contenido (`.shell-content`) deja a cada lado el token `--shell-gutter`: 2.5rem desde 1024 px, 1.5rem entre 600 y 1023 px y 16 px por debajo de 600 px (la regla general de las páginas: 16 px de margen en celular, sin desplazamiento horizontal). Los cortes son de la ventana, como el del menú (F10 D16 (7)). El margen vertical sigue en 2.5rem. El menú (280 px) y la barra superior (64 px, con su propio margen) no cambian.
 
 ## 5. Componentes compartidos
 
@@ -171,6 +174,7 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 9. `StageBar`: cada etapa tiene su barra y su nombre; solo la actual lleva `aria-current="step"`; el texto oculto dice "completada", "etapa actual" o "pendiente"; las terminadas muestran "✓". A 320 px la barra va en 2×3 y por debajo de 768 px en 3×2, sin desplazamiento horizontal (EP1).
 10. `ProtocolHeader`: sin código ni versión no hay chip neutro; sin estado no hay chip de estado; un dato sin valor no aparece en la línea de datos y, si no hay ninguno, la línea no existe; sin etapa no hay barra; la acción proyectada en `[protocolHeaderAction]` aparece a la derecha del título (EP1).
 11. La versión `"2.0"` se muestra como `v2`; si no se puede leer un número entero (por ejemplo `"2.5"`, vacío o ausente), no se muestra (EP1).
+12. El contenido del AppShell deja a cada lado 16 px a 320 y 599 px, 1.5rem (24 px) a 600 y 1023 px y 2.5rem (40 px) a 1024 px; a 320 px el AppShell no tiene desplazamiento horizontal; el menú mide 280 px y la barra 64 px en todos esos anchos (D16 de F00, SH1).
 
 ## 10. Pendientes
 

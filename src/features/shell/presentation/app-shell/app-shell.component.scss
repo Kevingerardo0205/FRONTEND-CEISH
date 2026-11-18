@@ -337,7 +337,8 @@
 
 .shell-content {
   flex: 1;
-  padding: 2.5rem;
+  // F00 D16 (SH1): el margen lateral depende de la ventana; el vertical sigue en 2.5rem.
+  padding: 2.5rem var(--shell-gutter);
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;

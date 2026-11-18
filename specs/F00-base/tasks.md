@@ -80,6 +80,29 @@ Rama de EP1: `feat/f00-ep1-encabezado-protocolo` (desde `dev` `2b9b451`). Spec: 
 - Datos del encabezado que faltan en el backend: investigador principal, nivel de riesgo, sesión y fecha (spec-ui §8).
 - Dos `GET /protocols/:id` por carga del espacio (plan §10).
 
+## Ajustes del AppShell (SH, desde el 17/11/2026)
+
+Rama de SH1: `feat/f00-sh1-margen-movil` (desde `dev` `d9728c4`). Spec: spec-ui §3 y §4 (v0.9, D16 de F00) y criterio 12.
+
+| # | Capa | Tarea | Archivos | Terminado cuando… | Estado |
+|---|---|---|---|---|---|
+| SH1 | shared + presentation | Margen lateral del contenido según la ventana (hallazgo de C5: 2.5rem fijo deja 240 px a 320 px): token `--shell-gutter` en `_tokens.scss` (2.5rem desde 1024 px, 1.5rem de 600 a 1023 px, 16 px por debajo de 600 px) y `.shell-content` lo usa; el margen vertical, el menú y la barra no cambian | `src/styles/_tokens.scss`, `features/shell/presentation/app-shell/app-shell.component.{scss,spec.ts}` | Criterio 12 de spec-ui; a 320, 599, 600, 1023 y 1024 px el margen es el esperado y a 320 px no hay desplazamiento horizontal; mutaciones M1 y M2 detectadas | Hecho (`5a34f61`) |
+
+**Resultados de SH1 (17/11/2026):**
+- Paso 0: el margen vivía solo en `.shell-content` (`padding: 2.5rem`, `app-shell.component.scss:338-345`); no había token de espaciado en `_tokens.scss`, por eso se creó `--shell-gutter`. Ninguna pantalla depende de ese margen: no hay márgenes laterales negativos ni `100vw` (solo `margin` verticales negativos en `reassignment.page.scss:79` y `mis-pendientes.page.scss:12`, y `max-width: calc(100vw - 2rem)` en `undo-toast`, que va fuera del contenido); `mis-protocolos` y el espacio del protocolo usan `max-width` solo como tope.
+- Línea base (`dev` `d9728c4`, archivos `base-*-20261117.txt`): 1464 pruebas; `tsc` de app y de spec con exit 0; `npx eslint src` con 0 errores y 68 avisos; build de producción con exit 0 y 19 avisos.
+- Después (dos vueltas iguales): **1475 pruebas** (+11 en `app-shell.component.spec.ts`: margen a 320, 599, 600, 1023 y 1024 px; menú de 280 px y barra de 64 px en esos anchos; sin desplazamiento horizontal a 320 px); `tsc` de app y de spec con exit 0; `npx eslint src` con 0 errores y 68 avisos (los `*.spec.ts` están fuera del lint por la configuración); build de producción con exit 0 y 19 avisos.
+- Las pruebas copian el AppShell ya dibujado y todas las reglas CSS de la página a un iframe del ancho pedido, para que las consultas `@media` se evalúen contra ese ancho (Karma tiene una sola ventana).
+- Mutaciones (revertidas copiando el archivo guardado y comprobadas con `cmp`; solo con `app-shell.component.spec.ts`):
+
+| Mutación | Qué se rompió | Pruebas que fallan | Tests |
+|---|---|---|---|
+| M1 | `.shell-content` vuelve a `padding: 2.5rem` (código anterior) | a 320, 599, 600 y 1023 px el contenido deja el margen esperado | 4 failed, 69 passed |
+| M2 | Sin el paso de 600 px (se quita `@media (max-width: 599.98px)` del token) | a 320 y 599 px el contenido deja 16 px | 2 failed, 71 passed |
+
+- Revisión impeccable (audit, sin cambios): sin colores nuevos ni valores fijos fuera del token. Notas, sin corregir porque quedan fuera de SH1: (1) de 600 a 1023 px la barra superior deja 16 px y el contenido 24 px, así que sus bordes izquierdos no se alinean (8 px); (2) el espacio del protocolo suma su propio relleno (`clamp(16px, 3vw, 24px)`, `protocol-workspace.component.ts:183-289`), así que a 320 px su encabezado queda en 256 px (antes 208 px).
+- Capturas a 320 px del espacio del protocolo y de Mis protocolos: NO EJECUTADO (el backend local no respondía en `localhost:3000` y sin inicio de sesión no se llega a esas pantallas). Lo que sí está medido: a 320 px el contenido mide 288 px; `mis-protocolos.page.spec.ts` ya comprueba que la página no se desborda a 240 px, y el `StageBar` de EP1 pasa a 2×3 por debajo de 400 px de barra.
+
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
