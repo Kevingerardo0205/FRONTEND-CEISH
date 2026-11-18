@@ -810,6 +810,86 @@ describe('AppShellComponent (T13b)', () => {
     });
   });
 
+  // SH1 (D16 de F00): los cortes son de la ventana. Karma tiene un solo tamaño de ventana, así que
+  // el AppShell ya dibujado se copia, con todas las hojas de estilo de la página, a un iframe del
+  // ancho pedido: ahí las consultas @media se evalúan contra ese ancho, como en el navegador.
+  describe('Margen lateral del contenido (SH1, D16 de F00)', () => {
+    const frames: HTMLIFrameElement[] = [];
+
+    afterEach(() => {
+      frames.splice(0).forEach((f) => f.remove());
+    });
+
+    async function renderAt(width: number): Promise<{ doc: Document; win: Window }> {
+      narrow$.next(width < 1024);
+      const shellFixture = TestBed.createComponent(AppShellComponent);
+      shellFixture.detectChanges();
+      await shellFixture.whenStable();
+      shellFixture.detectChanges();
+
+      const frame = document.createElement('iframe');
+      frame.style.cssText = `position:absolute;left:-10000px;top:0;border:0;width:${width}px;height:800px`;
+      document.body.appendChild(frame);
+      frames.push(frame);
+      const doc = frame.contentDocument as Document;
+      const win = frame.contentWindow as Window;
+
+      // Todas las reglas de la página (globales con los tokens y las del componente), estén en
+      // <style> o en <link>, se copian como texto: así no dependen de rutas relativas del iframe.
+      const css = Array.from(document.styleSheets)
+        .map((sheet) => Array.from(sheet.cssRules).map((rule) => rule.cssText).join('\n'))
+        .join('\n');
+      const style = doc.createElement('style');
+      style.textContent = css;
+      doc.head.appendChild(style);
+      doc.body.appendChild(doc.importNode(shellFixture.nativeElement as HTMLElement, true));
+      shellFixture.destroy();
+      return { doc, win };
+    }
+
+    function px(win: Window, el: Element | null, prop: 'paddingLeft' | 'paddingRight' | 'paddingTop' | 'width' | 'height'): number {
+      return parseFloat(win.getComputedStyle(el as Element)[prop]);
+    }
+
+    const casos: { width: number; gutter: number }[] = [
+      { width: 320, gutter: 16 },
+      { width: 599, gutter: 16 },
+      { width: 600, gutter: 24 },
+      { width: 1023, gutter: 24 },
+      { width: 1024, gutter: 40 },
+    ];
+
+    casos.forEach(({ width, gutter }) => {
+      it(`a ${width} px el contenido deja ${gutter} px a cada lado y el margen vertical sigue en 40 px`, async () => {
+        const { doc, win } = await renderAt(width);
+        const content = doc.querySelector('.shell-content');
+
+        expect(win.innerWidth).toBe(width);
+        expect(px(win, content, 'paddingLeft')).toBe(gutter);
+        expect(px(win, content, 'paddingRight')).toBe(gutter);
+        expect(px(win, content, 'paddingTop')).toBe(40);
+      });
+
+      it(`a ${width} px el menú mide 280 px y la barra 64 px`, async () => {
+        const { doc, win } = await renderAt(width);
+
+        expect(px(win, doc.querySelector('.shell-sidebar'), 'width')).toBe(280);
+        expect(px(win, doc.querySelector('.shell-topbar'), 'height')).toBe(64);
+        expect(px(win, doc.querySelector('.shell-topbar'), 'paddingLeft')).toBe(width < 1024 ? 16 : 40);
+      });
+    });
+
+    it('a 320 px el AppShell no tiene desplazamiento horizontal', async () => {
+      const { doc } = await renderAt(320);
+
+      for (const selector of ['.shell-main', '.shell-content', '.shell-topbar']) {
+        const el = doc.querySelector(selector) as HTMLElement;
+        expect(el.scrollWidth).withContext(selector).toBeLessThanOrEqual(el.clientWidth);
+      }
+      expect(doc.documentElement.scrollWidth).toBeLessThanOrEqual(doc.documentElement.clientWidth);
+    });
+  });
+
   describe('INVESTIGADOR sin verificar (F10 D9, trasladado del antiguo marco en T10-5a)', () => {
     it('muestra el aviso en lugar de sus opciones y conserva Cerrar sesión', () => {
       mockSessionUser.canEnterInvestigatorArea.and.returnValue(false);

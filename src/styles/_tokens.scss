@@ -37,4 +37,16 @@
   // Alturas mínimas (accesibilidad)
   --min-h-action: 44px;
   --min-h-filter: 40px;
+
+  // Margen lateral del contenido del AppShell (F00 D16, SH1): 2.5rem desde 1024 px,
+  // 1.5rem de 600 a 1023 px y 16 px por debajo de 600 px. Cortes de la ventana, como el del menú.
+  --shell-gutter: 2.5rem;
+
+  @media (max-width: 1023.98px) {
+    --shell-gutter: 1.5rem;
+  }
+
+  @media (max-width: 599.98px) {
+    --shell-gutter: 16px;
+  }
 }
