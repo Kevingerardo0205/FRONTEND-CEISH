@@ -1,4 +1,4 @@
-import { protocolVersionLabel } from './protocol-header';
+import { RISK_LEVEL_UNSET_LABEL, protocolVersionLabel, riskLevelFactValue } from './protocol-header';
 
 describe('protocolVersionLabel (F00 criterio 11)', () => {
   it('"2.0" se muestra como v2', () => {
@@ -16,5 +16,20 @@ describe('protocolVersionLabel (F00 criterio 11)', () => {
       expect(protocolVersionLabel(v)).withContext(JSON.stringify(v)).toBeNull();
     }
     expect(protocolVersionLabel(null)).toBeNull();
+  });
+});
+
+describe('riskLevelFactValue (F10 D19, excepción de F00 §5)', () => {
+  it('el nombre del nivel se muestra tal cual', () => {
+    expect(riskLevelFactValue('Riesgo mínimo')).toBe('Riesgo mínimo');
+  });
+
+  it('null es un estado real: «Sin fijar»', () => {
+    expect(RISK_LEVEL_UNSET_LABEL).toBe('Sin fijar');
+    expect(riskLevelFactValue(null)).toBe('Sin fijar');
+  });
+
+  it('sin la clave (undefined) el dato no sale', () => {
+    expect(riskLevelFactValue(undefined)).toBeNull();
   });
 });

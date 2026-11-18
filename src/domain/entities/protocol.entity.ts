@@ -7,10 +7,12 @@ export interface ProtocolEntity {
   code?: string;
   title: string;
   investigatorId: string;
+  /** Nombre del investigador principal (`principalInvestigator.fullName`); '' si no llega. */
   principalInvestigator?: string;
   type: ProtocolType;
   studyTypeCode?: string;
-  studyType?: { id: number; codigo: string; nombre: string };
+  /** Nombre del tipo de estudio: `GET /protocols/:id` lo manda como texto (F10 D19). */
+  studyType?: string | null;
   status: ProtocolStatus;
   statusId?: number;
   submissionDate?: Date;
@@ -20,7 +22,8 @@ export interface ProtocolEntity {
   deadline?: string | Date;
 
   // Campos Diferidos Adicionales
-  riskLevel?: { id: number; name: string; description?: string };
+  /** Nombre del nivel de riesgo; null = no fijado (F10 D19). */
+  riskLevel?: string | null;
   riskLevelId?: number;
   geographicCoverage?: string;
   studyDurationMonths?: number;

@@ -1,4 +1,3 @@
-import { StageCode } from '@domain/value-objects/stage.vo';
 import { estadoById, resolveEstado } from '@shared/utils/estado.resolver';
 
 /**
@@ -15,31 +14,12 @@ export function workspaceStatusCode(
 }
 
 /**
- * TEMPORAL (F10 D13, excepción a F00 §5): etapa de cada estado, copiada de la migración del backend
- * `1890000000000-AddEtapaOrdenToEstados` (por id, en el comentario), hasta que `GET /protocols/:id`
- * traiga `etapa` (TSK-F02-3). SEGUIMIENTO y RENOVACION no salen: el backend las decide con datos que
- * `GET /:id` no entrega.
+ * Estado de la etapa ASIGNACION para las acciones del espacio (F10 D13 y D15): «Asignar Pares» y el
+ * aviso de aceptación de tiempos siguen el estado canónico (D19). COMPLETO (10) es el único estado
+ * con etapa ASIGNACION en la migración `1890000000000-AddEtapaOrdenToEstados`.
  */
-const STAGE_BY_STATUS_CODE: Readonly<Record<string, StageCode>> = {
-  INICIADO: 'RECEPCION', // 9
-  INCOMPLETO: 'RECEPCION', // 11
-  ARCHIVADO_VENCIMIENTO: 'RECEPCION', // 12
-  EN_REVISION_SECRETARIA: 'RECEPCION', // 15
-  REQUIERE_SUBSANACION_DOC: 'RECEPCION', // 20
-  EN_CONTROL_DOCUMENTAL: 'RECEPCION', // 21
-  COMPLETO: 'ASIGNACION', // 10
-  EN_EVALUACION: 'EVALUACION', // 13
-  DISCREPANCIA_RIESGO: 'EVALUACION', // 16
-  EVALUADO: 'RESOLUCION', // 14
-  APROBADO: 'RESOLUCION', // 17
-  RECHAZADO: 'RESOLUCION', // 18
-  REQUIERE_SUBSANACION_VERSION: 'RESOLUCION', // 19
-  APROBADO_CON_CONDICION: 'RESOLUCION', // 25
-};
-
-/** Etapa del estado canónico (temporal, ver arriba). Sin estado reconocido: null (no hay barra, F02 §5.3). */
-export function workspaceStageCode(statusCode: string | null): StageCode | null {
-  return statusCode ? (STAGE_BY_STATUS_CODE[statusCode] ?? null) : null;
+export function isAssignmentStatus(statusCode: string | null): boolean {
+  return statusCode === 'COMPLETO';
 }
 
 export const UNKNOWN_STATUS_LABEL = 'Estado no reconocido';
