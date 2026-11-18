@@ -185,10 +185,42 @@ describe('NuevoProtocoloPage — cuerpo de POST /protocols', () => {
     });
   });
 
+  it('C6 (D30): no envía principalInvestigatorId; el backend lo toma del token (RF-02.9)', () => {
+    const body = enviarFormularioValido();
+    expect(Object.prototype.hasOwnProperty.call(body, 'principalInvestigatorId')).toBeFalse();
+  });
+
+  it('C6 (D30): el resto del cuerpo, isThesis incluido, sigue con las mismas claves', () => {
+    const body = enviarFormularioValido();
+    expect(Object.keys(body).sort()).toEqual(
+      [
+        'title',
+        'studyTypeId',
+        'geographicCoverage',
+        'studyDurationMonths',
+        'usesBiologicalSamples',
+        'isVulnerablePopulation',
+        'isIndigenousPopulation',
+        'isMulticentric',
+        'hasExternalInstitutions',
+        'isThesis',
+        'sponsorRuc',
+        'sponsorPhone',
+        'sponsorAddress',
+        'sponsorWeb',
+        'sponsorExecutingAgency',
+        'financingAmount',
+        'isAffidavitAccepted',
+        'investigators',
+        'institutions',
+      ].sort(),
+    );
+    expect(body['isThesis']).toBeFalse();
+  });
+
   it('envía los campos obligatorios del DTO con sus tipos', () => {
     const body = enviarFormularioValido();
     expect(body['title']).toBe('ZZ_TEST_ Protocolo de prueba sin nivel de riesgo');
-    expect(body['principalInvestigatorId']).toBe(30);
     expect(body['studyTypeId']).toBe(2);
     expect(body['isAffidavitAccepted']).toBeTrue();
     expect(body['usesBiologicalSamples']).toBeTrue();

@@ -56,7 +56,7 @@ export interface InstitucionParticipante {
  */
 export interface CrearProtocoloDto {
   title: string;
-  principalInvestigatorId: number;
+  // Sin principalInvestigatorId: el backend toma el investigador principal del token (F09 D30).
   studyTypeId: number;
   geographicCoverage: string;
   studyDurationMonths: number;

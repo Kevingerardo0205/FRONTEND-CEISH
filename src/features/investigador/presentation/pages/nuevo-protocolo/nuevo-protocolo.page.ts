@@ -34,7 +34,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ProtocoloService } from '../../../application/services/protocolo.service';
 import { CrearProtocoloDto, ChecklistRequirement } from '../../../domain/dtos/crear-protocolo.dto';
 import { sanitizeFilename } from '@domain/entities/storage.interface';
-import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { abrirEnPestana } from '@shared/utils/descarga-en-pestana.util';
 import { apiErrorStatus, extractApiErrorMessage } from '@shared/utils/api-error-message.util';
@@ -200,7 +199,6 @@ export class NuevoProtocoloPage implements OnInit {
 
   private readonly fb = inject(FormBuilder);
   private readonly protocoloService = inject(ProtocoloService);
-  private readonly authFacade = inject(AuthFacade);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -526,12 +524,10 @@ export class NuevoProtocoloPage implements OnInit {
     }
 
     this.isLoading = true;
-    const user = this.authFacade.currentUser();
     const formVal = this.generalForm.getRawValue();
 
     const payload: CrearProtocoloDto = {
       title: (formVal.titulo ?? '').trim(),
-      principalInvestigatorId: Number(user?.id),
       studyTypeId: Number(formVal.tipoEstudio),
       geographicCoverage: null as unknown as string,
       studyDurationMonths: null as unknown as number,

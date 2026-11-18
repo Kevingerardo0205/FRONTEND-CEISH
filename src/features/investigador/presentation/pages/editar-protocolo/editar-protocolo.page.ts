@@ -304,7 +304,11 @@ export class EditarProtocoloPage implements OnInit {
 
     // riskLevelId ya no es parte de la creación (CrearProtocoloDto); la edición lo conserva sin cambio
     // de comportamiento hasta que se revise este flujo en su propia tarea.
-    const payload: Partial<CrearProtocoloDto> & { riskLevelId?: number } = {
+    // principalInvestigatorId salió de CrearProtocoloDto (F09 D30); se conserva aquí hasta T09-7.
+    const payload: Partial<CrearProtocoloDto> & {
+      riskLevelId?: number;
+      principalInvestigatorId?: number;
+    } = {
       riskLevelId: formVal.riskLevelId ? Number(formVal.riskLevelId) : (null as unknown as number),
       geographicCoverage: formVal.geographicCoverage!,
       studyDurationMonths: formVal.studyDurationMonths
