@@ -80,6 +80,14 @@ Rama de EP1: `feat/f00-ep1-encabezado-protocolo` (desde `dev` `2b9b451`). Spec: 
 - Datos del encabezado que faltan en el backend: investigador principal, nivel de riesgo, sesión y fecha (spec-ui §8).
 - Dos `GET /protocols/:id` por carga del espacio (plan §10).
 
+## Ajustes del AppShell (SH, desde el 17/11/2026)
+
+Rama de SH1: `feat/f00-sh1-margen-movil` (desde `dev` `d9728c4`). Spec: spec-ui §3 y §4 (v0.9, D16 de F00) y criterio 12.
+
+| # | Capa | Tarea | Archivos | Terminado cuando… | Estado |
+|---|---|---|---|---|---|
+| SH1 | shared + presentation | Margen lateral del contenido según la ventana (hallazgo de C5: 2.5rem fijo deja 240 px a 320 px): token `--shell-gutter` en `_tokens.scss` (2.5rem desde 1024 px, 1.5rem de 600 a 1023 px, 16 px por debajo de 600 px) y `.shell-content` lo usa; el margen vertical, el menú y la barra no cambian | `src/styles/_tokens.scss`, `features/shell/presentation/app-shell/app-shell.component.{scss,spec.ts}` | Criterio 12 de spec-ui; a 320, 599, 600, 1023 y 1024 px el margen es el esperado y a 320 px no hay desplazamiento horizontal; mutaciones M1 y M2 detectadas | En curso |
+
 ## Calidad
 
 - En `cf5ef01` (ajustes de revisión T01b–T03): el script `lint` quedó con `--max-warnings 76`, se ocultó el botón "Solicitar Enmienda" de `detalle-protocolo.page.ts` y se agregó la fuente Outfit en `index.html`.
