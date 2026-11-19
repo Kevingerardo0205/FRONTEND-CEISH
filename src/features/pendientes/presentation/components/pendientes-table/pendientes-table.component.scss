@@ -72,6 +72,11 @@
   white-space: nowrap;
 }
 
+.pendientes__sin-accion {
+  color: var(--c-text-2);
+  white-space: normal;
+}
+
 .pendientes__boton,
 .pendientes__ver-todos {
   min-height: var(--min-h-action);

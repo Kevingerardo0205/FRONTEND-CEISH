@@ -96,11 +96,22 @@ describe('PendientesTableComponent (F01 T01-5)', () => {
     expect(el.querySelectorAll('tbody tr').length).toBe(1);
     expect(el.querySelector('tbody button')).toBeNull();
     expect(texto(el)).toContain('Estudio de prueba A');
+    expect(el.querySelector('.pendientes__sin-accion')).toBeNull();
+  });
+
+  it('ASIGNAR → sin botón y con «Pendiente de asignación por la Presidencia» (F03 D10 (5))', () => {
+    const el = render([{ ...BASE, accion: 'ASIGNAR', accionTexto: 'Asignar evaluadores' }]);
+    expect(el.querySelector('tbody button')).toBeNull();
+    expect(texto(el.querySelector('.pendientes__sin-accion'))).toBe(
+      'Pendiente de asignación por la Presidencia',
+    );
+    expect(texto(el)).not.toContain('Asignar evaluadores');
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   describe('destinos (spec-ui §3.1.1, criterio 20)', () => {
+    // ASIGNAR ya no tiene destino (F03 D10 (5)): su prueba está arriba.
     const casos: [AccionPendiente, (string | number)[]][] = [
-      ['ASIGNAR', ['/dashboard/protocols/workspace', 41, 'info']],
       ['VALIDAR', ['/dashboard/protocols/workspace', 41, 'validation']],
       ['REASIGNAR', ['/dashboard/evaluations/reassignment', 41]],
     ];

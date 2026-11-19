@@ -317,14 +317,15 @@ describe('ProtocolDetailTabPage - datos de Información (F10 D19)', () => {
   });
 });
 
-describe('Tablas de roles del espacio del protocolo (F10 D12 y D17)', () => {
+describe('Tablas de roles del espacio del protocolo (F10 D12, D17 y D20)', () => {
   const EXPECTED_SECTION_ROLES: Record<WorkspaceSection, RoleCode[]> = {
     EVALUATOR_PANEL: ['SECRETARIA', 'PRESIDENTE'],
   };
   const EXPECTED_ACTION_ROLES: Record<WorkspaceAction, RoleCode[]> = {
     EDIT_PROTOCOL: ['INVESTIGADOR'],
     VALIDATE_ALL: ['SECRETARIA'],
-    ASSIGN_EVALUATORS: ['SECRETARIA'],
+    // F10 D20 (2): solo la Presidenta asigna (TSK-002-N52).
+    ASSIGN_EVALUATORS: ['PRESIDENTE'],
     SUBMIT_CORRECTIONS: ['INVESTIGADOR'],
   };
 
@@ -332,7 +333,7 @@ describe('Tablas de roles del espacio del protocolo (F10 D12 y D17)', () => {
     expect(WORKSPACE_SECTION_ROLES).toEqual(EXPECTED_SECTION_ROLES);
   });
 
-  it('WORKSPACE_ACTION_ROLES es la de D12 y D17 (4)', () => {
+  it('WORKSPACE_ACTION_ROLES es la de D12, D17 (4) y D20 (2)', () => {
     expect(WORKSPACE_ACTION_ROLES).toEqual(EXPECTED_ACTION_ROLES);
   });
 });

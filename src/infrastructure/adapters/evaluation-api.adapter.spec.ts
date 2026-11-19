@@ -66,16 +66,34 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
     });
   });
 
-  describe('assignPeerEvaluators (F10 D15)', () => {
+  describe('assignPeerEvaluators (F03 D6, N52)', () => {
     const URL = '/api/evaluations/protocols/5/assign-peer-evaluators';
+    const PAYLOAD = {
+      reviewType: 'EXPEDITA' as const,
+      evaluators: [
+        { evaluatorId: 11, profile: 'JURIDICO' as const },
+        { evaluatorId: 12, profile: 'SOCIEDAD_CIVIL' as const },
+        { evaluatorId: 13, profile: 'METODOLOGICO' as const },
+        { evaluatorId: 14, profile: 'SALUD' as const },
+      ],
+    };
 
-    it('envía {evaluatorIds} y traduce el arreglo de EvaluationAssignmentEntity del backend', () => {
+    it('envía { reviewType, evaluators } (nunca evaluatorIds) y traduce la respuesta del backend', () => {
       let result: AssignEvaluatorsResponse | undefined;
-      adapter.assignPeerEvaluators('5', [11, 12, 13, 14]).subscribe((r) => (result = r));
+      adapter.assignPeerEvaluators('5', PAYLOAD).subscribe((r) => (result = r));
 
       const req = httpMock.expectOne(URL);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ evaluatorIds: [11, 12, 13, 14] });
+      expect(req.request.body).toEqual({
+        reviewType: 'EXPEDITA',
+        evaluators: [
+          { evaluatorId: 11, profile: 'JURIDICO' },
+          { evaluatorId: 12, profile: 'SOCIEDAD_CIVIL' },
+          { evaluatorId: 13, profile: 'METODOLOGICO' },
+          { evaluatorId: 14, profile: 'SALUD' },
+        ],
+      });
+      expect(Object.keys(req.request.body)).not.toContain('evaluatorIds');
       req.flush({
         data: [
           { id: 301, protocolId: 5, evaluatorId: 11, evaluatorProfile: 'JURIDICO', isAssignedForAnnex10: true, deadlineDate: null, deadlineTimestamp: null, _status: 'ASSIGNED' },
@@ -103,13 +121,78 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
       let error: Error | undefined;
       let next = false;
       adapter
-        .assignPeerEvaluators('5', [11, 12, 13, 14])
+        .assignPeerEvaluators('5', PAYLOAD)
         .subscribe({ next: () => (next = true), error: (e) => (error = e) });
 
       httpMock.expectOne(URL).flush({ data: { message: 'ok' }, statusCode: 201, message: 'Success' });
 
       expect(next).toBeFalse();
       expect(error?.message).toBe('Respuesta inesperada del servidor al asignar los evaluadores.');
+    });
+  });
+
+  describe('getPendingPeerAssignmentProtocols (F03 D2)', () => {
+    it('lee la entidad ORM sin inventar datos: lo que falta queda en null', () => {
+      let result: unknown;
+      adapter.getPendingPeerAssignmentProtocols().subscribe((r) => (result = r));
+
+      httpMock.expectOne('/api/evaluations/protocols/pending-peer-assignment').flush({
+        data: [
+          {
+            id: 7,
+            ceishCode: 'CEISH-ESPOCH-IO-007-2026',
+            title: 'Estudio de prueba',
+            isTimelineTermsAccepted: true,
+            studyType: { code: 'OBS', name: 'Observacional' },
+            principalInvestigator: { id: 3, fullName: 'Investigadora Prueba' },
+            activeVersion: { reception: { receptionDate: '2026-11-10T15:00:00.000Z' } },
+          },
+          { id: 8, title: '', studyType: null, principalInvestigator: null },
+          { id: 'x', title: 'Sin id válido' },
+        ],
+        statusCode: 200,
+        message: 'Success',
+      });
+
+      expect(result).toEqual([
+        {
+          id: 7,
+          ceishCode: 'CEISH-ESPOCH-IO-007-2026',
+          title: 'Estudio de prueba',
+          studyType: 'Observacional',
+          principalInvestigator: 'Investigadora Prueba',
+          receptionDate: '2026-11-10T15:00:00.000Z',
+          isTimelineTermsAccepted: true,
+        },
+        {
+          id: 8,
+          ceishCode: null,
+          title: null,
+          studyType: null,
+          principalInvestigator: null,
+          receptionDate: null,
+          isTimelineTermsAccepted: null,
+        },
+      ]);
+    });
+  });
+
+  describe('getActiveEvaluators (F03 D8)', () => {
+    it('lee { id, fullName } de la forma real y descarta entradas sin id o sin nombre', () => {
+      let result: unknown;
+      adapter.getActiveEvaluators().subscribe((r) => (result = r));
+
+      httpMock.expectOne('/api/evaluations/evaluators/active').flush({
+        data: [
+          { id: 21, fullName: 'Evaluadora Prueba', institutionalEmail: 'evaluadora@example.test' },
+          { id: '22', fullName: 'Id en texto' },
+          { id: 23, fullName: '' },
+        ],
+        statusCode: 200,
+        message: 'Success',
+      });
+
+      expect(result).toEqual([{ id: 21, fullName: 'Evaluadora Prueba' }]);
     });
   });
 

@@ -5,6 +5,10 @@ import {
   PendingPeerAssignmentProtocol,
   PeerAssignmentEntity,
   PEER_EVALUATOR_PROFILES,
+  PEER_EVALUATOR_PROFILE_LABELS,
+  normalizeProfile,
+  profileCodesFromNames,
+  dashboardMemberProfiles,
 } from './peer-evaluation.entity';
 
 describe('PeerEvaluation Canonical Entities', () => {
@@ -33,13 +37,27 @@ describe('PeerEvaluation Canonical Entities', () => {
     expect(Object.keys(response)).toEqual(['outgoingAssignment', 'newAssignment', 'auditHistory']);
   });
 
-  it('should list exactly the 4 strict backend profiles', () => {
+  it('lista los 5 perfiles estrictos del backend, con Bioético (F03 D9)', () => {
     expect([...PEER_EVALUATOR_PROFILES]).toEqual([
       'JURIDICO',
       'SOCIEDAD_CIVIL',
       'METODOLOGICO',
       'SALUD',
+      'BIOETICO',
     ]);
+  });
+
+  it('una sola lista de etiquetas: cada perfil tiene la suya y Bioético se lee «Bioético»', () => {
+    expect(Object.keys(PEER_EVALUATOR_PROFILE_LABELS).sort()).toEqual(
+      [...PEER_EVALUATOR_PROFILES].sort(),
+    );
+    expect(PEER_EVALUATOR_PROFILE_LABELS.BIOETICO).toBe('Bioético');
+  });
+
+  it('normalizeProfile reconoce «Bioético» del catálogo (TSK-002-N50) y no «Ético»', () => {
+    expect(normalizeProfile('Bioético')).toBe('BIOETICO');
+    expect(normalizeProfile('BIOETICO')).toBe('BIOETICO');
+    expect(normalizeProfile('Ético')).toBeNull();
   });
 
   it('should instantiate AssignmentHistoryEntry with complete audit trail and numeric IDs', () => {
@@ -67,30 +85,20 @@ describe('PeerEvaluation Canonical Entities', () => {
     expect(historyEntry.executedByUserId).toBe(10);
   });
 
-  it('should instantiate PendingPeerAssignmentProtocol supporting RF-12.1 and RF-12.2', () => {
+  it('PendingPeerAssignmentProtocol admite null en lo que el backend no envía (F03 D2)', () => {
     const protocol: PendingPeerAssignmentProtocol = {
       id: 42,
-      ceishCode: 'CEISH-ESPOCH-EI-001-2026',
-      title: 'Estudio de Bioequivalencia y Bioética',
-      receptionStatus: 'PENDING_ASSIGNMENT',
-      isRiskLevelDesignated: false,
-      createdAt: '2026-09-01T10:00:00.000Z',
-      studyType: {
-        id: 1,
-        codigo: 'OBS',
-        nombre: 'Observacional',
-      },
-      principalInvestigatorRecord: {
-        id: 10,
-        fullName: 'Dr. Investigador Principal',
-        email: 'investigador@espoch.edu.ec',
-      },
+      ceishCode: null,
+      title: 'Estudio de prueba',
+      studyType: null,
+      principalInvestigator: null,
+      receptionDate: null,
+      isTimelineTermsAccepted: true,
     };
 
     expect(protocol.id).toBe(42);
-    expect(protocol.ceishCode).toBe('CEISH-ESPOCH-EI-001-2026');
-    expect(protocol.studyType.codigo).toBe('OBS');
-    expect(protocol.principalInvestigatorRecord.email).toBe('investigador@espoch.edu.ec');
+    expect(protocol.ceishCode).toBeNull();
+    expect(protocol.principalInvestigator).toBeNull();
   });
 
   it('should instantiate PeerAssignmentEntity supporting evaluator-protocol linkage for RF-12.4', () => {
@@ -120,5 +128,34 @@ describe('PeerEvaluation Canonical Entities', () => {
     expect(assignment.evaluatorId).toBe(201);
     expect(assignment.proposedRiskLevelId).toBe(5);
     expect(assignment.protocol.ceishCode).toBe('CEISH-ESPOCH-EI-001-2026');
+  });
+
+  describe('perfiles del dashboard (F03 D8)', () => {
+    it('profileCodesFromNames: nombres → códigos, sin repetidos ni desconocidos', () => {
+      expect(
+        profileCodesFromNames([
+          { id: 7, name: 'Bioético' },
+          { id: 10, name: 'Sociedad Civil' },
+          { id: 7, name: 'Bioético' },
+          { id: 99, name: 'Perfil desconocido' },
+          null,
+        ]),
+      ).toEqual(['BIOETICO', 'SOCIEDAD_CIVIL']);
+      expect(profileCodesFromNames(undefined)).toEqual([]);
+    });
+
+    it('dashboardMemberProfiles: id y perfiles; descarta entradas sin id numérico', () => {
+      expect(
+        dashboardMemberProfiles([
+          { id: 1, fullName: 'Andrés Prueba', profiles: [{ id: 9, name: 'Salud' }] },
+          { id: 2, fullName: 'Beatriz Prueba' },
+          { id: '3', profiles: [{ id: 9, name: 'Salud' }] },
+        ]),
+      ).toEqual([
+        { id: 1, profiles: ['SALUD'] },
+        { id: 2, profiles: [] },
+      ]);
+      expect(dashboardMemberProfiles(null)).toEqual([]);
+    });
   });
 });

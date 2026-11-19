@@ -577,7 +577,7 @@ export class ProtocolDetailTabPage {
 
     // F10 D14 (EARS 28): las evaluaciones las pide el Resumen y solo si muestra el cuerpo
     // evaluador. Lee el objeto `protocol`, así que también se vuelven a pedir al recargar
-    // el mismo :id después de Asignar Pares, como antes.
+    // el mismo :id (Reintentar, D14).
     effect(() => {
       const p = this.protocol();
       if (p?.id && this.showEvaluators()) {

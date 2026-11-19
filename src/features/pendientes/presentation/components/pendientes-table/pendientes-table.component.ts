@@ -8,7 +8,7 @@ import {
 } from '@shared/ui/states/states.component';
 import { fechaEcuador } from '@shared/utils/fecha-ecuador.util';
 import { EstadoBloque } from '../../../application/mis-pendientes.facade';
-import { destinoAccion } from '../../../domain/accion.rules';
+import { destinoAccion, textoSinAccion } from '../../../domain/accion.rules';
 import { FiltroPendientes, PendienteItem } from '../../../domain/pendiente.model';
 import { PlazoChip, plazoChip } from '../../../domain/plazo.rules';
 
@@ -17,6 +17,8 @@ interface Fila {
   plazo: PlazoChip;
   etapa: string;
   destino: (string | number)[] | null;
+  /** F03 D10 (5): texto en lugar del botón (ASIGNAR). */
+  sinAccion: string | null;
   ariaLabel: string;
 }
 
@@ -55,6 +57,7 @@ export class PendientesTableComponent {
       plazo: plazoChip(item.estadoPlazo, fechaEcuador(item.fechaPlazo)),
       etapa: item.etapa?.label ?? 'Etapa no reconocida',
       destino: destinoAccion(item.accion, item.protocolId),
+      sinAccion: textoSinAccion(item.accion),
       ariaLabel: item.ceishCode ? `${item.accionTexto} ${item.ceishCode}` : item.accionTexto,
     })),
   );

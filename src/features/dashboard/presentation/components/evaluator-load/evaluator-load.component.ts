@@ -7,6 +7,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { IEvaluatorRepositoryPort } from '@domain/ports/IEvaluatorRepositoryPort';
 import { EvaluatorEntity, EvaluatorProfile } from '@domain/entities/evaluator.entity';
+import {
+  PEER_EVALUATOR_PROFILES,
+  PEER_EVALUATOR_PROFILE_LABELS,
+} from '@domain/entities/peer-evaluation.entity';
 
 @Component({
   selector: 'app-evaluator-load',
@@ -30,10 +34,9 @@ import { EvaluatorEntity, EvaluatorProfile } from '@domain/entities/evaluator.en
             placeholder="Todos los perfiles"
           >
             <mat-option [value]="null">Todos</mat-option>
-            <mat-option value="JURIDICO">Jurídico</mat-option>
-            <mat-option value="SALUD">Salud</mat-option>
-            <mat-option value="METODOLOGIA">Metodología</mat-option>
-            <mat-option value="SOCIEDAD_CIVIL">Sociedad Civil</mat-option>
+            @for (profile of profiles; track profile) {
+              <mat-option [value]="profile">{{ profileLabels[profile] }}</mat-option>
+            }
           </mat-select>
         </mat-form-field>
       </div>
@@ -155,6 +158,9 @@ export class EvaluatorLoadComponent implements OnInit {
 
   evaluators = signal<EvaluatorEntity[]>([]);
   selectedProfile = signal<EvaluatorProfile | null>(null);
+  /** Filtro con los códigos y la lista única de etiquetas del dominio (F03 D9). */
+  readonly profiles = PEER_EVALUATOR_PROFILES;
+  readonly profileLabels = PEER_EVALUATOR_PROFILE_LABELS;
 
   displayedColumns = ['nombre', 'perfil', 'carga'];
 

@@ -28,11 +28,12 @@ export type WorkspaceAction =
 /**
  * F10 D12 y D17: acciones del espacio según el rol activo.
  * `SUBMIT_CORRECTIONS` (D17 (4)): vista de subsanación de la pestaña Validación.
+ * `ASSIGN_EVALUATORS` (D20 (2), 19/11/2026): solo la Presidenta asigna (TSK-002-N52).
  */
 export const WORKSPACE_ACTION_ROLES: Readonly<Record<WorkspaceAction, readonly RoleCode[]>> = {
   EDIT_PROTOCOL: ['INVESTIGADOR'],
   VALIDATE_ALL: ['SECRETARIA'],
-  ASSIGN_EVALUATORS: ['SECRETARIA'],
+  ASSIGN_EVALUATORS: ['PRESIDENTE'],
   SUBMIT_CORRECTIONS: ['INVESTIGADOR'],
 };
 

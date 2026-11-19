@@ -45,6 +45,7 @@ describe('active-assignment-view.util', () => {
     expect(peerEvaluatorProfileLabel('SOCIEDAD_CIVIL')).toBe('Sociedad Civil');
     expect(peerEvaluatorProfileLabel('METODOLOGICO')).toBe('Metodológico');
     expect(peerEvaluatorProfileLabel('SALUD')).toBe('Salud');
+    expect(peerEvaluatorProfileLabel('BIOETICO')).toBe('Bioético');
     expect(peerEvaluatorProfileLabel(null)).toBe('Sin perfil');
     expect(peerEvaluatorProfileLabel('OTRO')).toBe('OTRO');
   });

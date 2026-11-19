@@ -103,10 +103,21 @@ describe('Route role codes (T13a)', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('deja las rutas de evaluación sin data.roles (no cambia quién entra)', () => {
-    const withRoles = flatten(EVALUATION_ROUTES).filter(({ route }) => roleList(route));
+  // T13a dejó las rutas de evaluación sin data.roles; F03 D1 (19/11/2026) restringe solo la
+  // asignación a PRESIDENTE, con RoleGuard. Las demás siguen sin data.roles.
+  it('en evaluación, solo la asignación declara data.roles: PRESIDENTE, con RoleGuard (F03 D1)', () => {
+    const withRoles = flatten(EVALUATION_ROUTES)
+      .filter(({ route }) => roleList(route))
+      .map(({ path, route }) => ({
+        path,
+        roles: roleList(route),
+        guarded: (route.canActivate ?? []).includes(RoleGuard),
+      }));
 
-    expect(withRoles).toEqual([]);
+    expect(withRoles).toEqual([
+      { path: 'assignment', roles: ['PRESIDENTE'], guarded: true },
+      { path: 'assignment/:protocolId', roles: ['PRESIDENTE'], guarded: true },
+    ]);
   });
 
   it('protege con RoleGuard toda ruta que declara data.roles', () => {

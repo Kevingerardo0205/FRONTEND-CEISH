@@ -1,6 +1,7 @@
 import {
   ActiveAssignment,
   ActiveAssignmentStatus,
+  PEER_EVALUATOR_PROFILE_LABELS,
   PeerEvaluatorProfile,
 } from '@domain/entities/peer-evaluation.entity';
 
@@ -13,21 +14,14 @@ const STATUS_LABELS: Record<ActiveAssignmentStatus, string> = {
   COMPLETED: 'Completado',
 };
 
-const PROFILE_LABELS: Record<PeerEvaluatorProfile, string> = {
-  JURIDICO: 'Jurídico',
-  SOCIEDAD_CIVIL: 'Sociedad Civil',
-  METODOLOGICO: 'Metodológico',
-  SALUD: 'Salud',
-};
-
 export function activeAssignmentStatusLabel(status: ActiveAssignmentStatus | string): string {
   return STATUS_LABELS[status as ActiveAssignmentStatus] ?? status;
 }
 
-/** Etiqueta legible del perfil; la lógica sigue usando los códigos del backend. */
+/** Etiqueta legible del perfil (lista única del dominio, F03 D9); la lógica usa los códigos. */
 export function peerEvaluatorProfileLabel(profile: PeerEvaluatorProfile | string | null): string {
   if (profile === null) return NO_PROFILE_LABEL;
-  return PROFILE_LABELS[profile as PeerEvaluatorProfile] ?? profile;
+  return PEER_EVALUATOR_PROFILE_LABELS[profile as PeerEvaluatorProfile] ?? profile;
 }
 
 /**

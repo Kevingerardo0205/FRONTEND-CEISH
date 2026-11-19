@@ -47,7 +47,7 @@ export class ProtocolWorkspaceService {
 
   /**
    * Carga el protocolo al suscribirse (D14). Con otro `:id`, vacía el protocolo y las evaluaciones
-   * antes de pedirlo; con el mismo (recarga después de Asignar Pares), conserva los datos. Las
+   * antes de pedirlo; con el mismo (recarga con «Reintentar»), conserva los datos. Las
    * evaluaciones ya no se piden aquí: las pide el Resumen (EARS 28). El encabezado (D18) se pide
    * junto con el protocolo: si falla cualquiera de los dos, se aplica D14; con otro `:id` se vacía
    * y, si falla la recarga del mismo, se conserva.

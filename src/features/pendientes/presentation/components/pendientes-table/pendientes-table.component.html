@@ -57,6 +57,8 @@
                       >
                         {{ fila.item.accionTexto }}
                       </button>
+                    } @else if (fila.sinAccion) {
+                      <span class="pendientes__sin-accion">{{ fila.sinAccion }}</span>
                     }
                   </td>
                 </tr>

@@ -1,0 +1,72 @@
+<section class="asignacion">
+  <app-page-header
+    heading="Asignar evaluadores"
+    subtitle="Protocolos con la recepción aprobada que esperan la asignación de evaluadores pares."
+  />
+
+  <div class="asignacion__contenido">
+    @switch (estado()) {
+      @case ('cargando') {
+        <app-loading-state message="Cargando protocolos por asignar…" />
+      }
+      @case ('error') {
+        <app-error-state
+          message="No pudimos cargar los protocolos por asignar."
+          (retry)="cargar()"
+        />
+      }
+      @default {
+        @if (filas().length === 0) {
+          <app-empty-state message="No hay protocolos por asignar." />
+        } @else {
+          <div class="asignacion__tabla-marco">
+            <table class="asignacion__tabla">
+              <caption class="visually-hidden">Protocolos por asignar</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Protocolo</th>
+                  <th scope="col">Investigador principal</th>
+                  <th scope="col">Tipo de estudio</th>
+                  <th scope="col">Recepción</th>
+                  <th scope="col"><span class="visually-hidden">Acción</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of filas(); track fila.id) {
+                  <tr>
+                    <td>
+                      <div class="asignacion__protocolo">
+                        @if (fila.codigo) {
+                          <span class="asignacion__codigo">{{ fila.codigo }}</span>
+                        }
+                        <span class="asignacion__titulo">{{ fila.titulo }}</span>
+                      </div>
+                    </td>
+                    <td>{{ fila.investigador }}</td>
+                    <td>{{ fila.tipoEstudio }}</td>
+                    <td class="asignacion__fecha">{{ fila.recepcion }}</td>
+                    <td class="asignacion__accion">
+                      <button
+                        type="button"
+                        class="asignacion__boton"
+                        [disabled]="!!fila.motivo"
+                        [attr.aria-label]="fila.ariaLabel"
+                        [attr.aria-describedby]="fila.motivo ? 'motivo-' + fila.id : null"
+                        (click)="asignar(fila)"
+                      >
+                        Asignar
+                      </button>
+                      @if (fila.motivo) {
+                        <p class="asignacion__motivo" [id]="'motivo-' + fila.id">{{ fila.motivo }}</p>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  </div>
+</section>

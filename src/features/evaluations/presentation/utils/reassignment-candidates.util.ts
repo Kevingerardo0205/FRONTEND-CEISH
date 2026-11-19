@@ -1,7 +1,8 @@
 import {
   ActiveAssignment,
-  PEER_EVALUATOR_PROFILES,
   PeerEvaluatorProfile,
+  normalizeProfile,
+  profileCodesFromNames,
 } from '@domain/entities/peer-evaluation.entity';
 
 /**
@@ -20,24 +21,13 @@ export interface EvaluatorCandidate {
   id: number;
   fullName: string;
   email: string;
-  /** Solo los perfiles reconocidos entre los 4 estrictos; los demás (p. ej. "Ético") se ignoran. */
+  /** Solo los perfiles reconocidos entre los estrictos; los demás (p. ej. "Ético") se ignoran. */
   profiles: PeerEvaluatorProfile[];
   currentLoad: number;
 }
 
-/** "Metodológico" → METODOLOGICO, "Sociedad Civil" → SOCIEDAD_CIVIL; cualquier otro nombre → null (nunca SALUD por defecto). */
-export function normalizeProfile(name: unknown): PeerEvaluatorProfile | null {
-  if (typeof name !== 'string') return null;
-  const norm = name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .trim()
-    .toUpperCase()
-    .replace(/[\s-]+/g, '_');
-  return (PEER_EVALUATOR_PROFILES as readonly string[]).includes(norm)
-    ? (norm as PeerEvaluatorProfile)
-    : null;
-}
+/** La conversión de nombre a código vive en el dominio (F03 D8); se reexporta para la reasignación. */
+export { normalizeProfile };
 
 /** Mapea data.evaluators del dashboard; descarta entradas sin id numérico. */
 export function mapDashboardCandidates(evaluators: unknown): EvaluatorCandidate[] {
@@ -45,15 +35,12 @@ export function mapDashboardCandidates(evaluators: unknown): EvaluatorCandidate[
   return evaluators.flatMap((raw): EvaluatorCandidate[] => {
     const e = raw as Partial<DashboardEvaluatorDto> | null;
     if (!e || typeof e.id !== 'number') return [];
-    const profiles = (Array.isArray(e.profiles) ? e.profiles : [])
-      .map((p) => normalizeProfile(p?.name))
-      .filter((p): p is PeerEvaluatorProfile => p !== null);
     return [
       {
         id: e.id,
         fullName: typeof e.fullName === 'string' ? e.fullName : `Evaluador ${e.id}`,
         email: typeof e.email === 'string' ? e.email : '',
-        profiles: [...new Set(profiles)],
+        profiles: profileCodesFromNames(e.profiles),
         currentLoad: typeof e.currentLoad === 'number' ? e.currentLoad : 0,
       },
     ];

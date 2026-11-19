@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
-import { AssignmentPage } from './presentation/pages/assignment/assignment.page';
+import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { ReassignmentPage } from './presentation/pages/reassignment/reassignment.page';
 import { EvaluationListPage } from './presentation/pages/evaluation-list/evaluation-list.page';
 import { EvaluationFormPage } from './presentation/pages/evaluation-form/evaluation-form.page';
@@ -11,14 +11,24 @@ export const EVALUATION_ROUTES: Routes = [
   {
     path: '',
     children: [
+      // F03 D1 y D2: lista y formulario de asignación, solo PRESIDENTE con EVALUACION_ASIGNAR.
       {
         path: 'assignment',
-        component: AssignmentPage,
-        canActivate: [AuthGuard],
-        data: {
-          permissions: ['EVALUATORS_ASSIGN', 'EVALUATORS_SUGGEST', 'EVALUACION_ASIGNAR'],
-          permissionStrategy: 'any',
-        },
+        loadComponent: () =>
+          import('./presentation/pages/peer-assignment-list/peer-assignment-list.page').then(
+            (m) => m.PeerAssignmentListPage,
+          ),
+        canActivate: [RoleGuard, AuthGuard],
+        data: { roles: ['PRESIDENTE'], permissions: ['EVALUACION_ASIGNAR'] },
+      },
+      {
+        path: 'assignment/:protocolId',
+        loadComponent: () =>
+          import('./presentation/pages/peer-assignment-form/peer-assignment-form.page').then(
+            (m) => m.PeerAssignmentFormPage,
+          ),
+        canActivate: [RoleGuard, AuthGuard],
+        data: { roles: ['PRESIDENTE'], permissions: ['EVALUACION_ASIGNAR'] },
       },
       {
         path: 'reassignment/:protocolId',

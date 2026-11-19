@@ -3,7 +3,6 @@ import { TestBed } from '@angular/core/testing';
 import { Component, signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, provideRouter, Router, UrlTree } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { map, of, Subject } from 'rxjs';
 
@@ -16,6 +15,7 @@ import { Role, RoleCode } from '@domain/value-objects/role.vo';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
+import { TERMS_NOT_ACCEPTED_REASON } from '@domain/entities/peer-assignment-composition';
 import { ProtocolHeaderData, ProtocolHeaderPort } from '../../../domain/protocol-header';
 
 const PROTOCOL_TITLE = 'Estudio de prueba del investigador';
@@ -44,13 +44,13 @@ const STATE = {
 } satisfies Record<string, RealState>;
 type StateName = keyof typeof STATE;
 
-/** Estados que abren alguna acción de la cabecera (EDIT_PROTOCOL, VALIDATE_ALL, ASSIGN_EVALUATORS). */
+/** Estados que abren alguna acción de la cabecera (EDIT_PROTOCOL, VALIDATE_ALL, ASSIGN_EVALUATORS de PRESIDENTE). */
 const ACTION_STATES: StateName[] = ['ENVIADO', 'RECEPCION_APROBADA', 'CON_OBSERVACIONES'];
 
 /**
  * Tabla aprobada del Paso 0 de S-1f (F10 D13), referencia de la prueba: etiqueta, pestañas
- * de estado (Validación, Seguimiento) y acciones de SECRETARIA e INVESTIGADOR; ventana para
- * INVESTIGADOR sin tiempos aceptados.
+ * de estado (Validación, Seguimiento) y acciones de SECRETARIA, PRESIDENTE (F10 D20, con los
+ * tiempos aceptados) e INVESTIGADOR; ventana para INVESTIGADOR sin tiempos aceptados.
  */
 const EXPECTED: Record<
   StateName,
@@ -59,22 +59,23 @@ const EXPECTED: Record<
     validation: boolean;
     followUp: boolean;
     secretaria: string[];
+    presidente: string[];
     investigador: string[];
     modal: boolean;
   }
 > = {
-  BORRADOR: { label: 'Borrador', validation: false, followUp: false, secretaria: [], investigador: [], modal: false },
-  ENVIADO: { label: 'Por validar', validation: true, followUp: false, secretaria: ['VALIDATE_ALL'], investigador: [], modal: false },
-  CON_OBSERVACIONES: { label: 'Con observaciones', validation: true, followUp: false, secretaria: [], investigador: ['EDIT_PROTOCOL'], modal: false },
-  POR_SUBSANAR: { label: 'Pendiente de subsanación', validation: true, followUp: false, secretaria: [], investigador: ['EDIT_PROTOCOL'], modal: false },
-  ARCHIVADO: { label: 'Archivado', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  RECEPCION_APROBADA: { label: 'Recepción aprobada', validation: true, followUp: false, secretaria: ['ASSIGN_EVALUATORS'], investigador: [], modal: true },
-  EN_EVALUACION: { label: 'En evaluación', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  DISCREPANCIA: { label: 'Discrepancia de riesgo', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  APROBADO: { label: 'Aprobado', validation: true, followUp: true, secretaria: [], investigador: [], modal: false },
-  APROBADO_CON_CONDICION: { label: 'Aprobado con condiciones', validation: true, followUp: true, secretaria: [], investigador: [], modal: false },
-  RECHAZADO: { label: 'Rechazado', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  NUEVA_VERSION: { label: 'Nueva versión en revisión documental', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
+  BORRADOR: { label: 'Borrador', validation: false, followUp: false, secretaria: [], presidente: [], investigador: [], modal: false },
+  ENVIADO: { label: 'Por validar', validation: true, followUp: false, secretaria: ['VALIDATE_ALL'], presidente: [], investigador: [], modal: false },
+  CON_OBSERVACIONES: { label: 'Con observaciones', validation: true, followUp: false, secretaria: [], presidente: [], investigador: ['EDIT_PROTOCOL'], modal: false },
+  POR_SUBSANAR: { label: 'Pendiente de subsanación', validation: true, followUp: false, secretaria: [], presidente: [], investigador: ['EDIT_PROTOCOL'], modal: false },
+  ARCHIVADO: { label: 'Archivado', validation: true, followUp: false, secretaria: [], presidente: [], investigador: [], modal: false },
+  RECEPCION_APROBADA: { label: 'Recepción aprobada', validation: true, followUp: false, secretaria: [], presidente: ['ASSIGN_EVALUATORS'], investigador: [], modal: true },
+  EN_EVALUACION: { label: 'En evaluación', validation: true, followUp: false, secretaria: [], presidente: [], investigador: [], modal: false },
+  DISCREPANCIA: { label: 'Discrepancia de riesgo', validation: true, followUp: false, secretaria: [], presidente: [], investigador: [], modal: false },
+  APROBADO: { label: 'Aprobado', validation: true, followUp: true, secretaria: [], presidente: [], investigador: [], modal: false },
+  APROBADO_CON_CONDICION: { label: 'Aprobado con condiciones', validation: true, followUp: true, secretaria: [], presidente: [], investigador: [], modal: false },
+  RECHAZADO: { label: 'Rechazado', validation: true, followUp: false, secretaria: [], presidente: [], investigador: [], modal: false },
+  NUEVA_VERSION: { label: 'Nueva versión en revisión documental', validation: true, followUp: false, secretaria: [], presidente: [], investigador: [], modal: false },
 };
 
 function createProtocol(
@@ -150,7 +151,6 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
         { provide: ActivatedRoute, useValue: { params: of({}) } },
         { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-        { provide: MatDialog, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
       .overrideComponent(ProtocolWorkspaceComponent, {
@@ -200,12 +200,15 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
         ...(expected.followUp ? ['follow-up'] : []),
       ];
 
-      // SECRETARIA con los tiempos aceptados: "Asignar Pares" los exige desde S-1h (D15).
+      // Con los tiempos aceptados: "Asignar Pares" los exige desde S-1h (D15) y es de PRESIDENTE (D20).
       activeRoleSignal.set('SECRETARIA');
       setState(name, true);
       expect(page.statusLabel()).toBe(expected.label);
       expect(tabPaths()).toEqual(['info', ...stateTabs]);
       expect(actionIds()).toEqual(expected.secretaria);
+
+      activeRoleSignal.set('PRESIDENTE');
+      expect(actionIds()).toEqual(expected.presidente);
 
       activeRoleSignal.set('INVESTIGADOR');
       setState(name);
@@ -218,18 +221,20 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     });
   }
 
-  it('Asignar Pares sale solo en la etapa ASIGNACION', () => {
-    activeRoleSignal.set('SECRETARIA');
+  it('Asignar Pares sale solo en la etapa ASIGNACION y solo para PRESIDENTE (F10 D20 (2))', () => {
     for (const name of Object.keys(STATE) as StateName[]) {
       setState(name, true);
+      activeRoleSignal.set('PRESIDENTE');
       expect(actionIds().includes('ASSIGN_EVALUATORS'))
-        .withContext(name)
+        .withContext('PRESIDENTE con ' + name)
         .toBe(name === 'RECEPCION_APROBADA');
+      activeRoleSignal.set('SECRETARIA');
+      expect(actionIds()).withContext('SECRETARIA con ' + name).not.toContain('ASSIGN_EVALUATORS');
     }
   });
 
-  it('Asignar Pares exige la aceptación de tiempos; sin ella, SECRETARIA ve el aviso (F10 D15)', () => {
-    activeRoleSignal.set('SECRETARIA');
+  it('Asignar Pares exige la aceptación de tiempos; sin ella, PRESIDENTE ve el aviso y SECRETARIA no (F10 D20 (3))', () => {
+    activeRoleSignal.set('PRESIDENTE');
     setState('RECEPCION_APROBADA');
     expect(actionIds()).not.toContain('ASSIGN_EVALUATORS');
     expect(page.awaitingTimelineAcceptance()).toBeTrue();
@@ -238,13 +243,15 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(actionIds()).toContain('ASSIGN_EVALUATORS');
     expect(page.awaitingTimelineAcceptance()).toBeFalse();
 
-    activeRoleSignal.set('INVESTIGADOR');
-    setState('RECEPCION_APROBADA');
-    expect(page.awaitingTimelineAcceptance()).toBeFalse();
+    for (const role of ['SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+      activeRoleSignal.set(role);
+      setState('RECEPCION_APROBADA');
+      expect(page.awaitingTimelineAcceptance()).withContext(role).toBeFalse();
+    }
   });
 
   it('statusId 25 nunca cae a la recepción: sin Asignar Pares', () => {
-    activeRoleSignal.set('SECRETARIA');
+    activeRoleSignal.set('PRESIDENTE');
     setState('APROBADO_CON_CONDICION');
 
     expect(page.statusCode()).toBe('APROBADO_CON_CONDICION');
@@ -267,9 +274,10 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(tabPaths()).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual(['VALIDATE_ALL']);
 
+    // F10 D20 (2): la Secretaría ya no asigna.
     setState('RECEPCION_APROBADA', true);
     expect(tabPaths()).toEqual(['info', 'validation']);
-    expect(actionIds()).toEqual(['ASSIGN_EVALUATORS']);
+    expect(actionIds()).toEqual([]);
 
     setState('CON_OBSERVACIONES');
     expect(tabPaths()).toEqual(['info', 'validation']);
@@ -284,8 +292,12 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(actionIds()).toEqual([]);
   });
 
-  it('PRESIDENTE ve Resumen y Seguimiento aprobado, sin Evaluación ni acciones', () => {
+  it('PRESIDENTE ve Resumen y Seguimiento aprobado, sin Evaluación; su única acción es Asignar Pares con los tiempos aceptados (D20)', () => {
     activeRoleSignal.set('PRESIDENTE');
+
+    setState('RECEPCION_APROBADA', true);
+    expect(tabPaths()).toEqual(['info']);
+    expect(actionIds()).toEqual(['ASSIGN_EVALUATORS']);
 
     setState('APROBADO');
     expect(tabPaths()).toEqual(['info', 'follow-up']);
@@ -381,7 +393,6 @@ describe('ProtocolWorkspaceComponent - sin pestaña Evaluación (F10 D11, S-1c)'
         { provide: ActivatedRoute, useValue: { params: of({}) } },
         { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-        { provide: MatDialog, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
       .overrideComponent(ProtocolWorkspaceComponent, {
@@ -425,7 +436,6 @@ describe('ProtocolWorkspaceComponent - template real', () => {
         { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
         { provide: ActivatedRoute, useValue: { params: of({}) } },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-        { provide: MatDialog, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
       .overrideComponent(ProtocolWorkspaceComponent, {
@@ -435,20 +445,24 @@ describe('ProtocolWorkspaceComponent - template real', () => {
       .compileComponents();
   });
 
-  it('oculta Historial y Finalizar y muestra Asignar Pares para SECRETARIA con COMPLETO', () => {
+  it('oculta Historial y Finalizar; Asignar Pares sale para PRESIDENTE con COMPLETO y no para SECRETARIA (F10 D20)', () => {
     const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
     fixture.detectChanges();
+    const buttonLabels = () =>
+      Array.from(
+        fixture.nativeElement.querySelectorAll(
+          'app-protocol-header .protocol-header__action .header-action__button',
+        ) as NodeListOf<HTMLButtonElement>,
+        (button) => button.querySelector('span')?.textContent?.trim(),
+      );
 
-    const buttons = fixture.nativeElement.querySelectorAll(
-      'app-protocol-header .protocol-header__action .header-action__button',
-    ) as NodeListOf<HTMLButtonElement>;
-    const buttonLabels = Array.from(buttons, (button) =>
-      button.querySelector('span')?.textContent?.trim(),
-    );
+    expect(buttonLabels()).not.toContain('Historial');
+    expect(buttonLabels()).not.toContain('Finalizar');
+    expect(buttonLabels()).not.toContain('Asignar Pares');
 
-    expect(buttonLabels).not.toContain('Historial');
-    expect(buttonLabels).not.toContain('Finalizar');
-    expect(buttonLabels).toContain('Asignar Pares');
+    activeRoleSignal.set('PRESIDENTE');
+    fixture.detectChanges();
+    expect(buttonLabels()).toContain('Asignar Pares');
   });
 
   it('muestra la etiqueta y la barra de 6 etapas con la etapa del backend como actual (F10 D19)', () => {
@@ -573,6 +587,7 @@ describe('ProtocolWorkspaceComponent - template real', () => {
   });
 
   it('D18: Asignar Pares va en la ranura de acción del encabezado', () => {
+    activeRoleSignal.set('PRESIDENTE');
     const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
     fixture.detectChanges();
     const action = (fixture.nativeElement as HTMLElement).querySelector(
@@ -655,7 +670,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
   let requests: { id: string; response: Subject<ProtocolEntity> }[];
   let harness: RouterTestingHarness;
   let router: Router;
-  let dialogOpen: jasmine.Spy;
+  let activeRole: WritableSignal<RoleCode | null>;
 
   function protocolWith(id: string, title: string, principalInvestigator = 'Investigador Prueba'): ProtocolEntity {
     return { ...createProtocol(STATE.RECEPCION_APROBADA, true), id, title, principalInvestigator };
@@ -685,7 +700,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
   beforeEach(async () => {
     TabPruebaComponent.created = 0;
     requests = [];
-    dialogOpen = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(true) });
+    activeRole = signal<RoleCode | null>('SECRETARIA');
     const getById = jasmine.createSpy('getById').and.callFake((id: string) => {
       const response = new Subject<ProtocolEntity>();
       requests.push({ id, response });
@@ -727,7 +742,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
           provide: AuthFacade,
           useValue: { currentUser: () => ({ rol: 'SECRETARIA', roles: ['SECRETARIA'] }) },
         },
-        { provide: ActiveRoleFacade, useValue: { activeRole: signal<RoleCode | null>('SECRETARIA') } },
+        { provide: ActiveRoleFacade, useValue: { activeRole } },
         { provide: RoleHome, useValue: { urlTree: () => HOME_TREE } },
       ],
     });
@@ -735,7 +750,6 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
       add: {
         providers: [
           { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
-          { provide: MatDialog, useValue: { open: dialogOpen } },
         ],
       },
     });
@@ -818,12 +832,17 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(root().querySelector('.protocol-header__title')?.textContent?.trim()).toBe('Estudio de prueba seis');
   });
 
-  it('al recargar el mismo :id después de Asignar Pares conserva cabecera, pestañas y pestaña abierta, sin "Cargando"', async () => {
+  /** Recarga del mismo :id (D14); desde F10 D20 ya no la dispara Asignar Pares, que navega. */
+  function reloadSameId(): void {
+    (harness.routeDebugElement?.componentInstance as ProtocolWorkspaceComponent).reload();
+    harness.detectChanges();
+  }
+
+  it('al recargar el mismo :id conserva cabecera, pestañas y pestaña abierta, sin "Cargando"', async () => {
     await harness.navigateByUrl('/workspace/5/info');
     respond(0, protocolWith('5', 'Estudio de prueba cinco'));
 
-    button('person_addAsignar Pares')?.click();
-    harness.detectChanges();
+    reloadSameId();
 
     expect(requests.map((r) => r.id)).toEqual(['5', '5']);
     expect(root().textContent).not.toContain(LOADING_TEXT);
@@ -837,13 +856,16 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(TabPruebaComponent.created).toBe(1);
   });
 
-  it('sin aceptación de tiempos no sale Asignar Pares y la cabecera dice que falta (F10 D15)', async () => {
-    const notice = 'El investigador aún no acepta los tiempos del comité.';
+  it('PRESIDENTE sin aceptación de tiempos no ve Asignar Pares y la cabecera dice que falta (F10 D20 (3))', async () => {
+    activeRole.set('PRESIDENTE');
     await harness.navigateByUrl('/workspace/5/info');
     respond(0, { ...protocolWith('5', 'Estudio de prueba cinco'), isTimelineTermsAccepted: false });
 
     expect(button('person_addAsignar Pares')).toBeUndefined();
-    expect(root().querySelector('.header-notice')?.textContent?.trim()).toBe(notice);
+    expect(root().querySelector('.header-notice')?.textContent?.trim()).toBe(
+      'El investigador aún no acepta los tiempos del comité.',
+    );
+    expect(TERMS_NOT_ACCEPTED_REASON).toBe('El investigador aún no acepta los tiempos del comité.');
 
     await harness.navigateByUrl('/workspace/6/info');
     respond(1, protocolWith('6', 'Estudio de prueba seis'));
@@ -854,8 +876,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
   it('si falla la recarga del mismo :id conserva los datos y avisa "No pudimos actualizar el protocolo."; Reintentar vuelve a pedirlo (F10 D15)', async () => {
     await harness.navigateByUrl('/workspace/5/info');
     respond(0, protocolWith('5', 'Estudio de prueba cinco'));
-    button('person_addAsignar Pares')?.click();
-    harness.detectChanges();
+    reloadSameId();
     spyOn(console, 'error');
     fail(1, 'fallo de red', 500);
 
@@ -874,37 +895,26 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(TabPruebaComponent.created).toBe(1);
   });
 
-  it('Asignar Pares abre el modal solo con datos reales, sin "General" ni "Investigador Principal" (F10 D15)', async () => {
-    // Se cierra sin asignar: sin recarga, cada respuesta es del :id navegado.
-    dialogOpen.and.returnValue({ afterClosed: () => of(false) });
+  it('Asignar Pares lleva al formulario de F03 del protocolo, sin abrir un modal (F10 D20 (2))', async () => {
+    activeRole.set('PRESIDENTE');
     await harness.navigateByUrl('/workspace/5/info');
-    respond(0, protocolWith('5', 'Estudio de prueba cinco', ''));
+    respond(0, protocolWith('5', 'Estudio de prueba cinco'));
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+
     button('person_addAsignar Pares')?.click();
 
-    expect(dialogOpen.calls.mostRecent().args[1].data.protocol).toEqual({
-      id: 5,
-      ceishCode: '',
-      title: 'Estudio de prueba cinco',
-      receptionStatus: 'COMPLETO',
-      isRiskLevelDesignated: false,
-      createdAt: '',
-      studyType: { id: 0, codigo: '', nombre: '' },
-      principalInvestigatorRecord: { id: 0, fullName: '', email: '' },
-    });
+    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/evaluations/assignment', '5']);
+    expect(requests.length).toBe(1);
+  });
 
-    // `GET /protocols/:id` manda studyType como texto (F10 D19: la entidad ya es `string | null`).
+  it('con SECRETARIA activa el espacio no ofrece Asignar Pares ni el aviso de tiempos (F10 D20)', async () => {
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, { ...protocolWith('5', 'Estudio de prueba cinco'), isTimelineTermsAccepted: false });
+    expect(root().querySelector('.header-notice')).toBeNull();
+
     await harness.navigateByUrl('/workspace/6/info');
-    respond(1, {
-      ...protocolWith('6', 'Estudio de prueba seis'),
-      code: 'CEISH-PRUEBA-006',
-      studyType: 'Investigación de prueba',
-    });
-    button('person_addAsignar Pares')?.click();
-
-    const data = dialogOpen.calls.mostRecent().args[1].data.protocol;
-    expect(data.ceishCode).toBe('CEISH-PRUEBA-006');
-    expect(data.studyType.nombre).toBe('Investigación de prueba');
-    expect(data.principalInvestigatorRecord.fullName).toBe('Investigador Prueba');
+    respond(1, protocolWith('6', 'Estudio de prueba seis'));
+    expect(button('person_addAsignar Pares')).toBeUndefined();
   });
 
   it('el encabezado no muestra el investigador principal: mostrarlo queda pendiente de decisión (F10 D18 (1))', async () => {

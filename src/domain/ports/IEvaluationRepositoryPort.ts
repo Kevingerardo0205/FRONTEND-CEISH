@@ -9,6 +9,7 @@ import {
   ReassignPeerEvaluatorResponse,
   AssignmentHistoryEntry,
   ActiveAssignmentsResult,
+  AssignPeerEvaluatorsPayload,
 } from '../entities/peer-evaluation.entity';
 
 export interface EvaluatorsDashboardResponse {
@@ -82,9 +83,10 @@ export abstract class IEvaluationRepositoryPort {
   abstract getByProtocolId(protocolId: string): Observable<EvaluationEntity[]>;
   abstract getByEvaluatorId(evaluatorId: string): Observable<EvaluationEntity[]>;
   abstract getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]>;
+  /** N52 (F03 D6): `{ reviewType, evaluators: [{ evaluatorId, profile }] }`. */
   abstract assignPeerEvaluators(
     protocolId: string,
-    evaluatorIds: number[],
+    payload: AssignPeerEvaluatorsPayload,
   ): Observable<AssignEvaluatorsResponse>;
   abstract getMyPendingPeerAssignments(): Observable<PeerAssignmentEntity[]>;
   abstract submitPeerRiskProposed(
@@ -100,10 +102,10 @@ export abstract class IEvaluationRepositoryPort {
   abstract getActiveAssignments(protocolId: number): Observable<ActiveAssignmentsResult>;
 }
 
+/** Una persona de GET /evaluations/evaluators/active (activa, con rol EVALUADOR; sin perfiles, N54). */
 export interface ActiveEvaluator {
   id: number;
-  nombre: string;
-  email: string;
+  fullName: string;
 }
 
 export interface ConsolidatedEvaluationResponse {

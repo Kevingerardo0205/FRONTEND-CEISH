@@ -1,0 +1,223 @@
+:host {
+  display: block;
+  font-family: var(--font-content);
+  color: var(--c-text);
+}
+
+.formulario__cuerpo,
+.formulario__aviso,
+.formulario__exito {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+}
+
+.formulario__aviso p,
+.formulario__exito-titulo {
+  margin: 0 0 1rem;
+}
+
+.formulario__exito-titulo {
+  font-weight: 600;
+}
+
+.formulario__exito-lista {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--c-border);
+  }
+}
+
+.formulario__riesgo {
+  padding: 0 0.5rem;
+  border-radius: var(--radius-control);
+  background: var(--tone-azul-bg);
+  color: var(--tone-azul-fg);
+  font-size: 0.8125rem;
+}
+
+.formulario__tipo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  border: none;
+
+  legend {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+}
+
+.formulario__opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--min-h-action);
+  cursor: pointer;
+
+  input {
+    accent-color: var(--c-primary);
+  }
+}
+
+.formulario__filas {
+  display: flex;
+  flex-direction: column;
+}
+
+.formulario__fila {
+  display: grid;
+  grid-template-columns: minmax(9rem, 14rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--c-border);
+
+  @media (max-width: 599px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.formulario__fila--fuera .formulario__nombre {
+  color: var(--c-text-2);
+  text-decoration: line-through;
+}
+
+.formulario__etiqueta,
+.formulario__nombre {
+  font-weight: 500;
+}
+
+.formulario__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.formulario__etiqueta-campo {
+  font-size: 0.8125rem;
+  color: var(--c-text-2);
+}
+
+.formulario__sin-perfil {
+  grid-column: 2 / -1;
+  color: var(--c-text-2);
+
+  @media (max-width: 599px) {
+    grid-column: auto;
+  }
+}
+
+.formulario__select {
+  min-height: var(--min-h-action);
+  min-width: 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-control);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    color: var(--c-text-2);
+  }
+}
+
+.formulario__quitadas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+}
+
+.formulario__secundario,
+.formulario__principal {
+  min-height: var(--min-h-action);
+  padding: 0 1rem;
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}
+
+.formulario__secundario {
+  background: var(--c-surface);
+  color: var(--c-primary-dark);
+
+  &:hover {
+    background: var(--c-primary-soft);
+  }
+}
+
+.formulario__principal {
+  background: var(--c-primary);
+  color: var(--c-surface);
+
+  &:hover:not(:disabled) {
+    background: var(--c-primary-dark);
+  }
+
+  &:disabled {
+    border-color: var(--c-border);
+    background: var(--tone-gris-bg);
+    color: var(--c-text-2);
+    cursor: not-allowed;
+  }
+}
+
+.formulario__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 1.5rem;
+}
+
+.formulario__motivo {
+  flex-basis: 100%;
+  order: 1;
+  margin: 0;
+  color: var(--c-text-2);
+}
+
+.formulario__error {
+  margin: 1.5rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--tone-rojo-bg);
+  color: var(--tone-rojo-fg);
+}
+
+.formulario__enlace {
+  color: var(--c-primary-dark);
+  font-weight: 600;
+
+  &:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+}

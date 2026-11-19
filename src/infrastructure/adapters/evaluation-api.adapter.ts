@@ -24,6 +24,7 @@ import {
   ReassignPeerEvaluatorResponse,
   AssignmentHistoryEntry,
   ActiveAssignmentsResult,
+  AssignPeerEvaluatorsPayload,
 } from 'src/domain/entities/peer-evaluation.entity';
 
 type ApiEnvelope<T> = { data: T };
@@ -39,6 +40,43 @@ interface RawPeerAssignment {
   evaluatorProfile: string;
   isAssignedForAnnex10?: boolean;
   deadlineDate?: string | null;
+}
+
+/** Un elemento de GET /evaluations/protocols/pending-peer-assignment (entidad ORM del protocolo). */
+interface RawPendingPeerProtocol {
+  id?: unknown;
+  ceishCode?: unknown;
+  title?: unknown;
+  createdAt?: unknown;
+  isTimelineTermsAccepted?: unknown;
+  studyType?: { name?: unknown } | null;
+  principalInvestigator?: { fullName?: unknown } | null;
+  activeVersion?: { reception?: { receptionDate?: unknown } | null } | null;
+}
+
+const textOrNull = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() ? value : null;
+
+/** F03 D2: mapper estricto, sin rellenos («General», «Investigador Principal», «S/C»). */
+export function toPendingPeerAssignmentProtocols(raw: unknown): PendingPeerAssignmentProtocol[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item): PendingPeerAssignmentProtocol[] => {
+    const p = item as RawPendingPeerProtocol | null;
+    const id = Number(p?.id);
+    if (!p || !Number.isInteger(id) || id <= 0) return [];
+    return [
+      {
+        id,
+        ceishCode: textOrNull(p.ceishCode),
+        title: textOrNull(p.title),
+        studyType: textOrNull(p.studyType?.name),
+        principalInvestigator: textOrNull(p.principalInvestigator?.fullName),
+        receptionDate: textOrNull(p.activeVersion?.reception?.receptionDate),
+        isTimelineTermsAccepted:
+          typeof p.isTimelineTermsAccepted === 'boolean' ? p.isTimelineTermsAccepted : null,
+      },
+    ];
+  });
 }
 
 interface RawProtocolInfo {
@@ -264,21 +302,23 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
 
   getPendingPeerAssignmentProtocols(): Observable<PendingPeerAssignmentProtocol[]> {
     return this.apiClient
-      .get<ApiEnvelope<PendingPeerAssignmentProtocol[]>>(
-        ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.PENDING_ASSIGNMENT,
-      )
-      .pipe(map((res) => res.data || (res as unknown as PendingPeerAssignmentProtocol[])));
+      .get<ApiEnvelope<unknown>>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.PENDING_ASSIGNMENT)
+      .pipe(map((res) => toPendingPeerAssignmentProtocols(res?.data ?? res)));
   }
 
   assignPeerEvaluators(
     protocolId: string,
-    evaluatorIds: number[],
+    payload: AssignPeerEvaluatorsPayload,
   ): Observable<AssignEvaluatorsResponse> {
-    // F10 D15: el backend responde { data: EvaluationAssignmentEntity[] }; se traduce aquí.
+    // F03 D6 (N52): { reviewType, evaluators }; responde { data: EvaluationAssignmentEntity[] }.
+    const body: AssignPeerEvaluatorsPayload = {
+      reviewType: payload.reviewType,
+      evaluators: payload.evaluators.map((e) => ({ evaluatorId: e.evaluatorId, profile: e.profile })),
+    };
     return this.apiClient
       .post<ApiEnvelope<RawPeerAssignment[]>>(
         ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ASSIGN_PEERS(protocolId),
-        { evaluatorIds },
+        body,
       )
       .pipe(
         map((res) => {
@@ -314,13 +354,19 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
     );
   }
 
+  /** F03 D8: `{ id, fullName, institutionalEmail }` del backend; sin id numérico o sin nombre, se descarta. */
   getActiveEvaluators(): Observable<ActiveEvaluator[]> {
     return this.apiClient
-      .get<ApiEnvelope<ActiveEvaluator[]>>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ACTIVE_EVALUATORS)
+      .get<ApiEnvelope<unknown>>(ENDPOINTS.EVALUATIONS.PEER_ASSIGNMENTS.ACTIVE_EVALUATORS)
       .pipe(
         map((res) => {
-          const raw = res?.data || (res as unknown as ActiveEvaluator[]);
-          return Array.isArray(raw) ? raw : [];
+          const raw = res?.data ?? res;
+          if (!Array.isArray(raw)) return [];
+          return raw.flatMap((item): ActiveEvaluator[] => {
+            const e = item as { id?: unknown; fullName?: unknown } | null;
+            const fullName = textOrNull(e?.fullName);
+            return e && typeof e.id === 'number' && fullName ? [{ id: e.id, fullName }] : [];
+          });
         }),
       );
   }
