@@ -77,7 +77,7 @@ Todas van como botones del mismo tipo (con borde), con `aria-label="{accionTexto
 | `accion` | `accionTexto` (RF-ALR.f.1) | Destino | Evidencia |
 |---|---|---|---|
 | `VALIDAR` | Validar documentos | `/dashboard/protocols/workspace/{protocolId}/validation` | `protocols/routes.ts:23-36` (`workspace/:id` → hijo `validation` → `ProtocolValidationDetailPage`); mismo enlace en `protocol-validation-list.page.ts:151` |
-| `ASIGNAR` | Asignar evaluadores | `/dashboard/protocols/workspace/{protocolId}/info`: el espacio de ESE protocolo, con la acción `Asignar Pares` | `protocols/routes.ts:23-32` (`workspace/:id` → `info`); `protocol-workspace.component.ts:558-560` muestra `Asignar Pares` cuando el estado es `COMPLETO` o `INCOMPLETO`, y `:627-668` abre `AssignPeersModalComponent` con ese protocolo (el mismo modal de la bandeja, `peer-risk-pending-table.component.ts:250-252`). Decisión D1 |
+| `ASIGNAR` | Asignar evaluadores | **Desde el 19/11/2026 (F03 D10 (5)): sin acción**, con el texto «Pendiente de asignación por la Presidencia» en lugar del botón (la Secretaría ya no asigna, TSK-002-N52). Antes: `/dashboard/protocols/workspace/{protocolId}/info`: el espacio de ESE protocolo, con la acción `Asignar Pares` | `protocols/routes.ts:23-32` (`workspace/:id` → `info`); `protocol-workspace.component.ts:558-560` muestra `Asignar Pares` cuando el estado es `COMPLETO` o `INCOMPLETO`, y `:627-668` abre `AssignPeersModalComponent` con ese protocolo (el mismo modal de la bandeja, `peer-risk-pending-table.component.ts:250-252`). Decisión D1 |
 | `REASIGNAR` | Reasignar evaluador | `/dashboard/evaluations/reassignment/{protocolId}` | `evaluations/routes.ts:24-31` (`ReassignmentPage`); lee `protocolId` en `reassignment.page.ts:83` |
 
 Las tres rutas cuelgan de `/dashboard/...`, que para la Secretaría se carga dentro del mismo AppShell (`dashboard/routes.ts:51-57` y `111-115`, `app.routes.ts:100-104`).
@@ -88,6 +88,8 @@ Las tres rutas cuelgan de `/dashboard/...`, que para la Secretaría se carga den
 - No se verificó que `findOne` cargue la recepción de la versión activa: lo comprueba la prueba de humo de T01-5. Si no aparece `Asignar Pares`, se registra como hallazgo, se detiene la tarea y se decide (la alternativa es la bandeja `/estratificacion-riesgo`).
 - Nota (12/11/2026, F10 S-1f y S-1h, D13 y D15 de `specs/F10-menu-por-rol/spec-ui.md`): las líneas citadas arriba son anteriores a F10. Desde S-1f, `Asignar Pares` sale solo con el estado canónico en la etapa ASIGNACION (ya no con INCOMPLETO); desde S-1h, además, solo si el investigador aceptó los tiempos (`isTimelineTermsAccepted`). Sin cambio de versión de F01.
 - `AssignmentPage` no acepta el protocolo: no tiene parámetros y solo redirige (`assignment.page.ts:25-30`).
+
+- Nota (19/11/2026, F03 D10 y F10 D20): la Secretaría deja de asignar. La fila ASIGNAR queda sin botón y muestra «Pendiente de asignación por la Presidencia»; «Asignar Pares» del espacio pasa a la Presidenta; la bandeja `/estratificacion-riesgo` y `AssignmentPage` se borran. Lo que esta sección dice de D1 queda como historia. Sin cambio de versión de F01.
 
 **Regla:** si llega una `accion` fuera de estas tres, la fila se muestra sin botón (no se inventa un destino) y se registra con `console.warn`.
 
