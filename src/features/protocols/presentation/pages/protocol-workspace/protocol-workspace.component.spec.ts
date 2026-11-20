@@ -1,3 +1,4 @@
+import { Stage } from '@domain/value-objects/stage.vo';
 import { TestBed } from '@angular/core/testing';
 import { Component, signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, provideRouter, Router, UrlTree } from '@angular/router';
@@ -47,7 +48,7 @@ type StateName = keyof typeof STATE;
 const ACTION_STATES: StateName[] = ['ENVIADO', 'RECEPCION_APROBADA', 'CON_OBSERVACIONES'];
 
 /**
- * Tabla aprobada del Paso 0 de S-1f (F10 D13), referencia de la prueba: etiqueta, etapa, pestañas
+ * Tabla aprobada del Paso 0 de S-1f (F10 D13), referencia de la prueba: etiqueta, pestañas
  * de estado (Validación, Seguimiento) y acciones de SECRETARIA e INVESTIGADOR; ventana para
  * INVESTIGADOR sin tiempos aceptados.
  */
@@ -55,7 +56,6 @@ const EXPECTED: Record<
   StateName,
   {
     label: string;
-    stage: string | null;
     validation: boolean;
     followUp: boolean;
     secretaria: string[];
@@ -63,18 +63,18 @@ const EXPECTED: Record<
     modal: boolean;
   }
 > = {
-  BORRADOR: { label: 'Borrador', stage: 'RECEPCION', validation: false, followUp: false, secretaria: [], investigador: [], modal: false },
-  ENVIADO: { label: 'Por validar', stage: 'RECEPCION', validation: true, followUp: false, secretaria: ['VALIDATE_ALL'], investigador: [], modal: false },
-  CON_OBSERVACIONES: { label: 'Con observaciones', stage: 'RECEPCION', validation: true, followUp: false, secretaria: [], investigador: ['EDIT_PROTOCOL'], modal: false },
-  POR_SUBSANAR: { label: 'Pendiente de subsanación', stage: 'RECEPCION', validation: true, followUp: false, secretaria: [], investigador: ['EDIT_PROTOCOL'], modal: false },
-  ARCHIVADO: { label: 'Archivado', stage: 'RECEPCION', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  RECEPCION_APROBADA: { label: 'Recepción aprobada', stage: 'ASIGNACION', validation: true, followUp: false, secretaria: ['ASSIGN_EVALUATORS'], investigador: [], modal: true },
-  EN_EVALUACION: { label: 'En evaluación', stage: 'EVALUACION', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  DISCREPANCIA: { label: 'Discrepancia de riesgo', stage: 'EVALUACION', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  APROBADO: { label: 'Aprobado', stage: 'RESOLUCION', validation: true, followUp: true, secretaria: [], investigador: [], modal: false },
-  APROBADO_CON_CONDICION: { label: 'Aprobado con condiciones', stage: 'RESOLUCION', validation: true, followUp: true, secretaria: [], investigador: [], modal: false },
-  RECHAZADO: { label: 'Rechazado', stage: 'RESOLUCION', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
-  NUEVA_VERSION: { label: 'Nueva versión en revisión documental', stage: 'RECEPCION', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
+  BORRADOR: { label: 'Borrador', validation: false, followUp: false, secretaria: [], investigador: [], modal: false },
+  ENVIADO: { label: 'Por validar', validation: true, followUp: false, secretaria: ['VALIDATE_ALL'], investigador: [], modal: false },
+  CON_OBSERVACIONES: { label: 'Con observaciones', validation: true, followUp: false, secretaria: [], investigador: ['EDIT_PROTOCOL'], modal: false },
+  POR_SUBSANAR: { label: 'Pendiente de subsanación', validation: true, followUp: false, secretaria: [], investigador: ['EDIT_PROTOCOL'], modal: false },
+  ARCHIVADO: { label: 'Archivado', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
+  RECEPCION_APROBADA: { label: 'Recepción aprobada', validation: true, followUp: false, secretaria: ['ASSIGN_EVALUATORS'], investigador: [], modal: true },
+  EN_EVALUACION: { label: 'En evaluación', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
+  DISCREPANCIA: { label: 'Discrepancia de riesgo', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
+  APROBADO: { label: 'Aprobado', validation: true, followUp: true, secretaria: [], investigador: [], modal: false },
+  APROBADO_CON_CONDICION: { label: 'Aprobado con condiciones', validation: true, followUp: true, secretaria: [], investigador: [], modal: false },
+  RECHAZADO: { label: 'Rechazado', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
+  NUEVA_VERSION: { label: 'Nueva versión en revisión documental', validation: true, followUp: false, secretaria: [], investigador: [], modal: false },
 };
 
 function createProtocol(
@@ -95,12 +95,13 @@ function createProtocol(
   } as unknown as ProtocolEntity;
 }
 
-/** Encabezado ficticio sin rellenos (F10 D18). */
+/** Encabezado ficticio sin rellenos (F10 D18); etapa del backend (D19). Sin la clave riskLevel. */
 const HEADER: ProtocolHeaderData = {
   code: 'CEISH-PRUEBA-005',
   version: '2.0',
   title: PROTOCOL_TITLE,
-  riskLevel: null,
+  riskLevel: undefined,
+  stage: Stage.fromBackend('ASIGNACION'),
 };
 
 function workspaceMock(
@@ -193,7 +194,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
   for (const name of Object.keys(STATE) as StateName[]) {
     const expected = EXPECTED[name];
 
-    it('estado real ' + name + ': etiqueta, etapa, pestañas y acciones (Paso 0 de S-1f)', () => {
+    it('estado real ' + name + ': etiqueta, pestañas y acciones (Paso 0 de S-1f)', () => {
       const stateTabs = [
         ...(expected.validation ? ['validation'] : []),
         ...(expected.followUp ? ['follow-up'] : []),
@@ -203,7 +204,6 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
       activeRoleSignal.set('SECRETARIA');
       setState(name, true);
       expect(page.statusLabel()).toBe(expected.label);
-      expect((page.workspaceStage()?.code ?? null) as string | null).toBe(expected.stage);
       expect(tabPaths()).toEqual(['info', ...stateTabs]);
       expect(actionIds()).toEqual(expected.secretaria);
 
@@ -243,22 +243,20 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(page.awaitingTimelineAcceptance()).toBeFalse();
   });
 
-  it('statusId 25 nunca cae a la recepción: sin Asignar Pares y en Resolución', () => {
+  it('statusId 25 nunca cae a la recepción: sin Asignar Pares', () => {
     activeRoleSignal.set('SECRETARIA');
     setState('APROBADO_CON_CONDICION');
 
     expect(page.statusCode()).toBe('APROBADO_CON_CONDICION');
     expect(actionIds()).toEqual([]);
-    expect(page.workspaceStage()?.code).toBe('RESOLUCION');
   });
 
-  it('un statusId desconocido no cae a la recepción: sin acciones, sin barra y "Estado no reconocido"', () => {
+  it('un statusId desconocido no cae a la recepción: sin acciones y "Estado no reconocido"', () => {
     activeRoleSignal.set('SECRETARIA');
     protocolSignal.set(createProtocol({ reception: 'COMPLETO', statusId: 99 }));
 
     expect(page.statusCode()).toBeNull();
     expect(actionIds()).toEqual([]);
-    expect(page.workspaceStage()).toBeNull();
     expect(page.statusLabel()).toBe('Estado no reconocido');
   });
 
@@ -453,7 +451,7 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     expect(buttonLabels).toContain('Asignar Pares');
   });
 
-  it('muestra la etiqueta y la barra de 6 etapas con Asignación como actual (F10 D13)', () => {
+  it('muestra la etiqueta y la barra de 6 etapas con la etapa del backend como actual (F10 D19)', () => {
     const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
@@ -467,13 +465,36 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     );
   });
 
-  it('sin estado reconocido no muestra la barra de etapas (F02 §5.3)', () => {
-    protocolSignal.set(createProtocol({ reception: 'COMPLETO', statusId: 99 }));
+  it('D19: APROBADO con etapa SEGUIMIENTO del backend marca Seguimiento (sin cálculo desde el estado)', () => {
+    protocolSignal.set(createProtocol(STATE.APROBADO, true));
+    headerSignal.set({ ...HEADER, stage: Stage.fromBackend('SEGUIMIENTO') });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('app-stage-bar [aria-current="step"]')?.getAttribute('data-stage')).toBe(
+      'SEGUIMIENTO',
+    );
+  });
+
+  it('D19: sin etapa del backend (null o desconocida) no muestra la barra, aunque el estado se reconozca', () => {
+    headerSignal.set({ ...HEADER, stage: null });
     const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
 
     expect(root.querySelector('app-stage-bar')).toBeNull();
+    expect(root.querySelector('.protocol-header__status .chip')?.textContent?.trim()).toBe(
+      'Recepción aprobada',
+    );
+  });
+
+  it('sin estado reconocido el chip dice "Estado no reconocido" en gris (F02 §5.3)', () => {
+    protocolSignal.set(createProtocol({ reception: 'COMPLETO', statusId: 99 }));
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
     expect(root.querySelector('.protocol-header__status .chip')?.textContent?.trim()).toBe(
       'Estado no reconocido',
     );
@@ -513,7 +534,7 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     expect(root.textContent).not.toContain('v1');
   });
 
-  it('D18: la línea de datos muestra el nivel de riesgo solo si llega', () => {
+  it('D18/D19: la línea de datos muestra el nivel de riesgo; sin la clave no aparece', () => {
     const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
@@ -523,6 +544,17 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     fixture.detectChanges();
     expect(root.querySelector('.protocol-header__facts')?.textContent?.trim()).toBe(
       'Nivel de riesgo: Riesgo mínimo',
+    );
+  });
+
+  it('D19: riskLevel null es un estado real: «Nivel de riesgo: Sin fijar»', () => {
+    headerSignal.set({ ...HEADER, riskLevel: null });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('.protocol-header__facts')?.textContent?.trim()).toBe(
+      'Nivel de riesgo: Sin fijar',
     );
   });
 
@@ -668,7 +700,8 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
             code: p.code || null,
             version: '1.0',
             title: p.title,
-            riskLevel: null,
+            riskLevel: undefined,
+            stage: Stage.fromBackend('ASIGNACION'),
           }),
         ),
       );
@@ -859,13 +892,13 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
       principalInvestigatorRecord: { id: 0, fullName: '', email: '' },
     });
 
-    // `GET /protocols/:id` manda studyType como texto (protocol.mapper.ts:52-53 del backend).
+    // `GET /protocols/:id` manda studyType como texto (F10 D19: la entidad ya es `string | null`).
     await harness.navigateByUrl('/workspace/6/info');
     respond(1, {
       ...protocolWith('6', 'Estudio de prueba seis'),
       code: 'CEISH-PRUEBA-006',
       studyType: 'Investigación de prueba',
-    } as unknown as ProtocolEntity);
+    });
     button('person_addAsignar Pares')?.click();
 
     const data = dialogOpen.calls.mostRecent().args[1].data.protocol;
@@ -874,7 +907,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(data.principalInvestigatorRecord.fullName).toBe('Investigador Prueba');
   });
 
-  it('el encabezado no muestra el investigador principal: GET /protocols/:id no lo trae (F10 D18)', async () => {
+  it('el encabezado no muestra el investigador principal: mostrarlo queda pendiente de decisión (F10 D18 (1))', async () => {
     await harness.navigateByUrl('/workspace/6/info');
     respond(0, protocolWith('6', 'Estudio de prueba seis'));
 

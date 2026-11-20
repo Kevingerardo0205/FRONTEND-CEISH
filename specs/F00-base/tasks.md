@@ -35,6 +35,7 @@ Rama de EP1: `feat/f00-ep1-encabezado-protocolo` (desde `dev` `2b9b451`). Spec: 
 | # | Capa | Tarea | Archivos | Terminado cuando… | Estado |
 |---|---|---|---|---|---|
 | EP1 | shared + protocols | `ProtocolHeaderComponent`, rediseño de `StageBar`, `protocolStatusTone` (regla T14b), mapper estricto del encabezado y adopción en el espacio del protocolo (sin `premium-header` ni colores fijos; el `<nav>` de las pestañas con `aria-label="Pestañas del protocolo"`) | plan §2 (EP1) | Criterios 9 a 11 de spec-ui y EARS 46 a 51 de F10; pruebas y mutaciones en verde | Hecho (`16f3b8e`) |
+| EP1b | protocols + infraestructura compartida | Encabezado y pestaña Información desde el backend (TSK-001.27, backend `dev` `3d00183`): `mapToEntity` lee `principalInvestigator.fullName` y `studyType`/`riskLevel` como texto (`ProtocolEntity` con `string \| null`); el mapper estricto del encabezado lee `etapa` (orden de `Stage`, sin `etapaOrden`) y distingue `riskLevel` `null` (`Sin fijar`) de la clave ausente; la barra del espacio deja el cálculo temporal de D13 (se retiran `workspaceStageCode` y su tabla); la pestaña Información muestra `Sin investigador principal`, `Sin tipo de estudio` y el riesgo siempre. Rama `feat/ep1b-encabezado-desde-backend` | `src/infrastructure/adapters/protocol-api.adapter.ts` + spec nuevo, `src/domain/entities/protocol.entity.ts`, `features/protocols/domain/{protocol-header,workspace-status}.ts` + specs, `features/protocols/infrastructure/protocol-header.mapper.ts` + spec, `protocol-workspace.component.ts` + spec, `tabs/protocol-detail-tab.component.ts` + spec | Criterio 13 de spec-ui y EARS 22 y 52 a 55 de F10; mutaciones M1 a M6 detectadas; tsc, `ng test`, build y eslint sin empeorar | Hecho (`c539e1d`) |
 | EP2 | presentation | Validación de documentos: `ProtocolHeader` en `protocol-validation-detail` y retiro del `official-header` con sus rellenos (coordinar con TSK-F02-3) | `protocols/presentation/pages/protocol-validation-detail/*` | Sin `'TRÁMITE EN PROCESO'`, `'1.0'` ni `'No especificado'` | Por hacer |
 | EP3 | presentation | Dictámenes / consolidación (`evaluation-consolidation`) | `evaluations/presentation/pages/evaluation-consolidation/*` | Encabezado común y sin el encabezado propio | Por hacer |
 | EP4 | presentation | Emitir resolución (`resolution-generator`), con la acción y su motivo (canvas EmitirResolucion) | `resolutions/presentation/pages/resolution-generator/*` | Sin `'PRT-' + id` | Por hacer |
@@ -79,6 +80,33 @@ Rama de EP1: `feat/f00-ep1-encabezado-protocolo` (desde `dev` `2b9b451`). Spec: 
 - Diferencia de etapa entre el espacio y el listado para APROBADO con resolución (spec-ui §10); la resuelve la etapa en `GET /protocols/:id` (TSK-001.3).
 - Datos del encabezado que faltan en el backend: investigador principal, nivel de riesgo, sesión y fecha (spec-ui §8).
 - Dos `GET /protocols/:id` por carga del espacio (plan §10).
+
+**Resultados de EP1b (18/11/2026, código `c539e1d`; docs `8e377c3`; backend `dev` `3d00183`):**
+- Línea base (`dev` `f23a237`): `npx tsc -p tsconfig.app.json --noEmit` exit 0; `npx ng test --watch=false --browsers=ChromeHeadless` `Executed 1475 of 1475 SUCCESS`; `npx ng build --configuration production` exit 0 con 19 líneas `WARNING` (las de `canvg`/`core-js`); `npx eslint` de los 7 archivos de código: 0 problemas.
+- Verificación final (dos veces): `tsc` exit 0; `ng test` `Executed 1478 of 1478 SUCCESS` las dos veces; build de producción exit 0 las dos veces, 19 líneas `WARNING` como la línea base; `npx eslint` de los 7 archivos de código: 0 problemas las dos veces; las 9 specs tocadas con `--no-ignore`: 0 problemas; `npx eslint src`: 68 avisos y 0 errores, como la línea base.
+- Pruebas: +19 nuevas (mapper 3, `riskLevelFactValue` 3, `isAssignmentStatus` 1, la que comprueba que `workspaceStageCode` ya no se exporta 1, pestaña Información 3, espacio 3 y `protocol-api.adapter.spec.ts` nuevo con 5) y −16 de la etapa temporal retirada (`workspaceStageCode`): de 1475 a 1478.
+- Mutaciones (cada una aplicada y revertida por un script que restaura los bytes y compara el hash de `git diff`: "REVERTIDO: OK" en todas; `npx ng test --watch=false --browsers=ChromeHeadless --include=<spec>`):
+
+| Mutación | Qué se rompió (código anterior) | Prueba que falla | Resultado |
+|---|---|---|---|
+| M1 | `mapToEntity` vuelve a `String(raw.principalInvestigator \|\| …)` | `GET /protocols/:id: investigador por fullName, tipo de estudio y riesgo como texto`; `GET /protocols (lista con el objeto principalInvestigator): ninguna fila dice «[object Object]»` | `2 failed, 3 passed` |
+| M1b | Solo la forma objeto (primera versión de EP1b): el texto de `GET /reception/protocols` se pierde | `GET /reception/protocols manda el investigador como texto: se conserva el nombre` | `1 failed, 4 passed` |
+| M2 | La pestaña vuelve a `\|\| 'Cargando...'` | `sin datos usa los textos vacíos de la spec, nunca «Cargando...» ni «[object Object]»` | `1 failed, 15 passed` |
+| M3 | El tipo de estudio vuelve a `studyType?.nombre \|\| type` | `muestra el nombre del investigador principal, el nombre del tipo de estudio y el riesgo`; `sin datos usa los textos vacíos…` | `2 failed, 14 passed` |
+| M4 | La barra vuelve al cálculo de D13 desde el estado (tabla de `dev`) | `D19: APROBADO con etapa SEGUIMIENTO del backend marca Seguimiento (sin cálculo desde el estado)`; `D19: sin etapa del backend (null o desconocida) no muestra la barra, aunque el estado se reconozca` | `2 failed, 50 passed` |
+| M5 | El riesgo `null` vuelve a ocultarse (`riskLevel ?? null`) | `D19: riskLevel null es un estado real: «Nivel de riesgo: Sin fijar»` | `1 failed, 51 passed` |
+| M6 | El mapper deja de leer `etapa` (`stage: null`) | `lee código, versión, título, riesgo y etapa del objeto solo`; `D19: la etapa sale de etapa y su orden de Stage, sin mirar etapaOrden`; `un campo con otro tipo lanza ContractError con su ruta` | `3 failed, 60 passed` (mapper + espacio) |
+
+- M2 a M6 se midieron antes de agregar `principalInvestigatorName` al adapter; ese cambio no toca sus archivos ni sus specs. M1 se volvió a medir después, junto con M1b.
+
+**Notas de EP1b (18/11/2026):**
+- Hallazgo en la verificación: `GET /reception/protocols` manda `principalInvestigator` como texto (`reception.service.ts:188-191` del backend), y `getReceptionProtocols` (lo usan `dashboard.facade.ts:66`, `secretariat-dashboard.service.ts:128`, `load-reception-protocols.use-case.ts:12` y `load-validation-queues.use-case.ts:17`) pasa por `mapToEntity`; el adapter acepta las dos formas (M1b). D19 (4) se precisó en este commit de docs, después del código.
+- Usos que cambiaron por `ProtocolEntity.studyType` y `riskLevel` como `string | null` (solo lo que marcó `tsc` o el compilador de plantillas): `protocol-workspace.component.ts` (modal de pares: `studyType.nombre` = `p.studyType ?? ''` e `id: 0`, que ya era 0 porque `studyType` llegaba como texto) y la plantilla de `protocol-detail-tab.component.ts`. `editar-protocolo.page.ts:203` usa su propio tipo (`ProtocoloEdicion`) y no cambió.
+- En `mapToEntity`, `type` y `studyTypeCode` dejaron de leer `studyType?.code`, que con `studyType` como texto siempre era `undefined`: mismo resultado.
+- El nivel de riesgo salió de "Detalles adicionales" de la pestaña Información y va siempre en la primera tarjeta; `hasDeferredData()` ya no lo cuenta.
+- Sin probar en el navegador contra el backend local: NO EJECUTADO en esta tarea.
+
+**Pendiente anotado en EP1b (18/11/2026), sin tarea asignada:** el backend ya puede devolver el perfil `'BIOETICO'` (TSK-002-N50) y el frontend no lo reconoce. Sitios: (1) `PEER_EVALUATOR_PROFILES` (`src/domain/entities/peer-evaluation.entity.ts:99-104`, 4 perfiles sin Bioético, y la nota de `:113`); (2) las etiquetas de `src/features/evaluations/presentation/utils/active-assignment-view.util.ts:16-31` (mostraría el código tal cual); (3) `normalizeProfile` de `src/features/evaluations/presentation/utils/reassignment-candidates.util.ts:29-39` (devolvería `null`); (4) los catálogos aparte de `src/domain/entities/evaluator.entity.ts:1` (`'BIOETICA'`, `'METODOLOGIA'`) y de `src/features/evaluations/presentation/pages/subsanacion/subsanacion.page.ts:1328-1336` (mapa local). No se toca en EP1b.
 
 ## Ajustes del AppShell (SH, desde el 17/11/2026)
 

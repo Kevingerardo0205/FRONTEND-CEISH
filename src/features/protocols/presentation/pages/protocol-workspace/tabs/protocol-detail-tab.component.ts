@@ -17,6 +17,11 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
 import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity';
 import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/states.component';
+import { RISK_LEVEL_UNSET_LABEL } from '../../../../domain/protocol-header';
+
+/** Textos vacíos de la pestaña Información (F10 D19, decisión de la usuaria del 18/11/2026). */
+export const NO_PRINCIPAL_INVESTIGATOR_LABEL = 'Sin investigador principal';
+export const NO_STUDY_TYPE_LABEL = 'Sin tipo de estudio';
 
 @Component({
   selector: 'app-protocol-detail-tab',
@@ -51,15 +56,19 @@ import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/st
         <div class="info-grid">
           <div class="info-item">
             <label>Tipo de Estudio</label>
-            <p>{{ protocol()?.studyType?.nombre || protocol()?.type }}</p>
+            <p data-testid="study-type">{{ studyTypeLabel() }}</p>
           </div>
           <div class="info-item">
             <label>Investigador Principal</label>
-            <p>{{ protocol()?.principalInvestigator || 'Cargando...' }}</p>
+            <p data-testid="principal-investigator">{{ principalInvestigatorLabel() }}</p>
           </div>
           <div class="info-item full-width">
             <label>Título del Proyecto</label>
             <p class="project-title">{{ protocol()?.title }}</p>
+          </div>
+          <div class="info-item">
+            <label>Nivel de Riesgo</label>
+            <p data-testid="risk-level">{{ riskLevelLabel() }}</p>
           </div>
         </div>
 
@@ -68,10 +77,6 @@ import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/st
           <mat-icon>info</mat-icon> Detalles Adicionales
         </h4>
         <div class="info-grid mt-2" *ngIf="hasDeferredData()">
-          <div class="info-item" *ngIf="protocol()?.riskLevel">
-            <label>Nivel de Riesgo</label>
-            <p>{{ protocol()?.riskLevel?.name || protocol()?.riskLevel }}</p>
-          </div>
           <div class="info-item" *ngIf="protocol()?.geographicCoverage">
             <label>Cobertura Geográfica</label>
             <p>{{ protocol()?.geographicCoverage }}</p>
@@ -548,6 +553,15 @@ export class ProtocolDetailTabPage {
   resolveEstado = resolveEstado;
 
   protocol = this.workspaceService.protocol;
+
+  /** F10 D19: el nombre del tipo de estudio (`studyType`), no el código. */
+  studyTypeLabel = computed(() => this.protocol()?.studyType || NO_STUDY_TYPE_LABEL);
+  /** F10 D19: `principalInvestigator.fullName`; nunca «Cargando...» ni «[object Object]». */
+  principalInvestigatorLabel = computed(
+    () => this.protocol()?.principalInvestigator || NO_PRINCIPAL_INVESTIGATOR_LABEL,
+  );
+  /** F10 D19: el nivel de riesgo se muestra siempre; sin fijar (null) → «Sin fijar». */
+  riskLevelLabel = computed(() => this.protocol()?.riskLevel || RISK_LEVEL_UNSET_LABEL);
   auditTrail = signal<ProtocolTrailEvent[]>([]);
 
   constructor() {
@@ -622,7 +636,6 @@ export class ProtocolDetailTabPage {
     const p = this.protocol();
     if (!p) return false;
     return !!(
-      p.riskLevel ||
       p.geographicCoverage ||
       p.studyDurationMonths ||
       p.lugarEjecucion ||

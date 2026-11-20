@@ -57,8 +57,20 @@ interface InvestigatorFromApi {
   nombre?: string;
 }
 
-interface RawStudyType {
-  code?: string;
+/** `principalInvestigator` de `GET /protocols/:id` y `GET /protocols` (`toListResponse`, TSK-001.27). */
+interface RawPrincipalInvestigator {
+  id?: number;
+  fullName?: string;
+}
+
+/**
+ * Nombre del investigador principal (F10 D19). Dos formas reales del backend: objeto `{ id, fullName }`
+ * (`GET /protocols/:id` y `GET /protocols`) y texto con el nombre (`GET /reception/protocols`,
+ * `reception.service.ts:188-191`). Antes, `String(objeto)` daba «[object Object]».
+ */
+function principalInvestigatorName(value: RawPrincipalInvestigator | string | null | undefined): string {
+  if (typeof value === 'string') return value;
+  return value?.fullName ?? '';
 }
 
 interface RawStatusObj {
@@ -72,9 +84,10 @@ interface RawProtocolData {
   title?: string;
   titulo?: string;
   investigatorId?: string;
-  principalInvestigator?: string;
+  principalInvestigator?: RawPrincipalInvestigator | string | null;
   investigators?: InvestigatorFromApi[];
-  studyType?: RawStudyType;
+  /** Nombre del tipo de estudio (texto, `protocol.mapper.ts` del backend). */
+  studyType?: string | null;
   studyTypeCode?: string;
   type?: string;
   receptionStatus?: string | RawStatusObj;
@@ -87,7 +100,8 @@ interface RawProtocolData {
   ceishCode?: string;
   documents?: ProtocolEntity['documents'];
   version?: number | string;
-  riskLevel?: ProtocolEntity['riskLevel'];
+  /** Nombre del nivel de riesgo; null si no está fijado (TSK-001.27). */
+  riskLevel?: string | null;
   riskLevelId?: number;
   geographicCoverage?: string;
   studyDurationMonths?: number;
@@ -355,7 +369,9 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       statusLabel = String(statusLabel.name || statusLabel.label || 'DESCONOCIDO');
     }
 
-    let pi = String(raw.principalInvestigator || nestedProtocol?.principalInvestigator || '');
+    let pi =
+      principalInvestigatorName(raw.principalInvestigator) ||
+      principalInvestigatorName(nestedProtocol?.principalInvestigator);
     const investigatorsList = (raw.investigators || nestedProtocol?.investigators || null) as
       InvestigatorFromApi[] | null;
     if (!pi && investigatorsList && Array.isArray(investigatorsList)) {
@@ -372,23 +388,9 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       ),
       investigatorId: String(raw.investigatorId || nestedProtocol?.investigatorId || ''),
       principalInvestigator: pi,
-      type: String(
-        raw.studyType?.code ||
-          raw.type ||
-          nestedProtocol?.studyType?.code ||
-          nestedProtocol?.type ||
-          '',
-      ) as ProtocolType,
-      studyTypeCode: String(
-        raw.studyType?.code ||
-          raw.studyTypeCode ||
-          nestedProtocol?.studyType?.code ||
-          nestedProtocol?.studyTypeCode ||
-          '',
-      ),
-      studyType: (raw.studyType ||
-        nestedProtocol?.studyType ||
-        null) as ProtocolEntity['studyType'],
+      type: String(raw.type || nestedProtocol?.type || '') as ProtocolType,
+      studyTypeCode: String(raw.studyTypeCode || nestedProtocol?.studyTypeCode || ''),
+      studyType: raw.studyType || nestedProtocol?.studyType || null,
       status: String(statusLabel).toUpperCase() as ProtocolStatus,
       statusId: statusIdVal ? Number(statusIdVal) : undefined,
       submissionDate: raw.receptionDate
@@ -405,9 +407,7 @@ export class ProtocolApiAdapter extends IProtocolRepositoryPort {
       ),
       documents: (raw.documents || nestedProtocol?.documents || []) as ProtocolEntity['documents'],
       version: (raw.version || nestedProtocol?.version || 1) as ProtocolEntity['version'],
-      riskLevel: (raw.riskLevel ||
-        nestedProtocol?.riskLevel ||
-        null) as ProtocolEntity['riskLevel'],
+      riskLevel: raw.riskLevel || nestedProtocol?.riskLevel || null,
       riskLevelId: (raw.riskLevelId || nestedProtocol?.riskLevelId) as number | undefined,
       geographicCoverage: (raw.geographicCoverage || nestedProtocol?.geographicCoverage) as
         string | undefined,

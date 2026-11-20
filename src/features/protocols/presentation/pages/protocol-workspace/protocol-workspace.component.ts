@@ -16,7 +16,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
-import { Stage } from '@domain/value-objects/stage.vo';
 import {
   ProtocolHeaderComponent,
   ProtocolHeaderFact,
@@ -27,11 +26,11 @@ import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/st
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
 import {
-  workspaceStageCode,
+  isAssignmentStatus,
   workspaceStatusCode,
   workspaceStatusLabel,
 } from '../../../domain/workspace-status';
-import { protocolVersionLabel } from '../../../domain/protocol-header';
+import { protocolVersionLabel, riskLevelFactValue } from '../../../domain/protocol-header';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -331,11 +330,8 @@ export class ProtocolWorkspaceComponent implements OnInit {
   /** Borrador: la recepción en BORRADOR (D13). */
   private isDraft = computed(() => this.protocol()?.status?.toUpperCase() === 'BORRADOR');
 
-  /** Etapa de la barra (temporal, D13). */
-  workspaceStage = computed(() => {
-    const code = workspaceStageCode(this.statusCode());
-    return code ? Stage.fromBackend(code) : null;
-  });
+  /** Etapa de la barra (F10 D19): la `etapa` de `GET /protocols/:id`; null o desconocida → sin barra. */
+  workspaceStage = computed(() => this.header()?.stage ?? null);
 
   statusLabel = computed(() => workspaceStatusLabel(this.statusCode(), this.isDraft()));
 
@@ -357,11 +353,12 @@ export class ProtocolWorkspaceComponent implements OnInit {
   versionLabel = computed(() => protocolVersionLabel(this.header()?.version ?? null));
 
   /**
-   * Línea de datos del encabezado (D18): solo lo que trae `GET /protocols/:id`. El investigador
-   * principal y la sesión no llegan (F00 §8); el nivel de riesgo, solo si llega.
+   * Línea de datos del encabezado (D18, D19): solo lo que trae `GET /protocols/:id`. El nivel de
+   * riesgo `null` se muestra «Sin fijar» y sin la clave no sale. El investigador principal ya llega,
+   * pero mostrarlo aquí queda pendiente de decisión (D18 (1)); la sesión no llega (F00 §8).
    */
   facts = computed<readonly ProtocolHeaderFact[]>(() => [
-    { label: 'Nivel de riesgo', value: this.header()?.riskLevel ?? null },
+    { label: 'Nivel de riesgo', value: riskLevelFactValue(this.header()?.riskLevel) },
   ]);
 
   showAcceptanceModal = computed(() => {
@@ -419,7 +416,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (
       activeRole &&
       WORKSPACE_ACTION_ROLES.ASSIGN_EVALUATORS.includes(activeRole) &&
-      workspaceStageCode(code) === 'ASIGNACION' &&
+      isAssignmentStatus(code) &&
       p.isTimelineTermsAccepted === true
     ) {
       actions.push({ id: 'ASSIGN_EVALUATORS', label: 'Asignar Pares', icon: 'person_add' });
@@ -438,7 +435,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
       !!p &&
       !!activeRole &&
       WORKSPACE_ACTION_ROLES.ASSIGN_EVALUATORS.includes(activeRole) &&
-      workspaceStageCode(this.statusCode()) === 'ASIGNACION' &&
+      isAssignmentStatus(this.statusCode()) &&
       p.isTimelineTermsAccepted !== true
     );
   });
@@ -513,10 +510,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
       // F10 D15: solo datos reales, sin rellenos ('General', 'Investigador Principal'). El modal
       // usa id, ceishCode, title, studyType.nombre y principalInvestigatorRecord.fullName; los
       // demás campos los exige el tipo y el modal no los lee. `GET /protocols/:id` manda
-      // `studyType` como texto (`protocol.mapper.ts:52` del backend), aunque la entidad diga objeto.
-      const rawStudyType: unknown = p.studyType;
-      const studyTypeName =
-        typeof rawStudyType === 'string' ? rawStudyType : (p.studyType?.nombre ?? '');
+      // `studyType` como texto (F10 D19: `ProtocolEntity.studyType` es `string | null`).
       const mappedProtocol: PendingPeerAssignmentProtocol = {
         id: Number(p.id),
         ceishCode: p.code || '',
@@ -524,7 +518,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
         receptionStatus: p.status,
         isRiskLevelDesignated: false,
         createdAt: p.submissionDate ? new Date(p.submissionDate).toISOString() : '',
-        studyType: { id: p.studyType?.id ?? 0, codigo: p.studyTypeCode || '', nombre: studyTypeName },
+        studyType: { id: 0, codigo: p.studyTypeCode || '', nombre: p.studyType ?? '' },
         principalInvestigatorRecord: { id: 0, fullName: p.principalInvestigator || '', email: '' },
       };
 

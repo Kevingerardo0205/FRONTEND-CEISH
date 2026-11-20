@@ -5,6 +5,7 @@ import {
   stripTransportEnvelope,
   unwrapData,
 } from '@infrastructure/mappers/contract-readers';
+import { Stage } from '@domain/value-objects/stage.vo';
 import { ProtocolHeaderData } from '../domain/protocol-header';
 
 /**
@@ -26,9 +27,16 @@ export class ProtocolHeaderMapper {
       code: texto(raw, 'ceishCode', path),
       version: version(raw, path),
       title: texto(raw, 'title', path),
-      riskLevel: texto(raw, 'riskLevel', path),
+      riskLevel: 'riskLevel' in raw ? texto(raw, 'riskLevel', path) : undefined,
+      stage: etapa(raw, path),
     };
   }
+}
+
+/** `etapa` (F10 D19): el orden sale de `Stage` y `etapaOrden` no se lee; null o desconocida → null. */
+function etapa(raw: Raw, path: string): Stage | null {
+  const v = texto(raw, 'etapa', path);
+  return Stage.all().find((s) => s.code === v) ?? null;
 }
 
 function esEnvoltorio(value: unknown): boolean {

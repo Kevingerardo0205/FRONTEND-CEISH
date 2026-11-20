@@ -1,30 +1,11 @@
 import { EstadoCatalog } from '@domain/catalogs/estado.catalog';
-import { StageCode } from '@domain/value-objects/stage.vo';
-import { estadoById } from '@shared/utils/estado.resolver';
+import * as workspaceStatus from './workspace-status';
 import {
   UNKNOWN_STATUS_LABEL,
-  workspaceStageCode,
+  isAssignmentStatus,
   workspaceStatusCode,
   workspaceStatusLabel,
 } from './workspace-status';
-
-/** Etapa por id de la migración del backend `1890000000000-AddEtapaOrdenToEstados` (referencia). */
-const EXPECTED_STAGE_BY_ID: Record<number, StageCode> = {
-  9: 'RECEPCION',
-  11: 'RECEPCION',
-  12: 'RECEPCION',
-  15: 'RECEPCION',
-  20: 'RECEPCION',
-  21: 'RECEPCION',
-  10: 'ASIGNACION',
-  13: 'EVALUACION',
-  16: 'EVALUACION',
-  14: 'RESOLUCION',
-  17: 'RESOLUCION',
-  18: 'RESOLUCION',
-  19: 'RESOLUCION',
-  25: 'RESOLUCION',
-};
 
 /** Casos reales de `GET /protocols/:id` (Paso 0 de S-1f): `receptionStatus` + `statusId` → estado canónico. */
 const REAL_CASES: { name: string; reception: string; statusId: number | null; code: string }[] = [
@@ -56,7 +37,6 @@ describe('workspaceStatusCode: estado canónico del espacio (F10 D13)', () => {
 
   it('statusId 25 nunca cae a la recepción', () => {
     expect(workspaceStatusCode(25, 'COMPLETO')).toBe('APROBADO_CON_CONDICION');
-    expect(workspaceStageCode(workspaceStatusCode(25, 'COMPLETO'))).not.toBe('ASIGNACION');
   });
 
   it('un statusId fuera del catálogo no cae a la recepción', () => {
@@ -69,25 +49,18 @@ describe('workspaceStatusCode: estado canónico del espacio (F10 D13)', () => {
   });
 });
 
-describe('workspaceStageCode: etapa temporal (F10 D13)', () => {
-  for (const [id, stage] of Object.entries(EXPECTED_STAGE_BY_ID)) {
-    it('el estado ' + id + ' está en ' + stage, () => {
-      expect(workspaceStageCode(estadoById(Number(id))?.code ?? null)).toBe(stage);
-    });
-  }
-
-  it('todos los estados del catálogo tienen etapa en la tabla de la migración', () => {
-    for (const estado of Object.values(EstadoCatalog)) {
-      expect(EXPECTED_STAGE_BY_ID[estado.id]).withContext(estado.code).toBeDefined();
-    }
+describe('workspace-status sin etapa calculada (F10 D19)', () => {
+  it('ya no exporta la etapa temporal: la etapa del espacio sale del backend', () => {
+    expect(Object.keys(workspaceStatus)).not.toContain('workspaceStageCode');
   });
+});
 
-  it('nunca da SEGUIMIENTO ni RENOVACION, y sin estado da null', () => {
+describe('isAssignmentStatus: acciones de la etapa ASIGNACION (F10 D13, D19)', () => {
+  it('solo COMPLETO, el único estado de ASIGNACION en la migración', () => {
     for (const estado of Object.values(EstadoCatalog)) {
-      expect(['SEGUIMIENTO', 'RENOVACION']).not.toContain(workspaceStageCode(estado.code) as string);
+      expect(isAssignmentStatus(estado.code)).withContext(estado.code).toBe(estado.code === 'COMPLETO');
     }
-    expect(workspaceStageCode(null)).toBeNull();
-    expect(workspaceStageCode('DESCONOCIDO')).toBeNull();
+    expect(isAssignmentStatus(null)).toBeFalse();
   });
 });
 

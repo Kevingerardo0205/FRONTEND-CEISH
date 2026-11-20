@@ -55,6 +55,18 @@ src/
 | `src/features/protocols/protocol-header.providers.ts` | `PROTOCOL_HEADER_PROVIDERS`, registrado en los `providers` de la ruta `workspace/:id` (`protocols/routes.ts`) |
 | `protocol-workspace.service.ts` (cambia) | `loadProtocol` pide el protocolo y el encabezado juntos (`forkJoin`); los dos se vacían con otro `:id` y se conservan si falla la recarga del mismo (F10 D14). **Costo conocido:** son dos `GET /protocols/:id` por carga, hasta que el adapter compartido deje de rellenar (entonces el encabezado sale del mismo `ProtocolEntity`) |
 
+### EP1b — encabezado y pestaña Información desde el backend (18/11/2026)
+
+| Archivo | Cambio |
+|---|---|
+| `src/infrastructure/adapters/protocol-api.adapter.ts` + spec nuevo | `mapToEntity` lee `principalInvestigator.fullName` (objeto de `GET /protocols/:id` y de `GET /protocols`), `studyType` y `riskLevel` como texto o `null`. Sin spec previo: el adapter solo estaba simulado en `protocol-workspace.service.spec.ts` |
+| `src/domain/entities/protocol.entity.ts` | `studyType` y `riskLevel`: `string \| null`; se ajusta solo lo que marque `tsc` |
+| `features/protocols/domain/protocol-header.ts` + spec | `ProtocolHeaderData.stage` (`Stage \| null`); `riskLevel` distingue `null` (sin fijar) de `undefined` (clave ausente); `riskLevelFactValue()` y `RISK_LEVEL_UNSET_LABEL` (`Sin fijar`) |
+| `features/protocols/infrastructure/protocol-header.mapper.ts` + spec | Lee `etapa` (orden de `Stage`, sin `etapaOrden`; desconocida → `null`) y la presencia de `riskLevel` |
+| `features/protocols/domain/workspace-status.ts` + spec | Se retiran `workspaceStageCode` y `STAGE_BY_STATUS_CODE` (F10 D19) |
+| `protocol-workspace.component.ts` + spec | La barra usa `header().stage`; el dato de riesgo usa `riskLevelFactValue` |
+| `tabs/protocol-detail-tab.component.ts` + spec | `Sin investigador principal`, `Sin tipo de estudio` y el nivel de riesgo siempre visible |
+
 `src/features/shell/presentation/app-shell/` y `role-selector/` ya existen (T13b y T13c). Las rutas por rol activo están en `src/app/app.routes.ts`, `src/features/dashboard/routes.ts` y `src/infrastructure/guards/role-home.guard.ts` (T13d).
 
 ### application — rol activo

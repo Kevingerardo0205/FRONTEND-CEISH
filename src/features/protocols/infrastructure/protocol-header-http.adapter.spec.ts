@@ -34,7 +34,7 @@ describe('ProtocolHeaderHttpAdapter (F10 D18)', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ statusCode: 200, message: 'Success', data: { id: 5, version: '1.0' } });
 
-    expect(header).toEqual({ code: null, version: '1.0', title: null, riskLevel: null });
+    expect(header).toEqual({ code: null, version: '1.0', title: null, riskLevel: undefined, stage: null });
   });
 
   it('el error HTTP llega al suscriptor', () => {

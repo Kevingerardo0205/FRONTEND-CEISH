@@ -237,6 +237,86 @@ describe('ProtocolDetailTabPage - cuerpo evaluador (F10 D14 y D17)', () => {
 });
 
 /** F10 D12 y D17: las tablas del dominio, contra su copia escrita a mano desde la spec. */
+/**
+ * F10 D19 (EP1b, EARS 54 y 55): la pestaña Información muestra el investigador principal, el nombre
+ * del tipo de estudio y el nivel de riesgo; si faltan, los textos vacíos de la spec. Plantilla real.
+ * Datos ficticios.
+ */
+describe('ProtocolDetailTabPage - datos de Información (F10 D19)', () => {
+  const BASE = {
+    id: '5',
+    title: 'Estudio de prueba del investigador',
+    investigatorId: '30',
+    status: 'COMPLETO',
+    type: '',
+    studyTypeCode: 'OBS',
+    documents: [],
+    version: 1,
+  };
+
+  async function render(overrides: Partial<ProtocolEntity>): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [ProtocolDetailTabPage],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ProtocolWorkspaceService,
+          useValue: {
+            protocol: signal<ProtocolEntity | null>({ ...BASE, ...overrides } as ProtocolEntity),
+            evaluations: signal([]),
+            evaluationsLoading: signal(false),
+            evaluationsError: signal(false),
+            loadEvaluations: jasmine.createSpy('loadEvaluations'),
+            refreshEvaluations: jasmine.createSpy('refreshEvaluations'),
+          },
+        },
+        { provide: ActiveRoleFacade, useValue: { activeRole: signal<RoleCode | null>('INVESTIGADOR') } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ rol: 'INVESTIGADOR' }) } },
+        {
+          provide: AuditUseCase,
+          useValue: { getProtocolTrail: jasmine.createSpy('getProtocolTrail').and.returnValue(of([])) },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ProtocolDetailTabPage);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function text(el: HTMLElement, testId: string): string | undefined {
+    return el.querySelector(`[data-testid="${testId}"]`)?.textContent?.trim();
+  }
+
+  it('muestra el nombre del investigador principal, el nombre del tipo de estudio y el riesgo', async () => {
+    const el = await render({
+      principalInvestigator: 'Investigador de prueba',
+      studyType: 'Observacional de prueba',
+      riskLevel: 'Riesgo mínimo',
+    });
+
+    expect(text(el, 'principal-investigator')).toBe('Investigador de prueba');
+    expect(text(el, 'study-type')).toBe('Observacional de prueba');
+    expect(text(el, 'risk-level')).toBe('Riesgo mínimo');
+    expect(el.textContent).not.toContain('OBS');
+  });
+
+  it('sin datos usa los textos vacíos de la spec, nunca «Cargando...» ni «[object Object]»', async () => {
+    const el = await render({ principalInvestigator: '', studyType: null, riskLevel: null });
+
+    expect(text(el, 'principal-investigator')).toBe('Sin investigador principal');
+    expect(text(el, 'study-type')).toBe('Sin tipo de estudio');
+    expect(text(el, 'risk-level')).toBe('Sin fijar');
+    expect(el.textContent).not.toContain('Cargando...');
+    expect(el.textContent).not.toContain('[object Object]');
+  });
+
+  it('el nivel de riesgo se muestra siempre, aunque no haya otros detalles adicionales', async () => {
+    const el = await render({ riskLevel: undefined });
+
+    expect(text(el, 'risk-level')).toBe('Sin fijar');
+  });
+});
+
 describe('Tablas de roles del espacio del protocolo (F10 D12 y D17)', () => {
   const EXPECTED_SECTION_ROLES: Record<WorkspaceSection, RoleCode[]> = {
     EVALUATOR_PANEL: ['SECRETARIA', 'PRESIDENTE'],

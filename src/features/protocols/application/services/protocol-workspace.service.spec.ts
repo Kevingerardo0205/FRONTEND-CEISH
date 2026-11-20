@@ -52,7 +52,7 @@ function protocolBody(id: number, title: string) {
 
 /** Encabezado ficticio del `:id` (F10 D18). */
 function headerOf(id: string): ProtocolHeaderData {
-  return { code: `CEISH-PRUEBA-${id}`, version: '1.0', title: `Encabezado ${id}`, riskLevel: null };
+  return { code: `CEISH-PRUEBA-${id}`, version: '1.0', title: `Encabezado ${id}`, riskLevel: null, stage: null };
 }
 
 describe('ProtocolWorkspaceService - carga y errores (F10 D14, S-1g)', () => {
