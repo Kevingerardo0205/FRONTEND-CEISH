@@ -33,9 +33,8 @@ import {
 import { protocolVersionLabel, riskLevelFactValue } from '../../../domain/protocol-header';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TimelineAcceptanceModalComponent } from '../../components/timeline-acceptance-modal.component';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { AssignPeersModalComponent } from '../../../../dashboard/presentation/components/assign-peers-modal/assign-peers-modal.component';
-import { PendingPeerAssignmentProtocol } from '@domain/entities/peer-evaluation.entity';
+import { MatDialogModule } from '@angular/material/dialog';
+import { TERMS_NOT_ACCEPTED_REASON } from '@domain/entities/peer-assignment-composition';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
 
@@ -104,11 +103,9 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
                     <span>{{ action.label }}</span>
                   </button>
                 }
-                <!-- F10 D15: Asignar Pares espera la aceptación de tiempos del investigador -->
+                <!-- F10 D20 (3): la Presidenta ve que Asignar Pares espera la aceptación de tiempos -->
                 @if (awaitingTimelineAcceptance()) {
-                  <p class="header-notice" role="status">
-                    El investigador aún no acepta los tiempos del comité.
-                  </p>
+                  <p class="header-notice" role="status">{{ termsNotAcceptedReason }}</p>
                 }
               </div>
             }
@@ -304,11 +301,12 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private authFacade = inject(AuthFacade);
   private activeRoleFacade = inject(ActiveRoleFacade);
   private snackBar = inject(MatSnackBar);
-  private dialog = inject(MatDialog);
   private roleHome = inject(RoleHome);
   private destroyRef = inject(DestroyRef);
+  /** F10 D20 (3) y F03 D5 (1): el mismo texto que el motivo del formulario de asignación. */
+  readonly termsNotAcceptedReason = TERMS_NOT_ACCEPTED_REASON;
 
-  /** Recarga del mismo `:id` (Reintentar y después de Asignar Pares, D14). */
+  /** Recarga del mismo `:id` (Reintentar, D14). */
   private reload$ = new Subject<void>();
 
   protocol = this.workspaceService.protocol;
@@ -425,8 +423,8 @@ export class ProtocolWorkspaceComponent implements OnInit {
   });
 
   /**
-   * D15: quien puede asignar pares ve, en la etapa ASIGNACION, que falta la aceptación de tiempos
-   * del investigador (por eso aún no sale "Asignar Pares").
+   * D15 y D20 (3): quien puede asignar pares (PRESIDENTE) ve, en la etapa ASIGNACION, que falta la
+   * aceptación de tiempos del investigador (por eso aún no sale "Asignar Pares").
    */
   awaitingTimelineAcceptance = computed(() => {
     const p = this.protocol();
@@ -504,38 +502,8 @@ export class ProtocolWorkspaceComponent implements OnInit {
     } else if (actionId === 'VALIDATE_ALL') {
       this.router.navigate(['/dashboard/protocols/workspace', this.protocol()?.id, 'validation']);
     } else if (actionId === 'ASSIGN_EVALUATORS') {
-      const p = this.protocol();
-      if (!p) return;
-
-      // F10 D15: solo datos reales, sin rellenos ('General', 'Investigador Principal'). El modal
-      // usa id, ceishCode, title, studyType.nombre y principalInvestigatorRecord.fullName; los
-      // demás campos los exige el tipo y el modal no los lee. `GET /protocols/:id` manda
-      // `studyType` como texto (F10 D19: `ProtocolEntity.studyType` es `string | null`).
-      const mappedProtocol: PendingPeerAssignmentProtocol = {
-        id: Number(p.id),
-        ceishCode: p.code || '',
-        title: p.title,
-        receptionStatus: p.status,
-        isRiskLevelDesignated: false,
-        createdAt: p.submissionDate ? new Date(p.submissionDate).toISOString() : '',
-        studyType: { id: 0, codigo: p.studyTypeCode || '', nombre: p.studyType ?? '' },
-        principalInvestigatorRecord: { id: 0, fullName: p.principalInvestigator || '', email: '' },
-      };
-
-      const dialogRef = this.dialog.open(AssignPeersModalComponent, {
-        width: '600px',
-        data: { protocol: mappedProtocol },
-        disableClose: true,
-      });
-
-      dialogRef.afterClosed().subscribe((assigned: boolean) => {
-        if (assigned) {
-          this.snackBar.open('✅ Evaluadores asignados correctamente.', 'Cerrar', {
-            duration: 4000,
-          });
-          this.reload();
-        }
-      });
+      // F10 D20 (2): el formulario de asignación de la Presidenta (F03), no un modal.
+      this.router.navigate(['/dashboard/evaluations/assignment', this.protocol()?.id]);
     }
   }
 }

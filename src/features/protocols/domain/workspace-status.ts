@@ -14,7 +14,7 @@ export function workspaceStatusCode(
 }
 
 /**
- * Estado de la etapa ASIGNACION para las acciones del espacio (F10 D13 y D15): «Asignar Pares» y el
+ * Estado de la etapa ASIGNACION para las acciones del espacio (F10 D13, D15 y D20): «Asignar Pares» y el
  * aviso de aceptación de tiempos siguen el estado canónico (D19). COMPLETO (10) es el único estado
  * con etapa ASIGNACION en la migración `1890000000000-AddEtapaOrdenToEstados`.
  */

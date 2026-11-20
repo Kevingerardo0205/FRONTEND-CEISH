@@ -65,6 +65,14 @@ export const MENU_ITEMS: readonly MenuItem[] = [
     icon: 'edit_note',
   },
   {
+    // F10 D20 (1) y F03 D2: lista de protocolos por asignar de la Presidenta.
+    id: 'presidente-asignar',
+    label: 'Asignar evaluadores',
+    route: '/dashboard/evaluations/assignment',
+    roles: ['PRESIDENTE'],
+    icon: 'person_add',
+  },
+  {
     id: 'presidente-sesiones',
     label: 'Sesiones del pleno',
     route: '/dashboard/resolutions/calls',

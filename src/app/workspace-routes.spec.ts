@@ -198,16 +198,8 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
     expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
   });
 
-  it('SECRETARIA abre info desde ASIGNAR de Mis pendientes', async () => {
-    await start(['SECRETARIA'], 'SECRETARIA', ROLE_PERMISSIONS.SECRETARIA);
-
-    await harness.navigateByUrl('/pendientes');
-    const destino = destinoAccion('ASIGNAR', 1);
-    expect(destino).not.toBeNull();
-    await router.navigate(destino ?? []);
-
-    expect(router.url).toBe(WORKSPACE_ROOT + '/info');
-    expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
+  it('ASIGNAR de Mis pendientes ya no lleva a ninguna parte: asigna la Presidenta (F03 D10 (5))', () => {
+    expect(destinoAccion('ASIGNAR', 1)).toBeNull();
   });
 
   it('SECRETARIA abre info desde Ver Info de la lista de validación', async () => {

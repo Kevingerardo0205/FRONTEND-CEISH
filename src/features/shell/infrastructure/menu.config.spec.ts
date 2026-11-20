@@ -15,7 +15,8 @@ describe('StaticMenuConfigAdapter', () => {
     const expectedLabels: Record<RoleCode, string[]> = {
       SECRETARIA: ['Mis pendientes', 'Protocolos', 'Convocatorias', 'Reportes', 'Configuración'],
       INVESTIGADOR: ['Mis protocolos', 'Nuevo protocolo', 'Subsanaciones'],
-      PRESIDENTE: ['Sesiones del pleno', 'Reportes'],
+      // F10 D20 (1): Asignar evaluadores primero.
+      PRESIDENTE: ['Asignar evaluadores', 'Sesiones del pleno', 'Reportes'],
       EVALUADOR: ['Mis evaluaciones'],
     };
 
@@ -36,6 +37,8 @@ describe('StaticMenuConfigAdapter', () => {
       'investigador-mis-protocolos': 'description',
       'investigador-nuevo-protocolo': 'note_add',
       'investigador-subsanaciones': 'edit_note',
+      // F10 D20 (1): el ícono que tenía «Asignar Pares» en el espacio del protocolo.
+      'presidente-asignar': 'person_add',
       'presidente-sesiones': 'groups',
       'presidente-reportes': 'bar_chart',
       'evaluador-evaluaciones': 'fact_check',

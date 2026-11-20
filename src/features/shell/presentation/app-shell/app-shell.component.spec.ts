@@ -609,7 +609,8 @@ describe('AppShellComponent (T13b)', () => {
       mockActiveRoleFacade.activeRole.set('PRESIDENTE');
       fixture.detectChanges();
       const instance = fixture.componentInstance;
-      expect(labels()).toEqual(['Sesiones del pleno', 'Reportes']);
+      // F10 D20 (1): Asignar evaluadores primero.
+      expect(labels()).toEqual(['Asignar evaluadores', 'Sesiones del pleno', 'Reportes']);
 
       mockActiveRoleFacade.activeRole.set('EVALUADOR');
       fixture.detectChanges();
@@ -624,7 +625,11 @@ describe('AppShellComponent (T13b)', () => {
       const routes = fixture.debugElement
         .queryAll(By.css('.sidebar-nav .nav-link'))
         .map((el) => el.nativeElement.getAttribute('href'));
-      expect(routes).toEqual(['/dashboard/resolutions/calls', '/dashboard/reports/stats']);
+      expect(routes).toEqual([
+        '/dashboard/evaluations/assignment',
+        '/dashboard/resolutions/calls',
+        '/dashboard/reports/stats',
+      ]);
       expect(routes.some((route) => secretaria.includes(route))).toBeFalse();
     });
 

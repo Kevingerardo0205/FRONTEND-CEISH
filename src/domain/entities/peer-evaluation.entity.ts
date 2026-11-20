@@ -1,20 +1,18 @@
+/**
+ * Un protocolo de GET /evaluations/protocols/pending-peer-assignment (F03 D2). `null`: el backend no
+ * lo envió; la pantalla muestra un texto de ausencia, nunca un dato inventado.
+ */
 export interface PendingPeerAssignmentProtocol {
   id: number;
-  ceishCode: string;
-  title: string;
-  receptionStatus: string;
-  isRiskLevelDesignated: boolean;
-  createdAt: string;
-  studyType: {
-    id: number;
-    codigo: string;
-    nombre: string;
-  };
-  principalInvestigatorRecord: {
-    id: number;
-    fullName: string;
-    email: string;
-  };
+  ceishCode: string | null;
+  title: string | null;
+  /** Nombre del tipo de estudio (`studyType.name`). */
+  studyType: string | null;
+  /** Nombre del investigador principal (`principalInvestigator.fullName`). */
+  principalInvestigator: string | null;
+  /** Instante ISO de la recepción de la versión activa (`activeVersion.reception.receptionDate`). */
+  receptionDate: string | null;
+  isTimelineTermsAccepted: boolean | null;
 }
 
 export interface PeerAssignmentEntity {
@@ -39,17 +37,17 @@ export interface PeerAssignmentEntity {
 }
 
 /**
- * Una asignación creada por POST /evaluations/protocols/:id/assign-peer-evaluators (F10 D15). El
- * backend devuelve un arreglo de `EvaluationAssignmentEntity` (`assign-evaluators.use-case.ts`).
+ * Una asignación creada por POST /evaluations/protocols/:id/assign-peer-evaluators (F03 D7). El
+ * backend devuelve un arreglo de `EvaluationAssignmentEntity` (`assign-evaluators.use-case.ts`, N52).
  */
 export interface PeerAssignmentResult {
   assignmentId: number | string | null;
   evaluatorId: number;
-  /** Código del perfil (JURIDICO, SOCIEDAD_CIVIL, METODOLOGICO, SALUD). */
+  /** Código del perfil con que entró la persona (`PeerEvaluatorProfile`). */
   profile: string;
-  /** Par de riesgo: elegido al azar para el Anexo 10 (`isAssignedForAnnex10`). */
+  /** Define el riesgo (Anexo 10, `isAssignedForAnnex10`): todos menos Sociedad Civil (RF-12.2a). */
   isRiskPeer: boolean;
-  /** 'YYYY-MM-DD', o null hasta que el protocolo entre en una convocatoria (RF-12.7(a)). */
+  /** Fecha de entrega de la convocatoria ('YYYY-MM-DD') o null; no es la fecha límite de la revisión. */
   deadlineDate: string | null;
 }
 
@@ -95,32 +93,89 @@ export const PET_RISK_LEVELS: RiskLevelInfo[] = [
   },
 ];
 
-/** Perfiles estrictos que acepta el backend en la reasignación (RF-12.3). */
+/**
+ * Perfiles estrictos del backend (`EvaluatorProfile` de `evaluator-enums.ts`): los acepta la
+ * asignación (N52) y la reasignación (RF-12.3). Bioético desde TSK-002-N50 (F03 D9).
+ */
 export const PEER_EVALUATOR_PROFILES = [
   'JURIDICO',
   'SOCIEDAD_CIVIL',
   'METODOLOGICO',
   'SALUD',
+  'BIOETICO',
 ] as const;
 export type PeerEvaluatorProfile = (typeof PEER_EVALUATOR_PROFILES)[number];
 
+/** Única lista de etiquetas de los perfiles (F03 D9). La lógica sigue usando los códigos. */
+export const PEER_EVALUATOR_PROFILE_LABELS: Readonly<Record<PeerEvaluatorProfile, string>> = {
+  JURIDICO: 'Jurídico',
+  SOCIEDAD_CIVIL: 'Sociedad Civil',
+  METODOLOGICO: 'Metodológico',
+  SALUD: 'Salud',
+  BIOETICO: 'Bioético',
+};
+
 /**
- * Cuota de la asignación de pares (F10 D15). Única fuente de la instrucción, la etiqueta y la
- * validación del modal de pares. Copia lo que exige hoy el backend `dev`:
- * `evaluator-assignment-adapter.service.ts:56-64` (exactamente 4 evaluadores) y `:109-114` (uno por
- * cada perfil: JURIDICO, SOCIEDAD_CIVIL, METODOLOGICO, SALUD), y `random-risk-selector.service.ts`
- * (2 pares de riesgo al azar, nunca SOCIEDAD_CIVIL).
- * Pendiente de alinear: la reunión del 06/11/2026 decidió 5 perfiles (con Bioético), mínimo 2 pares
- * y que asigna la Presidenta.
+ * Nombre de un perfil del catálogo → código: "Metodológico" → METODOLOGICO, "Sociedad Civil" →
+ * SOCIEDAD_CIVIL, "Bioético" → BIOETICO. Cualquier otro nombre → null (nunca un perfil por defecto).
  */
-const PEERS_PER_PROFILE = 1;
-export const PEER_ASSIGNMENT_QUOTA = {
-  profiles: PEER_EVALUATOR_PROFILES,
-  perProfile: PEERS_PER_PROFILE,
-  total: PEER_EVALUATOR_PROFILES.length * PEERS_PER_PROFILE,
-  riskPeers: 2,
-  riskExcludedProfile: 'SOCIEDAD_CIVIL' as PeerEvaluatorProfile,
-} as const;
+export function normalizeProfile(name: unknown): PeerEvaluatorProfile | null {
+  if (typeof name !== 'string') return null;
+  const norm = name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
+  return (PEER_EVALUATOR_PROFILES as readonly string[]).includes(norm)
+    ? (norm as PeerEvaluatorProfile)
+    : null;
+}
+
+/**
+ * `profiles[]` de un evaluador de GET /evaluations/evaluators/dashboard (`[{ id, name }]`) → códigos,
+ * sin repetidos; los nombres que no son de un perfil se ignoran. Lo usan la reasignación y F03 D8.
+ */
+export function profileCodesFromNames(profiles: unknown): PeerEvaluatorProfile[] {
+  if (!Array.isArray(profiles)) return [];
+  const codes = profiles
+    .map((p: { name?: unknown } | null) => normalizeProfile(p?.name))
+    .filter((p): p is PeerEvaluatorProfile => p !== null);
+  return [...new Set(codes)];
+}
+
+/** `data.evaluators[]` del dashboard → `{ id, profiles }`; descarta entradas sin id numérico (F03 D8). */
+export function dashboardMemberProfiles(
+  evaluators: unknown,
+): { id: number; profiles: PeerEvaluatorProfile[] }[] {
+  if (!Array.isArray(evaluators)) return [];
+  return evaluators.flatMap((item) => {
+    const e = item as { id?: unknown; profiles?: unknown } | null;
+    return e && typeof e.id === 'number' ? [{ id: e.id, profiles: profileCodesFromNames(e.profiles) }] : [];
+  });
+}
+
+/** Tipos de revisión con los que la Presidenta asigna (RF-12.REV; sin ENSAYO_CLINICO). */
+export type AssignmentReviewType = 'EXPEDITA' | 'PLENO';
+
+/** Una persona con el perfil con que entra (cuerpo de N52). */
+export interface AssignedEvaluator {
+  evaluatorId: number;
+  profile: PeerEvaluatorProfile;
+}
+
+/** Cuerpo de POST /evaluations/protocols/:id/assign-peer-evaluators (N52, F03 D6). */
+export interface AssignPeerEvaluatorsPayload {
+  reviewType: AssignmentReviewType;
+  evaluators: AssignedEvaluator[];
+}
+
+/** Persona que se puede asignar: activa, con rol EVALUADOR y sus perfiles activos (F03 D8). */
+export interface AssignmentMember {
+  id: number;
+  fullName: string;
+  profiles: PeerEvaluatorProfile[];
+}
 
 export type ActiveAssignmentStatus = 'SUGGESTED' | 'ASSIGNED' | 'COMPLETED';
 
@@ -175,7 +230,7 @@ export interface AssignmentHistoryEntry {
   previousEvaluatorName: string;
   newEvaluatorId: number;
   newEvaluatorName: string;
-  evaluatorProfile: 'JURIDICO' | 'SOCIEDAD_CIVIL' | 'METODOLOGICO' | 'SALUD';
+  evaluatorProfile: PeerEvaluatorProfile;
   reassignmentReason: 'VENCIMIENTO' | 'CONFLICTO_INTERES';
   reasonDescription: string;
   executedByUserId: number;

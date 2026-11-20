@@ -77,7 +77,7 @@ infrastructure → adapters HTTP (*-http.repository.ts), mappers DTO↔entidad
 | **F00-base** | Tokens, AppShell (menú), StageBar, componentes compartidos, rutas y guards por rol | — |
 | F01-pendientes-y-protocolos | Mis pendientes; Protocolos con un botón por etapa | F00 |
 | F02-recepcion | Checklist de requisitos, aprobar recepción u observar | F00, F01 |
-| F03-asignacion | Asignar evaluadores, tipo de revisión, reasignar | F00, F01 |
+| F03-asignacion | Asignar evaluadores, tipo de revisión, reasignar; desde el 19/11/2026 la carpeta es `specs/F03-asignacion` (AP1: asignación por la Presidenta; la reasignación sigue pendiente) | F00, F01 |
 | F04-convocatoria-y-sesion | Convocatoria, sesión, tomar lista, resultados, corregir decisión | F00, F03 |
 | F05-resolucion | Emitir resolución, aprobado con condición | F00, F04 |
 | F06-seguimiento | Calendario, control del informe, evento adverso | F00, F05 |

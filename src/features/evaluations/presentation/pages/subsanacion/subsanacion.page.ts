@@ -1329,6 +1329,8 @@ export class SubsanacionPage implements OnInit {
     const map: Record<string, string> = {
       METODOLOGIA: 'Metodológico',
       BIOETICA: 'de Bioética',
+      // F03 D9: el endpoint manda el nombre del perfil, no el código; solo se agrega Bioético.
+      BIOETICO: 'Bioético',
       LEGAL: 'de Aspectos Jurídicos',
       SOCIEDAD_CIVIL: 'Sociedad Civil',
       ETICA: 'Ética',

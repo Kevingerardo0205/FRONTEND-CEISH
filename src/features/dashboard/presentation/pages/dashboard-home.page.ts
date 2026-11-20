@@ -722,12 +722,6 @@ export class DashboardHomePage implements OnInit {
               link: '/dashboard/protocols/validation/list',
               color: '#3b82f6',
             },
-            {
-              label: 'Oficializar Asignaciones',
-              icon: 'people_alt',
-              link: '/dashboard/evaluations/assignment',
-              color: '#6366f1',
-            },
           ],
           recentTitle: 'Trámites recibidos hoy',
           emptyMessage: 'No hay trámites nuevos pendientes de validación.',

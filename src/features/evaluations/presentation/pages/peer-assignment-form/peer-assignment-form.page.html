@@ -1,0 +1,174 @@
+<section class="formulario">
+  @switch (estado()) {
+    @case ('cargando') {
+      <app-page-header heading="Asignar evaluadores" />
+      <app-loading-state message="Cargando la asignación…" />
+    }
+    @case ('error') {
+      <app-page-header heading="Asignar evaluadores" />
+      <app-error-state message="No pudimos cargar los datos de la asignación." (retry)="cargar()" />
+    }
+    @case ('no-encontrado') {
+      <app-page-header heading="Asignar evaluadores" />
+      <div class="formulario__aviso">
+        <p>No encontramos este protocolo. Revise el enlace.</p>
+        <a class="formulario__enlace" [routerLink]="listRoute">Volver a la lista</a>
+      </div>
+    }
+    @default {
+      <app-page-header heading="Asignar evaluadores" [subtitle]="subtitle()" />
+
+      @if (result(); as res) {
+        <div class="formulario__exito" role="status">
+          <p class="formulario__exito-titulo">Se asignaron {{ res.assignments.length }} evaluadores.</p>
+          <ul class="formulario__exito-lista">
+            @for (fila of resultRows(); track fila.key) {
+              <li>
+                <span class="formulario__nombre">{{ fila.nombre }}</span>
+                <span>{{ fila.perfil }}</span>
+                @if (fila.defineRiesgo) {
+                  <span class="formulario__riesgo">Define el riesgo (Anexo 10)</span>
+                }
+              </li>
+            }
+          </ul>
+          <a class="formulario__enlace" [routerLink]="listRoute">Volver a la lista</a>
+        </div>
+      } @else if (members().length === 0) {
+        <div class="formulario__aviso">
+          <p>No hay evaluadores activos para asignar.</p>
+          <a class="formulario__enlace" [routerLink]="listRoute">Volver a la lista</a>
+        </div>
+      } @else {
+        <form class="formulario__cuerpo" (submit)="$event.preventDefault(); onSubmit()">
+          <fieldset class="formulario__tipo">
+            <legend>Tipo de revisión</legend>
+            <label class="formulario__opcion">
+              <input
+                type="radio"
+                name="reviewType"
+                value="EXPEDITA"
+                [checked]="reviewType() === 'EXPEDITA'"
+                (change)="setReviewType('EXPEDITA')"
+              />
+              Expedita
+            </label>
+            <label class="formulario__opcion">
+              <input
+                type="radio"
+                name="reviewType"
+                value="PLENO"
+                [checked]="reviewType() === 'PLENO'"
+                (change)="setReviewType('PLENO')"
+              />
+              En pleno
+            </label>
+          </fieldset>
+
+          @if (reviewType() === 'EXPEDITA') {
+            <div class="formulario__filas" data-testid="filas-expedita">
+              @for (fila of expeditedView(); track fila.profile) {
+                <div class="formulario__fila" [attr.data-profile]="fila.profile">
+                  <label class="formulario__etiqueta" [for]="'exp-' + fila.profile">{{ fila.label }}</label>
+                  <select
+                    class="formulario__select"
+                    [id]="'exp-' + fila.profile"
+                    (change)="chooseExpeditedPerson(fila.profile, $any($event.target).value)"
+                  >
+                    <option value="" [selected]="fila.evaluatorId === null">Elija una persona</option>
+                    @for (m of fila.options; track m.id) {
+                      <option [value]="m.id" [selected]="fila.evaluatorId === m.id">{{ m.fullName }}</option>
+                    }
+                  </select>
+                  @if (fila.profile !== requiredProfile) {
+                    <button
+                      type="button"
+                      class="formulario__secundario"
+                      (click)="removeExpeditedRow(fila.profile)"
+                    >
+                      Quitar fila
+                    </button>
+                  }
+                </div>
+              }
+              @if (removedExpedited().length) {
+                <div class="formulario__quitadas">
+                  @for (q of removedExpedited(); track q.profile) {
+                    <button
+                      type="button"
+                      class="formulario__secundario"
+                      (click)="restoreExpeditedRow(q.profile)"
+                    >
+                      Agregar {{ q.label }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          @if (reviewType() === 'PLENO') {
+            <div class="formulario__filas" data-testid="filas-pleno">
+              @for (fila of plenaryView(); track fila.memberId) {
+                <div
+                  class="formulario__fila"
+                  [class.formulario__fila--fuera]="!fila.included"
+                  [attr.data-member]="fila.memberId"
+                >
+                  <span class="formulario__nombre">{{ fila.fullName }}</span>
+                  @if (fila.hasProfiles) {
+                    <div class="formulario__campo">
+                      <!-- F03 D4: etiqueta visible «Perfil»; el nombre completa el texto accesible. -->
+                      <label class="formulario__etiqueta-campo" [for]="'plen-' + fila.memberId">
+                        Perfil<span class="visually-hidden"> de {{ fila.fullName }}</span>
+                      </label>
+                      <select
+                        class="formulario__select"
+                        [id]="'plen-' + fila.memberId"
+                        [disabled]="!fila.included"
+                        (change)="choosePlenaryProfile(fila.memberId, $any($event.target).value)"
+                      >
+                        <option value="" [selected]="fila.profile === null">Elija el perfil</option>
+                        @for (o of fila.options; track o.value) {
+                          <option [value]="o.value" [selected]="fila.profile === o.value">{{ o.label }}</option>
+                        }
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      class="formulario__secundario"
+                      (click)="togglePlenary(fila.memberId)"
+                    >
+                      {{ fila.included ? 'Quitar' : 'Incluir' }}
+                    </button>
+                  } @else {
+                    <span class="formulario__sin-perfil">Sin perfil asignado</span>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          @if (submitError(); as error) {
+            <p class="formulario__error" role="alert">{{ error }}</p>
+          }
+
+          <div class="formulario__acciones">
+            <button
+              type="submit"
+              class="formulario__principal"
+              [disabled]="!!blockReason() || sending()"
+              [attr.aria-describedby]="blockReason() ? 'motivo-asignacion' : null"
+            >
+              {{ sending() ? 'Asignando…' : 'Asignar evaluadores' }}
+            </button>
+            @if (blockReason(); as motivo) {
+              <p class="formulario__motivo" id="motivo-asignacion">{{ motivo }}</p>
+            }
+            <a class="formulario__enlace" [routerLink]="listRoute">Volver a la lista</a>
+          </div>
+        </form>
+      }
+    }
+  }
+</section>

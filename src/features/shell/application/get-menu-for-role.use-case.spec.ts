@@ -34,6 +34,7 @@ describe('GetMenuForRoleUseCase', () => {
   // F10 T10-1: menú de los otros roles (spec-ui F10 §3, D2–D4).
   const otherRoles = {
     PRESIDENTE: [
+      ['Asignar evaluadores', '/dashboard/evaluations/assignment'],
       ['Sesiones del pleno', '/dashboard/resolutions/calls'],
       ['Reportes', '/dashboard/reports/stats'],
     ],

@@ -325,58 +325,57 @@ describe('Rutas por rol activo (T13d)', () => {
     }
   });
 
-  describe('F01 T01-0: bandeja "Estratificación de Riesgo" en /estratificacion-riesgo', () => {
+  describe('F03 D1, D2 y D10: la asignación es de la Presidenta', () => {
     const ASSIGN_PERMISSIONS = ['EVALUACION_ASIGNAR'];
 
-    it('SECRETARIA con permiso de asignar abre la bandeja dentro del AppShell', async () => {
-      await start(['SECRETARIA'], undefined, ASSIGN_PERMISSIONS);
+    it('PRESIDENTE con EVALUACION_ASIGNAR abre la lista dentro del AppShell', async () => {
+      await start(['PRESIDENTE'], undefined, ASSIGN_PERMISSIONS);
 
-      await harness.navigateByUrl('/estratificacion-riesgo');
+      await harness.navigateByUrl('/dashboard/evaluations/assignment');
 
-      expect(router.url).toBe('/estratificacion-riesgo');
-      expect(has('app-shell')).toBeTrue();
-      expect(has('app-peer-risk-pending-page')).toBeTrue();
+      expect(router.url).toBe('/dashboard/evaluations/assignment');
+      expect(has('app-shell app-peer-assignment-list-page')).toBeTrue();
       expect(notify).not.toHaveBeenCalled();
     });
 
-    it('INVESTIGADOR que abre /estratificacion-riesgo vuelve a su inicio con aviso', async () => {
-      await start(['INVESTIGADOR'], undefined, ASSIGN_PERMISSIONS);
+    it('PRESIDENTE abre el formulario de un protocolo', async () => {
+      await start(['PRESIDENTE'], undefined, ASSIGN_PERMISSIONS);
 
-      await harness.navigateByUrl('/estratificacion-riesgo');
+      await harness.navigateByUrl('/dashboard/evaluations/assignment/15');
 
-      expect(router.url).toBe('/dashboard/home');
+      expect(router.url).toBe('/dashboard/evaluations/assignment/15');
+      expect(has('app-shell app-peer-assignment-form-page')).toBeTrue();
+    });
+
+    it('SECRETARIA, aunque tenga EVALUACION_ASIGNAR, vuelve a /pendientes con aviso', async () => {
+      await start(['SECRETARIA'], undefined, ASSIGN_PERMISSIONS);
+
+      await harness.navigateByUrl('/dashboard/evaluations/assignment');
+
+      expect(router.url).toBe('/pendientes');
+      expect(has('app-peer-assignment-list-page')).toBeFalse();
       expect(notify).toHaveBeenCalledOnceWith(
         'No tiene acceso a esta sección con el rol activo.',
         'info',
       );
     });
 
-    it('SECRETARIA sin permiso de asignar no entra y vuelve a /pendientes', async () => {
-      await start(['SECRETARIA']);
+    it('SECRETARIA tampoco abre el formulario', async () => {
+      await start(['SECRETARIA'], undefined, ASSIGN_PERMISSIONS);
 
-      await harness.navigateByUrl('/estratificacion-riesgo');
+      await harness.navigateByUrl('/dashboard/evaluations/assignment/15');
 
       expect(router.url).toBe('/pendientes');
-      expect(has('app-peer-risk-pending-page')).toBeFalse();
+      expect(has('app-peer-assignment-form-page')).toBeFalse();
     });
 
-    it('SECRETARIA: /dashboard/evaluations/assignment termina en /estratificacion-riesgo', async () => {
-      await start(['SECRETARIA'], undefined, ASSIGN_PERMISSIONS);
-
-      await harness.navigateByUrl('/dashboard/evaluations/assignment');
-      await harness.fixture.whenStable();
-
-      expect(router.url).toBe('/estratificacion-riesgo');
-      expect(has('app-shell')).toBeTrue();
-    });
-
-    it('la ruta nueva no entra al menú: el menú de SECRETARIA sigue con 5 entradas', async () => {
+    it('/estratificacion-riesgo ya no existe: no abre ninguna bandeja de asignación', async () => {
       await start(['SECRETARIA'], undefined, ASSIGN_PERMISSIONS);
 
       await harness.navigateByUrl('/estratificacion-riesgo');
 
-      const links = harness.fixture.nativeElement.querySelectorAll('.nav-list .nav-link');
-      expect(links.length).toBe(5);
+      expect(router.url).not.toBe('/estratificacion-riesgo');
+      expect(has('app-peer-assignment-list-page')).toBeFalse();
     });
   });
 
@@ -555,22 +554,15 @@ describe('Rutas por rol activo (T13d)', () => {
     const leaves = (list: Route[]): Route[] =>
       list.flatMap((r) => (r.children ? leaves(r.children) : r.redirectTo ? [] : [r]));
 
-    it('las 5 entradas del menú y la bandeja temporal (F01 T01-0) existen bajo el AppShell', () => {
+    it('las 5 entradas del menú existen bajo el AppShell (sin /estratificacion-riesgo, F03 D10)', () => {
       const paths = SECRETARIA_ROUTES.map((r) => r.path);
-      expect(paths).toEqual([
-        'pendientes',
-        'protocolos',
-        'convocatorias',
-        'reportes',
-        'configuracion',
-        'estratificacion-riesgo',
-      ]);
+      expect(paths).toEqual(['pendientes', 'protocolos', 'convocatorias', 'reportes', 'configuracion']);
     });
 
     it('cada ruta nueva usa loadComponent y no component', () => {
       const pages = leaves(SECRETARIA_ROUTES);
       // F08 D1: configuracion tiene usuarios y formatos.
-      expect(pages.length).toBe(7);
+      expect(pages.length).toBe(6);
       for (const page of pages) {
         expect(page.loadComponent).withContext(String(page.path)).toBeDefined();
         expect(page.component).withContext(String(page.path)).toBeUndefined();
