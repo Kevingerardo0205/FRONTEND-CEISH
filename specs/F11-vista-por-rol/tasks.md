@@ -11,7 +11,7 @@
 |---|---|---|---|
 | **EP2** · La PRESIDENTE ve Recepción en solo lectura | spec-ui §4, EARS F11-1 a F11-7; plan EP2 | No | Hecho (`8b927e7`; resultados abajo) |
 | EP3 · Lista de documentos compartida | Una sola pieza en lugar de la lista vacía del Resumen; la usan los 4 roles | Sí, para el investigador (B6) | Pendiente |
-| EP4 · El investigador sin datos internos | Sin la bitácora para INVESTIGADOR, sin la bitácora inventada para nadie; en Subsanaciones, perfil y dictamen de cada par sin nombres y sin los informes con nombre (V5) | B2 y B8 (la pantalla no los espera) | En curso |
+| EP4 · El investigador sin datos internos | Sin la bitácora para INVESTIGADOR, sin la bitácora inventada para nadie; en Subsanaciones, perfil y dictamen de cada par sin nombres y sin los informes con nombre (V5) | B2 y B8 (la pantalla no los espera) | Hecho (`91bca59`; resultados abajo) |
 | EP5 · Pantalla del evaluador | `ProtocolHeader` (código, título, tipo), la lista de EP3 y el plazo (V6) | B4 y B6 | Pendiente |
 | EP6 · Espacio por etapas | Las 6 etapas para SECRETARIA y PRESIDENTE; las cerradas en solo lectura (V2) | — | Pendiente |
 | EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | Pendiente |
@@ -27,6 +27,32 @@
 - **Capas:** domain (`workspace-tab-roles.ts`, `audit.entity.ts`, `dictamen.catalog.ts`, `IEvaluationRepositoryPort.ts`), application (`load-subsanacion-detail.use-case.ts`), infrastructure (`audit-repository.adapter.ts`, `evaluation-api.adapter.ts`) y presentation (`protocol-detail-tab.component.ts`, `protocol-trail.page.ts`, `audit-logs.page.ts`, `audit-feed.component.ts`, `subsanacion.page.ts`).
 - **Terminado cuando:** EARS F11-8 a F11-17 con prueba; mutaciones M1 a M8 detectadas y revertidas; verificación completa sin archivos que empeoren.
 - **Mutaciones previstas:** M1 bitácora del Resumen sin la comprobación de rol (el INVESTIGADOR la pide y la ve); M2 `raw.length === 0 → getMockTrail`; M3 `catchError → of(getMockTrail)`; M4 error de la bitácora solo con `console.error`; M5 vuelven los enlaces `reportPath`, `rutaPdf` y `rutaDocx`; M6 el adaptador de `observations` pasa la respuesta tal cual; M7 vuelve la huella `sha256-{id}-{fecha}`; M8 dictamen con la tabla anterior (`3 → NO_APROBADO`, sin dictamen → `PENDIENTE`). También: M2b y M3b (`getLogs` con `mockLogs`) y M4b (feed con `catchError(() => of([]))`).
+
+**Resultados de EP4 (21/11/2026, código `91bca59`, docs `b31f632`)**
+- Línea base (`ba1b9c4`): `npx tsc` app y spec dos veces exit 0; `npx ng test --watch=false` `TOTAL: 1 FAILED, 1529 SUCCESS` (solo «DialogComponent al abrir, el foco entra al diálogo y queda atrapado»); build de producción exit 0; `npx eslint "src/**/*.ts"` `✖ 65 problems (0 errors, 65 warnings)`.
+- `npx tsc -p tsconfig.app.json --noEmit` y `npx tsc -p tsconfig.spec.json --noEmit`, dos veces: exit 0 las cuatro.
+- `npx ng test --watch=false` tres veces: `2 FAILED, 1563 SUCCESS` · `1 FAILED, 1564 SUCCESS` · `1565 SUCCESS` (1565 pruebas; línea base 1530, 35 nuevas). Fallaron solo las dos pruebas de foco ya anotadas en F00: «DialogComponent al abrir, el foco entra al diálogo y queda atrapado» (corridas 1 y 2) y «NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c) nuevo diseño (D15, C2d) con el teclado: enfocar el ⓘ lo abre y Enter (clic sin puntero) no lo cierra» (corrida 1). Ninguna de EP4.
+- `npx ng build --configuration production`: exit 0 (19 avisos `WARNING`, los mismos 19 de la línea base: `canvg` no ESM).
+- `npx eslint "src/**/*.ts"`: `✖ 64 problems (0 errors, 64 warnings)` (línea base 65). Desaparece el `no-explicit-any` de `load-subsanacion-detail.use-case.ts:31`; los demás avisos de los archivos tocados son los de `dev` con otra línea (`audit-repository.adapter.ts` 111 y 144 → 32 y 59; `audit-logs.page.ts` 338 → 362; `subsanacion.page.ts:41` e `IEvaluationRepositoryPort.ts:7` sin cambio). Ningún archivo empeora. Las `*.spec.ts` están ignoradas por la configuración de eslint.
+- **Nota:** el feed «Actividad Reciente» (`audit-feed.component.ts`) no lo monta ninguna pantalla hoy (`git grep "app-audit-feed\|AuditFeedComponent" -- src` solo da su propio archivo); se le aplicaron los estados de §5 igual, como pidió la usuaria. Su retiro o su montaje es otra tarea.
+- Mutaciones (cada una revertida con el mismo script, comprobando que las sumas `md5sum` de los 20 archivos cambiados son las de antes y `git diff --stat` igual: `18 files changed, 806 insertions(+), 367 deletions(-)`). Corridas con `npx ng test --watch=false --include=<spec>`:
+
+| # | Qué se rompió (código anterior) | Prueba que falla | Línea |
+|---|---|---|---|
+| M1 | `showAuditTrail()` devuelve `true` (bitácora para cualquier rol, como antes) | «… bitácora del Resumen (F11 EP4) con INVESTIGADOR activo no pide la bitácora ni la muestra (F11-8)»; «… con EVALUADOR activo …» | `TOTAL: 2 FAILED, 22 SUCCESS` |
+| M2 | `getProtocolTrail`: `raw.length === 0` → eventos de respaldo | «AuditRepositoryAdapter (F11 EP4) getProtocolTrail lista vacía del backend → lista vacía, sin eventos de respaldo (F11-10)»; «… { data: [] } → lista vacía (F11-10)» | `TOTAL: 2 FAILED, 20 SUCCESS` |
+| M2b | `getLogs`: `raw.length === 0` → registros de respaldo | «AuditRepositoryAdapter (F11 EP4) getLogs lista vacía del backend → lista vacía, sin registros de respaldo (F11-10)» | `TOTAL: 1 FAILED, 21 SUCCESS` |
+| M3 | `getProtocolTrail` con `catchError(() => of(<eventos de respaldo>))` | «… getProtocolTrail error del backend → el error se propaga, sin eventos de respaldo (F11-11)» | `TOTAL: 1 FAILED, 21 SUCCESS` |
+| M3b | `getLogs` con `catchError(() => of(<registros de respaldo>))` | «… getLogs error del backend → el error se propaga, sin registros de respaldo (F11-11)» | `TOTAL: 1 FAILED, 21 SUCCESS` |
+| M4 | Error de la bitácora del Resumen solo con `console.error` | «… bitácora del Resumen (F11 EP4) error: «No pudimos cargar la bitácora del protocolo.» con Reintentar, nunca el vacío; Reintentar vuelve a pedirla (F11-11)» | `TOTAL: 1 FAILED, 23 SUCCESS` |
+| M4b | Feed: el error se muestra como vacío (como `catchError(() => of([]))`) | «AuditFeedComponent - estados (F11 EP4) error: mensaje con Reintentar, nunca el vacío; Reintentar vuelve a pedirla (F11-11)» | `TOTAL: 1 FAILED, 3 SUCCESS` |
+| M5 | Vuelven los enlaces `reportPath`, `rutaPdf` y `rutaDocx` | «SubsanacionPage tarjetas de los pares (F11 EP4) sin enlaces a los informes individuales (PDF adicional, PDF oficial ni Word), aunque lleguen sus rutas (F11-15)» | `TOTAL: 1 FAILED, 15 SUCCESS` |
+| M6 | El adaptador de `observations` pasa la respuesta tal cual | «EvaluationApiAdapter (Infrastructure) getProtocolObservations (F11 EP4) deja pasar solo los campos de ObservationEntry: sin reportPath, nombres, ids ni correos (F11-17)» | `TOTAL: 1 FAILED, 11 SUCCESS` |
+| M7 | Vuelve la huella `sha256-{id}-{fecha}` (adaptador y Resumen) | «AuditRepositoryAdapter (F11 EP4) getProtocolTrail hace GET /api/audit/protocol/5 y mapea los eventos reales, sin huella (V13)»; «… bitácora del Resumen (F11 EP4) sin huella: no muestra «Huella Digital» ni «SHA-256» ni «Hash» (F11-13, V13)» | `TOTAL: 2 FAILED, 44 SUCCESS` |
+| M8 | Dictamen con la tabla anterior (`3 → NO_APROBADO`, sin dictamen → `PENDIENTE`) | «SubsanacionPage tarjetas de los pares (F11 EP4) dictamen con los códigos de EvaluatorDictamen; sin dictamen «Sin dictamen registrado», nunca «PENDIENTE» (F11-16)» | `TOTAL: 1 FAILED, 15 SUCCESS` |
+
+- **No detectable por mutación:** F11-14 (sin nombres, ids ni correos en las tarjetas). La plantilla nunca los mostró; la prueba es una guardia para cambios futuros.
+- **Pendiente:** revisión en el navegador con INVESTIGADOR, SECRETARIA y PRESIDENTE (la hace la usuaria). Backend: B2, B8 y B12.
 
 ### EP2 · La PRESIDENTE ve Recepción en solo lectura
 
