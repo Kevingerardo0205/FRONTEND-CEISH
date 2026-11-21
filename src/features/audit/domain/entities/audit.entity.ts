@@ -23,7 +23,6 @@ export interface ProtocolTrailEvent {
   status: 'PENDING' | 'COMPLETED' | 'REJECTED' | 'CONDITIONED';
   comments?: string;
   documents?: { name: string; url: string }[];
-  integrityHash: string;
 }
 
 export interface AuditFilters {

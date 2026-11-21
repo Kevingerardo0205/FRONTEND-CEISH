@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal, WritableSignal } from '@angular/core';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { ProtocolDetailTabPage } from './protocol-detail-tab.component';
 import { ProtocolWorkspaceService } from '../../../../application/services/protocol-workspace.service';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
+import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity';
 import { RoleCode } from '@domain/value-objects/role.vo';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
@@ -320,6 +321,8 @@ describe('ProtocolDetailTabPage - datos de Información (F10 D19)', () => {
 describe('Tablas de roles del espacio del protocolo (F10 D12, D17 y D20)', () => {
   const EXPECTED_SECTION_ROLES: Record<WorkspaceSection, RoleCode[]> = {
     EVALUATOR_PANEL: ['SECRETARIA', 'PRESIDENTE'],
+    // F11 V10 (EP4): bitácora del Resumen.
+    AUDIT_TRAIL: ['SECRETARIA', 'PRESIDENTE'],
   };
   const EXPECTED_ACTION_ROLES: Record<WorkspaceAction, RoleCode[]> = {
     EDIT_PROTOCOL: ['INVESTIGADOR'],
@@ -329,11 +332,140 @@ describe('Tablas de roles del espacio del protocolo (F10 D12, D17 y D20)', () =>
     SUBMIT_CORRECTIONS: ['INVESTIGADOR'],
   };
 
-  it('WORKSPACE_SECTION_ROLES es la de D17 (2): el cuerpo evaluador solo con SECRETARIA y PRESIDENTE', () => {
+  it('WORKSPACE_SECTION_ROLES es la de D17 (2) y F11 V10: cuerpo evaluador y bitácora solo con SECRETARIA y PRESIDENTE', () => {
     expect(WORKSPACE_SECTION_ROLES).toEqual(EXPECTED_SECTION_ROLES);
   });
 
   it('WORKSPACE_ACTION_ROLES es la de D12, D17 (4) y D20 (2)', () => {
     expect(WORKSPACE_ACTION_ROLES).toEqual(EXPECTED_ACTION_ROLES);
+  });
+});
+
+/** F11 V10 a V13 (EP4): bitácora del Resumen por rol activo, con datos reales o su estado. */
+describe('ProtocolDetailTabPage - bitácora del Resumen (F11 EP4)', () => {
+  const LOADING = 'Cargando la bitácora…';
+  const EMPTY = 'Aún no hay eventos registrados para este protocolo.';
+  const ERROR = 'No pudimos cargar la bitácora del protocolo.';
+  const EVENT: ProtocolTrailEvent = {
+    id: '91',
+    date: new Date('2026-11-20T10:00:00Z'),
+    responsible: 'ZZ_TEST_ Usuario Secretaría (SECRETARIA)',
+    action: 'Recepción Finalizada',
+    status: 'COMPLETED',
+  };
+  let getProtocolTrail: jasmine.Spy;
+
+  async function render(active: RoleCode): Promise<{ el: HTMLElement; tick: () => void }> {
+    await TestBed.configureTestingModule({
+      imports: [ProtocolDetailTabPage],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ProtocolWorkspaceService,
+          useValue: {
+            protocol: signal<ProtocolEntity | null>({
+              id: '5',
+              title: 'Estudio de prueba',
+              status: 'COMPLETO',
+              documents: [],
+              version: 1,
+            } as unknown as ProtocolEntity),
+            evaluations: signal<unknown[]>([]),
+            evaluationsLoading: signal(false),
+            evaluationsError: signal(false),
+            loadEvaluations: jasmine.createSpy('loadEvaluations'),
+            refreshEvaluations: jasmine.createSpy('refreshEvaluations'),
+          },
+        },
+        { provide: ActiveRoleFacade, useValue: { activeRole: signal<RoleCode | null>(active) } },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ rol: active }) } },
+        { provide: AuditUseCase, useValue: { getProtocolTrail } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ProtocolDetailTabPage);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, tick: () => fixture.detectChanges() };
+  }
+
+  function trailText(el: HTMLElement): string {
+    return el.querySelector('[data-testid="audit-trail"]')?.textContent ?? '';
+  }
+
+  beforeEach(() => {
+    getProtocolTrail = jasmine.createSpy('getProtocolTrail').and.returnValue(of([EVENT]));
+  });
+
+  for (const role of ['INVESTIGADOR', 'EVALUADOR'] as RoleCode[]) {
+    it(`con ${role} activo no pide la bitácora ni la muestra (F11-8)`, async () => {
+      const { el } = await render(role);
+
+      expect(getProtocolTrail).not.toHaveBeenCalled();
+      expect(el.querySelector('[data-testid="audit-trail"]')).toBeNull();
+      expect(el.textContent).not.toContain('Bitácora');
+      expect(el.textContent).not.toContain('ZZ_TEST_');
+    });
+  }
+
+  for (const role of ['SECRETARIA', 'PRESIDENTE'] as RoleCode[]) {
+    it(`con ${role} activo pide la bitácora del protocolo abierto y muestra sus eventos reales (F11-9)`, async () => {
+      const { el } = await render(role);
+
+      expect(getProtocolTrail).toHaveBeenCalledOnceWith('5');
+      expect(trailText(el)).toContain('Recepción Finalizada');
+      expect(trailText(el)).toContain('ZZ_TEST_ Usuario Secretaría (SECRETARIA)');
+      expect(trailText(el)).not.toContain(EMPTY);
+    });
+  }
+
+  it('sin huella: no muestra «Huella Digital» ni «SHA-256» ni «Hash» (F11-13, V13)', async () => {
+    const { el } = await render('SECRETARIA');
+
+    expect(trailText(el)).toContain('Recepción Finalizada');
+    expect(el.textContent).not.toContain('Huella');
+    expect(el.textContent).not.toContain('SHA-256');
+    expect(el.textContent).not.toContain('Hash');
+  });
+
+  it('vacío: «Aún no hay eventos registrados para este protocolo.» (V12)', async () => {
+    getProtocolTrail.and.returnValue(of([]));
+    const { el } = await render('PRESIDENTE');
+
+    expect(trailText(el)).toContain(EMPTY);
+    expect(trailText(el)).not.toContain(ERROR);
+  });
+
+  it('mientras carga: «Cargando la bitácora…» y no el vacío (F11-12)', async () => {
+    const pending = new Subject<ProtocolTrailEvent[]>();
+    getProtocolTrail.and.returnValue(pending.asObservable());
+    const { el, tick } = await render('SECRETARIA');
+
+    expect(trailText(el)).toContain(LOADING);
+    expect(trailText(el)).not.toContain(EMPTY);
+
+    pending.next([EVENT]);
+    tick();
+    expect(trailText(el)).not.toContain(LOADING);
+    expect(trailText(el)).toContain('Recepción Finalizada');
+  });
+
+  it('error: «No pudimos cargar la bitácora del protocolo.» con Reintentar, nunca el vacío; Reintentar vuelve a pedirla (F11-11)', async () => {
+    getProtocolTrail.and.returnValue(throwError(() => new Error('500')));
+    const { el, tick } = await render('SECRETARIA');
+
+    expect(trailText(el)).toContain(ERROR);
+    expect(trailText(el)).not.toContain(EMPTY);
+
+    getProtocolTrail.and.returnValue(of([EVENT]));
+    const retry = Array.from(el.querySelectorAll('[data-testid="audit-trail"] button')).find(
+      (b) => b.textContent?.trim() === 'Reintentar',
+    ) as HTMLButtonElement | undefined;
+    expect(retry).toBeDefined();
+    retry?.click();
+    tick();
+
+    expect(getProtocolTrail).toHaveBeenCalledTimes(2);
+    expect(getProtocolTrail.calls.mostRecent().args).toEqual(['5']);
+    expect(trailText(el)).toContain('Recepción Finalizada');
+    expect(trailText(el)).not.toContain(ERROR);
   });
 });

@@ -42,13 +42,16 @@ export const WORKSPACE_ACTION_ROLES: Readonly<Record<WorkspaceAction, readonly R
   SUBMIT_CORRECTIONS: ['INVESTIGADOR'],
 };
 
-export type WorkspaceSection = 'EVALUATOR_PANEL';
+export type WorkspaceSection = 'EVALUATOR_PANEL' | 'AUDIT_TRAIL';
 
 /**
  * F10 D17 (2): secciones de las pestañas según el rol activo.
  * `EVALUATOR_PANEL`: cuerpo evaluador del Resumen (nombres de los evaluadores); el INVESTIGADOR
  * nunca lo ve. Los mismos roles que tienen `EVALUACION_INFORMES` en el backend.
+ * `AUDIT_TRAIL` (F11 V10, EP4): bitácora del Resumen (nombres de quien hizo cada acción); los
+ * mismos roles que `audit/*` (F00 D4). Sin ella no se pide `GET /audit/protocol/:id`.
  */
 export const WORKSPACE_SECTION_ROLES: Readonly<Record<WorkspaceSection, readonly RoleCode[]>> = {
   EVALUATOR_PANEL: ['SECRETARIA', 'PRESIDENTE'],
+  AUDIT_TRAIL: ['SECRETARIA', 'PRESIDENTE'],
 };

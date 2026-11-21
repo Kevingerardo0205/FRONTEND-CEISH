@@ -6,7 +6,7 @@ import { Subject, defer, of, throwError } from 'rxjs';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ProtocoloService } from '@features/investigador/application/services/protocolo.service';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
-import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
+import { IEvaluationRepositoryPort, ObservationEntry } from '@domain/ports/IEvaluationRepositoryPort';
 import { IProtocolRepositoryPort } from '@domain/ports/IProtocolRepositoryPort';
 import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
@@ -311,6 +311,88 @@ describe('SubsanacionPage', () => {
       fixture.detectChanges();
       expect(alerta()?.textContent?.trim()).toBe('No pudimos descargar el formato. Intente de nuevo.');
       expect(abrirSpy).toHaveBeenCalledOnceWith('', '_blank');
+    });
+  });
+
+  /** F11 V14 y V15 (EP4): perfil y dictamen de cada par, sin nombres ni informes individuales. */
+  describe('tarjetas de los pares (F11 EP4)', () => {
+    const LEAK = {
+      evaluatorName: 'ZZ_TEST_ Nombre Revisor',
+      evaluatorFullName: 'ZZ_TEST_ Nombre Completo Revisor',
+      evaluatorEmail: 'zz-test-revisor@test.invalid',
+      evaluatorId: 98765,
+      reportPath: 'evaluations/zz-test/informe-adicional.pdf',
+      rutaPdf: 'evaluations/zz-test/anexo9.pdf',
+      rutaDocx: 'evaluations/zz-test/anexo9.docx',
+    };
+    const entry = (profile: string, result: number | null) =>
+      ({
+        evaluatorProfile: profile,
+        result,
+        generalObservations: null,
+        checklistDetails: [],
+        ...LEAK,
+      }) as unknown as ObservationEntry;
+
+    const el = () => fixture.nativeElement as HTMLElement;
+    const dictamenes = () =>
+      Array.from(el().querySelectorAll('[data-testid="obs-dictamen"]')).map((e) =>
+        e.textContent?.trim(),
+      );
+
+    beforeEach(() => {
+      mockEvalRepo.getProtocolObservations.and.returnValue(
+        of([
+          entry('BIOETICO', 1),
+          entry('SOCIEDAD_CIVIL', 2),
+          entry('LEGAL', 3),
+          entry('CIENTIFICO', null),
+          entry('EXTERNO', 7),
+        ]),
+      );
+      (mockS3StorageService as unknown as { getEvaluationDocumentUrl: jasmine.Spy })
+        .getEvaluationDocumentUrl = jasmine.createSpy('getEvaluationDocumentUrl');
+      component.loadProtocolDetail();
+      fixture.detectChanges();
+    });
+
+    it('cada tarjeta muestra el perfil del par (F11-14)', () => {
+      const text = el().querySelector('.obs-list')?.textContent ?? '';
+      expect(el().querySelectorAll('.obs-card').length).toBe(5);
+      expect(text).toContain('Evaluador Bioético');
+      expect(text).toContain('Evaluador Sociedad Civil');
+    });
+
+    it('ninguna tarjeta muestra nombres, ids ni correos de evaluadores, aunque lleguen (F11-14)', () => {
+      const text = el().textContent ?? '';
+      expect(text).not.toContain('ZZ_TEST_');
+      expect(text).not.toContain('zz-test-revisor@test.invalid');
+      expect(text).not.toContain('98765');
+    });
+
+    it('sin enlaces a los informes individuales (PDF adicional, PDF oficial ni Word), aunque lleguen sus rutas (F11-15)', () => {
+      const text = el().textContent ?? '';
+      expect(text).not.toContain('Informe Técnico Evaluador');
+      expect(text).not.toContain('PDF Adicional');
+      expect(text).not.toContain('PDF Oficial');
+      expect(text).not.toContain('Word Editable');
+      expect(el().querySelectorAll('.obs-card .ev-doc-link').length).toBe(0);
+      expect(
+        (mockS3StorageService as unknown as { getEvaluationDocumentUrl: jasmine.Spy })
+          .getEvaluationDocumentUrl,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('dictamen con los códigos de EvaluatorDictamen; sin dictamen «Sin dictamen registrado», nunca «PENDIENTE» (F11-16)', () => {
+      expect(dictamenes()).toEqual([
+        'Aprobado',
+        'Aprobado con observaciones',
+        'Rechazado',
+        'Sin dictamen registrado',
+        'Dictamen no reconocido',
+      ]);
+      expect(el().querySelector('.obs-list')?.textContent).not.toContain('PENDIENTE');
+      expect(el().querySelector('.obs-list')?.textContent).not.toContain('NO_APROBADO');
     });
   });
 });

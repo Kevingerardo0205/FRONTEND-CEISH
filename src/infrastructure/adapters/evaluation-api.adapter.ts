@@ -57,6 +57,48 @@ interface RawPendingPeerProtocol {
 const textOrNull = (value: unknown): string | null =>
   typeof value === 'string' && value.trim() ? value : null;
 
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+/** El arreglo `observations` de la respuesta, venga suelto, en `observations` o dentro de `data`. */
+const observationList = (res: unknown): unknown[] => {
+  if (Array.isArray(res)) return res;
+  const body = asRecord(res);
+  if (!body) return [];
+  if (Array.isArray(body['observations'])) return body['observations'];
+  return body['data'] !== undefined ? observationList(body['data']) : [];
+};
+
+/** El detalle del checklist, con los nombres de campo que ha usado el backend. */
+const checklistList = (o: Record<string, unknown>): Readonly<Record<string, unknown>>[] => {
+  const raw = o['checklistDetails'] ?? o['detallesChecklist'] ?? o['checklist'];
+  const box = asRecord(raw);
+  const list = Array.isArray(raw) ? raw : (box?.['items'] ?? box?.['data']);
+  return Array.isArray(list)
+    ? list.flatMap((item) => {
+        const r = asRecord(item);
+        return r ? [r] : [];
+      })
+    : [];
+};
+
+/** F11 V14 (EP4): solo perfil, dictamen, observaciones generales y checklist de cada par. */
+const toObservationEntries = (res: unknown): ObservationEntry[] =>
+  observationList(res).flatMap((item): ObservationEntry[] => {
+    const o = asRecord(item);
+    if (!o) return [];
+    return [
+      {
+        evaluatorProfile: textOrNull(o['evaluatorProfile']) ?? '',
+        result: typeof o['result'] === 'number' ? o['result'] : null,
+        generalObservations: textOrNull(o['generalObservations']),
+        checklistDetails: checklistList(o),
+      },
+    ];
+  });
+
 /** F03 D2: mapper estricto, sin rellenos («General», «Investigador Principal», «S/C»). */
 export function toPendingPeerAssignmentProtocols(raw: unknown): PendingPeerAssignmentProtocol[] {
   if (!Array.isArray(raw)) return [];
@@ -371,12 +413,14 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
       );
   }
 
+  /**
+   * F11 V14 (EP4): `{ protocolId, versionNumber, observations }` (con o sin `data`). Solo pasan los
+   * campos de `ObservationEntry`: si el backend manda `reportPath`, nombres, ids o correos, no llegan.
+   */
   getProtocolObservations(protocolId: string): Observable<ObservationEntry[]> {
     return this.apiClient
-      .get<ApiEnvelope<ObservationEntry[]>>(
-        `${ENDPOINTS.EVALUATIONS.BASE}/protocol/${protocolId}/observations`,
-      )
-      .pipe(map((res) => res.data || (res as unknown as ObservationEntry[])));
+      .get<unknown>(`${ENDPOINTS.EVALUATIONS.BASE}/protocol/${protocolId}/observations`)
+      .pipe(map((res) => toObservationEntries(res)));
   }
 
   /**

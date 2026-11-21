@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { EvaluationApiAdapter } from './evaluation-api.adapter';
+import { ObservationEntry } from 'src/domain/ports/IEvaluationRepositoryPort';
 import {
   ActiveAssignmentsResult,
   AssignEvaluatorsResponse,
@@ -264,6 +265,76 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
       req.flush({ data: [entry], statusCode: 200, message: 'Success' });
 
       expect(history).toEqual([entry]);
+    });
+  });
+
+  /** F11 V14 (EP4): solo perfil, dictamen, observaciones generales y checklist de cada par. */
+  describe('getProtocolObservations (F11 EP4)', () => {
+    const URL = '/api/evaluations/protocol/123/observations';
+    const BODY = {
+      protocolId: 123,
+      versionNumber: 2,
+      observations: [
+        {
+          evaluatorProfile: 'BIOETICO',
+          result: 2,
+          reportPath: 'evaluations/zz-test/informe.pdf',
+          rutaPdf: 'evaluations/zz-test/anexo9.pdf',
+          rutaDocx: 'evaluations/zz-test/anexo9.docx',
+          evaluatorName: 'ZZ_TEST_ Nombre Revisor',
+          evaluatorEmail: 'zz-test-revisor@test.invalid',
+          evaluatorId: 98765,
+          generalObservations: 'Revise el consentimiento.',
+          detallesChecklist: [{ itemCodigo: 'A1', estado: 'NC', observaciones: 'Falta firma.' }],
+        },
+        { evaluatorProfile: 'LEGAL' },
+      ],
+    };
+
+    it('deja pasar solo los campos de ObservationEntry: sin reportPath, nombres, ids ni correos (F11-17)', () => {
+      let result: ObservationEntry[] | undefined;
+      adapter.getProtocolObservations('123').subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne(URL);
+      expect(req.request.method).toBe('GET');
+      req.flush({ data: BODY });
+
+      expect(result).toEqual([
+        {
+          evaluatorProfile: 'BIOETICO',
+          result: 2,
+          generalObservations: 'Revise el consentimiento.',
+          checklistDetails: [{ itemCodigo: 'A1', estado: 'NC', observaciones: 'Falta firma.' }],
+        },
+        { evaluatorProfile: 'LEGAL', result: null, generalObservations: null, checklistDetails: [] },
+      ]);
+      expect(JSON.stringify(result)).not.toContain('zz-test');
+      expect(JSON.stringify(result)).not.toContain('ZZ_TEST_');
+      expect(JSON.stringify(result)).not.toContain('98765');
+    });
+
+    it('también sin el sobre data', () => {
+      let result: ObservationEntry[] | undefined;
+      adapter.getProtocolObservations('123').subscribe((r) => (result = r));
+
+      httpMock.expectOne(URL).flush(BODY);
+
+      expect(result?.map((o) => o.evaluatorProfile)).toEqual(['BIOETICO', 'LEGAL']);
+    });
+
+    it('sin observaciones («No hay evaluaciones registradas…») → lista vacía (F11-17)', () => {
+      let result: ObservationEntry[] | undefined;
+      adapter.getProtocolObservations('123').subscribe((r) => (result = r));
+
+      httpMock.expectOne(URL).flush({
+        data: {
+          protocolId: 123,
+          observations: [],
+          message: 'No hay evaluaciones registradas para este protocolo.',
+        },
+      });
+
+      expect(result).toEqual([]);
     });
   });
 });

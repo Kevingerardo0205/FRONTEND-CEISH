@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -16,6 +17,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
 import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.entity';
+import {
+  EmptyStateComponent,
+  ErrorStateComponent,
+  LoadingStateComponent,
+} from '@shared/ui/states/states.component';
 
 @Component({
   selector: 'app-audit-logs',
@@ -36,6 +42,9 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
     MatButtonModule,
     MatTooltipModule,
     MatExpansionModule,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    LoadingStateComponent,
   ],
   template: `
     <div class="audit-container">
@@ -102,7 +111,18 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
       </mat-card>
 
       <mat-card class="table-card">
-        <div class="table-container">
+        <!-- F11 V11 (EP4): datos reales o su estado; un error nunca se muestra como vacío -->
+        @if (error()) {
+          <app-error-state
+            message="No pudimos cargar el registro de auditoría."
+            (retry)="loadLogs()"
+          ></app-error-state>
+        } @else if (loading()) {
+          <app-loading-state message="Cargando el registro de auditoría…"></app-loading-state>
+        } @else if (logs.length === 0) {
+          <app-empty-state message="Aún no hay registros de auditoría."></app-empty-state>
+        }
+        <div class="table-container" [hidden]="error() || loading() || logs.length === 0">
           <table mat-table [dataSource]="logs" matSort>
             <!-- Fecha -->
             <ng-container matColumnDef="timestamp">
@@ -316,6 +336,10 @@ import { AuditLog, AuditFilters } from '@features/audit/domain/entities/audit.en
 })
 export class AuditLogsPage implements OnInit {
   private readonly auditUseCase = inject(AuditUseCase);
+  private readonly destroyRef = inject(DestroyRef);
+  private sub?: Subscription;
+  readonly loading = signal(false);
+  readonly error = signal(false);
 
   logs: AuditLog[] = [];
   displayedColumns = [
@@ -338,11 +362,26 @@ export class AuditLogsPage implements OnInit {
   selectedLog: any = null;
 
   ngOnInit() {
+    this.destroyRef.onDestroy(() => this.sub?.unsubscribe());
     this.loadLogs();
   }
 
+  /** F11 V11: también es «Reintentar»; gana la última búsqueda. */
   loadLogs() {
-    this.auditUseCase.getLogs(this.filters).subscribe((logs: AuditLog[]) => (this.logs = logs));
+    this.sub?.unsubscribe();
+    this.error.set(false);
+    this.loading.set(true);
+    this.sub = this.auditUseCase.getLogs(this.filters).subscribe({
+      next: (logs: AuditLog[]) => {
+        this.logs = logs;
+        this.loading.set(false);
+      },
+      error: () => {
+        this.logs = [];
+        this.loading.set(false);
+        this.error.set(true);
+      },
+    });
   }
 
   toggleChanges(log: AuditLog) {
