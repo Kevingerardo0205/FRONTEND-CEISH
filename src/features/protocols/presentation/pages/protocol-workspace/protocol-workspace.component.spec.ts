@@ -292,22 +292,26 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(actionIds()).toEqual([]);
   });
 
-  it('PRESIDENTE ve Resumen y Seguimiento aprobado, sin Evaluación; su única acción es Asignar Pares con los tiempos aceptados (D20)', () => {
+  it('PRESIDENTE ve Resumen, Validación (solo lectura, F11 EP2) y Seguimiento aprobado, sin Evaluación; su única acción es Asignar Pares con los tiempos aceptados (D20)', () => {
     activeRoleSignal.set('PRESIDENTE');
 
     setState('RECEPCION_APROBADA', true);
-    expect(tabPaths()).toEqual(['info']);
+    expect(tabPaths()).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual(['ASSIGN_EVALUATORS']);
 
     setState('APROBADO');
-    expect(tabPaths()).toEqual(['info', 'follow-up']);
+    expect(tabPaths()).toEqual(['info', 'validation', 'follow-up']);
     expect(actionIds()).toEqual([]);
 
     for (const name of ACTION_STATES) {
       setState(name);
-      expect(tabPaths()).toEqual(['info']);
+      expect(tabPaths()).toEqual(['info', 'validation']);
       expect(actionIds()).toEqual([]);
     }
+
+    // Borrador: sin Validación, como para los demás roles.
+    setState('BORRADOR');
+    expect(tabPaths()).toEqual(['info']);
   });
 
   it('EVALUADOR no ve ninguna pestaña del espacio, ni acciones ni ventana de aceptación', () => {

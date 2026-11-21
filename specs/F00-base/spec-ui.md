@@ -1,6 +1,6 @@
 # F00 · Base del rediseño — spec-ui
 
-**Versión:** 0.10 · **Fecha:** 18/11/2026 · **Rama:** `feat/ep1b-encabezado-desde-backend`
+**Versión:** 0.11 · **Fecha:** 20/11/2026 · **Rama:** `feat/ep2-presidenta-recepcion-lectura`
 **Cubre:** spec-001 RF-EST.1, RF-EST.2, RF-EST.3 y HU-001 (roles fijos) · spec-003 RF-ALR.f (solo la entrada del menú)
 **Actualización 31/10/2026:** F00b se limita al módulo de la SECRETARIA (decisiones D1, D3, D4, D6 y D7).
 **Actualización 10/11/2026 (v0.3):** el menú lateral de los 4 roles se define en F10 (`specs/F10-menu-por-rol/`). D1, §2, §4 y §10 remiten a F10.
@@ -12,6 +12,7 @@
 **Actualización 17/11/2026 (v0.9, SH1):** §3 con el token `--shell-gutter` y §4 con D16, el margen lateral del contenido del AppShell según el ancho de la ventana (decisión de la usuaria; hallazgo de C5: con 2.5rem fijo, a 320 px el contenido quedaba en 240 px). Criterio 12.
 **Actualización 18/11/2026 (v0.10, EP1b):** Paso 0 de EP1b (frontend `dev` `f23a237`; backend en solo lectura, `dev` `3d00183`, que incluye TSK-001.27) y decisiones de la usuaria del 18/11/2026. §5: se retira la excepción temporal de `StageBar` (la etapa del espacio es `etapa` de `GET /protocols/:id`, F10 D19) y `ProtocolHeader` recibe una excepción explícita a «si falta un dato no se muestra»: el nivel de riesgo `null` se muestra como «Sin fijar». §8: los datos del encabezado ya llegan (falta la sesión). §10: pendientes de etapa y de datos cerrados. Criterio 13. **Efecto de EP1b fuera del espacio:** `ProtocolApiAdapter.mapToEntity` lee `principalInvestigator.fullName`, lo que corrige también el «[object Object]» que recibían `getAll()` (`GET /protocols`) y sus pantallas: `workflow-table`, `protocol-validation-list`, `resolution-generator` y la búsqueda de `secretariat-dashboard`.
 
+**Actualización 20/11/2026 (v0.11, F11):** §2 enlaza la matriz rol × etapa de F11 (`specs/F11-vista-por-rol/spec-ui.md` §3): qué ve y qué hace cada rol activo en cada etapa del protocolo (decisiones de la usuaria del 20/11/2026).
 ---
 
 ## 1. Alcance
@@ -37,6 +38,8 @@ Fuente: spec-001 HU-001. Los roles **no se editan** desde el sistema. Una person
 | INVESTIGADOR | Menú en F10 (spec-ui §3): Mis protocolos · Nuevo protocolo · Subsanaciones |
 
 **Regla (14/11/2026, F10 D17 (1), confirmada por la usuaria):** el rol INVESTIGADOR es exclusivo: un investigador no puede tener ningún otro rol y un miembro del comité no puede ser investigador. Las combinaciones posibles son solo entre roles del comité; la única cuenta con dos roles hoy es PRESIDENTE + EVALUADOR. El backend lo impide al asignar roles (`segregation-of-duties.service.ts:64-82` y `:174-177`).
+
+**Qué ve cada rol de un protocolo (20/11/2026, F11 v0.1):** la matriz rol × etapa está en `specs/F11-vista-por-rol/spec-ui.md` §3. Principio: la consistencia visual se logra con las mismas piezas de §5 (`ProtocolHeader`, lista de documentos, chips de estado), no mostrando las mismas pantallas a todos.
 
 **Varios roles a la vez:** cuando la persona tiene más de un rol, el avatar muestra un **selector de rol activo**. El menú y las rutas corresponden al rol elegido. — Confirmado (spec-001 v3.5.3, HU-001 resuelto por backend TSK-001.1c, 31/10/2026).
 

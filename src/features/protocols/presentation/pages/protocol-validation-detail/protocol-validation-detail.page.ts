@@ -197,7 +197,8 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
                     </ng-template>
                   </td>
                   <td class="text-center">
-                    <div *ngIf="!isInvestigador(); else investigatorPages">
+                    <!-- F11 EP2: solo la vista de validar edita las páginas -->
+                    <div *ngIf="canValidate(); else readOnlyPages">
                       <div
                         *ngIf="item.attachedDocument"
                         class="d-flex flex-column align-items-center gap-1"
@@ -223,7 +224,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
                       </div>
                       <span *ngIf="!item.attachedDocument" class="text-muted">-</span>
                     </div>
-                    <ng-template #investigatorPages>
+                    <ng-template #readOnlyPages>
                       <div
                         *ngIf="item.attachedDocument"
                         class="d-flex flex-column align-items-center"
@@ -242,8 +243,8 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
                     </ng-template>
                   </td>
                   <td class="text-center">
-                    <!-- Si no es investigador, renderiza la validación de la secretaría -->
-                    <div *ngIf="!isInvestigador()">
+                    <!-- Vista de validar (F11 EP2): la validación de la Secretaría -->
+                    <div *ngIf="canValidate()">
                       <div class="btn-group-validation" *ngIf="item.attachedDocument">
                         <button
                           mat-icon-button
@@ -271,8 +272,8 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
                       <span *ngIf="!item.attachedDocument" class="small text-muted">-</span>
                     </div>
 
-                    <!-- Si es investigador, renderiza el botón de carga o estado -->
-                    <div *ngIf="isInvestigador()">
+                    <!-- Sin la vista de validar: carga del investigador (subsanación) o el estado en lectura -->
+                    <div *ngIf="!canValidate()">
                       <!-- Modo Subsanación (Edición) -->
                       <div *ngIf="isSubsanacionMode()">
                         <!-- Requisitos aprobados: solo lectura -->
@@ -335,7 +336,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
                   </td>
                   <td>
                     <!-- Observaciones de la Secretaría (editable) -->
-                    <div *ngIf="!isInvestigador()">
+                    <div *ngIf="canValidate()">
                       <input
                         type="text"
                         class="mini-input"
@@ -349,8 +350,8 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
                       />
                     </div>
 
-                    <!-- Observaciones del Investigador (lectura) -->
-                    <div *ngIf="isInvestigador()">
+                    <!-- Observaciones en lectura (investigador y PRESIDENTE, F11 EP2) -->
+                    <div *ngIf="!canValidate()">
                       <div class="observations-display-box" *ngIf="item.observations">
                         <mat-icon
                           class="text-danger-custom"
@@ -378,18 +379,18 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
         <!-- PANEL DE OBSERVACIONES GENERALES -->
         <div
           class="verification-panel mt-4 p-4 shadow-soft"
-          *ngIf="!isInvestigador() || missingItemsList"
+          *ngIf="canValidate() || missingItemsList"
         >
           <h3 class="section-title">
             <mat-icon>chat_bubble_outline</mat-icon>
             {{
-              isInvestigador()
-                ? 'Observaciones de la Secretaría'
-                : 'Observaciones Generales (Para correo al investigador)'
+              canValidate()
+                ? 'Observaciones Generales (Para correo al investigador)'
+                : 'Observaciones de la Secretaría'
             }}
           </h3>
           <div
-            *ngIf="isInvestigador()"
+            *ngIf="!canValidate()"
             class="p-3 bg-light rounded border border-warning"
             style="border-left: 4px solid #ffc107 !important; margin-bottom: 0;"
           >
@@ -397,12 +398,14 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
               {{ missingItemsList }}
             </p>
           </div>
-          <mat-form-field class="full-width" appearance="outline" *ngIf="!isInvestigador()">
+          <mat-form-field class="full-width" appearance="outline" *ngIf="canValidate()">
             <mat-label>Observaciones Generales / Lista de Faltantes</mat-label>
+            <!-- F11 V9: con la recepción ya validada no se edita -->
             <textarea
               matInput
               rows="3"
               [(ngModel)]="missingItemsList"
+              [disabled]="isFinalized()"
               placeholder="Ej: Se solicita revisar el formato del Anexo 2 que se encuentra ilegible..."
             ></textarea>
           </mat-form-field>
@@ -455,12 +458,12 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
             </div>
 
             <div class="action-buttons-row">
-              <!-- Botón para descargar certificado -->
+              <!-- Botón para descargar certificado (F11 V8: no para la vista de solo lectura) -->
               <button
                 *ngIf="
                   header()?.ceishCode &&
                   header()?.ceishCode !== 'TRÁMITE EN PROCESO' &&
-                  (!isInvestigador() || isFinalized())
+                  (canValidate() || (isInvestigador() && isFinalized()))
                 "
                 mat-stroked-button
                 color="accent"
@@ -472,7 +475,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
 
               <!-- Botón de finalizar revisión para Secretaría -->
               <button
-                *ngIf="!isInvestigador()"
+                *ngIf="canValidate()"
                 mat-flat-button
                 class="btn-finalize"
                 [disabled]="!allReviewed() || isProcessing || isFinalized()"
@@ -503,7 +506,7 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
 
             <div
               class="legal-disclaimer"
-              *ngIf="!isInvestigador() && allReviewed() && !isFinalized()"
+              *ngIf="canValidate() && allReviewed() && !isFinalized()"
             >
               <mat-icon [color]="progress() === 100 ? 'primary' : 'warn'">info</mat-icon>
               <span *ngIf="progress() === 100"
@@ -968,6 +971,15 @@ export class ProtocolValidationDetailPage implements OnInit {
     return !!activeRole && WORKSPACE_ACTION_ROLES.SUBMIT_CORRECTIONS.includes(activeRole);
   });
 
+  /**
+   * F11 EP2: vista de validar con el rol activo en `VALIDATE_ALL` (SECRETARIA). Sin ella y sin la
+   * de subsanar (hoy PRESIDENTE), la pestaña es de solo lectura (F11 §4).
+   */
+  canValidate = computed(() => {
+    const activeRole = this.activeRoleFacade.activeRole();
+    return !!activeRole && WORKSPACE_ACTION_ROLES.VALIDATE_ALL.includes(activeRole);
+  });
+
   uploadingRequirements = signal<Record<number, boolean>>({});
   dragOverReqId = signal<number | null>(null);
 
@@ -988,6 +1000,7 @@ export class ProtocolValidationDetailPage implements OnInit {
     if (this.isInvestigador()) {
       return !this.isSubsanacionMode();
     }
+    if (!this.canValidate()) return true;
     return this.isFinalized();
   });
 
@@ -1085,6 +1098,8 @@ export class ProtocolValidationDetailPage implements OnInit {
   }
 
   onValidateItem(item: ValidationChecklistItem, actionType: number) {
+    // F11-5: sin la vista de validar no se llama al backend.
+    if (!this.canValidate()) return;
     this.isProcessing = true;
     this.validateChecklistItem.execute(item, actionType, item.observations || '').subscribe({
       next: () => {
@@ -1119,7 +1134,7 @@ export class ProtocolValidationDetailPage implements OnInit {
   }
 
   onChangePageCount(item: ValidationChecklistItem) {
-    if (!item.attachedDocument) return;
+    if (!this.canValidate() || !item.attachedDocument) return;
 
     let pageCount = item.attachedDocument.pageCount;
     if (pageCount === null || pageCount === undefined) {
@@ -1166,6 +1181,7 @@ export class ProtocolValidationDetailPage implements OnInit {
   }
 
   onFinalize() {
+    if (!this.canValidate()) return;
     if (!this.allReviewed()) {
       this.snackBar.open('❌ Error: Existen documentos pendientes de revisión.', 'Cerrar');
       return;

@@ -20,10 +20,10 @@ const WORKSPACE_ROOT = '/dashboard/protocols/workspace/1';
 /** Ruta de "Mis evaluaciones" aprobada en F10 D11 (11/11/2026); la prueba comprueba que es la de MENU_ITEMS. */
 const EVALUATOR_LIST = '/dashboard/evaluations/list';
 
-/** Tabla aprobada por la usuaria (F10 spec-ui D10, 11/11/2026). Es la referencia de la prueba: no se deriva del código. */
+/** Tabla aprobada por la usuaria (F10 spec-ui D10, 11/11/2026; `validation` con PRESIDENTE desde F11 EP2, 20/11/2026). Es la referencia de la prueba: no se deriva del código. */
 const EXPECTED_TAB_ROLES: Record<WorkspaceTab, RoleCode[]> = {
   info: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
-  validation: ['SECRETARIA', 'INVESTIGADOR'],
+  validation: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
   'follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
 };
 
@@ -325,13 +325,14 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
     expect(notify).toHaveBeenCalledOnceWith(ACCESS_DENIED_MESSAGE, 'info');
   });
 
-  it('PRESIDENTE rebota desde /dashboard/protocols/validation/detail/1 con aviso', async () => {
+  // F11 EP2: la PRESIDENTE abre la pestaña Validación en solo lectura.
+  it('PRESIDENTE abre validation desde /dashboard/protocols/validation/detail/1, sin aviso (F11 EP2)', async () => {
     await start(['PRESIDENTE'], 'PRESIDENTE', ROLE_PERMISSIONS.PRESIDENTE);
 
     await harness.navigateByUrl('/dashboard/protocols/validation/detail/1');
 
-    expect(router.url.startsWith(WORKSPACE_ROOT)).toBeFalse();
-    expect(notify).toHaveBeenCalledOnceWith(ACCESS_DENIED_MESSAGE, 'info');
+    expect(router.url).toBe(WORKSPACE_ROOT + '/validation');
+    expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
   });
 
   it('WORKSPACE_TAB_ROLES y PROTOCOL_ROUTES contienen las mismas tres filas con RoleGuard', () => {
