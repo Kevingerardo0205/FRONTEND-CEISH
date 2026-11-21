@@ -1,11 +1,14 @@
 import { RoleCode } from '@domain/value-objects/role.vo';
 
-/** F10 D10: acceso a cada pestaña del espacio según el rol activo. */
+/**
+ * F10 D10: acceso a cada pestaña del espacio según el rol activo.
+ * F11 EP2 (20/11/2026): PRESIDENTE abre `validation` en solo lectura (F11 §4).
+ */
 export type WorkspaceTab = 'info' | 'validation' | 'follow-up';
 
 export const WORKSPACE_TAB_ROLES: Readonly<Record<WorkspaceTab, readonly RoleCode[]>> = {
   info: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
-  validation: ['SECRETARIA', 'INVESTIGADOR'],
+  validation: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
   'follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
 };
 
@@ -29,6 +32,8 @@ export type WorkspaceAction =
  * F10 D12 y D17: acciones del espacio según el rol activo.
  * `SUBMIT_CORRECTIONS` (D17 (4)): vista de subsanación de la pestaña Validación.
  * `ASSIGN_EVALUATORS` (D20 (2), 19/11/2026): solo la Presidenta asigna (TSK-002-N52).
+ * `VALIDATE_ALL` también decide la vista de validar de la pestaña Validación (F11 EP2): sin ella
+ * y sin `SUBMIT_CORRECTIONS`, la pestaña es de solo lectura.
  */
 export const WORKSPACE_ACTION_ROLES: Readonly<Record<WorkspaceAction, readonly RoleCode[]>> = {
   EDIT_PROTOCOL: ['INVESTIGADOR'],
