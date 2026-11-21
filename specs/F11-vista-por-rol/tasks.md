@@ -1,6 +1,6 @@
 # F11 · Qué ve cada rol de un protocolo — tasks
 
-**Versión:** 0.1 · **Fecha:** 20/11/2026 · Spec: `spec-ui.md` v0.1 · Plan: `plan.md` v0.1.
+**Versión:** 0.2 · **Fecha:** 20/11/2026 · Spec: `spec-ui.md` v0.2 · Plan: `plan.md` v0.2.
 
 **Línea base (20/11/2026, `975b8e5`):** `npx tsc -p tsconfig.app.json --noEmit` y `npx tsc -p tsconfig.spec.json --noEmit` exit 0; `npx ng test --watch=false` tres veces: `2 FAILED` de 1518 (nombres no guardados) · `1 FAILED, 1517 SUCCESS` · `1 FAILED, 1517 SUCCESS` (las dos con «NuevoProtocoloPage — paso 1 Datos (F09-9, C2, C2b y C2c) nuevo diseño (D15, C2d) con el teclado: enfocar el ⓘ lo abre y Enter (clic sin puntero) no lo cierra», prueba de foco ya anotada en F00); `npx ng build --configuration production` exit 0; `npx eslint "src/**/*.ts"` `✖ 65 problems (0 errors, 65 warnings)`.
 **Verificación:** `npx tsc` app y spec dos veces · `npx ng test --watch=false` tres veces, con los nombres de lo que falle · `npx ng build --configuration production` · `npx eslint` (ningún archivo empeora).
@@ -11,10 +11,22 @@
 |---|---|---|---|
 | **EP2** · La PRESIDENTE ve Recepción en solo lectura | spec-ui §4, EARS F11-1 a F11-7; plan EP2 | No | Hecho (`8b927e7`; resultados abajo) |
 | EP3 · Lista de documentos compartida | Una sola pieza en lugar de la lista vacía del Resumen; la usan los 4 roles | Sí, para el investigador (B6) | Pendiente |
-| EP4 · El investigador sin datos internos | Sin la bitácora para INVESTIGADOR, sin la bitácora inventada para nadie; en Subsanaciones, perfil y dictamen de cada par sin nombres y sin los informes con nombre (V5) | B2 y B8 | Pendiente |
+| EP4 · El investigador sin datos internos | Sin la bitácora para INVESTIGADOR, sin la bitácora inventada para nadie; en Subsanaciones, perfil y dictamen de cada par sin nombres y sin los informes con nombre (V5) | B2 y B8 (la pantalla no los espera) | En curso |
 | EP5 · Pantalla del evaluador | `ProtocolHeader` (código, título, tipo), la lista de EP3 y el plazo (V6) | B4 y B6 | Pendiente |
 | EP6 · Espacio por etapas | Las 6 etapas para SECRETARIA y PRESIDENTE; las cerradas en solo lectura (V2) | — | Pendiente |
 | EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | Pendiente |
+| EP8 · Notificaciones reales | `notification-repository.adapter.ts` devuelve notificaciones inventadas (`of([...])`, códigos PRT-2024-00x) a todos los roles | Sí (no hay endpoint) | Pendiente (Paso 0 de EP4) |
+| EP9 · Pestaña Seguimiento sin datos inventados | `adverse-events-list.page.ts:162-180` (pestaña Seguimiento del espacio) muestra eventos adversos inventados de otros protocolos, también al investigador | Sí | Pendiente (Paso 0 de EP4) |
+| EP10 · Eventos adversos y renovaciones sin éxito falso | `eventos-adversos.page.ts`, `renovaciones.page.ts`, `renewal-request.page.ts` y `adverse-event-form.page.ts` no llaman al backend y muestran un éxito («Se notificó a Secretaría y Presidencia») | Sí | Pendiente (Paso 0 de EP4) |
+| EP11 · Carta consolidada sin ruta armada | `subsanacion.page.ts`, `downloadConsolidatedPdf`: si el backend no da la ruta o falla, arma `protocols/{id}/resolutions/Carta_Resolucion_Consolidada.pdf` a mano | Sí | Pendiente (Paso 0 de EP4) |
+| EP12 · Asistente de IA con trato de usted | El saludo del asistente (`ai-assistant.component.ts`) trata de tú («Estoy aquí para ayudarte») | No | Pendiente (Paso 0 de EP4) |
+| EP13 · Inventario de datos simulados | Inventario de pantallas y adaptadores con datos simulados (`of([...])`, mocks, éxitos falsos) en todo el frontend, con una tarea por hallazgo. Ya vistos en EP4: `getLogs` con la entidad fija `'Protocol'`, la acción por defecto `'UPDATE'` y `'Sistema'` cuando falta el usuario; frases de `getActionText` del feed que no corresponden a las acciones reales del backend | — | Pendiente (Paso 0 de EP4) |
+
+### EP4 · El investigador sin datos internos
+
+- **Capas:** domain (`workspace-tab-roles.ts`, `audit.entity.ts`, `dictamen.catalog.ts`, `IEvaluationRepositoryPort.ts`), application (`load-subsanacion-detail.use-case.ts`), infrastructure (`audit-repository.adapter.ts`, `evaluation-api.adapter.ts`) y presentation (`protocol-detail-tab.component.ts`, `protocol-trail.page.ts`, `audit-logs.page.ts`, `audit-feed.component.ts`, `subsanacion.page.ts`).
+- **Terminado cuando:** EARS F11-8 a F11-17 con prueba; mutaciones M1 a M8 detectadas y revertidas; verificación completa sin archivos que empeoren.
+- **Mutaciones previstas:** M1 bitácora del Resumen sin la comprobación de rol (el INVESTIGADOR la pide y la ve); M2 `raw.length === 0 → getMockTrail`; M3 `catchError → of(getMockTrail)`; M4 error de la bitácora solo con `console.error`; M5 vuelven los enlaces `reportPath`, `rutaPdf` y `rutaDocx`; M6 el adaptador de `observations` pasa la respuesta tal cual; M7 vuelve la huella `sha256-{id}-{fecha}`; M8 dictamen con la tabla anterior (`3 → NO_APROBADO`, sin dictamen → `PENDIENTE`). También: M2b y M3b (`getLogs` con `mockLogs`) y M4b (feed con `catchError(() => of([]))`).
 
 ### EP2 · La PRESIDENTE ve Recepción en solo lectura
 
@@ -56,6 +68,7 @@
 - **B5:** cerrar `POST /documents`.
 - **B6:** el EVALUADOR solo ve los documentos de sus asignaciones (5, 6, 7); el investigador dueño puede listar los suyos.
 - **B7:** `GET /evaluations/:id/checklist-details`, `/document` y `/docx` solo para la asignación propia.
+- **B12:** `POST /ai-assistant/chat` comprueba que el usuario pueda leer el protocolo cuyo contexto pide y decide el acceso con el rol activo, no con todos los roles (spec-ui §6, FALTA 5).
 - **B8:** observaciones al investigador con perfil y dictamen de cada par, sin nombres ni `reportPath`; el correo de la resolución sin los informes con el nombre del revisor (V5).
 - **B9:** `GET /resolutions/protocol/:id` con la regla del lector y un mapper.
 - **B10:** sacar de la respuesta al investigador los campos internos (`isPresidentNotified`, `presidentNotificationDate`, `timelineTermsAcceptedIp`, `versionLock`); `riskLevel` y `reviewType` solo una vez fijados (V5).

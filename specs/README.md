@@ -85,7 +85,7 @@ infrastructure → adapters HTTP (*-http.repository.ts), mappers DTO↔entidad
 | F08-configuracion-y-reportes | Plazos, usuarios (roles fijos), reportes; desde el 17/11/2026 la carpeta es `specs/F08-configuracion` (CF1: `Formatos`) | F00 |
 | F09-investigador-borrador-envio | Investigador: borrador, envío a la Secretaría, continuar borrador, mensajes del envío (spec-001 v3.7.2 RF-02.3, RF-02.5) | F00 |
 | F10-menu-por-rol | Menú lateral por rol activo de los 4 roles, desde una sola configuración (spec-001 HU-001) | F00 |
-| F11-vista-por-rol | Qué ve cada rol de un protocolo: matriz rol × etapa (mismas piezas, no mismas pantallas) y tareas EP2 a EP7; EP2: la PRESIDENTE ve Recepción en solo lectura (20/11/2026) | F00, F02, F03, F09, F10 |
+| F11-vista-por-rol | Qué ve cada rol de un protocolo: matriz rol × etapa (mismas piezas, no mismas pantallas) y tareas EP2 a EP7; EP2: la PRESIDENTE ve Recepción en solo lectura (20/11/2026); EP4: el investigador sin datos internos y sin datos inventados de auditoría (20/11/2026) | F00, F02, F03, F09, F10 |
 
 ---
 
