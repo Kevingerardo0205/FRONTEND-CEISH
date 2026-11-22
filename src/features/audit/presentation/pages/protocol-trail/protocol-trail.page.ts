@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -7,11 +8,25 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
 import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity';
+import {
+  EmptyStateComponent,
+  ErrorStateComponent,
+  LoadingStateComponent,
+} from '@shared/ui/states/states.component';
 
 @Component({
   selector: 'app-protocol-trail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatTooltipModule,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    LoadingStateComponent,
+  ],
   template: `
     <div class="trail-container">
       <header class="page-header">
@@ -22,10 +37,21 @@ import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity
         <div class="protocol-info"><strong>Protocolo ID:</strong> {{ protocolId }}</div>
       </header>
 
-      <div class="timeline" *ngIf="events.length > 0; else emptyState">
+      <!-- F11 V11 a V13 (EP4): datos reales o su estado; un error nunca se muestra como vacío -->
+      @if (error()) {
+        <app-error-state
+          message="No pudimos cargar la bitácora del protocolo."
+          (retry)="loadTrail()"
+        ></app-error-state>
+      } @else if (loading()) {
+        <app-loading-state message="Cargando la bitácora…"></app-loading-state>
+      } @else if (events().length === 0) {
+        <app-empty-state message="Aún no hay eventos registrados para este protocolo."></app-empty-state>
+      } @else {
+      <div class="timeline">
         <div
           class="timeline-item"
-          *ngFor="let event of events; let last = last"
+          *ngFor="let event of events(); let last = last"
           [ngClass]="event.status"
         >
           <div class="timeline-marker">
@@ -49,26 +75,13 @@ import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity
                   <mat-icon>attachment</mat-icon> {{ doc.name }}
                 </button>
               </div>
-
-              <div class="integrity-footer">
-                <mat-icon [matTooltip]="'Verificado con Hash ' + event.integrityHash"
-                  >verified_user</mat-icon
-                >
-                <span class="hash-short">Hash: {{ event.integrityHash.substring(0, 16) }}...</span>
-              </div>
             </mat-card-content>
           </mat-card>
 
           <div class="timeline-connector" *ngIf="!last"></div>
         </div>
       </div>
-
-      <ng-template #emptyState>
-        <div class="empty-state">
-          <mat-icon>history</mat-icon>
-          <p>No se han registrado eventos para este protocolo aún.</p>
-        </div>
-      </ng-template>
+      }
     </div>
   `,
   styles: [
@@ -182,23 +195,6 @@ import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity
         font-size: 0.8rem;
       }
 
-      .integrity-footer {
-        margin-top: 1.5rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid #eee;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #28a745;
-        font-size: 0.75rem;
-        font-weight: 500;
-        mat-icon {
-          font-size: 16px;
-          width: 16px;
-          height: 16px;
-        }
-      }
-
       /* Status Styles */
       .COMPLETED .timeline-marker {
         border-color: #28a745;
@@ -229,17 +225,6 @@ import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity
       .REJECTED .timeline-content {
         border-left-color: #dc3545;
       }
-
-      .empty-state {
-        text-align: center;
-        padding: 4rem;
-        color: #999;
-        mat-icon {
-          font-size: 4rem;
-          width: 4rem;
-          height: 4rem;
-        }
-      }
     `,
   ],
 })
@@ -247,18 +232,38 @@ export class ProtocolTrailPage implements OnInit {
   private readonly auditUseCase = inject(AuditUseCase);
   private readonly route = inject(ActivatedRoute);
 
+  private readonly destroyRef = inject(DestroyRef);
+  private sub?: Subscription;
+
   protocolId: string = '';
-  events: ProtocolTrailEvent[] = [];
+  readonly events = signal<ProtocolTrailEvent[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal(false);
 
   ngOnInit() {
-    this.protocolId = this.route.snapshot.params['id'] || 'PRT-2026-001';
+    // F11 §5 (EP4): sin :id no se pide nada (antes se usaba el código inventado PRT-2026-001).
+    this.protocolId = this.route.snapshot.params['id'] || '';
+    this.destroyRef.onDestroy(() => this.sub?.unsubscribe());
     this.loadTrail();
   }
 
+  /** F11 V12: también es «Reintentar». */
   loadTrail() {
-    this.auditUseCase
-      .getProtocolTrail(this.protocolId)
-      .subscribe((events: ProtocolTrailEvent[]) => (this.events = events));
+    if (!this.protocolId) return;
+    this.sub?.unsubscribe();
+    this.error.set(false);
+    this.loading.set(true);
+    this.sub = this.auditUseCase.getProtocolTrail(this.protocolId).subscribe({
+      next: (events) => {
+        this.events.set(events);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.events.set([]);
+        this.loading.set(false);
+        this.error.set(true);
+      },
+    });
   }
 
   getStatusIcon(status: string): string {

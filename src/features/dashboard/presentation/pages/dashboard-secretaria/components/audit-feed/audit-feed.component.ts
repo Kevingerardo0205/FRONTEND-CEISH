@@ -1,16 +1,33 @@
-import { Component, OnInit, signal, inject, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  OnInit,
+  signal,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
 import { AuditLog } from '@features/audit/domain/entities/audit.entity';
-import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { Subscription } from 'rxjs';
+import {
+  EmptyStateComponent,
+  ErrorStateComponent,
+  LoadingStateComponent,
+} from '@shared/ui/states/states.component';
 
 @Component({
   selector: 'app-audit-feed',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatIconModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    LoadingStateComponent,
+  ],
   template: `
     <div class="feed-card shadow-soft">
       <div class="card-header">
@@ -18,7 +35,18 @@ import { of } from 'rxjs';
         <h3>Actividad Reciente</h3>
       </div>
 
-      <div class="feed-items" *ngIf="logs().length > 0; else emptyFeed">
+      <!-- F11 V11 (EP4): datos reales o su estado; un error nunca se muestra como vacío -->
+      @if (error()) {
+        <app-error-state
+          message="No pudimos cargar la actividad reciente."
+          (retry)="load()"
+        ></app-error-state>
+      } @else if (loading()) {
+        <app-loading-state message="Cargando la actividad reciente…"></app-loading-state>
+      } @else if (logs().length === 0) {
+        <app-empty-state message="Aún no hay actividad registrada."></app-empty-state>
+      } @else {
+      <div class="feed-items">
         <div *ngFor="let log of logs() | slice: 0 : 5" class="feed-item">
           <div class="item-icon" [ngClass]="log.action">
             <mat-icon>{{ getIcon(log.action) }}</mat-icon>
@@ -32,12 +60,7 @@ import { of } from 'rxjs';
           </div>
         </div>
       </div>
-
-      <ng-template #emptyFeed>
-        <div class="empty-feed">
-          <p>Cargando flujo de eventos...</p>
-        </div>
-      </ng-template>
+      }
     </div>
   `,
   styles: [
@@ -134,26 +157,40 @@ import { of } from 'rxjs';
         }
       }
 
-      .empty-feed {
-        padding: 1rem;
-        text-align: center;
-        color: #94a3b8;
-        font-size: 0.78rem;
-        font-weight: 600;
-      }
     `,
   ],
 })
 export class AuditFeedComponent implements OnInit {
   private auditUseCase = inject(AuditUseCase);
 
+  private destroyRef = inject(DestroyRef);
+  private sub?: Subscription;
+
   logs = signal<AuditLog[]>([]);
+  loading = signal(false);
+  error = signal(false);
 
   ngOnInit() {
-    this.auditUseCase
-      .getLogs({})
-      .pipe(catchError(() => of([])))
-      .subscribe((data) => this.logs.set(data));
+    this.destroyRef.onDestroy(() => this.sub?.unsubscribe());
+    this.load();
+  }
+
+  /** F11 V11: también es «Reintentar». */
+  load(): void {
+    this.sub?.unsubscribe();
+    this.error.set(false);
+    this.loading.set(true);
+    this.sub = this.auditUseCase.getLogs({}).subscribe({
+      next: (data) => {
+        this.logs.set(data);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.logs.set([]);
+        this.loading.set(false);
+        this.error.set(true);
+      },
+    });
   }
 
   getIcon(action: string): string {

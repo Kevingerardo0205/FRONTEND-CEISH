@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { IAuditRepositoryPort } from '../../domain/ports/audit-repository.port';
 import { AuditLog, ProtocolTrailEvent, AuditFilters } from '../../domain/entities/audit.entity';
 import { ApiClientService } from '@infrastructure/api/api-client.service';
@@ -18,102 +18,20 @@ interface AuditLogResponse {
   newData?: unknown;
 }
 
+/**
+ * F11 V11 (EP4): devuelve lo que manda el backend. Vacío → `[]`; error → error. Nunca registros ni
+ * eventos de respaldo, para ningún rol. Sin huella armada en el frontend (V13).
+ */
 @Injectable({
   providedIn: 'root',
 })
 export class AuditRepositoryAdapter implements IAuditRepositoryPort {
   private readonly apiClient = inject(ApiClientService);
 
-  private readonly mockLogs: AuditLog[] = [
-    {
-      id: 'aud-001',
-      timestamp: new Date(Date.now() - 10 * 60 * 1000),
-      userId: '1',
-      userName: 'Super Administrador',
-      userRole: 'ADMIN_TI',
-      action: 'UPDATE',
-      entity: 'User',
-      recordId: 'USR-0600000999',
-      ipAddress: '192.168.10.45',
-      changes: {
-        before: { roles: ['SECRETARIA'], suplencia: false },
-        after: { roles: ['SECRETARIA', 'EVALUADOR'], suplencia: true, vigencia: '2026-10-15' },
-      },
-      details: 'Asignación de suplencia temporal de Evaluador por licencia del titular.',
-    },
-    {
-      id: 'aud-002',
-      timestamp: new Date(Date.now() - 2 * 3600 * 1000),
-      userId: '2',
-      userName: 'Secretaría CEISH',
-      userRole: 'SECRETARIA',
-      action: 'APPROVE',
-      entity: 'Protocol',
-      recordId: 'PRT-2026-001',
-      ipAddress: '192.168.10.12',
-      changes: {
-        before: { estado: 'EN_RECEPCION' },
-        after: { estado: 'ACEPTADO_TRAMITE' },
-      },
-      details: 'Validación documental aprobada conforme Anexo 1.',
-    },
-    {
-      id: 'aud-003',
-      timestamp: new Date(Date.now() - 5 * 3600 * 1000),
-      userId: '3',
-      userName: 'Dr. Marco Vinicio Ramos',
-      userRole: 'INVESTIGADOR',
-      action: 'CREATE',
-      entity: 'Amendment',
-      recordId: 'ENM-2026-001',
-      ipAddress: '192.168.20.104',
-      changes: {
-        before: null,
-        after: { tipo: 'METHODOLOGY', severidad: 'SUBSTANTIAL', version: 2 },
-      },
-      details: 'Presentación formal de solicitud de enmienda metodológica (Anexo 23).',
-    },
-    {
-      id: 'aud-004',
-      timestamp: new Date(Date.now() - 24 * 3600 * 1000),
-      userId: '1',
-      userName: 'Super Administrador',
-      userRole: 'ADMIN_TI',
-      action: 'UPDATE',
-      entity: 'User',
-      recordId: 'USR-0600000006',
-      ipAddress: '192.168.10.45',
-      changes: {
-        before: { suplenciaFin: '2026-09-01' },
-        after: { suplenciaFin: '2026-10-01', motivo: 'Prórroga de suplencia por 30 días' },
-      },
-      details: 'Prórroga de vigencia temporal de rol Secretaría.',
-    },
-    {
-      id: 'aud-005',
-      timestamp: new Date(Date.now() - 48 * 3600 * 1000),
-      userId: '4',
-      userName: 'Presidente CEISH',
-      userRole: 'PRESIDENTE',
-      action: 'APPROVE',
-      entity: 'Resolution',
-      recordId: 'RES-2026-008',
-      ipAddress: '192.168.10.5',
-      changes: {
-        before: { estado: 'BORRADOR' },
-        after: { estado: 'EMITIDA_APROBADA', dictamen: 'FAVORABLE' },
-      },
-      details: 'Emisión de dictamen bioético favorable con código QR certificado.',
-    },
-  ];
-
   getLogs(filters: AuditFilters): Observable<AuditLog[]> {
     return this.apiClient.get<any>('/audit', filters).pipe(
       map((res) => {
         const raw: AuditLogResponse[] = Array.isArray(res) ? res : res?.data || [];
-        if (raw.length === 0) {
-          return this.applyLocalFilters(this.mockLogs, filters);
-        }
         const mapped = raw.map((log) => ({
           id: String(log.id),
           timestamp: new Date(log.createdAt),
@@ -134,9 +52,6 @@ export class AuditRepositoryAdapter implements IAuditRepositoryPort {
         }));
         return this.applyLocalFilters(mapped, filters);
       }),
-      catchError(() => {
-        return of(this.applyLocalFilters(this.mockLogs, filters));
-      }),
     );
   }
 
@@ -144,9 +59,6 @@ export class AuditRepositoryAdapter implements IAuditRepositoryPort {
     return this.apiClient.get<any>(`/audit/protocol/${protocolId}`).pipe(
       map((res) => {
         const raw: AuditLogResponse[] = Array.isArray(res) ? res : res?.data || [];
-        if (raw.length === 0) {
-          return this.getMockTrail(protocolId);
-        }
         return raw.map((log) => ({
           id: String(log.id),
           date: new Date(log.createdAt),
@@ -157,11 +69,7 @@ export class AuditRepositoryAdapter implements IAuditRepositoryPort {
               ? ('REJECTED' as const)
               : ('COMPLETED' as const),
           comments: log.newData ? JSON.stringify(log.newData) : undefined,
-          integrityHash: `sha256-${log.id}-${log.createdAt}`,
         }));
-      }),
-      catchError(() => {
-        return of(this.getMockTrail(protocolId));
       }),
     );
   }
@@ -193,58 +101,6 @@ export class AuditRepositoryAdapter implements IAuditRepositoryPort {
       result = result.filter((l) => new Date(l.timestamp).getTime() <= end);
     }
     return result;
-  }
-
-  private getMockTrail(protocolId: string): ProtocolTrailEvent[] {
-    return [
-      {
-        id: 'tr-1',
-        date: new Date(Date.now() - 15 * 24 * 3600 * 1000),
-        responsible: 'Dr. Investigador Principal (INVESTIGADOR)',
-        action: 'Envío Inicial de Protocolo',
-        status: 'COMPLETED',
-        comments: 'Presentación de expediente con 7 requisitos documentales.',
-        documents: [{ name: 'Protocolo_V1.pdf', url: '#' }],
-        integrityHash: `sha256-001-${protocolId}-initial`,
-      },
-      {
-        id: 'tr-2',
-        date: new Date(Date.now() - 12 * 24 * 3600 * 1000),
-        responsible: 'Secretaría CEISH (SECRETARIA)',
-        action: 'Aceptación de Plazos y Recepción Documental',
-        status: 'COMPLETED',
-        comments: 'Conformidad documental verificada conforme Anexo 1.',
-        integrityHash: `sha256-002-${protocolId}-reception`,
-      },
-      {
-        id: 'tr-3',
-        date: new Date(Date.now() - 10 * 24 * 3600 * 1000),
-        responsible: 'Presidente CEISH (PRESIDENTE)',
-        action: 'Asignación de Pares Evaluadores',
-        status: 'COMPLETED',
-        comments: 'Asignación de 2 evaluadores metodológico y bioético.',
-        integrityHash: `sha256-003-${protocolId}-peers`,
-      },
-      {
-        id: 'tr-4',
-        date: new Date(Date.now() - 5 * 24 * 3600 * 1000),
-        responsible: 'Evaluador Bioético (EVALUADOR)',
-        action: 'Registro de Evaluación y Checklist Bioético',
-        status: 'COMPLETED',
-        comments: 'Aprobado sin observaciones mayores.',
-        integrityHash: `sha256-004-${protocolId}-evaluation`,
-      },
-      {
-        id: 'tr-5',
-        date: new Date(Date.now() - 2 * 24 * 3600 * 1000),
-        responsible: 'Presidente CEISH (PRESIDENTE)',
-        action: 'Emisión de Dictamen Favorable',
-        status: 'COMPLETED',
-        comments: 'Resolución oficial firmada y registrada en catastro institucional.',
-        documents: [{ name: 'Dictamen_Favorable.pdf', url: '#' }],
-        integrityHash: `sha256-005-${protocolId}-resolution`,
-      },
-    ];
   }
 
   private formatActionLabel(action: string): string {

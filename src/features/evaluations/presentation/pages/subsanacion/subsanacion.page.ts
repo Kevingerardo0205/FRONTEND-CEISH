@@ -39,19 +39,9 @@ import {
   ProtocoloResumen,
 } from '@features/investigador/domain/dtos/crear-protocolo.dto';
 import { ProtocolDocumentHistoryEntry } from '@domain/ports/IProtocolRepositoryPort';
+import { ObservationEntry } from '@domain/ports/IEvaluationRepositoryPort';
+import { DictamenId, dictamenLabel } from '@domain/catalogs/dictamen.catalog';
 import { RequirementStatus } from '@features/investigador/domain/dtos/crear-protocolo.dto';
-
-interface EvaluationObservation {
-  evaluatorProfile: string;
-  result: string | number | { name?: string; code?: string; label?: string; verdict?: string };
-  generalObservations?: string;
-  reportPath?: string;
-  rutaPdf?: string;
-  rutaDocx?: string;
-  checklistDetails?: ChecklistDetailObservation[];
-  detallesChecklist?: ChecklistDetailObservation[];
-  checklist?: ChecklistDetailObservation[];
-}
 
 interface ChecklistDetailObservation {
   itemCode?: string;
@@ -374,8 +364,12 @@ interface ProtocolDocument {
                     <h4 class="fw-bold text-dark m-0" style="font-size: 14px; font-weight: 700;">
                       Evaluador {{ getProfileLabel(obs.evaluatorProfile) }}
                     </h4>
-                    <span class="badge-result" [ngClass]="getObsResultClass(obs.result)">
-                      {{ getObsResultLabel(obs.result).replace('_', ' ') }}
+                    <span
+                      class="badge-result"
+                      data-testid="obs-dictamen"
+                      [ngClass]="getObsResultClass(obs.result)"
+                    >
+                      {{ getObsResultLabel(obs.result) }}
                     </span>
                   </div>
 
@@ -399,51 +393,7 @@ interface ProtocolDocument {
                       </p>
                     </div>
 
-                    <!-- Descargas de Documentos del Evaluador -->
-                    <div class="mb-3" *ngIf="obs.reportPath || obs.rutaPdf || obs.rutaDocx">
-                      <div class="ev-doc-list">
-                        <!-- Informe Adicional -->
-                        <div
-                          class="ev-doc-link"
-                          *ngIf="obs.reportPath"
-                          (click)="downloadFile(obs.reportPath)"
-                        >
-                          <mat-icon class="text-danger">picture_as_pdf</mat-icon>
-                          <span class="doc-title-text"
-                            >Informe Técnico Evaluador {{ i + 1 }} (PDF Adicional)</span
-                          >
-                          <mat-icon class="open-icon">open_in_new</mat-icon>
-                        </div>
-
-                        <!-- Anexo 9 PDF -->
-                        <div
-                          class="ev-doc-link"
-                          *ngIf="obs.rutaPdf"
-                          (click)="downloadFile(obs.rutaPdf)"
-                        >
-                          <mat-icon class="text-danger">picture_as_pdf</mat-icon>
-                          <span class="doc-title-text"
-                            >Informe Técnico Evaluador {{ i + 1 }} (PDF Oficial)</span
-                          >
-                          <mat-icon class="open-icon">open_in_new</mat-icon>
-                        </div>
-
-                        <!-- Anexo 9 Word / Docx -->
-                        <div
-                          class="ev-doc-link"
-                          *ngIf="obs.rutaDocx"
-                          (click)="downloadFile(obs.rutaDocx)"
-                        >
-                          <mat-icon class="text-primary" style="color: #0284c7 !important;"
-                            >description</mat-icon
-                          >
-                          <span class="doc-title-text"
-                            >Informe Técnico Evaluador {{ i + 1 }} (Word Editable)</span
-                          >
-                          <mat-icon class="open-icon">download</mat-icon>
-                        </div>
-                      </div>
-                    </div>
+                    <!-- F11 V14 (EP4): sin los informes individuales; llevan el nombre del revisor -->
 
                     <!-- Lista de Requisitos Evaluados como "No Cumple" -->
                     <div class="checklist-nc" *ngIf="hasObservedItems(obs)">
@@ -1097,7 +1047,7 @@ export class SubsanacionPage implements OnInit {
   protocolVersion = signal<number>(1);
 
   protocols = signal<ProtocoloResumen[]>([]);
-  observations = signal<EvaluationObservation[]>([]);
+  observations = signal<ObservationEntry[]>([]);
   checklist = signal<ChecklistRequirement[]>([]);
   protocolDocuments = signal<ProtocolDocument[]>([]);
 
@@ -1199,7 +1149,7 @@ export class SubsanacionPage implements OnInit {
           this.protocolVersion.set(
             (rawP['versionNumber'] as number) || (rawP['version'] as number) || 1,
           );
-          this.observations.set((result.observations || []) as unknown as EvaluationObservation[]);
+          this.observations.set(result.observations);
           this.checklist.set((result.checklist || []) as unknown as ChecklistRequirement[]);
           this.protocolDocuments.set(result.documents || []);
         },
@@ -1340,32 +1290,23 @@ export class SubsanacionPage implements OnInit {
     return map[profile] || profile;
   }
 
-  getObsResultLabel(result: string | number | Record<string, unknown> | null | undefined): string {
-    if (!result) return 'PENDIENTE';
-    if (typeof result === 'string') return result;
-    if (typeof result === 'number') {
-      const map: Record<number, string> = {
-        1: 'APROBADO',
-        2: 'CON_OBSERVACIONES',
-        3: 'NO_APROBADO',
-      };
-      return map[result] || String(result);
-    }
-    if (typeof result === 'object') {
-      return (
-        (result['name'] as string) ||
-        (result['code'] as string) ||
-        (result['label'] as string) ||
-        (result['verdict'] as string) ||
-        'CON_OBSERVACIONES'
-      );
-    }
-    return String(result);
+  /** F11 V15 (EP4): etiqueta de `EvaluatorDictamen`; sin dictamen, «Sin dictamen registrado». */
+  getObsResultLabel(result: number | null): string {
+    return dictamenLabel(result);
   }
 
-  getObsResultClass(result: string | number | Record<string, unknown> | null | undefined): string {
-    const label = this.getObsResultLabel(result).toLowerCase();
-    return label.replace(/\s+/g, '_');
+  /** Tono del distintivo con las clases que ya existen; sin dictamen o desconocido, sin tono. */
+  getObsResultClass(result: number | null): string {
+    switch (result) {
+      case DictamenId.APROBADO:
+        return 'aprobado';
+      case DictamenId.APROBADO_CON_OBSERVACIONES:
+        return 'aprobado_con_observaciones';
+      case DictamenId.RECHAZADO:
+        return 'no_aprobado';
+      default:
+        return '';
+    }
   }
 
   isSinObservaciones(text: string): boolean {
@@ -1429,16 +1370,9 @@ export class SubsanacionPage implements OnInit {
     });
   }
 
-  getChecklistDetails(obs: EvaluationObservation): ChecklistDetailObservation[] {
-    if (!obs) return [];
-    const list = obs.checklistDetails || obs.detallesChecklist || obs.checklist;
-    if (Array.isArray(list)) return list;
-    if (list && typeof list === 'object') {
-      const maybeArray =
-        (list as Record<string, unknown>)['items'] || (list as Record<string, unknown>)['data'];
-      if (Array.isArray(maybeArray)) return maybeArray;
-    }
-    return [];
+  getChecklistDetails(obs: ObservationEntry): readonly ChecklistDetailObservation[] {
+    // El adaptador ya junta los nombres de campo del checklist (F11 V14).
+    return (obs?.checklistDetails ?? []) as readonly ChecklistDetailObservation[];
   }
 
   isItemObserved(item: ChecklistDetailObservation): boolean {
@@ -1447,7 +1381,7 @@ export class SubsanacionPage implements OnInit {
     return ['NC', 'OBSERVADO', 'RECHAZADO', 'NO_CUMPLE'].includes(state);
   }
 
-  hasObservedItems(obs: EvaluationObservation): boolean {
+  hasObservedItems(obs: ObservationEntry): boolean {
     const details = this.getChecklistDetails(obs);
     return details.some((item) => this.isItemObserved(item));
   }

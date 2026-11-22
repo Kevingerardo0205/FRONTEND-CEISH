@@ -1,4 +1,13 @@
-import { Component, inject, computed, signal, effect, untracked } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  inject,
+  computed,
+  signal,
+  effect,
+  untracked,
+} from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -16,7 +25,11 @@ import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pip
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 import { AuditUseCase } from '@features/audit/application/use-cases/audit.use-case';
 import { ProtocolTrailEvent } from '@features/audit/domain/entities/audit.entity';
-import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/states.component';
+import {
+  EmptyStateComponent,
+  ErrorStateComponent,
+  LoadingStateComponent,
+} from '@shared/ui/states/states.component';
 import { RISK_LEVEL_UNSET_LABEL } from '../../../../domain/protocol-header';
 
 /** Textos vacíos de la pestaña Información (F10 D19, decisión de la usuaria del 18/11/2026). */
@@ -35,6 +48,7 @@ export const NO_STUDY_TYPE_LABEL = 'Sin tipo de estudio';
     RouterModule,
     ProtocolStatusLabelPipe,
     ProtocolStatusClassPipe,
+    EmptyStateComponent,
     ErrorStateComponent,
     LoadingStateComponent,
   ],
@@ -210,13 +224,23 @@ export const NO_STUDY_TYPE_LABEL = 'Sin tipo de estudio';
         </div>
       </div>
 
-      <!-- SECCIÓN: TRAZABILIDAD Y LOGS DE AUDITORÍA (Fase 7) -->
-      <div class="audit-section mt-4" *ngIf="auditTrail().length > 0">
+      <!-- F11 V10 a V13 (EP4): bitácora solo con AUDIT_TRAIL; datos reales o su estado -->
+      <div class="audit-section mt-4" *ngIf="showAuditTrail()" data-testid="audit-trail">
         <h3 class="section-title mb-3 d-flex align-items-center gap-2">
           <mat-icon style="color: #003366;">verified</mat-icon>
-          Bitácora de Trazabilidad de Auditoría (Firma Digital / PET)
+          Bitácora de Trazabilidad de Auditoría
         </h3>
 
+        @if (auditTrailError()) {
+          <app-error-state
+            message="No pudimos cargar la bitácora del protocolo."
+            (retry)="retryAuditTrail()"
+          ></app-error-state>
+        } @else if (auditTrailLoading()) {
+          <app-loading-state message="Cargando la bitácora…"></app-loading-state>
+        } @else if (auditTrail().length === 0) {
+          <app-empty-state message="Aún no hay eventos registrados para este protocolo."></app-empty-state>
+        } @else {
         <div class="timeline-scaffold">
           <div class="timeline-item" *ngFor="let ev of auditTrail(); let first = first">
             <div class="timeline-marker" [class.current]="first">
@@ -240,19 +264,13 @@ export const NO_STUDY_TYPE_LABEL = 'Sin tipo de estudio';
                 <strong>Responsable:</strong> {{ ev.responsible }}
               </p>
 
-              <p class="small text-muted mb-1" style="margin: 0; font-size: 0.75rem;">
+              <p class="small text-muted mb-0" style="margin: 0; font-size: 0.75rem;">
                 <strong>Fecha/Hora:</strong> {{ ev.date | date: 'dd MMM, yyyy - HH:mm:ss' }}
-              </p>
-
-              <p
-                class="small text-muted mb-0 font-monospace"
-                style="margin: 0; font-size: 0.65rem; word-break: break-all; color: #64748b;"
-              >
-                <strong>Huella Digital (SHA-256):</strong> {{ ev.integrityHash }}
               </p>
             </div>
           </div>
         </div>
+        }
       </div>
     </div>
   `,
@@ -549,6 +567,7 @@ export class ProtocolDetailTabPage {
   private workspaceService = inject(ProtocolWorkspaceService);
   private activeRoleFacade = inject(ActiveRoleFacade);
   private auditUseCase = inject(AuditUseCase);
+  private destroyRef = inject(DestroyRef);
 
   resolveEstado = resolveEstado;
 
@@ -563,17 +582,20 @@ export class ProtocolDetailTabPage {
   /** F10 D19: el nivel de riesgo se muestra siempre; sin fijar (null) → «Sin fijar». */
   riskLevelLabel = computed(() => this.protocol()?.riskLevel || RISK_LEVEL_UNSET_LABEL);
   auditTrail = signal<ProtocolTrailEvent[]>([]);
+  auditTrailLoading = signal(false);
+  auditTrailError = signal(false);
+  private auditTrailSub?: Subscription;
 
   constructor() {
+    // F11 V10 (EP4): la bitácora se pide solo con el rol activo en AUDIT_TRAIL; el INVESTIGADOR
+    // (y el EVALUADOR) no la ven ni la piden.
     effect(() => {
       const p = this.protocol();
-      if (p && p.id) {
-        this.auditUseCase.getProtocolTrail(String(p.id)).subscribe({
-          next: (trail) => this.auditTrail.set(trail),
-          error: (err) => console.error('Error cargando trazabilidad de auditoría:', err),
-        });
+      if (p?.id && this.showAuditTrail()) {
+        untracked(() => this.loadAuditTrail(String(p.id)));
       }
     });
+    this.destroyRef.onDestroy(() => this.auditTrailSub?.unsubscribe());
 
     // F10 D14 (EARS 28): las evaluaciones las pide el Resumen y solo si muestra el cuerpo
     // evaluador. Lee el objeto `protocol`, así que también se vuelven a pedir al recargar
@@ -591,6 +613,36 @@ export class ProtocolDetailTabPage {
 
   retryEvaluations(): void {
     this.workspaceService.refreshEvaluations();
+  }
+
+  /** F11 V10: bitácora solo con el rol activo en `AUDIT_TRAIL` (SECRETARIA y PRESIDENTE). */
+  showAuditTrail(): boolean {
+    const activeRole = this.activeRoleFacade.activeRole();
+    return !!activeRole && WORKSPACE_SECTION_ROLES.AUDIT_TRAIL.includes(activeRole);
+  }
+
+  /** F11 V12: «Reintentar» vuelve a pedir la bitácora del protocolo abierto. */
+  retryAuditTrail(): void {
+    const id = this.protocol()?.id;
+    if (id && this.showAuditTrail()) this.loadAuditTrail(String(id));
+  }
+
+  /** F11 V11: datos reales o su estado; un error nunca se muestra como vacío. Gana la última. */
+  private loadAuditTrail(protocolId: string): void {
+    this.auditTrailSub?.unsubscribe();
+    this.auditTrailError.set(false);
+    this.auditTrailLoading.set(true);
+    this.auditTrailSub = this.auditUseCase.getProtocolTrail(protocolId).subscribe({
+      next: (trail) => {
+        this.auditTrail.set(trail);
+        this.auditTrailLoading.set(false);
+      },
+      error: () => {
+        this.auditTrail.set([]);
+        this.auditTrailLoading.set(false);
+        this.auditTrailError.set(true);
+      },
+    });
   }
 
   /** F10 D17 (2): cuerpo evaluador solo con el rol activo en `EVALUATOR_PANEL`. */

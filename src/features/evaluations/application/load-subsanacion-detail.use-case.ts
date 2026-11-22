@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
 import {
   IEvaluationRepositoryPort,
   ObservationEntry,
@@ -27,14 +26,8 @@ export class LoadSubsanacionDetailUseCase {
   }> {
     return forkJoin({
       protocol: this.protocoloService.obtenerProtocolo(protocolId),
-      observations: this.evalRepo.getProtocolObservations(String(protocolId)).pipe(
-        switchMap((res: any) => {
-          if (Array.isArray(res)) return [res];
-          if (res && Array.isArray(res.observations)) return [res.observations];
-          if (res && Array.isArray(res.data)) return [res.data];
-          return [[]];
-        }),
-      ),
+      // F11 V14 (EP4): el adaptador ya entrega el arreglo, solo con perfil y dictamen de cada par.
+      observations: this.evalRepo.getProtocolObservations(String(protocolId)),
       checklist: this.protocoloService.getChecklist(protocolId),
       documents: this.protocolRepo.getDocumentHistory(String(protocolId)),
     });

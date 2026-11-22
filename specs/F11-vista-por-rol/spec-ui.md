@@ -1,7 +1,8 @@
 # F11 · Qué ve cada rol de un protocolo — spec-ui
 
-**Versión:** 0.1 · **Fecha:** 20/11/2026 · **Rama:** `feat/ep2-presidenta-recepcion-lectura` (desde `dev` `975b8e5`)
+**Versión:** 0.2 · **Fecha:** 20/11/2026 · **Rama:** `feat/ep4-investigador-sin-datos-internos` (desde `dev` `ba1b9c4`)
 **Historial:**
+- 0.2 (20/11/2026) Paso 0 de EP4 (frontend `dev` `ba1b9c4`; backend `dev` `19a5519`, leído con `git show`) y decisiones de la usuaria del 20/11/2026 (V10 a V15): EP4 (§4b), estados de la bitácora, del registro general y de la actividad reciente, sin datos inventados de auditoría para ningún rol, sin la huella inventada, Subsanaciones sin los informes individuales y con el dictamen de `EvaluatorDictamen`; EARS F11-8 a F11-17; §6 con B2, B8 y B12; tareas aparte en §8 y `tasks.md`.
 - 0.1 (20/11/2026) primer borrador desde los dos Paso 0 del 20/11/2026 (frontend `dev` `975b8e5`; backend `dev` `19a5519`, leído con `git show`) y las decisiones de la usuaria del 20/11/2026 (V1 a V9). Primera tarea: EP2 (la PRESIDENTE ve Recepción en solo lectura).
 
 **Cubre:** spec-001 v3.7.8 del backend: HU-001 (roles fijos, matriz de permisos fija, rol activo) y RF-02.10 (quién lee `GET /protocols/:id`); spec-002 v1.3.4: RF-12.1 h (pantalla de la Presidente). No copia su texto: lo cita.
@@ -31,6 +32,12 @@ Roles: SECRETARIA, PRESIDENTE, INVESTIGADOR y EVALUADOR (F00 §2). Se decide sie
 | V7 | **Resolución:** se firma fuera del sistema y la SECRETARIA sube el documento firmado. Si la PRESIDENTE conserva `RESOLUCION_CREAR`: **por decidir**. *Pendiente en HU-001.* |
 | V8 | **EP2, constancia:** la PRESIDENTE no ve el botón «Descargar Anexo 7 (constancia)»: el endpoint actual le responde 403 y además vuelve a emitir la constancia (§6, FALTA 1). |
 | V9 | **EP2, Recepción validada no cambia:** con el protocolo ya validado (`isFinalized`), el cuadro de observaciones generales queda deshabilitado también para la SECRETARIA. La barra de progreso de validación queda visible para la PRESIDENTE (es informativa y usa datos reales). |
+| V10 | **EP4, bitácora del Resumen:** el INVESTIGADOR no la ve ni se pide al backend. La ven SECRETARIA y PRESIDENTE (los mismos roles de `audit/*`, F00 D4). |
+| V11 | **EP4, sin datos inventados de auditoría, para ningún rol:** la bitácora del protocolo (Resumen y `/dashboard/audit/trail/:id`), el registro general (`/dashboard/audit/logs`) y la «Actividad Reciente» del tablero de la Secretaría muestran datos reales, o su estado de vacío o error. Un error nunca se muestra como vacío. |
+| V12 | **EP4, estados de la bitácora** (Resumen y `trail/:id`): cargando «Cargando la bitácora…»; error «No pudimos cargar la bitácora del protocolo.» con «Reintentar»; vacío «Aún no hay eventos registrados para este protocolo.». |
+| V13 | **EP4, sin la «Huella Digital (SHA-256)»:** el frontend la armaba con el id y la fecha (`sha256-{id}-{fecha}`); no es una huella. Se quita del Resumen y de `trail/:id`. |
+| V14 | **EP4, Subsanaciones:** se conservan las tarjetas con el perfil y el dictamen de cada par, sin nombres, ids ni correos. Se quitan los enlaces a los informes individuales (PDF adicional, PDF oficial y Word): esos archivos llevan el nombre del revisor. |
+| V15 | **EP4, dictamen de cada par:** las etiquetas siguen los códigos del backend (`EvaluatorDictamen`: 1 Aprobado, 2 Aprobado con observaciones, 3 Rechazado). Sin dictamen: «Sin dictamen registrado», nunca «PENDIENTE». |
 
 ## 3. Matriz rol × etapa (V2)
 
@@ -60,9 +67,31 @@ Las celdas «por precisar» no se rellenan: las decisiones del 20/11/2026 no dic
 
 **SECRETARIA con el protocolo ya validado (V9):** el cuadro de observaciones generales queda deshabilitado, como ya lo estaban los demás controles.
 
+## 4b. EP4 · El investigador sin datos internos
+
+**Bitácora del Resumen** (pestaña Información, `protocol-detail-tab.component.ts`): se muestra y se pide a `GET /audit/protocol/:id` solo con el rol activo en `WORKSPACE_SECTION_ROLES.AUDIT_TRAIL` (SECRETARIA y PRESIDENTE, V10). Con INVESTIGADOR (o EVALUADOR) activo no hay sección ni petición. Ocultarla no es seguridad: hoy el backend responde a cualquier sesión (B2, §6).
+
+**Sin datos inventados (V11):** el adaptador de auditoría devuelve lo que manda el backend. Respuesta vacía → lista vacía; error → error. Nunca eventos ni registros de respaldo. Tampoco se arma la huella (V13).
+
+**Subsanaciones** (`/dashboard/evaluacion-etica/subsanaciones`, `subsanacion.page.ts`), V14 y V15:
+- Cada tarjeta: «Evaluador {perfil}» y el dictamen. Sin nombres, ids, correos ni enlaces a los informes individuales.
+- El adaptador de `GET /evaluations/protocol/:id/observations` deja pasar solo el perfil, el dictamen, las observaciones generales y el detalle del checklist (para cuando el backend los mande, B8). Si el backend agrega `reportPath`, nombres, ids o correos, no llegan a la pantalla.
+- Dictamen: 1 «Aprobado», 2 «Aprobado con observaciones», 3 «Rechazado»; sin dictamen (`null` o ausente), «Sin dictamen registrado»; otro número, «Dictamen no reconocido» (texto de esta spec: no se inventa un dictamen).
+- Siguen la «Carta de Observaciones Consolidadas» y el «Formato de Respuestas a Evaluadores» (su ruta armada a mano es una tarea aparte, §8).
+
 ## 5. Estados
 
 EP2 no cambia los estados de la pestaña: cargando, no encontrado y error siguen como hoy (F10 D14 para el espacio).
+
+EP4 (V11, V12). Un error nunca se muestra como vacío y, mientras carga, no se muestra el vacío.
+
+| Pantalla | Cargando | Vacío | Error |
+|---|---|---|---|
+| Bitácora del Resumen (SECRETARIA y PRESIDENTE) y `/dashboard/audit/trail/:id` | «Cargando la bitácora…» | «Aún no hay eventos registrados para este protocolo.» | «No pudimos cargar la bitácora del protocolo.» con «Reintentar» |
+| Registro general `/dashboard/audit/logs` | «Cargando el registro de auditoría…» | «Aún no hay registros de auditoría.» | «No pudimos cargar el registro de auditoría.» con «Reintentar» |
+| «Actividad Reciente» del tablero de la Secretaría | «Cargando la actividad reciente…» | «Aún no hay actividad registrada.» | «No pudimos cargar la actividad reciente.» con «Reintentar» |
+
+Los textos del registro general y de la actividad reciente siguen el modelo aprobado para la bitácora (V12). Se usan `LoadingState`, `EmptyState` y `ErrorState` de F00. `trail/:id` sin `:id` no pide nada (antes usaba el código inventado `PRT-2026-001`).
 
 ## 6. Endpoints
 
@@ -77,6 +106,21 @@ EP2 no cambia los estados de la pestaña: cargando, no encontrado y error siguen
 
 **FALTA 2 · B4, regla del lector en los documentos (backend).** «Ver documento» funciona hoy porque `/reception/document/:id/download-url` no pide permiso. Cuando se cierre con la regla del lector, debe seguir permitiendo a la PRESIDENTE (y a la SECRETARIA, al investigador dueño y al evaluador asignado).
 
+**EP4 (backend `dev` `19a5519`):**
+
+| Endpoint | Para qué | Estado |
+|---|---|---|
+| `GET /audit/protocol/:id` | Bitácora del protocolo | Existe. Ver FALTA 3 (B2) |
+| `GET /audit` | Registro general y actividad reciente | Existe. Ver FALTA 3 (B2) |
+| `GET /evaluations/protocol/:id/observations` | Tarjetas de Subsanaciones | Existe. Devuelve `{ protocolId, versionNumber, observations: [{ evaluatorProfile, result, reportPath }] }` (`evaluations.service.ts:1949`); sin nombres, ids ni correos. Ver FALTA 4 (B8) |
+| `POST /ai-assistant/chat` | Asistente de IA | Existe. Ver FALTA 5 (B12) |
+
+**FALTA 3 · B2, auditoría con permiso (backend).** `/audit` y `/audit/protocol/:id` solo piden sesión (`JwtAuthGuard`, `audit.controller.ts`): cualquier rol, también el INVESTIGADOR, puede pedirlos directamente. `findProtocolTrail` devuelve el nombre completo de cada usuario (`userName`), `oldData` y `newData`, y filtra solo por `recordId` (mezcla tablas distintas con el mismo id). Falta: permiso, filtro por tabla y sin el INVESTIGADOR.
+
+**FALTA 4 · B8, observaciones y correo de la resolución sin nombres (backend).** `observations` manda `reportPath`, el informe individual con el nombre del revisor; debe mandar el perfil y el dictamen de cada par (y sus observaciones), sin nombres ni `reportPath`. El correo de la resolución no debe adjuntar ni enlazar los informes individuales (V5).
+
+**FALTA 5 · B12, asistente de IA (backend).** `POST /ai-assistant/chat` arma el contexto de cualquier `protocolId` que reciba (`context.service.ts`) sin comprobar que el protocolo sea del usuario o que su rol pueda leerlo, y decide el acceso con todos los roles de la cuenta (`user.roles`), no con el rol activo (F10 D12).
+
 ## 7. Criterios de aceptación (EARS)
 
 1. **F11-1:** Mientras el rol activo sea PRESIDENTE, `/dashboard/protocols/workspace/:id/validation` debe abrir sin el aviso de acceso denegado, y el espacio debe mostrar la pestaña «Validación Técnica» (salvo en borrador, como hoy).
@@ -87,6 +131,19 @@ EP2 no cambia los estados de la pestaña: cargando, no encontrado y error siguen
 6. **F11-6:** Mientras el protocolo esté validado (`isFinalized`), el cuadro de observaciones generales de la SECRETARIA debe estar deshabilitado.
 7. **F11-7:** Con SECRETARIA o INVESTIGADOR activos, la pestaña debe verse y actuar como antes de EP2, salvo F11-6.
 
+EP4:
+
+8. **F11-8:** Mientras el rol activo sea INVESTIGADOR (o EVALUADOR), el Resumen no debe pedir `GET /audit/protocol/:id` ni mostrar la bitácora.
+9. **F11-9:** Mientras el rol activo sea SECRETARIA o PRESIDENTE, el Resumen debe pedir la bitácora del protocolo abierto y mostrar sus eventos reales.
+10. **F11-10:** Cuando el backend devuelva una lista vacía de auditoría (bitácora o registro general), el adaptador debe devolver una lista vacía, sin eventos ni registros de respaldo.
+11. **F11-11:** Si `GET /audit/protocol/:id` o `GET /audit` fallan, el adaptador debe propagar el error y la pantalla debe mostrar su estado de error con «Reintentar» (§5), nunca el vacío ni datos de respaldo; «Reintentar» vuelve a pedir lo mismo.
+12. **F11-12:** Mientras la bitácora, el registro general o la actividad reciente carguen, la pantalla debe mostrar su texto de carga (§5) y no el vacío.
+13. **F11-13:** La bitácora (Resumen y `trail/:id`) no debe mostrar ninguna «Huella Digital» ni «Hash».
+14. **F11-14:** La tarjeta de cada par en Subsanaciones debe mostrar su perfil y su dictamen y no debe mostrar nombres, ids ni correos de evaluadores, aunque el backend los mande.
+15. **F11-15:** Subsanaciones no debe mostrar enlaces a los informes individuales de los evaluadores (PDF adicional, PDF oficial ni Word), aunque el backend mande sus rutas.
+16. **F11-16:** El dictamen de cada par debe mostrarse como «Aprobado» (1), «Aprobado con observaciones» (2) o «Rechazado» (3); sin dictamen, «Sin dictamen registrado»; con otro código, «Dictamen no reconocido».
+17. **F11-17:** El adaptador de `observations` debe devolver solo perfil, dictamen, observaciones generales y detalle del checklist de cada par, y una lista vacía si la respuesta no trae observaciones.
+
 ## 8. Pendientes
 
 - Registrar V2, V5, V6 y V7 en spec-001 HU-001 del backend (README §3, regla 1).
@@ -94,3 +151,5 @@ EP2 no cambia los estados de la pestaña: cargando, no encontrado y error siguen
 - Tareas de backend del Paso 0 del 20/11/2026 (filtraciones al investigador y al evaluador), en `tasks.md` §2.
 - V7: si la PRESIDENTE conserva `RESOLUCION_CREAR`.
 - Qué edita la SECRETARIA en Evaluación, Seguimiento y Renovación (§3, «por precisar»).
+- FALTA 3 (B2), FALTA 4 (B8) y FALTA 5 (B12) (§6).
+- Tareas aparte del Paso 0 de EP4 (decisión de la usuaria del 20/11/2026), en `tasks.md` §1: notificaciones inventadas; pestaña Seguimiento con eventos adversos inventados; eventos adversos y renovaciones con éxito falso; `downloadConsolidatedPdf` con la ruta armada a mano; saludo de tú del asistente de IA; inventario de pantallas y adaptadores con datos simulados en todo el frontend.

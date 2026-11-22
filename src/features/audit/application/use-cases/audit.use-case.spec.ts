@@ -29,7 +29,6 @@ describe('AuditUseCase', () => {
       responsible: 'Investigador (INVESTIGADOR)',
       action: 'Creación de Protocolo',
       status: 'COMPLETED',
-      integrityHash: 'sha256-mock-hash',
     },
   ];
 

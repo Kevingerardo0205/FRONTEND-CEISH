@@ -56,11 +56,16 @@ export interface ChecklistDetailItem {
   observaciones: string | null;
 }
 
+/**
+ * F11 V14 (EP4): lo que ve el investigador de cada par en Subsanaciones. Solo perfil, dictamen
+ * (`EvaluatorDictamen` o `null`), observaciones generales y detalle del checklist: sin nombres, ids,
+ * correos ni rutas de los informes individuales.
+ */
 export interface ObservationEntry {
-  evaluatorName: string;
-  section: string;
-  observations: string;
-  date?: string;
+  evaluatorProfile: string;
+  result: number | null;
+  generalObservations: string | null;
+  checklistDetails: readonly Readonly<Record<string, unknown>>[];
 }
 
 export abstract class IEvaluationRepositoryPort {
