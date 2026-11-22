@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   computed,
+  signal,
   OnInit,
   ChangeDetectionStrategy,
   DestroyRef,
@@ -37,6 +38,12 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { TERMS_NOT_ACCEPTED_REASON } from '@domain/entities/peer-assignment-composition';
 
 import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
+
+type AssignmentOrigin = 'assignment-list' | 'assignment-form';
+
+function toAssignmentOrigin(value: string | null): AssignmentOrigin | null {
+  return value === 'assignment-list' || value === 'assignment-form' ? value : null;
+}
 
 @Component({
   selector: 'app-protocol-workspace',
@@ -91,8 +98,18 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
             [facts]="facts()"
             [stage]="workspaceStage()"
           >
-            @if (contextualActions().length || awaitingTimelineAcceptance()) {
+            @if (contextualActions().length || awaitingTimelineAcceptance() || returnOrigin()) {
               <div protocolHeaderAction class="header-action">
+                @if (returnOrigin()) {
+                  <button
+                    type="button"
+                    class="header-action__button header-action__button--secondary"
+                    (click)="returnToAssignmentContext()"
+                  >
+                    <mat-icon aria-hidden="true">arrow_back</mat-icon>
+                    <span>{{ returnLabel() }}</span>
+                  </button>
+                }
                 @for (action of contextualActions(); track action.id) {
                   <button
                     type="button"
@@ -214,6 +231,15 @@ import { ProtocolWorkspaceService } from '../../../application/services/protocol
           outline-offset: 2px;
         }
       }
+      .header-action__button--secondary {
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        color: var(--c-primary-dark);
+
+        &:hover {
+          background: var(--c-primary-soft);
+        }
+      }
       .header-notice {
         margin: 0;
         max-width: 22rem;
@@ -315,6 +341,14 @@ export class ProtocolWorkspaceComponent implements OnInit {
   loadError = this.workspaceService.error;
 
   protocolIdNumber = computed(() => Number(this.protocol()?.id || 0));
+
+  returnOrigin = signal<AssignmentOrigin | null>(null);
+
+  returnLabel = computed(() =>
+    this.returnOrigin() === 'assignment-form'
+      ? 'Volver al formulario'
+      : 'Volver a la lista de asignación',
+  );
 
   /**
    * Estado canónico (F10 D13): el del protocolo y, si es NULL, el de la recepción. Pestañas,
@@ -474,6 +508,9 @@ export class ProtocolWorkspaceComponent implements OnInit {
    * así que gana la última respuesta. El error queda en el servicio (`loadError`).
    */
   ngOnInit() {
+    this.returnOrigin.set(
+      toAssignmentOrigin(this.route.snapshot?.queryParamMap?.get('origin') ?? null),
+    );
     const id$ = this.route.params.pipe(
       map((params) => params['id'] as string | undefined),
       filter((id): id is string => !!id),
@@ -503,7 +540,25 @@ export class ProtocolWorkspaceComponent implements OnInit {
       this.router.navigate(['/dashboard/protocols/workspace', this.protocol()?.id, 'validation']);
     } else if (actionId === 'ASSIGN_EVALUATORS') {
       // F10 D20 (2): el formulario de asignación de la Presidenta (F03), no un modal.
-      this.router.navigate(['/dashboard/evaluations/assignment', this.protocol()?.id]);
+      const origin = this.returnOrigin();
+      const destination = ['/dashboard/evaluations/assignment', this.protocol()?.id];
+      if (origin) {
+        this.router.navigate(destination, { queryParams: { origin } });
+      } else {
+        this.router.navigate(destination);
+      }
+    }
+  }
+
+  returnToAssignmentContext(): void {
+    const origin = this.returnOrigin();
+    const protocolId = this.protocolIdNumber();
+    if (origin === 'assignment-list') {
+      void this.router.navigate(['/dashboard/evaluations/assignment']);
+    } else if (origin === 'assignment-form' && protocolId > 0) {
+      void this.router.navigate(['/dashboard/evaluations/assignment', protocolId]);
+    } else {
+      this.goHome();
     }
   }
 }

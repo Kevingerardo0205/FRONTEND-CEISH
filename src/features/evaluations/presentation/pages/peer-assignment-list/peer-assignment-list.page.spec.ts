@@ -140,4 +140,18 @@ describe('PeerAssignmentListPage (F03 D2)', () => {
     expect(button.getAttribute('aria-describedby')).toBeNull();
     expect(root.querySelector('.asignacion__motivo')).toBeNull();
   });
+
+  it('Ver protocolo abre Validacion con el protocolo y origen de la lista (F11-19, F11-23)', () => {
+    setup(of([FULL]));
+    const button = Array.from(root.querySelectorAll('tbody button')).find(
+      (candidate) => text(candidate) === 'Ver protocolo',
+    ) as HTMLButtonElement;
+
+    button.click();
+
+    expect(navigate).toHaveBeenCalledOnceWith(
+      ['/dashboard/protocols/workspace', 15, 'validation'],
+      { queryParams: { origin: 'assignment-list' } },
+    );
+  });
 });

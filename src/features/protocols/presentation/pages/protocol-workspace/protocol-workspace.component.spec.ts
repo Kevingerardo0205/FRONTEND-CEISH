@@ -382,6 +382,48 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     setState('RECEPCION_APROBADA');
     expect(page.showAcceptanceModal()).toBeTrue();
   });
+
+  it('retorna a la lista para assignment-list y usa el inicio como fallback', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    activeRoleSignal.set('PRESIDENTE');
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set('assignment-list');
+
+    page.returnToAssignmentContext();
+
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/evaluations/assignment']);
+
+    navigate.calls.reset();
+    page.returnOrigin.set(null);
+    const goHome = spyOn(page, 'goHome');
+    page.returnToAssignmentContext();
+    expect(goHome).toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('retorna al formulario del mismo protocolo para assignment-form', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set('assignment-form');
+
+    page.returnToAssignmentContext();
+
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/evaluations/assignment', 5]);
+  });
+
+  it('conserva el origen al ejecutar Asignar Pares desde el workspace', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    activeRoleSignal.set('PRESIDENTE');
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set('assignment-list');
+
+    page.onExecuteAction('ASSIGN_EVALUATORS');
+
+    expect(navigate).toHaveBeenCalledWith(
+      ['/dashboard/evaluations/assignment', 5],
+      { queryParams: { origin: 'assignment-list' } },
+    );
+  });
 });
 
 describe('ProtocolWorkspaceComponent - sin pestaña Evaluación (F10 D11, S-1c)', () => {

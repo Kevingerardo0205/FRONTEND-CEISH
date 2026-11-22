@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, forkJoin, throwError } from 'rxjs';
 import {
   AssignEvaluatorsResponse,
@@ -82,6 +82,7 @@ const PROTOCOL_NOT_FOUND = Symbol('protocol-not-found');
 })
 export class PeerAssignmentFormPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly loadProtocol = inject(LoadAssignmentProtocolUseCase);
   private readonly loadMembers = inject(LoadAssignmentMembersUseCase);
   private readonly assign = inject(AssignPeerEvaluatorsUseCase);
@@ -291,6 +292,13 @@ export class PeerAssignmentFormPage implements OnInit {
           this.sending.set(false);
         },
       });
+  }
+
+  revisarDocumentacion(): void {
+    if (this.protocolId <= 0) return;
+    void this.router.navigate(['/dashboard/protocols/workspace', this.protocolId, 'validation'], {
+      queryParams: { origin: 'assignment-form' },
+    });
   }
 
   private updateExpedited(profile: PeerEvaluatorProfile, fn: (r: ExpeditedRow) => ExpeditedRow): void {

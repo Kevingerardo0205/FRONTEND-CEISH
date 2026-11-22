@@ -101,7 +101,7 @@
 - **B11:** endpoint para subir la resolución firmada y su estado (V7).
 ### EP2b - La PRESIDENTA revisa antes de asignar
 
-Estado general: **Pendiente**. Este bloque documenta la Etapa 1; ninguna tarea de implementacion o pruebas esta completada.
+Estado general: **Implementacion realizada; pruebas de navegador pendientes**. La ejecucion de ChromeHeadless queda bloqueada por el entorno local.
 
 #### Documentacion
 
@@ -115,20 +115,20 @@ Estado general: **Pendiente**. Este bloque documenta la Etapa 1; ninguna tarea d
 
 | Identificador | Descripcion | Criterio verificable | Dependencias | Estado |
 |---|---|---|---|---|
-| EP2b-IMP-01 | Incorporar «Ver protocolo» en `PeerAssignmentListPage`. | PRESIDENTA ve la accion y «Asignar» permanece disponible con su comportamiento actual. | EP2b-DOC-01; F03. | Pendiente |
-| EP2b-IMP-02 | Navegar desde la lista al workspace con el identificador y origen permitido. | Se abre el protocolo seleccionado y el origen solo admite `assignment-list`. | EP2b-IMP-01; EP2. | Pendiente |
-| EP2b-IMP-03 | Incorporar «Revisar documentacion» en `PeerAssignmentFormPage`. | La accion usa el `protocolId` que recibe el formulario. | EP2b-DOC-01; F03. | Pendiente |
-| EP2b-IMP-04 | Navegar desde el formulario a Validacion con contexto permitido. | Se abre `/dashboard/protocols/workspace/:protocolId/validation` para el mismo protocolo. | EP2b-IMP-03; EP2. | Pendiente |
-| EP2b-IMP-05 | Resolver el retorno seguro a lista o formulario. | Cada origen vuelve a su destino correspondiente sin aceptar URL arbitraria. | EP2b-IMP-02, EP2b-IMP-04. | Pendiente |
-| EP2b-IMP-06 | Conservar F10 D20 y «Asignar Pares». | La accion sigue conduciendo al formulario sin duplicarse ni perder el contexto permitido. | F10 D20; EP2. | Pendiente |
+| EP2b-IMP-01 | Incorporar «Ver protocolo» en `PeerAssignmentListPage`. | PRESIDENTA ve la accion y «Asignar» permanece disponible con su comportamiento actual. | EP2b-DOC-01; F03. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-02 | Navegar desde la lista al workspace con el identificador y origen permitido. | Se abre el protocolo seleccionado y el origen solo admite `assignment-list`. | EP2b-IMP-01; EP2. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-03 | Incorporar «Revisar documentacion» en `PeerAssignmentFormPage`. | La accion usa el `protocolId` que recibe el formulario. | EP2b-DOC-01; F03. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-04 | Navegar desde el formulario a Validacion con contexto permitido. | Se abre `/dashboard/protocols/workspace/:protocolId/validation` para el mismo protocolo. | EP2b-IMP-03; EP2. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-05 | Resolver el retorno seguro a lista o formulario. | Cada origen vuelve a su destino correspondiente sin aceptar URL arbitraria. | EP2b-IMP-02, EP2b-IMP-04. | Implementada; origen validado y fallback seguro |
+| EP2b-IMP-06 | Conservar F10 D20 y «Asignar Pares». | La accion sigue conduciendo al formulario sin duplicarse ni perder el contexto permitido. | F10 D20; EP2. | Implementada; regresion cubierta en pruebas |
 
 #### Pruebas
 
 | Identificador | Descripcion | Criterio verificable | Dependencias | Estado |
 |---|---|---|---|---|
-| EP2b-TEST-01 | Probar la navegacion desde la lista. | «Ver protocolo» abre el `protocolId` correcto. | EP2b-IMP-01, EP2b-IMP-02. | Pendiente |
-| EP2b-TEST-02 | Probar la navegacion desde el formulario. | «Revisar documentacion» abre Validacion del mismo protocolo. | EP2b-IMP-03, EP2b-IMP-04. | Pendiente |
-| EP2b-TEST-03 | Probar el origen permitido y el retorno. | `assignment-list` vuelve a la lista y `assignment-form` vuelve al formulario correcto. | EP2b-IMP-05. | Pendiente |
-| EP2b-TEST-04 | Probar las restricciones de solo lectura. | PRESIDENTA no ve ni ejecuta controles no permitidos por F11. | EP2. | Pendiente |
-| EP2b-TEST-05 | Probar regresion de «Asignar». | «Asignar» conserva su ruta, estado deshabilitado y comportamiento actuales. | EP2b-IMP-01. | Pendiente |
-| EP2b-TEST-06 | Probar regresion de «Asignar Pares». | F10 D20 sigue navegando al formulario. | EP2b-IMP-06. | Pendiente |
+| EP2b-TEST-01 | Probar la navegacion desde la lista. | «Ver protocolo» abre el `protocolId` correcto. | EP2b-IMP-01, EP2b-IMP-02. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-02 | Probar la navegacion desde el formulario. | «Revisar documentacion» abre Validacion del mismo protocolo. | EP2b-IMP-03, EP2b-IMP-04. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-03 | Probar el origen permitido y el retorno. | `assignment-list` vuelve a la lista y `assignment-form` vuelve al formulario correcto. | EP2b-IMP-05. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-04 | Probar las restricciones de solo lectura. | PRESIDENTA no ve ni ejecuta controles no permitidos por F11. | EP2. | Pendiente; requiere ejecución de suite |
+| EP2b-TEST-05 | Probar regresion de «Asignar». | «Asignar» conserva su ruta, estado deshabilitado y comportamiento actuales. | EP2b-IMP-01. | Cobertura existente; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-06 | Probar regresion de «Asignar Pares». | F10 D20 sigue navegando al formulario. | EP2b-IMP-06. | Prueba añadida; ejecución ChromeHeadless bloqueada |

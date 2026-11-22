@@ -56,6 +56,14 @@
                       >
                         Asignar
                       </button>
+                      <button
+                        type="button"
+                        class="asignacion__boton asignacion__boton--secundario"
+                        [attr.aria-label]="'Ver protocolo ' + (fila.codigo || fila.titulo)"
+                        (click)="verProtocolo(fila)"
+                      >
+                        Ver protocolo
+                      </button>
                       @if (fila.motivo) {
                         <p class="asignacion__motivo" [id]="'motivo-' + fila.id">{{ fila.motivo }}</p>
                       }

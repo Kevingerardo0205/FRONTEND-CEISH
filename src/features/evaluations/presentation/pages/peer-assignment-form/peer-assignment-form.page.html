@@ -155,6 +155,13 @@
 
           <div class="formulario__acciones">
             <button
+              type="button"
+              class="formulario__secundario"
+              (click)="revisarDocumentacion()"
+            >
+              Revisar documentación
+            </button>
+            <button
               type="submit"
               class="formulario__principal"
               [disabled]="!!blockReason() || sending()"

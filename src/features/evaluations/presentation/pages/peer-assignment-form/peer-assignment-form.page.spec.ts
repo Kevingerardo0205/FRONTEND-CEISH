@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import {
   AssignEvaluatorsResponse,
@@ -36,6 +36,7 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
   let loadProtocol: jasmine.Spy;
   let loadMembers: jasmine.Spy;
   let assign: jasmine.Spy;
+  let navigate: jasmine.Spy;
 
   function setup(
     options: {
@@ -67,6 +68,7 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
     });
     fixture = TestBed.createComponent(PeerAssignmentFormPage);
     fixture.detectChanges();
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     return root();
   }
 
@@ -105,6 +107,17 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
     (root().querySelector(`[data-profile="${profile}"] button`) as HTMLButtonElement).click();
     fixture.detectChanges();
   }
+
+  it('Revisar documentacion abre Validacion con el protocolId y origen del formulario (F11-22, F11-23)', () => {
+    setup();
+
+    click('Revisar documentación');
+
+    expect(navigate).toHaveBeenCalledOnceWith(
+      ['/dashboard/protocols/workspace', 15, 'validation'],
+      { queryParams: { origin: 'assignment-form' } },
+    );
+  });
 
   /** Expedita válida: Metodológico (Andrés) y Sociedad Civil (Beatriz). */
   function fillValidExpedited(): void {

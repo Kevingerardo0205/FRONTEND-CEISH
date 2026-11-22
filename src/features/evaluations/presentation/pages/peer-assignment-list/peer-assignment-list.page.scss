@@ -99,6 +99,17 @@
   }
 }
 
+.asignacion__boton--secundario {
+  margin-top: 0.5rem;
+  border-color: var(--c-border);
+  color: var(--c-text-2);
+
+  &:hover:not(:disabled) {
+    border-color: var(--c-primary);
+    color: var(--c-primary-dark);
+  }
+}
+
 .asignacion__motivo {
   margin: 0.375rem 0 0;
   max-width: 16rem;
