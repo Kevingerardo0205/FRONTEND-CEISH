@@ -153,3 +153,35 @@ EP4:
 - Qué edita la SECRETARIA en Evaluación, Seguimiento y Renovación (§3, «por precisar»).
 - FALTA 3 (B2), FALTA 4 (B8) y FALTA 5 (B12) (§6).
 - Tareas aparte del Paso 0 de EP4 (decisión de la usuaria del 20/11/2026), en `tasks.md` §1: notificaciones inventadas; pestaña Seguimiento con eventos adversos inventados; eventos adversos y renovaciones con éxito falso; `downloadConsolidatedPdf` con la ruta armada a mano; saludo de tú del asistente de IA; inventario de pantallas y adaptadores con datos simulados en todo el frontend.
+## 4a. EP2b - La PRESIDENTA consulta antes de asignar
+
+EP2b documenta el acceso a la documentacion desde las pantallas existentes de F03, sin crear una vista paralela ni cambiar los permisos. El rol de negocio es PRESIDENTA y el codigo de rol existente es `PRESIDENTE`.
+
+**Camino principal:** `F03 Lista de asignacion -> Ver protocolo -> Workspace EP2 -> Validacion -> Asignar Pares -> Formulario F03`.
+
+**Camino alternativo:** `F03 Lista de asignacion -> Asignar -> Formulario F03 -> Revisar documentacion -> Validacion`.
+
+**EP2b-01 - Consultar protocolo desde la lista.** La PRESIDENTA puede usar una accion independiente denominada «Ver protocolo» para abrir el workspace del protocolo. La accion no reemplaza, deshabilita ni modifica «Asignar».
+
+**EP2b-02 - Revisar documentacion desde el formulario.** La PRESIDENTA puede usar «Revisar documentacion» en el formulario de asignacion para abrir la pestana Validacion del mismo protocolo.
+
+**EP2b-03 - Reutilizacion del workspace.** El flujo reutiliza las rutas, componentes y funcionalidades existentes de EP2: `ProtocolWorkspaceComponent`, `ProtocolValidationDetailPage`, `ProtocolWorkspaceService` y `/dashboard/protocols/workspace/:id/validation`. No se crea una vista paralela.
+
+**EP2b-04 - Consulta de solo lectura.** La revision documental conserva las restricciones actuales de la PRESIDENTA. No habilita aprobar, rechazar, validar requisitos, cambiar paginas, finalizar, subsanar ni otra operacion que no este permitida por EP2.
+
+**EP2b-05 - Conservacion del contexto.** La navegacion conserva el `protocolId` y permite retornar al origen correspondiente. Los unicos origenes permitidos son `assignment-list` y `assignment-form`; no se aceptan URL arbitrarias de retorno.
+
+**EP2b-06 - Continuidad de asignacion.** La accion existente «Asignar Pares» de F10 D20 se mantiene y continua conduciendo al formulario de asignacion. EP2b no duplica ni reemplaza esa accion.
+
+## 7a. Criterios de aceptacion de EP2b
+
+18. **F11-18:** Mientras el rol activo sea PRESIDENTE, la lista de asignacion debe mostrar «Ver protocolo» como accion independiente de «Asignar» para cada fila.
+19. **F11-19:** Al seleccionar «Ver protocolo» desde la lista, debe abrirse el workspace del protocolo cuyo identificador corresponde a la fila seleccionada.
+20. **F11-20:** «Asignar» debe conservar su comportamiento y continuar abriendo `/dashboard/evaluations/assignment/:protocolId` de forma independiente.
+21. **F11-21:** Mientras el rol activo sea PRESIDENTE, el formulario debe ofrecer «Revisar documentacion» para el protocolo identificado por `protocolId`.
+22. **F11-22:** Al seleccionar «Revisar documentacion», debe abrirse `/dashboard/protocols/workspace/:protocolId/validation` para el mismo protocolo.
+23. **F11-23:** El flujo debe conservar el `protocolId` y un origen interno cuyo valor solo puede ser `assignment-list` o `assignment-form`.
+24. **F11-24:** Al retornar desde Validacion, `assignment-list` debe llevar a la lista y `assignment-form` al formulario del mismo protocolo.
+25. **F11-25:** Validacion debe conservar las restricciones de solo lectura de F11-1 a F11-7 para PRESIDENTA.
+26. **F11-26:** «Asignar Pares» de F10 D20 debe seguir abriendo el formulario y conservarse como accion independiente.
+27. **F11-27:** EP2b no debe cambiar el acceso, las pestanas ni las acciones de SECRETARIA, INVESTIGADOR o EVALUADOR definidos en F11 y F10.
