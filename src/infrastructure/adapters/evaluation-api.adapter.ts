@@ -141,6 +141,7 @@ interface RawAssignmentResponse {
   investigator?: string;
   reviewType?: string;
   annexToUse?: string | null;
+  isAnnex9Unlocked?: boolean;
   isRiskLevelDesignated?: boolean;
   deadline?: string;
   daysRemaining?: number | null;
@@ -183,7 +184,10 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
 
     const rawAnnexToUse = a.annexToUse;
     const isRiskLevelDesignated = protocol.isRiskLevelDesignated ?? a.isRiskLevelDesignated ?? true;
-    const isSuspended = !rawAnnexToUse || isRiskLevelDesignated === false;
+    const isAnnex9Unlocked = a.isAnnex9Unlocked === true;
+    const isSuspended =
+      !rawAnnexToUse ||
+      (isRiskLevelDesignated === false && !isAnnex9Unlocked);
 
     let annexToUse = rawAnnexToUse;
     if (!annexToUse) {
@@ -215,6 +219,7 @@ export class EvaluationApiAdapter implements IEvaluationRepositoryPort {
       investigator: investigatorName,
       annexToUse: annexToUse as string,
       rawAnnexToUse,
+      isAnnex9Unlocked,
       isSuspended,
       reviewType,
       daysRemaining: daysRemaining ?? undefined,

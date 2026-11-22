@@ -40,6 +40,7 @@ export interface EvaluationAssignment {
   isUrgent?: boolean;
   reviewType?: string;
   annexToUse?: string;
+  isAnnex9Unlocked?: boolean;
   isSuspended?: boolean;
 }
 

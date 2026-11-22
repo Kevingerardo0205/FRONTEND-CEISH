@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { EvaluationApiAdapter } from './evaluation-api.adapter';
-import { ObservationEntry } from 'src/domain/ports/IEvaluationRepositoryPort';
+import { EvaluationAssignment, ObservationEntry } from 'src/domain/ports/IEvaluationRepositoryPort';
 import {
   ActiveAssignmentsResult,
   AssignEvaluatorsResponse,
@@ -24,6 +24,29 @@ describe('EvaluationApiAdapter (Infrastructure)', () => {
   });
 
   afterEach(() => httpMock.verify());
+
+  describe('getMyAssignments - RF-12.2g / TSK-002-N53', () => {
+    it('no suspende un Anexo 9 desbloqueado aunque el riesgo global siga pendiente', () => {
+      let result: EvaluationAssignment[] | undefined;
+      adapter.getMyAssignments().subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne('/api/evaluations/my-assignments');
+      req.flush({
+        data: [
+          {
+            id: 101,
+            reviewType: 'EXPEDITA',
+            annexToUse: 'Anexo 9 (Revision Expedita)',
+            isRiskLevelDesignated: false,
+            isAnnex9Unlocked: true,
+          },
+        ],
+      });
+
+      expect(result?.[0].isAnnex9Unlocked).toBeTrue();
+      expect(result?.[0].isSuspended).toBeFalse();
+    });
+  });
 
   describe('getActiveAssignments', () => {
     it('hace GET /api/evaluations/protocol/119/active-assignments y devuelve data del fixture real', () => {
