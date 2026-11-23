@@ -4,13 +4,21 @@ import { RoleCode } from '@domain/value-objects/role.vo';
  * F10 D10: acceso a cada pestaña del espacio según el rol activo.
  * F11 EP2 (20/11/2026): PRESIDENTE abre `validation` en solo lectura (F11 §4).
  */
-export type WorkspaceTab = 'info' | 'validation' | 'follow-up';
+export type WorkspaceTab = 'info' | 'assignment' | 'validation' | 'follow-up';
 
 export const WORKSPACE_TAB_ROLES: Readonly<Record<WorkspaceTab, readonly RoleCode[]>> = {
   info: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+  assignment: ['PRESIDENTE'],
   validation: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
   'follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
 };
+
+/** Roles que ya pueden entrar al workspace mediante alguna pestaña existente. */
+export const WORKSPACE_ACCESS_ROLES: readonly RoleCode[] = [
+  'SECRETARIA',
+  'PRESIDENTE',
+  'INVESTIGADOR',
+];
 
 /**
  * F10 D11 (S-1c): primera pestaña que abre el rol, en el orden de `WORKSPACE_TAB_ROLES`.

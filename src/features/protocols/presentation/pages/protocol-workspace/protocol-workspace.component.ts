@@ -485,6 +485,14 @@ export class ProtocolWorkspaceComponent implements OnInit {
     }
 
     if (
+      code === 'COMPLETO' &&
+      activeRole &&
+      WORKSPACE_TAB_ROLES.assignment.includes(activeRole)
+    ) {
+      tabs.push({ label: 'Asignación', icon: 'person_add', path: 'assignment' });
+    }
+
+    if (
       !this.isDraft() &&
       activeRole &&
       WORKSPACE_TAB_ROLES.validation.includes(activeRole)
@@ -541,7 +549,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     } else if (actionId === 'ASSIGN_EVALUATORS') {
       // F10 D20 (2): el formulario de asignación de la Presidenta (F03), no un modal.
       const origin = this.returnOrigin();
-      const destination = ['/dashboard/evaluations/assignment', this.protocol()?.id];
+      const destination = ['/dashboard/protocols/workspace', this.protocol()?.id, 'assignment'];
       if (origin) {
         this.router.navigate(destination, { queryParams: { origin } });
       } else {

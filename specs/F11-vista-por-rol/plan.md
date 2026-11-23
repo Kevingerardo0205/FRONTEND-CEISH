@@ -86,3 +86,8 @@
 - La seguridad de solo lectura sigue dependiendo de la autorizacion existente; el frontend no es la unica barrera.
 
 **Pruebas previstas:** navegacion desde la lista, navegacion desde el formulario, `protocolId`, origen permitido, retorno, solo lectura, regresion de «Asignar» y regresion de «Asignar Pares». La verificacion de que las acciones del workspace conservan realmente el contexto queda pendiente de la implementacion.
+## Revisión EP2b — flujo integrado de asignación (22/11/2026)
+
+Implementado dentro del alcance de F11: `PeerAssignmentListPage` navega a la pestaña `assignment` del workspace y ya no ofrece «Ver protocolo». La ruta hija reutiliza `PeerAssignmentFormPage`; el formulario acepta el identificador del parámetro padre `workspace/:id` y conserva la ruta independiente existente para compatibilidad. `ProtocolWorkspaceComponent` añade la pestaña solo para `PRESIDENTE` en el estado de asignación y `Asignar Pares` usa el mismo destino integrado.
+
+Pruebas actualizadas: lista de asignaciones, roles/rutas del workspace y acciones contextuales. `tsc` de aplicación y specs pasan; la ejecución de Karma quedó bloqueada porque Chrome no inicia en el entorno local por errores de GPU/OS encryption.

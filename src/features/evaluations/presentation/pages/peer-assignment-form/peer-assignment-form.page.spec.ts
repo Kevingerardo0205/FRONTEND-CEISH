@@ -41,6 +41,7 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
   function setup(
     options: {
       id?: string;
+      workspaceId?: string;
       protocol?: Observable<AssignmentProtocolSummary>[];
       members?: Observable<AssignmentMember[]>[];
       assign?: Observable<AssignEvaluatorsResponse>;
@@ -59,7 +60,12 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
         provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ protocolId: options.id ?? '15' }) } },
+          useValue: {
+            snapshot: { paramMap: convertToParamMap(options.workspaceId ? {} : { protocolId: options.id ?? '15' }) },
+            parent: options.workspaceId
+              ? { snapshot: { paramMap: convertToParamMap({ id: options.workspaceId }) } }
+              : undefined,
+          },
         },
         { provide: LoadAssignmentProtocolUseCase, useValue: { execute: loadProtocol } },
         { provide: LoadAssignmentMembersUseCase, useValue: { execute: loadMembers } },
@@ -117,6 +123,13 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
       ['/dashboard/protocols/workspace', 15, 'validation'],
       { queryParams: { origin: 'assignment-form' } },
     );
+  });
+
+  it('en el workspace reutiliza el id de la ruta padre al cargar el protocolo (EP2b)', () => {
+    setup({ workspaceId: '15' });
+
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-015');
   });
 
   /** Expedita válida: Metodológico (Andrés) y Sociedad Civil (Beatriz). */

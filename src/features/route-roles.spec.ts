@@ -84,6 +84,7 @@ describe('Route role codes (T13a)', () => {
       'protocols|reception/new': ['SECRETARIA'],
       // F10 D10 (S-1a): pestañas del espacio del protocolo por rol activo.
       'protocols|workspace/:id/info': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+      'protocols|workspace/:id/assignment': ['PRESIDENTE'],
       // F11 EP2 (20/11/2026): PRESIDENTE abre validation en solo lectura.
       'protocols|workspace/:id/validation': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
       'protocols|workspace/:id/follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],

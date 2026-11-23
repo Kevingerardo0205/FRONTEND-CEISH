@@ -193,7 +193,10 @@ export class PeerAssignmentFormPage implements OnInit {
   );
 
   ngOnInit(): void {
-    const raw = this.route.snapshot.paramMap.get('protocolId') ?? '';
+    const raw =
+      this.route.snapshot.paramMap.get('protocolId') ??
+      this.route.parent?.snapshot.paramMap.get('id') ??
+      '';
     this.protocolId = /^\d+$/.test(raw) ? Number(raw) : 0;
     this.cargar();
   }

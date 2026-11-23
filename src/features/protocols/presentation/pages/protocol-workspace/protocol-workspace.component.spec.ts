@@ -296,7 +296,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     activeRoleSignal.set('PRESIDENTE');
 
     setState('RECEPCION_APROBADA', true);
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabPaths()).toEqual(['info', 'assignment', 'validation']);
     expect(actionIds()).toEqual(['ASSIGN_EVALUATORS']);
 
     setState('APROBADO');
@@ -420,7 +420,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     page.onExecuteAction('ASSIGN_EVALUATORS');
 
     expect(navigate).toHaveBeenCalledWith(
-      ['/dashboard/evaluations/assignment', 5],
+      ['/dashboard/protocols/workspace', 5, 'assignment'],
       { queryParams: { origin: 'assignment-list' } },
     );
   });

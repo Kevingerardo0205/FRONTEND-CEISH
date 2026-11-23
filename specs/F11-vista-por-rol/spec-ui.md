@@ -185,3 +185,10 @@ EP2b documenta el acceso a la documentacion desde las pantallas existentes de F0
 25. **F11-25:** Validacion debe conservar las restricciones de solo lectura de F11-1 a F11-7 para PRESIDENTA.
 26. **F11-26:** «Asignar Pares» de F10 D20 debe seguir abriendo el formulario y conservarse como accion independiente.
 27. **F11-27:** EP2b no debe cambiar el acceso, las pestanas ni las acciones de SECRETARIA, INVESTIGADOR o EVALUADOR definidos en F11 y F10.
+## EP2b v0.2 — Asignación integrada en el workspace (22/11/2026)
+
+La decisión anterior de mantener «Ver protocolo» como acción independiente queda reemplazada por esta revisión. La única acción principal de cada fila es «Asignar» y abre directamente `/dashboard/protocols/workspace/:protocolId/assignment` con `origin=assignment-list`.
+
+El workspace conserva su encabezado y barra de módulos; para la PRESIDENTA, durante la etapa `COMPLETO`, «Asignación» es la segunda pestaña y renderiza el `PeerAssignmentFormPage` existente. El formulario conserva sus casos de uso, validaciones, restricciones de rol y comportamiento de envío. La ruta `/dashboard/evaluations/assignment/:protocolId` se mantiene solo por compatibilidad con usos previos y deja de ser el destino principal.
+
+La recarga y la navegación directa a `/dashboard/protocols/workspace/:protocolId/assignment` reconstruyen el formulario usando el `:id` del workspace. Las demás pestañas y sus permisos permanecen sin cambios; no se modifican guards, contratos API ni políticas de autorización.

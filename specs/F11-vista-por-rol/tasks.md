@@ -132,3 +132,9 @@ Estado general: **Implementacion realizada; pruebas de navegador pendientes**. L
 | EP2b-TEST-04 | Probar las restricciones de solo lectura. | PRESIDENTA no ve ni ejecuta controles no permitidos por F11. | EP2. | Pendiente; requiere ejecución de suite |
 | EP2b-TEST-05 | Probar regresion de «Asignar». | «Asignar» conserva su ruta, estado deshabilitado y comportamiento actuales. | EP2b-IMP-01. | Cobertura existente; ejecución ChromeHeadless bloqueada |
 | EP2b-TEST-06 | Probar regresion de «Asignar Pares». | F10 D20 sigue navegando al formulario. | EP2b-IMP-06. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+### EP2b — cierre de integración (22/11/2026)
+
+- **Hecho:** la lista usa «Asignar» como única acción y abre `/dashboard/protocols/workspace/:id/assignment`.
+- **Hecho:** el segundo módulo del workspace reutiliza `PeerAssignmentFormPage`, conservando carga, validaciones y envío.
+- **Hecho:** el contexto `protocolId`, la recarga, la restricción de `PRESIDENTE` y la navegación entre módulos quedan representados en rutas y specs.
+- **Verificación:** `npx tsc -p tsconfig.app.json --noEmit` y `npx tsc -p tsconfig.spec.json --noEmit` exit 0. Karma no pudo ejecutar las specs porque Chrome no inicia en el entorno local; se registran los errores reales en el cierre de la tarea.

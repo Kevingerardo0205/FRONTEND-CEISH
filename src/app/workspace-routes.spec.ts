@@ -23,6 +23,7 @@ const EVALUATOR_LIST = '/dashboard/evaluations/list';
 /** Tabla aprobada por la usuaria (F10 spec-ui D10, 11/11/2026; `validation` con PRESIDENTE desde F11 EP2, 20/11/2026). Es la referencia de la prueba: no se deriva del código. */
 const EXPECTED_TAB_ROLES: Record<WorkspaceTab, RoleCode[]> = {
   info: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+  assignment: ['PRESIDENTE'],
   validation: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
   'follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
 };
@@ -335,8 +336,8 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
     expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
   });
 
-  it('WORKSPACE_TAB_ROLES y PROTOCOL_ROUTES contienen las mismas tres filas con RoleGuard', () => {
-    expect(Object.keys(WORKSPACE_TAB_ROLES)).toEqual(['info', 'validation', 'follow-up']);
+  it('WORKSPACE_TAB_ROLES y PROTOCOL_ROUTES contienen las filas esperadas con RoleGuard', () => {
+    expect(Object.keys(WORKSPACE_TAB_ROLES)).toEqual(['info', 'assignment', 'validation', 'follow-up']);
     expect(WORKSPACE_TAB_ROLES).toEqual(EXPECTED_TAB_ROLES);
 
     const validRoles = new Set(Role.all().map((role) => role.code));
