@@ -8,6 +8,20 @@ describe('StageBarComponent', () => {
 
   function render(code: string, detail?: string): HTMLElement {
     fixture.componentRef.setInput('stage', Stage.fromBackend(code));
+    fixture.componentRef.setInput('selectedStage', code);
+    const current = Stage.fromBackend(code).order;
+    fixture.componentRef.setInput(
+      'stageStates',
+      Object.fromEntries(
+        Stage.all().map((stage) => [
+          stage.code,
+          {
+            kind: 'determined',
+            status: stage.order < current ? 'COMPLETADA' : stage.order === current ? 'EN_CURSO' : 'PENDIENTE',
+          },
+        ]),
+      ),
+    );
     if (detail !== undefined) fixture.componentRef.setInput('detail', detail);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
@@ -116,6 +130,17 @@ describe('StageBarComponent', () => {
     const el = render('EVALUACION');
 
     expect(el.querySelector('.step__detail')).toBeNull();
+  });
+
+  it('no infiere estados individuales cuando no recibe una fuente de estados', () => {
+    fixture.componentRef.setInput('stage', Stage.fromBackend('EVALUACION'));
+    fixture.componentRef.setInput('selectedStage', 'RESOLUCION');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('.step--done, .step--completed, .step--pending').length).toBe(0);
+    expect(el.querySelectorAll('.step--undetermined').length).toBe(6);
+    expect(el.querySelector('[aria-current="step"]')?.getAttribute('data-stage')).toBe('RESOLUCION');
   });
 });
 

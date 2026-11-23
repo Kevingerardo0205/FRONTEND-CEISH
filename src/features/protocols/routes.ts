@@ -29,10 +29,37 @@ export const PROTOCOL_ROUTES: Routes = [
         providers: PROTOCOL_HEADER_PROVIDERS,
         children: [
           {
+            path: 'reception',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/tabs/protocol-detail-tab.component').then(
+                (m) => m.ProtocolDetailTabPage,
+              ),
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info] },
+          },
+          {
             path: 'info',
             loadComponent: () =>
               import('./presentation/pages/protocol-workspace/tabs/protocol-detail-tab.component').then(
                 (m) => m.ProtocolDetailTabPage,
+              ),
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info] },
+          },
+          {
+            path: 'assignment',
+            loadComponent: () =>
+              import('../evaluations/presentation/pages/peer-assignment-form/peer-assignment-form.page').then(
+                (m) => m.PeerAssignmentFormPage,
+              ),
+            canActivate: [RoleGuard, AuthGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.assignment], permissions: ['EVALUACION_ASIGNAR'] },
+          },
+          {
+            path: 'assignment-history',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-assignment-history.page').then(
+                (m) => m.ProtocolAssignmentHistoryPage,
               ),
             canActivate: [RoleGuard],
             data: { roles: [...WORKSPACE_TAB_ROLES.info] },
@@ -47,17 +74,39 @@ export const PROTOCOL_ROUTES: Routes = [
             // F10 D11 (S-1c, actualizada en S-1f): la evaluación ya no está en el espacio; los enlaces
             // viejos van al mismo destino que la ruta sin pestaña (EVALUADOR: Mis evaluaciones).
             path: 'evaluation',
-            redirectTo: redirectToFirstWorkspaceTab,
-            pathMatch: 'full',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
+              ),
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'EVALUACION' },
+          },
+          {
+            path: 'resolution',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
+              ),
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'RESOLUCION' },
           },
           {
             path: 'follow-up',
             loadComponent: () =>
-              import('../follow-up/presentation/pages/adverse-events/adverse-events-list.page').then(
-                (m) => m.AdverseEventsListPage,
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
               ),
             canActivate: [RoleGuard],
-            data: { roles: [...WORKSPACE_TAB_ROLES['follow-up']] },
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'SEGUIMIENTO' },
+          },
+          {
+            path: 'renewal',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
+              ),
+            canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'RENOVACION' },
           },
           {
             path: '',

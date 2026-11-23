@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, Subject, combineLatest } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, startWith, switchMap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +26,8 @@ import { ProtocolUI } from '@shared/utils/protocol-ui.util';
 import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/states.component';
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
+import { StageCode } from '@domain/value-objects/stage.vo';
+import { WorkspaceStageState } from '../../../domain/workspace-stage-state';
 import {
   isAssignmentStatus,
   workspaceStatusCode,
@@ -44,6 +46,15 @@ type AssignmentOrigin = 'assignment-list' | 'assignment-form';
 function toAssignmentOrigin(value: string | null): AssignmentOrigin | null {
   return value === 'assignment-list' || value === 'assignment-form' ? value : null;
 }
+
+const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
+  RECEPCION: 'reception',
+  ASIGNACION: 'assignment-history',
+  EVALUACION: 'evaluation',
+  RESOLUCION: 'resolution',
+  SEGUIMIENTO: 'follow-up',
+  RENOVACION: 'renewal',
+};
 
 @Component({
   selector: 'app-protocol-workspace',
@@ -97,6 +108,9 @@ function toAssignmentOrigin(value: string | null): AssignmentOrigin | null {
             [heading]="h.title"
             [facts]="facts()"
             [stage]="workspaceStage()"
+            [selectedStage]="selectedStage()"
+            [stageStates]="stageStates()"
+            [stageLinks]="stageLinks"
           >
             @if (contextualActions().length || awaitingTimelineAcceptance() || returnOrigin()) {
               <div protocolHeaderAction class="header-action">
@@ -342,6 +356,10 @@ export class ProtocolWorkspaceComponent implements OnInit {
 
   protocolIdNumber = computed(() => Number(this.protocol()?.id || 0));
 
+  readonly stageLinks = STAGE_PATHS;
+  readonly stageStates = signal<Readonly<Partial<Record<StageCode, WorkspaceStageState>>> >({});
+  readonly selectedStage = signal<StageCode | null>(null);
+
   returnOrigin = signal<AssignmentOrigin | null>(null);
 
   returnLabel = computed(() =>
@@ -519,6 +537,15 @@ export class ProtocolWorkspaceComponent implements OnInit {
     this.returnOrigin.set(
       toAssignmentOrigin(this.route.snapshot?.queryParamMap?.get('origin') ?? null),
     );
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        startWith({ urlAfterRedirects: this.router.url } as NavigationEnd),
+        map((event) => this.stageCodeFromUrl(event.urlAfterRedirects)),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((stage) => this.selectedStage.set(stage));
     const id$ = this.route.params.pipe(
       map((params) => params['id'] as string | undefined),
       filter((id): id is string => !!id),
@@ -530,6 +557,11 @@ export class ProtocolWorkspaceComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe();
+  }
+
+  private stageCodeFromUrl(url: string): StageCode | null {
+    const path = url.split('?')[0].split('/').filter(Boolean).pop();
+    return (Object.entries(STAGE_PATHS).find(([, value]) => value === path)?.[0] as StageCode) ?? null;
   }
 
   reload(): void {
