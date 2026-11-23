@@ -401,14 +401,14 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('retorna al formulario del mismo protocolo para assignment-form', () => {
+  it('retorna al formulario del mismo protocolo dentro del workspace para assignment-form', () => {
     const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
     setState('RECEPCION_APROBADA', true);
     page.returnOrigin.set('assignment-form');
 
     page.returnToAssignmentContext();
 
-    expect(navigate).toHaveBeenCalledWith(['/dashboard/evaluations/assignment', 5]);
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/protocols/workspace', 5, 'assignment']);
   });
 
   it('conserva el origen al ejecutar Asignar Pares desde el workspace', () => {

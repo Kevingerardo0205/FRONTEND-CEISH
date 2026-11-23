@@ -596,7 +596,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     if (origin === 'assignment-list') {
       void this.router.navigate(['/dashboard/evaluations/assignment']);
     } else if (origin === 'assignment-form' && protocolId > 0) {
-      void this.router.navigate(['/dashboard/evaluations/assignment', protocolId]);
+      void this.router.navigate(['/dashboard/protocols/workspace', protocolId, 'assignment']);
     } else {
       this.goHome();
     }
