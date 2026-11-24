@@ -528,19 +528,48 @@ export class ProtocolWorkspaceComponent implements OnInit {
       !!role &&
       WORKSPACE_TAB_ROLES.assignment.includes(role) &&
       isAssignmentStatus(this.statusCode());
-    return canAssign ? 'assignment' : 'assignment-history';
+    // Con evaluadores ya asignados nunca el formulario (F11-35). Mientras se consulta o si la consulta
+    // falla, la pestaña lleva al formulario: él muestra la carga o el error con «Reintentar» (F11-38).
+    return canAssign && this.activeAssignments().kind !== 'has' ? 'assignment' : 'assignment-history';
+  });
+
+  /** Asignaciones activas del protocolo (solo se piden a quien puede asignar, en la etapa de asignación). */
+  readonly activeAssignments = this.workspaceService.activeAssignments;
+
+  /** Quien puede asignar, con el protocolo en la etapa de asignación: es el único que consulta. */
+  private readonly needsAssignmentGate = computed(() => {
+    const role = this.activeRoleFacade.activeRole();
+    return (
+      !!role &&
+      WORKSPACE_ACTION_ROLES.ASSIGN_EVALUATORS.includes(role) &&
+      isAssignmentStatus(this.statusCode())
+    );
+  });
+
+  private readonly requestActiveAssignments = effect(() => {
+    const protocolId = this.protocolIdNumber();
+    if (protocolId <= 0 || !this.needsAssignmentGate()) return;
+    untracked(() => this.workspaceService.ensureActiveAssignments(protocolId));
+  });
+
+  /** «Asignar Pares» se muestra solo con la consulta resuelta y sin evaluadores ya asignados (F11-36). */
+  private readonly assignPeersAllowed = computed(() => {
+    const kind = this.activeAssignments().kind;
+    return kind === 'none' || kind === 'error';
   });
 
   /** «Asignar Pares» no se muestra con la pestaña Asignación abierta (F11-34). */
   private readonly onAssignmentStage = computed(() => this.selectedStage() === 'ASIGNACION');
 
   visibleActions = computed(() =>
-    this.onAssignmentStage()
+    this.onAssignmentStage() || !this.assignPeersAllowed()
       ? this.contextualActions().filter((action) => action.id !== 'ASSIGN_EVALUATORS')
       : this.contextualActions(),
   );
 
-  showTermsNotice = computed(() => this.awaitingTimelineAcceptance() && !this.onAssignmentStage());
+  showTermsNotice = computed(
+    () => this.awaitingTimelineAcceptance() && !this.onAssignmentStage() && this.assignPeersAllowed(),
+  );
 
   /**
    * Pestañas de la etapa seleccionada en la barra (F11-28 a F11-30): RECEPCIÓN muestra Resumen y
@@ -596,6 +625,9 @@ export class ProtocolWorkspaceComponent implements OnInit {
     const stage = this.workspaceStage();
     const loaded = !!this.protocol();
     if (!loaded || !stage || this.entryHandled) return;
+    // Quien asigna espera a saber si ya hay evaluadores: de eso depende formulario o historial.
+    const gate = this.activeAssignments().kind;
+    if (this.needsAssignmentGate() && (gate === 'idle' || gate === 'loading')) return;
     this.entryHandled = true;
     untracked(() => {
       const path = this.router.url.split('?')[0].split('/').filter(Boolean).pop();

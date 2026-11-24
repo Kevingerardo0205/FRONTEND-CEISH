@@ -38,6 +38,18 @@
             <a class="formulario__enlace" [routerLink]="listRoute">Volver a la lista</a>
           }
         </div>
+      } @else if (assignmentGate().kind === 'has') {
+        <div class="formulario__aviso" role="status">
+          <p>{{ alreadyAssignedNotice }}</p>
+          <a class="formulario__enlace" [routerLink]="historyLink()">Ver el historial de asignación</a>
+        </div>
+      } @else if (assignmentGate().kind === 'error') {
+        <app-error-state
+          message="No pudimos consultar las asignaciones del protocolo."
+          (retry)="reintentarAsignaciones()"
+        />
+      } @else if (assignmentGate().kind === 'loading' || assignmentGate().kind === 'idle') {
+        <app-loading-state message="Consultando las asignaciones del protocolo…" />
       } @else if (members().length === 0) {
         <div class="formulario__aviso">
           <p>No hay evaluadores activos para asignar.</p>

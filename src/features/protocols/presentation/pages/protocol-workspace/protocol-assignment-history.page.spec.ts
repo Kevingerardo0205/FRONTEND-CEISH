@@ -1,10 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
+import { RoleCode } from '@domain/value-objects/role.vo';
 import { ActivatedRoute, ParamMap, convertToParamMap } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { ActiveAssignmentsResult, AssignmentHistoryEntry } from '@domain/entities/peer-evaluation.entity';
 import { LoadActiveAssignmentsUseCase } from '@features/evaluations/application/load-active-assignments.use-case';
 import { LoadAssignmentHistoryUseCase } from '@features/evaluations/application/load-assignment-history.use-case';
-import { ProtocolAssignmentHistoryPage } from './protocol-assignment-history.page';
+import { ASSIGNMENT_RESERVED_MESSAGE, ProtocolAssignmentHistoryPage } from './protocol-assignment-history.page';
 
 const ACTIVE: ActiveAssignmentsResult = {
   protocolId: 42,
@@ -77,6 +80,7 @@ describe('ProtocolAssignmentHistoryPage', () => {
     active: Observable<ActiveAssignmentsResult> | Observable<ActiveAssignmentsResult>[] = of(ACTIVE),
     history: Observable<AssignmentHistoryEntry[]> | Observable<AssignmentHistoryEntry[]>[] = of(HISTORY),
     ids?: Subject<ParamMap>,
+    role: RoleCode = 'SECRETARIA',
   ): void {
     activeUseCase = jasmine.createSpyObj('LoadActiveAssignmentsUseCase', ['execute']);
     historyUseCase = jasmine.createSpyObj('LoadAssignmentHistoryUseCase', ['execute']);
@@ -98,6 +102,7 @@ describe('ProtocolAssignmentHistoryPage', () => {
       providers: [
         { provide: LoadActiveAssignmentsUseCase, useValue: activeUseCase },
         { provide: LoadAssignmentHistoryUseCase, useValue: historyUseCase },
+        { provide: ActiveRoleFacade, useValue: { activeRole: signal<RoleCode | null>(role) } },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -118,6 +123,48 @@ describe('ProtocolAssignmentHistoryPage', () => {
     expect(fixture.componentInstance.protocolId()).toBe(42);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Evaluador real');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Historial de reasignaciones');
+  });
+
+  describe('el INVESTIGADOR no ve evaluadores (F11-39, F11-40)', () => {
+    const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    it('ve el mensaje reservado del comité, con trato de usted, en lugar del historial', () => {
+      setup(of(ACTIVE), of(HISTORY), undefined, 'INVESTIGADOR');
+
+      expect(text()).toContain(ASSIGNMENT_RESERVED_MESSAGE);
+      expect(ASSIGNMENT_RESERVED_MESSAGE).toBe(
+        'La asignación de evaluadores es reservada del comité. Podrá ver el avance de su protocolo en la barra de etapas.',
+      );
+      expect((fixture.nativeElement as HTMLElement).querySelector('table')).toBeNull();
+      expect(text()).not.toContain('Historial de reasignaciones');
+    });
+
+    it('no pide asignaciones activas ni historial de reasignaciones: ninguna petición con evaluadores', () => {
+      setup(of(ACTIVE), of(HISTORY), undefined, 'INVESTIGADOR');
+
+      expect(activeUseCase.execute).not.toHaveBeenCalled();
+      expect(historyUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it('no muestra nombres, ids ni correos de evaluadores aunque el backend los hubiera enviado', () => {
+      setup(of(ACTIVE), of(HISTORY), undefined, 'INVESTIGADOR');
+
+      for (const secret of ['Evaluador real', 'Evaluador anterior', 'Secretaría']) {
+        expect(text()).withContext(secret).not.toContain(secret);
+      }
+      expect(text()).not.toContain('@');
+    });
+
+    it('SECRETARIA y PRESIDENTE sí ven el historial, sin el mensaje reservado', () => {
+      for (const role of ['SECRETARIA', 'PRESIDENTE'] as RoleCode[]) {
+        TestBed.resetTestingModule();
+        setup(of(ACTIVE), of(HISTORY), undefined, role);
+
+        expect(text()).withContext(role).toContain('Evaluador real');
+        expect(text()).withContext(role).not.toContain(ASSIGNMENT_RESERVED_MESSAGE);
+        expect(activeUseCase.execute).withContext(role).toHaveBeenCalledOnceWith(42);
+      }
+    });
   });
 
   it('distingue una respuesta correcta sin registros', () => {

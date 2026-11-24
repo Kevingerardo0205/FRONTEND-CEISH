@@ -1,6 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
+import { signal, WritableSignal } from '@angular/core';
+import {
+  ActiveAssignmentsState,
+  ProtocolWorkspaceService,
+} from '@features/protocols/application/services/protocol-workspace.service';
 import {
   AssignEvaluatorsResponse,
   AssignmentMember,
@@ -11,7 +16,7 @@ import {
   AssignmentProtocolSummary,
   LoadAssignmentProtocolUseCase,
 } from '../../../application/load-assignment-protocol.use-case';
-import { PeerAssignmentFormPage } from './peer-assignment-form.page';
+import { ALREADY_ASSIGNED_NOTICE, PeerAssignmentFormPage } from './peer-assignment-form.page';
 
 /** Datos de prueba (personas y protocolo que no existen). Nadie tiene el perfil Bioético. */
 const MEMBERS: AssignmentMember[] = [
@@ -50,9 +55,14 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
   let loadMembers: jasmine.Spy;
   let assign: jasmine.Spy;
   let navigate: jasmine.Spy;
+  let gate: WritableSignal<ActiveAssignmentsState>;
+  let ensureActive: jasmine.Spy;
+  let retryActive: jasmine.Spy;
 
   function setup(
     options: {
+      /** Estado de asignaciones activas del espacio; sin él no hay servicio del espacio. */
+      gate?: ActiveAssignmentsState;
       id?: string;
       workspaceId?: string;
       workspaceIds?: Subject<ReturnType<typeof convertToParamMap>>;
@@ -77,6 +87,9 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
       loadMembers.and.returnValues(...membersReturns);
     }
 
+    gate = signal<ActiveAssignmentsState>(options.gate ?? { kind: 'none' });
+    ensureActive = jasmine.createSpy('ensureActiveAssignments');
+    retryActive = jasmine.createSpy('retryActiveAssignments');
     assign = jasmine
       .createSpy('assign')
       .and.returnValue(options.assign ?? of({ assignments: [] }));
@@ -96,6 +109,18 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
               : undefined,
           },
         },
+        ...(options.gate
+          ? [
+              {
+                provide: ProtocolWorkspaceService,
+                useValue: {
+                  activeAssignments: gate,
+                  ensureActiveAssignments: ensureActive,
+                  retryActiveAssignments: retryActive,
+                },
+              },
+            ]
+          : []),
         { provide: LoadAssignmentProtocolUseCase, useValue: { execute: loadProtocol } },
         { provide: LoadAssignmentMembersUseCase, useValue: { execute: loadMembers } },
         { provide: AssignPeerEvaluatorsUseCase, useValue: { execute: assign } },
@@ -224,6 +249,91 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
       setup({ workspaceId: '15', members: [of([])] });
       expect(text(root())).toContain('No hay evaluadores activos para asignar.');
       expect(text(root())).not.toContain('Volver a la lista');
+    });
+  });
+
+  describe('con evaluadores ya asignados o sin poder consultarlo (F11-35, F11-37, F11-38)', () => {
+    const noForm = () => {
+      expect(root().querySelector('form')).toBeNull();
+      expect(root().querySelector('input[name="reviewType"]')).toBeNull();
+      expect(submit()).toBeNull();
+      expect(buttonByText('Asignar evaluadores')).toBeUndefined();
+    };
+
+    it('pide las asignaciones activas del protocolo al abrir', () => {
+      setup({ workspaceId: '15', gate: { kind: 'none' } });
+
+      expect(ensureActive).toHaveBeenCalledWith(15);
+    });
+
+    it('sin asignaciones activas muestra el formulario', () => {
+      setup({ workspaceId: '15', gate: { kind: 'none' } });
+
+      expect(root().querySelector('input[name="reviewType"]')).not.toBeNull();
+    });
+
+    it('con una asignación activa muestra el aviso y el enlace al historial, sin formulario ni botón', () => {
+      setup({ workspaceId: '15', gate: { kind: 'has', count: 1 } });
+
+      expect(text(root())).toContain(ALREADY_ASSIGNED_NOTICE);
+      expect(ALREADY_ASSIGNED_NOTICE).toBe('Este protocolo ya tiene evaluadores asignados.');
+      const link = root().querySelector('a.formulario__enlace') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toBe('/dashboard/protocols/workspace/15/assignment-history');
+      noForm();
+    });
+
+    it('si falla la consulta muestra el error con Reintentar, nunca el formulario por defecto', () => {
+      setup({ workspaceId: '15', gate: { kind: 'error' } });
+
+      expect(text(root())).toContain('No pudimos consultar las asignaciones del protocolo.');
+      noForm();
+
+      click('Reintentar');
+      expect(retryActive).toHaveBeenCalledTimes(1);
+    });
+
+    it('mientras consulta muestra la carga y no el formulario', () => {
+      for (const kind of ['loading', 'idle'] as const) {
+        TestBed.resetTestingModule();
+        setup({ workspaceId: '15', gate: { kind } });
+
+        expect(text(root())).withContext(kind).toContain('Consultando las asignaciones del protocolo…');
+        noForm();
+      }
+    });
+
+    it('al resolverse la consulta el formulario aparece o se reemplaza por el aviso', () => {
+      setup({ workspaceId: '15', gate: { kind: 'loading' } });
+      noForm();
+
+      gate.set({ kind: 'none' });
+      fixture.detectChanges();
+      expect(root().querySelector('input[name="reviewType"]')).not.toBeNull();
+
+      gate.set({ kind: 'has', count: 3 });
+      fixture.detectChanges();
+      expect(text(root())).toContain(ALREADY_ASSIGNED_NOTICE);
+      noForm();
+    });
+
+    it('tras asignar muestra el resultado aunque el estado pase a «con evaluadores», y refresca el estado', () => {
+      setup({ workspaceId: '15', gate: { kind: 'none' } });
+      fillValidExpedited();
+
+      click('Asignar evaluadores');
+      expect(ensureActive).toHaveBeenCalledWith(15, true);
+      gate.set({ kind: 'has', count: 2 });
+      fixture.detectChanges();
+
+      expect(root().querySelector('.formulario__exito')).not.toBeNull();
+      expect(text(root())).not.toContain(ALREADY_ASSIGNED_NOTICE);
+    });
+
+    it('fuera del espacio no consulta las asignaciones activas', () => {
+      setup({ gate: { kind: 'has', count: 1 } });
+
+      expect(ensureActive).not.toHaveBeenCalled();
+      expect(root().querySelector('input[name="reviewType"]')).not.toBeNull();
     });
   });
 

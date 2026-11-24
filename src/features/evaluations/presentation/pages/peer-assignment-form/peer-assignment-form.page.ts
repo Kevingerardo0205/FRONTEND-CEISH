@@ -37,6 +37,13 @@ import {
   LoadAssignmentProtocolUseCase,
 } from '../../../application/load-assignment-protocol.use-case';
 import { ASSIGNMENT_LIST_ROUTE } from '../peer-assignment-list/peer-assignment-list.page';
+import {
+  ActiveAssignmentsState,
+  ProtocolWorkspaceService,
+} from '@features/protocols/application/services/protocol-workspace.service';
+
+/** Aviso cuando el protocolo ya tiene evaluadores asignados (F11-37). */
+export const ALREADY_ASSIGNED_NOTICE = 'Este protocolo ya tiene evaluadores asignados.';
 
 type EstadoCarga = 'cargando' | 'listo' | 'error' | 'no-encontrado';
 
@@ -88,7 +95,10 @@ export class PeerAssignmentFormPage implements OnInit {
   private readonly loadMembers = inject(LoadAssignmentMembersUseCase);
   private readonly assign = inject(AssignPeerEvaluatorsUseCase);
   private readonly destroyRef = inject(DestroyRef);
+  /** Solo dentro del espacio: ahí vive el estado de las asignaciones activas del protocolo. */
+  private readonly workspace = inject(ProtocolWorkspaceService, { optional: true });
 
+  readonly alreadyAssignedNotice = ALREADY_ASSIGNED_NOTICE;
   readonly listRoute = ASSIGNMENT_LIST_ROUTE;
   /**
    * Dentro del espacio del protocolo (workspace/:id/assignment): el id llega por la ruta padre. Ahí
@@ -99,6 +109,21 @@ export class PeerAssignmentFormPage implements OnInit {
     !!this.route.parent?.snapshot?.paramMap?.get('id') &&
     !this.route.snapshot.paramMap.get('protocolId');
   readonly requiredProfile = REQUIRED_PROFILE;
+
+  /**
+   * Asignaciones activas (F11-35 a F11-38): con evaluadores ya asignados no hay formulario, y si la
+   * consulta falla tampoco (se muestra el error con «Reintentar», nunca el formulario por defecto).
+   * Fuera del espacio no se consulta.
+   */
+  readonly assignmentGate = computed<ActiveAssignmentsState>(() =>
+    this.inWorkspace && this.workspace ? this.workspace.activeAssignments() : { kind: 'none' },
+  );
+
+  readonly historyLink = computed(() => [
+    '/dashboard/protocols/workspace',
+    this.protocolId(),
+    'assignment-history',
+  ]);
 
   readonly estado = signal<EstadoCarga>('cargando');
   readonly protocol = signal<AssignmentProtocolSummary | null>(null);
@@ -251,6 +276,7 @@ export class PeerAssignmentFormPage implements OnInit {
     members: AssignmentMember[];
   }> {
     this.protocolId.set(protocolId);
+    if (this.inWorkspace && protocolId > 0) this.workspace?.ensureActiveAssignments(protocolId);
     this.protocol.set(null);
     this.members.set([]);
     this.reviewType.set(null);
@@ -341,6 +367,8 @@ export class PeerAssignmentFormPage implements OnInit {
         next: (res) => {
           this.result.set(res);
           this.sending.set(false);
+          // Ya hay evaluadores: el espacio pasa de formulario a historial.
+          if (this.inWorkspace) this.workspace?.ensureActiveAssignments(this.protocolId(), true);
         },
         error: (err: unknown) => {
           // F03 D6: el 400 o 409 del backend tal cual (el interceptor lo deja en `message`).
@@ -348,6 +376,11 @@ export class PeerAssignmentFormPage implements OnInit {
           this.sending.set(false);
         },
       });
+  }
+
+  /** «Reintentar» de la consulta de asignaciones activas. */
+  reintentarAsignaciones(): void {
+    this.workspace?.retryActiveAssignments();
   }
 
   revisarDocumentacion(): void {

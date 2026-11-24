@@ -58,12 +58,15 @@ function headerOf(id: string): ProtocolHeaderData {
 describe('ProtocolWorkspaceService - carga y errores (F10 D14, S-1g)', () => {
   let service: ProtocolWorkspaceService;
   let http: HttpTestingController;
-  let evaluationRepo: { getByProtocolId: jasmine.Spy };
+  let evaluationRepo: { getByProtocolId: jasmine.Spy; getActiveAssignments: jasmine.Spy };
   /** F10 D18: el encabezado sale de su propio port; aquí, sin HTTP. */
   let headerPort: { get: jasmine.Spy<(id: string) => Observable<ProtocolHeaderData>> };
 
   beforeEach(() => {
-    evaluationRepo = { getByProtocolId: jasmine.createSpy('getByProtocolId') };
+    evaluationRepo = {
+      getByProtocolId: jasmine.createSpy('getByProtocolId'),
+      getActiveAssignments: jasmine.createSpy('getActiveAssignments'),
+    };
     headerPort = { get: jasmine.createSpy('get').and.callFake((id: string) => of(headerOf(id))) };
     TestBed.configureTestingModule({
       providers: [
@@ -226,5 +229,57 @@ describe('ProtocolWorkspaceService - carga y errores (F10 D14, S-1g)', () => {
     expect(service.protocol()).toBeNull();
     expect(service.header()).toBeNull();
     expect(service.isLoading()).toBeFalse();
+  });
+
+  describe('asignaciones activas (F11-35, F11-36, F11-38)', () => {
+    const result = (n: number) => ({
+      protocolId: 5, ceishCode: 'C', versionId: 1, versionNumber: 1,
+      assignments: Array.from({ length: n }, (_, i) => ({
+        assignmentId: i + 1, evaluatorId: i + 1, evaluatorFullName: 'E' + i,
+        evaluatorProfile: 'SALUD' as const, status: 'ASSIGNED' as const,
+        isAssignedForAnnex10: false, assignedAt: null, deadlineDate: null, submittedAt: null,
+      })),
+    });
+
+    it('empieza sin pedir nada (idle)', () => {
+      expect(service.activeAssignments()).toEqual({ kind: 'idle' });
+    });
+
+    it('con asignaciones queda como has y sin ellas como none', () => {
+      evaluationRepo.getActiveAssignments.and.returnValue(of(result(2)));
+      service.ensureActiveAssignments(5);
+      expect(service.activeAssignments()).toEqual({ kind: 'has', count: 2 });
+
+      evaluationRepo.getActiveAssignments.and.returnValue(of(result(0)));
+      service.ensureActiveAssignments(6);
+      expect(service.activeAssignments()).toEqual({ kind: 'none' });
+    });
+
+    it('un error queda como error, nunca como none, y Reintentar lo vuelve a pedir', () => {
+      evaluationRepo.getActiveAssignments.and.returnValue(throwError(() => new Error('x')));
+      service.ensureActiveAssignments(5);
+      expect(service.activeAssignments()).toEqual({ kind: 'error' });
+
+      evaluationRepo.getActiveAssignments.and.returnValue(of(result(1)));
+      service.retryActiveAssignments();
+      expect(service.activeAssignments()).toEqual({ kind: 'has', count: 1 });
+    });
+
+    it('pide una sola vez por protocolo salvo con force', () => {
+      evaluationRepo.getActiveAssignments.and.returnValue(of(result(0)));
+      service.ensureActiveAssignments(5);
+      service.ensureActiveAssignments(5);
+      expect(evaluationRepo.getActiveAssignments).toHaveBeenCalledTimes(1);
+
+      service.ensureActiveAssignments(5, true);
+      expect(evaluationRepo.getActiveAssignments).toHaveBeenCalledTimes(2);
+    });
+
+    it('clear() vuelve a idle', () => {
+      evaluationRepo.getActiveAssignments.and.returnValue(of(result(1)));
+      service.ensureActiveAssignments(5);
+      service.clear();
+      expect(service.activeAssignments()).toEqual({ kind: 'idle' });
+    });
   });
 });

@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -7,7 +15,13 @@ import { catchError, distinctUntilChanged, map, startWith, switchMap } from 'rxj
 import { AssignmentHistoryEntry, ActiveAssignmentsResult } from '@domain/entities/peer-evaluation.entity';
 import { LoadActiveAssignmentsUseCase } from '@features/evaluations/application/load-active-assignments.use-case';
 import { LoadAssignmentHistoryUseCase } from '@features/evaluations/application/load-assignment-history.use-case';
+import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { WorkspaceInformationState } from '../../../domain/workspace-stage-state';
+import { ASSIGNMENT_EVALUATORS_VIEW_ROLES } from '../../../domain/workspace-tab-roles';
+
+/** Mensaje del INVESTIGADOR en la etapa Asignación (F11-39): ve el avance en la barra, no a los evaluadores. */
+export const ASSIGNMENT_RESERVED_MESSAGE =
+  'La asignación de evaluadores es reservada del comité. Podrá ver el avance de su protocolo en la barra de etapas.';
 
 @Component({
   selector: 'app-protocol-assignment-history',
@@ -22,7 +36,9 @@ import { WorkspaceInformationState } from '../../../domain/workspace-stage-state
         <p>Consulta de solo lectura de las asignaciones y reasignaciones registradas.</p>
       </header>
 
-      @if (informationState().kind === 'loading') {
+      @if (!canSeeEvaluators()) {
+        <p role="status" data-testid="assignment-reserved">{{ reservedMessage }}</p>
+      } @else if (informationState().kind === 'loading') {
         <p role="status">Cargando información de asignación…</p>
       } @else if (informationState().kind === 'error') {
         <p role="alert">No pudimos consultar el historial de asignación.</p>
@@ -95,6 +111,17 @@ export class ProtocolAssignmentHistoryPage implements OnInit {
   private readonly loadActiveAssignments = inject(LoadActiveAssignmentsUseCase);
   private readonly loadHistory = inject(LoadAssignmentHistoryUseCase);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly activeRole = inject(ActiveRoleFacade);
+
+  readonly reservedMessage = ASSIGNMENT_RESERVED_MESSAGE;
+  /**
+   * Solo el comité ve a las personas asignadas (F11-39, F11-40): el INVESTIGADOR no, y para él no se
+   * pide ninguna consulta de asignaciones ni de reasignaciones.
+   */
+  readonly canSeeEvaluators = computed(() => {
+    const role = this.activeRole.activeRole();
+    return !!role && ASSIGNMENT_EVALUATORS_VIEW_ROLES.includes(role);
+  });
 
   readonly informationState = signal<WorkspaceInformationState>({ kind: 'loading' });
   readonly activeAssignments = signal<ActiveAssignmentsResult['assignments']>([]);
@@ -117,6 +144,7 @@ export class ProtocolAssignmentHistoryPage implements OnInit {
           this.activeAssignments.set([]);
           this.history.set([]);
           this.hasRecords.set(false);
+          if (!this.canSeeEvaluators()) return of(null);
           if (protocolId <= 0) {
             this.informationState.set({ kind: 'unavailable' });
             return of(null);

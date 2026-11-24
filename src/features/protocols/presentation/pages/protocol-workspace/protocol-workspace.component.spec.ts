@@ -4,10 +4,14 @@ import { Component, signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router, UrlTree } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { map, of, Subject } from 'rxjs';
+import { map, Observable, of, Subject, throwError } from 'rxjs';
 
 import { ProtocolWorkspaceComponent } from './protocol-workspace.component';
-import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
+import {
+  ActiveAssignmentsState,
+  ProtocolWorkspaceService,
+} from '../../../application/services/protocol-workspace.service';
+import { ActiveAssignmentsResult } from '@domain/entities/peer-evaluation.entity';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
@@ -116,11 +120,33 @@ function workspaceMock(
     error: signal<string | null>(null),
     loadProtocol: jasmine.createSpy('loadProtocol').and.returnValue(of(null)),
     updateProtocol: jasmine.createSpy('updateProtocol'),
+    activeAssignments: signal<ActiveAssignmentsState>({ kind: 'none' }),
+    ensureActiveAssignments: jasmine.createSpy('ensureActiveAssignments'),
+    retryActiveAssignments: jasmine.createSpy('retryActiveAssignments'),
   };
 }
 
+const ACTIVE_RESULT = (count: number): ActiveAssignmentsResult => ({
+  protocolId: 5,
+  ceishCode: 'CEISH-PRUEBA-005',
+  versionId: 1,
+  versionNumber: 1,
+  assignments: Array.from({ length: count }, (_, i) => ({
+    assignmentId: i + 1,
+    evaluatorId: i + 10,
+    evaluatorFullName: 'Evaluador de prueba ' + (i + 1),
+    evaluatorProfile: 'SALUD' as const,
+    status: 'ASSIGNED' as const,
+    isAssignedForAnnex10: false,
+    assignedAt: null,
+    deadlineDate: null,
+    submittedAt: null,
+  })),
+});
+
 describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
   let page: ProtocolWorkspaceComponent;
+  let workspaceStub: ReturnType<typeof workspaceMock>;
   let protocolSignal: WritableSignal<ProtocolEntity | null>;
   let activeRoleSignal: WritableSignal<RoleCode | null>;
   let currentUserRoles: RoleCode[];
@@ -135,6 +161,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     queryParamMap = new Subject<ParamMap>();
     currentUserRol = null;
     const workspace = workspaceMock(protocolSignal);
+    workspaceStub = workspace;
 
     await TestBed.configureTestingModule({
       imports: [ProtocolWorkspaceComponent],
@@ -413,6 +440,72 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
       setState('RECEPCION_APROBADA', false);
 
       expect(tabsIn('ASIGNACION')).toEqual(['assignment']);
+    });
+  });
+
+  describe('protocolo con evaluadores ya asignados (F11-35, F11-36, F11-38)', () => {
+    beforeEach(() => {
+      activeRoleSignal.set('PRESIDENTE');
+      setState('RECEPCION_APROBADA', true);
+    });
+
+    it('sin asignaciones activas, la pestaña Asignación lleva al formulario', () => {
+      workspaceStub.activeAssignments.set({ kind: 'none' });
+
+      expect(tabsIn('ASIGNACION')).toEqual(['assignment']);
+    });
+
+    it('con una asignación activa, la pestaña y el enlace de la barra llevan al historial, nunca al formulario (F11-35)', () => {
+      workspaceStub.activeAssignments.set({ kind: 'has', count: 1 });
+
+      expect(tabsIn('ASIGNACION')).toEqual(['assignment-history']);
+      expect(page.stageLinks().ASIGNACION).toMatch(/\/assignment-history$/);
+    });
+
+    it('mientras se consulta o si la consulta falla, la pestaña lleva al formulario, que muestra la carga o el error (F11-38)', () => {
+      for (const kind of ['idle', 'loading', 'error'] as const) {
+        workspaceStub.activeAssignments.set({ kind });
+        expect(tabsIn('ASIGNACION')).withContext(kind).toEqual(['assignment']);
+      }
+    });
+
+    it('con una asignación activa «Asignar Pares» no se muestra en ninguna etapa (F11-36)', () => {
+      workspaceStub.activeAssignments.set({ kind: 'has', count: 2 });
+
+      for (const stage of ['RECEPCION', 'EVALUACION', 'SEGUIMIENTO'] as StageCode[]) {
+        page.selectedStage.set(stage);
+        expect(page.visibleActions().map((a) => a.id)).withContext(stage).not.toContain('ASSIGN_EVALUATORS');
+      }
+    });
+
+    it('«Asignar Pares» espera a la consulta y se ofrece sin asignaciones o si la consulta falló', () => {
+      page.selectedStage.set('RECEPCION');
+      const ids = () => page.visibleActions().map((a) => a.id);
+
+      workspaceStub.activeAssignments.set({ kind: 'idle' });
+      expect(ids()).not.toContain('ASSIGN_EVALUATORS');
+      workspaceStub.activeAssignments.set({ kind: 'loading' });
+      expect(ids()).not.toContain('ASSIGN_EVALUATORS');
+      workspaceStub.activeAssignments.set({ kind: 'none' });
+      expect(ids()).toContain('ASSIGN_EVALUATORS');
+      workspaceStub.activeAssignments.set({ kind: 'error' });
+      expect(ids()).toContain('ASSIGN_EVALUATORS');
+    });
+
+    it('pide las asignaciones activas solo a quien puede asignar y con el protocolo en COMPLETO', () => {
+      TestBed.tick();
+      expect(workspaceStub.ensureActiveAssignments).toHaveBeenCalledOnceWith(5);
+
+      workspaceStub.ensureActiveAssignments.calls.reset();
+      for (const role of ['SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+        activeRoleSignal.set(role);
+        TestBed.tick();
+      }
+      setState('APROBADO');
+      activeRoleSignal.set('PRESIDENTE');
+      TestBed.tick();
+
+      expect(workspaceStub.ensureActiveAssignments).not.toHaveBeenCalled();
     });
   });
 
@@ -1006,7 +1099,10 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
         { provide: ProtocolHeaderPort, useValue: { get: headerFromLastRequest } },
         {
           provide: IEvaluationRepositoryPort,
-          useValue: { getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])) },
+          useValue: {
+            getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])),
+            getActiveAssignments: jasmine.createSpy('getActiveAssignments').and.returnValue(of(ACTIVE_RESULT(0))),
+          },
         },
         {
           provide: AuthFacade,
@@ -1227,6 +1323,8 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
   let activeRole: WritableSignal<RoleCode | null>;
   let backendStage: StageCode | null;
   let pending: Subject<ProtocolEntity>[];
+  let activeResponse: Observable<ActiveAssignmentsResult>;
+  let getActiveAssignments: jasmine.Spy;
 
   const root = () => harness.fixture.nativeElement as HTMLElement;
   const tabLabels = () =>
@@ -1247,6 +1345,8 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
   beforeEach(async () => {
     pending = [];
     backendStage = 'ASIGNACION';
+    activeResponse = of(ACTIVE_RESULT(0));
+    getActiveAssignments = jasmine.createSpy('getActiveAssignments').and.callFake(() => activeResponse);
     activeRole = signal<RoleCode | null>('PRESIDENTE');
     const getById = jasmine.createSpy('getById').and.callFake(() => {
       const response = new Subject<ProtocolEntity>();
@@ -1288,7 +1388,10 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
         },
         {
           provide: IEvaluationRepositoryPort,
-          useValue: { getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])) },
+          useValue: {
+            getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])),
+            getActiveAssignments,
+          },
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ rol: 'PRESIDENTE', roles: ['PRESIDENTE'] }) } },
         { provide: ActiveRoleFacade, useValue: { activeRole } },
@@ -1351,6 +1454,58 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
 
     expect(router.url).toBe('/workspace/5/evaluation');
     expect(tabLabels()).toEqual([]);
+  });
+
+  it('PRESIDENTE con evaluadores ya asignados abre en el historial, no en el formulario (F11-35)', async () => {
+    activeResponse = of(ACTIVE_RESULT(2));
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(tabLabels()).toEqual(['Asignación']);
+    expect(getActiveAssignments).toHaveBeenCalledOnceWith(5);
+  });
+
+  it('con evaluadores ya asignados «Asignar Pares» no se muestra en Recepción (F11-36)', async () => {
+    activeResponse = of(ACTIVE_RESULT(1));
+
+    await open('/workspace/5/validation');
+
+    expect(router.url).toBe('/workspace/5/validation');
+    expect(hasButton('Asignar Pares')).toBeFalse();
+  });
+
+  it('sin evaluadores asignados «Asignar Pares» sí se muestra en Recepción', async () => {
+    await open('/workspace/5/validation');
+
+    expect(hasButton('Asignar Pares')).toBeTrue();
+  });
+
+  it('si falla la consulta abre el formulario (que muestra el error con Reintentar) y no el historial (F11-38)', async () => {
+    activeResponse = throwError(() => new Error('falla'));
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment');
+  });
+
+  it('INVESTIGADOR abre la etapa Asignación sin rebote y sin pedir asignaciones activas (F11-39, F11-40)', async () => {
+    activeRole.set('INVESTIGADOR');
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(tabLabels()).toEqual(['Asignación']);
+    expect(getActiveAssignments).not.toHaveBeenCalled();
+  });
+
+  it('SECRETARIA tampoco consulta las asignaciones desde el espacio: las ve en el historial', async () => {
+    activeRole.set('SECRETARIA');
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(getActiveAssignments).not.toHaveBeenCalled();
   });
 
   it('sin etapa del backend no redirige: el Resumen sigue siendo de Recepción', async () => {
