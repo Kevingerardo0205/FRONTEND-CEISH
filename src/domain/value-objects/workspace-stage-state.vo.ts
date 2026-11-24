@@ -113,6 +113,14 @@ export function isStageNotReached(
   return state?.kind === 'determined' && state.status === 'PENDIENTE';
 }
 
+/**
+ * Etapa «no aplica» de un protocolo cerrado (RECHAZADO o ARCHIVADO_VENCIMIENTO), posterior a la
+ * etapa donde se cerró (ep2c §3.8, 24/11/2026): tampoco se abre.
+ */
+export function isStageNotApplicable(state: WorkspaceStageState | undefined): boolean {
+  return state?.kind === 'determined' && state.status === 'NO_APLICA';
+}
+
 export function informationLoading(): WorkspaceInformationState {
   return { kind: 'loading' };
 }

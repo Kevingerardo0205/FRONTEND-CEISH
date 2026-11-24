@@ -44,6 +44,8 @@ export class ProtocolHeaderComponent {
   readonly stageLinks = input<Readonly<Partial<Record<StageCode, string>>>>({});
   /** Clic en una etapa que el protocolo aún no alcanza (la pantalla muestra el aviso). */
   readonly notReachedStageClick = output<StageCode>();
+  /** Clic en una etapa «no aplica» de un protocolo cerrado. */
+  readonly notApplicableStageClick = output<StageCode>();
 
   /** Chip neutro: código y versión que existan, unidos por "·"; sin ninguno, no hay chip. */
   readonly identity = computed(() => {

@@ -29,8 +29,8 @@ import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/st
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
 import { StageCode } from '@domain/value-objects/stage.vo';
-import { deriveStageStates, isStageNotReached } from '../../../domain/workspace-stage-state';
-import { stageNotReachedMessage } from '../../../domain/workspace-stage-messages';
+import { deriveStageStates, isStageNotApplicable, isStageNotReached } from '../../../domain/workspace-stage-state';
+import { stageClosedMessage, stageNotReachedMessage } from '../../../domain/workspace-stage-messages';
 import { NotificationService } from '@infrastructure/services/notification.service';
 import { Stage } from '@domain/value-objects/stage.vo';
 import {
@@ -117,6 +117,7 @@ const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
             [stageStates]="stageStates()"
             [stageLinks]="stageLinks()"
             (notReachedStageClick)="onNotReachedStage($event)"
+            (notApplicableStageClick)="onNotReachedStage($event)"
           >
             @if (visibleActions().length || showTermsNotice() || returnOrigin()) {
               <div protocolHeaderAction class="header-action">
@@ -643,12 +644,20 @@ export class ProtocolWorkspaceComponent implements OnInit {
     });
   });
 
-  /** Aviso flotante (tipo «info», se cierra solo) de una etapa que el protocolo aún no alcanza. */
+  /**
+   * Aviso flotante (tipo «info», se cierra solo) de una etapa que no se abre: una posterior que el
+   * protocolo aún no alcanza (F11-41) o una «no aplica» de un protocolo cerrado (F11-47).
+   */
   private notifyNotReached(stage: StageCode): void {
+    const closedAt = this.workspaceStage();
+    if (isStageNotApplicable(this.stageStates()[stage]) && closedAt) {
+      this.notifications.notify(stageClosedMessage(closedAt.label), 'info');
+      return;
+    }
     this.notifications.notify(stageNotReachedMessage(Stage.fromBackend(stage).label), 'info');
   }
 
-  /** Clic en una etapa posterior a la actual de la barra: no navega, solo avisa (F11-41). */
+  /** Clic en una etapa posterior a la actual o «no aplica»: no navega, solo avisa (F11-41, F11-47). */
   onNotReachedStage(stage: StageCode): void {
     this.notifyNotReached(stage);
   }
@@ -666,7 +675,8 @@ export class ProtocolWorkspaceComponent implements OnInit {
       return;
     }
     const target = Stage.all().find((s) => s.code === selected);
-    const blocked = !!target && isStageNotReached(current, this.stageStates()[selected], target);
+    const state = this.stageStates()[selected];
+    const blocked = !!target && (isStageNotReached(current, state, target) || isStageNotApplicable(state));
     if (!blocked) {
       this.blockedHandled = null;
       return;

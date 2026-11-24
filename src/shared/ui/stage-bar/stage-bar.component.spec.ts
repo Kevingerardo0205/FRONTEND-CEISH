@@ -184,7 +184,7 @@ describe('StageBarComponent', () => {
       expect((fixture.nativeElement as HTMLElement).querySelectorAll('button').length).toBe(0);
     });
 
-    it('con el protocolo cerrado las posteriores (no aplica) no se tratan como pendientes', () => {
+    it('con el protocolo cerrado las posteriores (no aplica) no son pendientes ni enlaces: botón que avisa (F11-47)', () => {
       fixture.componentRef.setInput('links', LINKS);
       fixture.componentRef.setInput('stage', Stage.fromBackend('EVALUACION'));
       fixture.componentRef.setInput('stageStates', {
@@ -198,8 +198,34 @@ describe('StageBarComponent', () => {
       fixture.detectChanges();
       const el = fixture.nativeElement as HTMLElement;
 
-      expect(el.querySelectorAll('button').length).toBe(0);
-      expect(hiddenText(item(el, 'RESOLUCION'))).toBe(', no aplica');
+      expect(el.querySelectorAll('button').length).toBe(3);
+      for (const code of ['RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
+        expect(hiddenText(item(el, code))).withContext(code).toBe(', no aplica');
+        expect(item(el, code).querySelector('a')).withContext(code).toBeNull();
+        expect(item(el, code).hasAttribute('aria-current')).withContext(code).toBeFalse();
+      }
+      for (const code of ['RECEPCION', 'ASIGNACION', 'EVALUACION']) {
+        expect(item(el, code).querySelector('a')).withContext(code).not.toBeNull();
+      }
+    });
+
+    it('el clic en una etapa «no aplica» emite notApplicableClick y no notReachedClick (F11-47)', () => {
+      const notApplicable: string[] = [];
+      const notReached: string[] = [];
+      fixture.componentInstance.notApplicableClick.subscribe((c) => notApplicable.push(c));
+      fixture.componentInstance.notReachedClick.subscribe((c) => notReached.push(c));
+      fixture.componentRef.setInput('links', LINKS);
+      fixture.componentRef.setInput('stage', Stage.fromBackend('EVALUACION'));
+      fixture.componentRef.setInput('stageStates', {
+        EVALUACION: { kind: 'determined', status: 'CERRADA' },
+        RESOLUCION: { kind: 'determined', status: 'NO_APLICA' },
+      });
+      fixture.detectChanges();
+
+      (item(fixture.nativeElement, 'RESOLUCION').querySelector('button') as HTMLButtonElement).click();
+
+      expect(notApplicable).toEqual(['RESOLUCION']);
+      expect(notReached).toEqual([]);
     });
   });
 

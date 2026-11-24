@@ -1,7 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Stage, StageCode } from '@domain/value-objects/stage.vo';
-import { WorkspaceStageState, isStageNotReached } from '@domain/value-objects/workspace-stage-state.vo';
+import {
+  WorkspaceStageState,
+  isStageNotApplicable,
+  isStageNotReached,
+} from '@domain/value-objects/workspace-stage-state.vo';
 
 export type StageStatus =
   | 'completed'
@@ -61,6 +65,8 @@ export class StageBarComponent {
   readonly detail = input<string>();
   /** Clic en una etapa posterior a la actual: no navega; la pantalla muestra el aviso (F11-41). */
   readonly notReachedClick = output<StageCode>();
+  /** Clic en una etapa «no aplica» de un protocolo cerrado: tampoco navega (F11-47). */
+  readonly notApplicableClick = output<StageCode>();
 
   readonly steps = computed(() => {
     const current = this.stage();
@@ -73,6 +79,7 @@ export class StageBarComponent {
 
       const isCurrent = current?.code === stage.code;
       const notReached = isStageNotReached(current, states[stage.code], stage);
+      const notApplicable = isStageNotApplicable(states[stage.code]);
 
       return {
         stage,
@@ -86,9 +93,10 @@ export class StageBarComponent {
             ? 'etapa pendiente, aún no disponible'
             : STATUS_TEXT[status],
         notReached,
+        notApplicable,
         current: isCurrent,
-        selected: !notReached && selected === stage.code,
-        link: notReached ? null : (links[stage.code] ?? null),
+        selected: !notReached && !notApplicable && selected === stage.code,
+        link: notReached || notApplicable ? null : (links[stage.code] ?? null),
       };
     });
   });

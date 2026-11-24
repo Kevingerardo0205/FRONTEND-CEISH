@@ -43,6 +43,7 @@
       [stageStates]="stageStates()"
       [links]="stageLinks()"
       (notReachedClick)="notReachedStageClick.emit($event)"
+      (notApplicableClick)="notApplicableStageClick.emit($event)"
     />
   }
 </header>

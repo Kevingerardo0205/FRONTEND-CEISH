@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { NotificationService } from '@infrastructure/services/notification.service';
 import {
   STAGE_SCREEN_MISSING_MESSAGE,
+  stageClosedMessage,
   stageNotReachedMessage,
 } from '../../../domain/workspace-stage-messages';
 import { map, Observable, of, Subject, throwError } from 'rxjs';
@@ -1499,6 +1500,71 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
 
       expect(router.url).toBe('/workspace/5/info');
       expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+    });
+
+    describe('protocolo cerrado: las etapas «no aplica» tampoco se abren (F11-47, F11-48)', () => {
+      it('el texto del aviso es el pedido', () => {
+        expect(stageClosedMessage('Evaluación')).toBe(
+          'El protocolo se cerró en la etapa Evaluación; esta etapa no aplica.',
+        );
+        expect(stageClosedMessage('Evaluación')).not.toBe(stageNotReachedMessage('Resolución'));
+      });
+
+      for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+        it(`${role}: el clic en una etapa «no aplica» no navega y avisa dónde se cerró (F11-47)`, async () => {
+          activeRole.set(role);
+          backendStage = 'EVALUACION';
+          await open('/workspace/5/evaluation', 'RECHAZADO');
+          const before = router.url;
+          notify.calls.reset();
+
+          (barItem('RESOLUCION').querySelector('button') as HTMLButtonElement).click();
+          harness.detectChanges();
+          await harness.fixture.whenStable();
+
+          expect(router.url).toBe(before);
+          expect(notify).toHaveBeenCalledOnceWith(stageClosedMessage('Evaluación'), 'info');
+        });
+      }
+
+      it('la etapa cerrada y las completadas siguen navegables', async () => {
+        backendStage = 'EVALUACION';
+        await open('/workspace/5/evaluation', 'RECHAZADO');
+
+        expect(barItem('EVALUACION').querySelector('a')).not.toBeNull();
+        expect(barItem('RECEPCION').querySelector('a')).not.toBeNull();
+        expect(barItem('ASIGNACION').querySelector('a')).not.toBeNull();
+        expect(notify).not.toHaveBeenCalled();
+      });
+
+      for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+        it(`${role}: por URL una etapa «no aplica» redirige a la etapa cerrada con el mismo aviso (F11-48)`, async () => {
+          activeRole.set(role);
+          backendStage = 'ASIGNACION';
+          const nav = spyOn(router, 'navigate').and.callThrough();
+
+          await open('/workspace/5/evaluation', 'RECHAZADO');
+
+          expect(router.url).toBe('/workspace/5/assignment-history');
+          expect(notify).toHaveBeenCalledOnceWith(stageClosedMessage('Asignación'), 'info');
+          expect(nav.calls.allArgs().some(([, x]) => (x as { replaceUrl?: boolean })?.replaceUrl === true)).toBeTrue();
+        });
+      }
+
+      it('ARCHIVADO_VENCIMIENTO en Recepción: la URL de Asignación vuelve al Resumen con el aviso', async () => {
+        backendStage = 'RECEPCION';
+
+        await open('/workspace/5/assignment-history', 'ARCHIVADO');
+
+        expect(router.url).toBe('/workspace/5/info');
+        expect(notify).toHaveBeenCalledOnceWith(stageClosedMessage('Recepción'), 'info');
+      });
+
+      it('con el protocolo abierto no sale el aviso de cierre', async () => {
+        await open('/workspace/5/evaluation');
+
+        expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+      });
     });
 
     it('el aviso de «aún no llega» y el de «no existe todavía» son mensajes distintos (F11-44)', () => {

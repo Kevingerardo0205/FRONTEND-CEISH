@@ -26,6 +26,15 @@
           <span class="step__label">{{ step.stage.label }}</span>
           <span class="visually-hidden">, {{ step.announce }}</span>
         </button>
+      } @else if (step.notApplicable) {
+        <button
+          type="button"
+          class="step__name step__link step__link--not-reached"
+          (click)="notApplicableClick.emit(step.stage.code)"
+        >
+          <span class="step__label">{{ step.stage.label }}</span>
+          <span class="visually-hidden">, {{ step.announce }}</span>
+        </button>
       } @else if (step.link; as link) {
         <a class="step__name step__link" [routerLink]="link">
           <span class="step__label">{{ step.stage.label }}</span>

@@ -1,5 +1,5 @@
 import { Stage } from './stage.vo';
-import { WorkspaceStageState, isStageNotReached } from './workspace-stage-state.vo';
+import { WorkspaceStageState, isStageNotApplicable, isStageNotReached } from './workspace-stage-state.vo';
 
 describe('isStageNotReached (ep2c §3.8, F11-41 a F11-43)', () => {
   const stage = (code: string) => Stage.fromBackend(code);
@@ -41,5 +41,17 @@ describe('isStageNotReached (ep2c §3.8, F11-41 a F11-43)', () => {
   it('sin estado determinado la etapa no se bloquea', () => {
     expect(isStageNotReached(stage('ASIGNACION'), undefined, stage('EVALUACION'))).toBeFalse();
     expect(isStageNotReached(stage('ASIGNACION'), { kind: 'undetermined' }, stage('EVALUACION'))).toBeFalse();
+  });
+});
+
+describe('isStageNotApplicable (ep2c §3.8, F11-47, F11-48)', () => {
+  it('solo la etapa NO_APLICA de un protocolo cerrado no se abre', () => {
+    expect(isStageNotApplicable({ kind: 'determined', status: 'NO_APLICA' })).toBeTrue();
+    for (const status of ['COMPLETADA', 'CERRADA', 'EN_CURSO', 'PENDIENTE'] as const) {
+      expect(isStageNotApplicable({ kind: 'determined', status })).withContext(status).toBeFalse();
+    }
+    expect(isStageNotApplicable({ kind: 'unavailable' })).toBeFalse();
+    expect(isStageNotApplicable({ kind: 'undetermined' })).toBeFalse();
+    expect(isStageNotApplicable(undefined)).toBeFalse();
   });
 });
