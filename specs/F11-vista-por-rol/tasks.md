@@ -83,6 +83,17 @@
 
 - **Pendiente:** revisión en el navegador con la PRESIDENTE y la SECRETARIA (la hace la usuaria).
 
+### Hallazgos de auditoría frontend (24/11/2026)
+
+Identificadores asignados por la usuaria. No existen en ninguna otra spec; F-03 y F-05 no existen.
+
+| Hallazgo | Alcance | Rama |
+|---|---|---|
+| **F-01** | Reactividad del `protocolId` y recuperación de errores en el formulario de asignación (`peer-assignment-form`), el historial de asignación (`protocol-assignment-history`) y la página de etapa (`protocol-workspace-stage`). Un error no debe terminar la suscripción ni dejar datos del protocolo anterior. | `feat/ep2b-presidenta-revisar-antes-de-asignar` |
+| **F-02** | Eventos adversos sin datos simulados ni éxito falso (`adverse-event-form`, `adverse-events-list`). | `feat/f02-f04-sin-simulados` |
+| **F-04** | Renovación sin éxito falso (`renewal-request`). | `feat/f02-f04-sin-simulados` |
+| **F-06** | Conservar el contexto de origen (`origin`) al volver del espacio del protocolo a la asignación (`protocol-workspace.component`). | `feat/ep2b-presidenta-revisar-antes-de-asignar` |
+
 ## 2. Backend (las hace otra sesión en el repo del backend)
 
 - **Registrar en spec-001 HU-001** V2, V5, V6 y V7 (README §3, regla 1).

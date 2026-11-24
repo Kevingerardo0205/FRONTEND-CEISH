@@ -8,11 +8,13 @@ EP2c evoluciona el espacio de trabajo del protocolo CEISH-ESPOCH para convertirl
 
 El alcance de esta especificación es el frontend. No se modifican el backend, la base de datos, los contratos API, los guards existentes ni los permisos.
 
-La implementación debe conservar íntegramente EP2b, incluida la ruta:
+La implementación debe conservar EP2b: el formulario de asignación sigue siendo el de F03 (`PeerAssignmentFormPage`), en modo espacio, en la ruta:
 
 `/dashboard/protocols/workspace/:id/assignment`
 
 La asignación continuará reutilizando `PeerAssignmentFormPage`, sus casos de uso, validaciones y restricciones.
+
+`/dashboard/protocols/workspace/:id/assignment` es el FORMULARIO de asignación (guards: PRESIDENTE con `EVALUACION_ASIGNAR`). `/dashboard/protocols/workspace/:id/assignment-history` es el HISTORIAL de asignaciones (`ProtocolAssignmentHistoryPage`), con los roles de consulta (SECRETARIA, PRESIDENTE, INVESTIGADOR). Flujo: listado de protocolos de la PRESIDENTE → «Asignar» → `workspace/:id/assignment`; «Asignar Pares» del encabezado lleva a la misma ruta. La ruta vieja `/dashboard/evaluations/assignment/:id` redirige a `workspace/:id/assignment`, para que haya un solo formulario (decisión de la usuaria, 24/11/2026).
 
 ## 2. Requerimientos funcionales
 
@@ -95,7 +97,9 @@ Se reutilizará íntegramente la implementación de EP2b:
 - validaciones existentes;
 - guards, permisos y reglas de retorno.
 
-No se duplicará la pantalla ni su lógica. La consulta histórica de asignaciones solo mostrará datos que entreguen los casos de uso y adaptadores existentes.
+No se duplicará la pantalla ni su lógica. «Asignar Pares» navega al formulario del espacio (`/dashboard/protocols/workspace/:id/assignment`, id numérico) conservando el origen para el retorno. La ruta `workspace/:id/assignment-history` solo consulta: muestra los datos que entreguen los casos de uso y adaptadores existentes.
+
+La pestaña Asignación es visible para quien ya la tenía aunque el investigador no haya aceptado los tiempos; en ese caso el botón «Asignar Pares» aparece deshabilitado con su motivo.
 
 ### EP2c-RF-08 · Evaluación
 
@@ -163,6 +167,18 @@ El estado de una etapa es un dato independiente de `etapaActualProtocolo` y `eta
 
 Los estados visuales `pendiente`, `en curso` y `completada` solo pueden mostrarse cuando una fuente real los respalde. Si no existe información suficiente, se debe mostrar `Estado no determinado` o `Información no disponible` y no inferir el estado por el orden de la etapa, el estado general del protocolo, `header.stage` o la existencia de una ruta.
 
+**Excepción aprobada (usuaria, 24/11/2026): estados «derivados de la etapa actual».** Es la única inferencia permitida y solo se calcula con `header.stage` (etapa actual enviada por el backend) y el código de estado del protocolo. Si `header.stage` es nulo, no se deriva nada y todas las etapas quedan en `Estado no determinado`. La barra no presenta estos estados como confirmados por una fuente propia de cada etapa.
+
+Regla de derivación, en el orden de las seis etapas:
+
+| Situación | Etapas anteriores a la actual | Etapa actual | Etapas posteriores |
+|---|---|---|---|
+| Protocolo en curso | `COMPLETADA` | `EN_CURSO` | `PENDIENTE` |
+| Protocolo `RECHAZADO` (estado 18) o `ARCHIVADO_VENCIMIENTO` (estado 12) | `COMPLETADA` | `CERRADA` (etapa donde se detuvo) | `NO_APLICA` |
+| `SEGUIMIENTO` y `RENOVACION` mientras no existan | `no disponible` | `no disponible` | `no disponible` |
+
+Precedencia: primero la fila de protocolo cerrado (RECHAZADO o ARCHIVADO_VENCIMIENTO); si no aplica, `SEGUIMIENTO` y `RENOVACION` quedan siempre `no disponible` y las cuatro primeras etapas siguen la primera fila. `NO_APLICA` y `CERRADA` son valores nuevos de `WorkspaceStageStatus`; `no disponible` es el estado `unavailable` de `WorkspaceStageState`.
+
 ### 3.5. Estado de información
 
 Cada apartado debe diferenciar explícitamente:
@@ -210,7 +226,7 @@ Las rutas no deben conceder operaciones. Los guards y permisos seguirán siendo 
 
 Cada apartado debe declarar explícitamente qué fuentes reales utiliza. Los requisitos, prerrequisitos, responsables, fechas, resultados y estados deben mostrarse únicamente cuando exista una fuente real que los respalde.
 
-Si una fuente no existe, no es compatible o no entrega un dato, la interfaz debe mostrar `Fuente no disponible`, `Estado no determinado` o `Información no disponible`, según corresponda. No se deben inferir datos desde la etapa actual, el estado general, el orden de la barra, la ruta o la ausencia de registros.
+Si una fuente no existe, no es compatible o no entrega un dato, la interfaz debe mostrar `Fuente no disponible`, `Estado no determinado` o `Información no disponible`, según corresponda. No se deben inferir datos desde la etapa actual, el estado general, el orden de la barra, la ruta o la ausencia de registros. La única excepción es la derivación de estados de la barra descrita en §3.4 (estados «derivados de la etapa actual»), que no aplica a requisitos, responsables, fechas ni resultados.
 
 No se modifican contratos API en EP2c.
 
@@ -257,7 +273,7 @@ El historial debe distinguir entre una fuente que confirmó `Sin registros`, una
 12. Ingresar a una etapa pendiente no habilita operaciones prematuras.
 13. Los guards y permisos existentes continúan aplicándose y EP2c no amplía los roles autorizados.
 14. La navegación no concede autorización para ejecutar operaciones.
-15. EP2b conserva su ruta, formulario, validaciones, origen y retorno.
+15. EP2b conserva su formulario (`workspace/:id/assignment`), validaciones, origen y retorno; `workspace/:id/assignment-history` es solo consulta y la ruta vieja `/dashboard/evaluations/assignment/:id` redirige al formulario.
 16. La consulta de un registro formalizado no permite modificaciones directas no autorizadas.
 17. Las correcciones y subsanaciones autorizadas mantienen el mecanismo de versionamiento existente.
 
@@ -289,7 +305,9 @@ El historial debe distinguir entre una fuente que confirmó `Sin registros`, una
 - Navegación directa y recarga conservan el apartado.
 - La barra genera destinos correctos.
 - Las rutas antiguas de EP2b continúan funcionando.
-- `assignment` continúa cargando `PeerAssignmentFormPage`.
+- `assignment` (workspace) es el formulario de asignación (EP2b); `assignment-history` carga la consulta de la etapa Asignación (historial). `/dashboard/evaluations/assignment/:id` redirige a `workspace/:id/assignment`.
+- Con rol EVALUADOR activo, el espacio y cada ruta de etapa (`reception`, `assignment`, `assignment-history`, `evaluation`, `resolution`, `follow-up`, `renewal`) redirigen a «Mis evaluaciones» sin aviso (`assignment` es el formulario; el historial es `assignment-history`) (F10 D11 / S-1f); el evaluador no ve el espacio ni la barra de etapas (F11). Las pestañas `info` y `validation` siguen con el aviso de acceso de `RoleGuard`.
+- Sin etapa del backend, la barra de etapas no se renderiza (F10 D19).
 - Los roles no autorizados siguen siendo rechazados por los guards.
 - Cambiar de rol activo no conserva acceso indebido.
 - Un rol sin autorización previa para el workspace no obtiene acceso por la existencia de las seis rutas.
