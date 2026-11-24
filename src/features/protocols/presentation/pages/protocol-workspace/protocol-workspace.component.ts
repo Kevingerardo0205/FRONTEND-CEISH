@@ -6,10 +6,12 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   DestroyRef,
+  effect,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, Subject, combineLatest, of } from 'rxjs';
-import { catchError, distinctUntilChanged, filter, map, startWith, switchMap } from 'rxjs/operators';
+import { catchError, distinctUntilChanged, filter, map, startWith, switchMap, tap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -112,7 +114,7 @@ const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
             [stageStates]="stageStates()"
             [stageLinks]="stageLinks()"
           >
-            @if (contextualActions().length || awaitingTimelineAcceptance() || returnOrigin()) {
+            @if (visibleActions().length || showTermsNotice() || returnOrigin()) {
               <div protocolHeaderAction class="header-action">
                 @if (returnOrigin()) {
                   <button
@@ -124,7 +126,7 @@ const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
                     <span>{{ returnLabel() }}</span>
                   </button>
                 }
-                @for (action of contextualActions(); track action.id) {
+                @for (action of visibleActions(); track action.id) {
                   <button
                     type="button"
                     class="header-action__button"
@@ -135,7 +137,7 @@ const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
                   </button>
                 }
                 <!-- F10 D20 (3): sin la aceptación de tiempos, Asignar Pares sigue visible pero deshabilitado, con su motivo -->
-                @if (awaitingTimelineAcceptance()) {
+                @if (showTermsNotice()) {
                   <button
                     type="button"
                     class="header-action__button"
@@ -370,9 +372,10 @@ export class ProtocolWorkspaceComponent implements OnInit {
   readonly stageLinks = computed<Readonly<Partial<Record<StageCode, string>>>>(() => {
     const protocolId = this.protocol()?.id ?? this.route.snapshot.paramMap.get('id');
     if (!protocolId) return {};
+    const paths: Record<StageCode, string> = { ...STAGE_PATHS, ASIGNACION: this.assignmentPath() };
 
     return Object.fromEntries(
-      Object.entries(STAGE_PATHS).map(([stage, path]) => [
+      Object.entries(paths).map(([stage, path]) => [
         stage,
         `/dashboard/protocols/workspace/${protocolId}/${path}`,
       ]),
@@ -515,27 +518,59 @@ export class ProtocolWorkspaceComponent implements OnInit {
     );
   });
 
+  /**
+   * Ruta de la pestaña Asignación (F11-29): el formulario para quien asigna (PRESIDENTE) mientras el
+   * protocolo esté en la etapa de asignación (COMPLETO); el historial en los demás casos.
+   */
+  readonly assignmentPath = computed(() => {
+    const role = this.activeRoleFacade.activeRole();
+    const canAssign =
+      !!role &&
+      WORKSPACE_TAB_ROLES.assignment.includes(role) &&
+      isAssignmentStatus(this.statusCode());
+    return canAssign ? 'assignment' : 'assignment-history';
+  });
+
+  /** «Asignar Pares» no se muestra con la pestaña Asignación abierta (F11-34). */
+  private readonly onAssignmentStage = computed(() => this.selectedStage() === 'ASIGNACION');
+
+  visibleActions = computed(() =>
+    this.onAssignmentStage()
+      ? this.contextualActions().filter((action) => action.id !== 'ASSIGN_EVALUATORS')
+      : this.contextualActions(),
+  );
+
+  showTermsNotice = computed(() => this.awaitingTimelineAcceptance() && !this.onAssignmentStage());
+
+  /**
+   * Pestañas de la etapa seleccionada en la barra (F11-28 a F11-30): RECEPCIÓN muestra Resumen y
+   * Validación Técnica; ASIGNACIÓN, solo Asignación; SEGUIMIENTO, su pestaña cuando existe; las
+   * demás etapas no tienen pestañas todavía (la página muestra el estado «no disponible» de EP2c).
+   * Sin etapa (ni seleccionada ni del backend) se conservan todas las pestañas de siempre.
+   */
   tabConfig = computed(() => {
     const p = this.protocol();
     if (!p) return [];
 
     const activeRole = this.activeRoleFacade.activeRole();
     const code = this.statusCode();
+    const stage = this.selectedStage() ?? this.workspaceStage()?.code ?? null;
     const tabs: { label: string; icon: string; path: string }[] = [];
+    const all = stage === null;
 
-    if (activeRole && WORKSPACE_TAB_ROLES.info.includes(activeRole)) {
+    if ((all || stage === 'RECEPCION') && activeRole && WORKSPACE_TAB_ROLES.info.includes(activeRole)) {
       tabs.push({ label: 'Resumen', icon: 'dashboard', path: 'info' });
     }
 
-    if (
-      code === 'COMPLETO' &&
-      activeRole &&
-      WORKSPACE_TAB_ROLES.assignment.includes(activeRole)
-    ) {
+    if (all && code === 'COMPLETO' && activeRole && WORKSPACE_TAB_ROLES.assignment.includes(activeRole)) {
       tabs.push({ label: 'Asignación', icon: 'person_add', path: 'assignment' });
+    }
+    if (stage === 'ASIGNACION' && activeRole && WORKSPACE_TAB_ROLES.info.includes(activeRole)) {
+      tabs.push({ label: 'Asignación', icon: 'person_add', path: this.assignmentPath() });
     }
 
     if (
+      (all || stage === 'RECEPCION') &&
       !this.isDraft() &&
       activeRole &&
       WORKSPACE_TAB_ROLES.validation.includes(activeRole)
@@ -544,6 +579,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
     }
 
     if (
+      (all || stage === 'SEGUIMIENTO') &&
       (code === 'APROBADO' || code === 'APROBADO_CON_CONDICION') &&
       activeRole &&
       WORKSPACE_TAB_ROLES['follow-up'].includes(activeRole)
@@ -552,6 +588,22 @@ export class ProtocolWorkspaceComponent implements OnInit {
     }
 
     return tabs;
+  });
+
+  /** Al abrir el espacio la etapa seleccionada es la actual del protocolo (F11-31): una vez por :id. */
+  private entryHandled = false;
+  private readonly openCurrentStage = effect(() => {
+    const stage = this.workspaceStage();
+    const loaded = !!this.protocol();
+    if (!loaded || !stage || this.entryHandled) return;
+    this.entryHandled = true;
+    untracked(() => {
+      const path = this.router.url.split('?')[0].split('/').filter(Boolean).pop();
+      if (path !== 'info' || stage.code === 'RECEPCION') return;
+      const target = stage.code === 'ASIGNACION' ? this.assignmentPath() : STAGE_PATHS[stage.code];
+      // Relativa al espacio; si la ruta no existe, el espacio se queda donde está.
+      void this.router.navigate([target], { relativeTo: this.route, replaceUrl: true }).catch(() => false);
+    });
   });
 
   /**
@@ -580,6 +632,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
       map((params) => params['id'] as string | undefined),
       filter((id): id is string => !!id),
       distinctUntilChanged(),
+      tap(() => (this.entryHandled = false)),
     );
     combineLatest([id$, this.reload$.pipe(startWith(undefined))])
       .pipe(
@@ -591,6 +644,9 @@ export class ProtocolWorkspaceComponent implements OnInit {
 
   private stageCodeFromUrl(url: string): StageCode | null {
     const path = url.split('?')[0].split('/').filter(Boolean).pop();
+    // Resumen y Validación Técnica son pestañas de RECEPCIÓN; assignment es el formulario de ASIGNACIÓN.
+    if (path === 'info' || path === 'validation') return 'RECEPCION';
+    if (path === 'assignment') return 'ASIGNACION';
     return (Object.entries(STAGE_PATHS).find(([, value]) => value === path)?.[0] as StageCode) ?? null;
   }
 

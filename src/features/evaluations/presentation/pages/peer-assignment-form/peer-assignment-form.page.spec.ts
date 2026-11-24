@@ -161,6 +161,82 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
     expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-015');
   });
 
+  describe('dentro del espacio del protocolo (F11-32, F11-33)', () => {
+    const actions = () => root().querySelector('.formulario__acciones');
+
+    it('antes de elegir el tipo solo hay título, código y título del protocolo y «Tipo de revisión»', () => {
+      setup({ workspaceId: '15' });
+
+      expect(text(root().querySelector('app-page-header'))).toContain('Asignar evaluadores');
+      expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-015');
+      expect(text(root().querySelector('app-page-header'))).toContain('Estudio de prueba quince');
+      expect(text(root().querySelector('.formulario__tipo'))).toContain('Tipo de revisión');
+      expect(text(root().querySelector('.formulario__tipo'))).toContain('Expedita');
+      expect(text(root().querySelector('.formulario__tipo'))).toContain('En pleno');
+      expect(actions()).toBeNull();
+      expect(submit()).toBeNull();
+      expect(root().querySelector('#motivo-asignacion')).toBeNull();
+      expect(buttonByText('Asignar evaluadores')).toBeUndefined();
+    });
+
+    it('el botón y su motivo aparecen después de elegir el tipo, debajo de las filas', () => {
+      setup({ workspaceId: '15' });
+
+      chooseType('EXPEDITA');
+
+      expect(submit()).not.toBeNull();
+      expect(reason()).not.toBe('');
+      const rows = root().querySelector('[data-testid="filas-expedita"]') as Element;
+      expect(rows.compareDocumentPosition(submit()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('en pleno también muestra el botón solo después de elegir el tipo', () => {
+      setup({ workspaceId: '15' });
+      expect(submit()).toBeNull();
+
+      chooseType('PLENO');
+
+      expect(submit()).not.toBeNull();
+    });
+
+    it('no ofrece «Revisar documentación» ni «Volver a la lista», con o sin tipo elegido', () => {
+      setup({ workspaceId: '15' });
+      expect(buttonByText('Revisar documentación')).toBeUndefined();
+      expect(text(root())).not.toContain('Volver a la lista');
+
+      chooseType('EXPEDITA');
+      expect(buttonByText('Revisar documentación')).toBeUndefined();
+      expect(text(root())).not.toContain('Volver a la lista');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('tras asignar tampoco ofrece «Volver a la lista»', () => {
+      setup({ workspaceId: '15' });
+      fillValidExpedited();
+
+      click('Asignar evaluadores');
+
+      expect(root().querySelector('.formulario__exito')).not.toBeNull();
+      expect(text(root())).not.toContain('Volver a la lista');
+    });
+
+    it('sin evaluadores activos o sin protocolo tampoco ofrece «Volver a la lista»', () => {
+      setup({ workspaceId: '15', members: [of([])] });
+      expect(text(root())).toContain('No hay evaluadores activos para asignar.');
+      expect(text(root())).not.toContain('Volver a la lista');
+    });
+  });
+
+  describe('fuera del espacio conserva sus acciones', () => {
+    it('muestra «Revisar documentación» y «Volver a la lista» y el botón antes de elegir el tipo', () => {
+      setup();
+
+      expect(buttonByText('Revisar documentación')).toBeDefined();
+      expect(text(root())).toContain('Volver a la lista');
+      expect(submit()).not.toBeNull();
+    });
+  });
+
   it('recarga el protocolo vigente y limpia el anterior cuando cambia el id sin destruirse', () => {
     const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
     setup({

@@ -90,6 +90,14 @@ export class PeerAssignmentFormPage implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly listRoute = ASSIGNMENT_LIST_ROUTE;
+  /**
+   * Dentro del espacio del protocolo (workspace/:id/assignment): el id llega por la ruta padre. Ahí
+   * no hay «Revisar documentación» (está en Recepción → Validación Técnica) ni «Volver a la lista», y el
+   * botón de asignar aparece después de elegir el tipo de revisión (F11-32, F11-33).
+   */
+  readonly inWorkspace =
+    !!this.route.parent?.snapshot?.paramMap?.get('id') &&
+    !this.route.snapshot.paramMap.get('protocolId');
   readonly requiredProfile = REQUIRED_PROFILE;
 
   readonly estado = signal<EstadoCarga>('cargando');
