@@ -10,13 +10,23 @@
       [class.step--not-applicable]="step.status === 'not-applicable'"
       [class.step--unavailable]="step.status === 'unavailable'"
       [class.step--undetermined]="step.status === 'undetermined'"
+      [class.step--not-reached]="step.notReached"
       [class.step--current]="step.current"
       [class.step--selected]="step.selected"
       [attr.aria-current]="step.selected ? 'step' : null"
       [attr.data-stage]="step.stage.code"
     >
       <span class="step__bar" aria-hidden="true"></span>
-      @if (step.link; as link) {
+      @if (step.notReached) {
+        <button
+          type="button"
+          class="step__name step__link step__link--not-reached"
+          (click)="notReachedClick.emit(step.stage.code)"
+        >
+          <span class="step__label">{{ step.stage.label }}</span>
+          <span class="visually-hidden">, {{ step.announce }}</span>
+        </button>
+      } @else if (step.link; as link) {
         <a class="step__name step__link" [routerLink]="link">
           <span class="step__label">{{ step.stage.label }}</span>
           @if (step.status === 'completed') {

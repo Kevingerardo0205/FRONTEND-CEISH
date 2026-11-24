@@ -97,6 +97,22 @@ export function deriveStageStates(
   return states;
 }
 
+/**
+ * Etapa posterior a la actual del protocolo (ep2c §3.8, 24/11/2026): aún no se puede abrir.
+ * Es `PENDIENTE`, o `unavailable` cuando además es posterior a la actual (SEGUIMIENTO y RENOVACION
+ * antes de llegar a ellas). Sin etapa del backend no se bloquea nada; las etapas completadas, las
+ * cerradas, las que no aplican y la actual no se bloquean.
+ */
+export function isStageNotReached(
+  current: Stage | null,
+  state: WorkspaceStageState | undefined,
+  stage: Stage,
+): boolean {
+  if (!current || stage.order <= current.order) return false;
+  if (state?.kind === 'unavailable') return true;
+  return state?.kind === 'determined' && state.status === 'PENDIENTE';
+}
+
 export function informationLoading(): WorkspaceInformationState {
   return { kind: 'loading' };
 }

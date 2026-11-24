@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Stage, StageCode } from '@domain/value-objects/stage.vo';
-import { WorkspaceStageState } from '@domain/value-objects/workspace-stage-state.vo';
+import { WorkspaceStageState, isStageNotReached } from '@domain/value-objects/workspace-stage-state.vo';
 
 export type StageStatus =
   | 'completed'
@@ -59,6 +59,8 @@ export class StageBarComponent {
   readonly links = input<Readonly<Partial<Record<StageCode, string>>>>({});
   /** Texto corto bajo la etapa actual, por ejemplo "Riesgo fijado · 3 de 4 dictámenes". */
   readonly detail = input<string>();
+  /** Clic en una etapa posterior a la actual: no navega; la pantalla muestra el aviso (F11-41). */
+  readonly notReachedClick = output<StageCode>();
 
   readonly steps = computed(() => {
     const current = this.stage();
@@ -70,6 +72,7 @@ export class StageBarComponent {
       const status = toStageStatus(states[stage.code]);
 
       const isCurrent = current?.code === stage.code;
+      const notReached = isStageNotReached(current, states[stage.code], stage);
 
       return {
         stage,
@@ -79,10 +82,13 @@ export class StageBarComponent {
           ? status === 'closed'
             ? 'etapa actual, cerrada'
             : 'etapa actual'
-          : STATUS_TEXT[status],
+          : notReached
+            ? 'etapa pendiente, aún no disponible'
+            : STATUS_TEXT[status],
+        notReached,
         current: isCurrent,
-        selected: selected === stage.code,
-        link: links[stage.code] ?? null,
+        selected: !notReached && selected === stage.code,
+        link: notReached ? null : (links[stage.code] ?? null),
       };
     });
   });

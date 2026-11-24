@@ -7,6 +7,7 @@ import { distinctUntilChanged, startWith, switchMap } from 'rxjs/operators';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
 import { WorkspaceInformationState } from '../../../domain/workspace-stage-state';
+import { STAGE_SCREEN_MISSING_MESSAGE } from '../../../domain/workspace-stage-messages';
 
 type StageCode = 'EVALUACION' | 'RESOLUCION' | 'SEGUIMIENTO' | 'RENOVACION';
 
@@ -27,7 +28,7 @@ const TITLES: Readonly<Record<StageCode, string>> = {
       <header class="workspace-stage__header">
         <p class="workspace-stage__eyebrow">Apartado del expediente</p>
         <h2>{{ title() }}</h2>
-        <p class="workspace-stage__description">Consulta disponible dentro del workspace.</p>
+        <p class="workspace-stage__description" data-testid="stage-screen-missing" role="status">{{ screenMissingMessage }}</p>
       </header>
 
       @if (informationState().kind === 'loading') {
@@ -59,6 +60,8 @@ export class ProtocolWorkspaceStagePage implements OnInit {
   private readonly resolutions = inject(IResolutionRepositoryPort);
   private readonly destroyRef = inject(DestroyRef);
 
+  /** La etapa ya se alcanzó pero su pantalla aún no existe (F11-44); distinto de «aún no llega». */
+  readonly screenMissingMessage = STAGE_SCREEN_MISSING_MESSAGE;
   readonly stage = signal<StageCode>('EVALUACION');
   readonly title = signal('Evaluación');
   readonly informationState = signal<WorkspaceInformationState>({ kind: 'loading' });

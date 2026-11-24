@@ -10,6 +10,7 @@ export {
   informationError,
   informationLoading,
   informationUnavailable,
+  isStageNotReached,
   operationAvailable,
   operationRestricted,
   selectedStageFromRoute,

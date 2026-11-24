@@ -29,7 +29,10 @@ import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/st
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
 import { StageCode } from '@domain/value-objects/stage.vo';
-import { deriveStageStates } from '../../../domain/workspace-stage-state';
+import { deriveStageStates, isStageNotReached } from '../../../domain/workspace-stage-state';
+import { stageNotReachedMessage } from '../../../domain/workspace-stage-messages';
+import { NotificationService } from '@infrastructure/services/notification.service';
+import { Stage } from '@domain/value-objects/stage.vo';
 import {
   isAssignmentStatus,
   workspaceStatusCode,
@@ -113,6 +116,7 @@ const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
             [selectedStage]="selectedStage()"
             [stageStates]="stageStates()"
             [stageLinks]="stageLinks()"
+            (notReachedStageClick)="onNotReachedStage($event)"
           >
             @if (visibleActions().length || showTermsNotice() || returnOrigin()) {
               <div protocolHeaderAction class="header-action">
@@ -354,6 +358,7 @@ export class ProtocolWorkspaceComponent implements OnInit {
   private authFacade = inject(AuthFacade);
   private activeRoleFacade = inject(ActiveRoleFacade);
   private snackBar = inject(MatSnackBar);
+  private notifications = inject(NotificationService);
   private roleHome = inject(RoleHome);
   private destroyRef = inject(DestroyRef);
   /** F10 D20 (3) y F03 D5 (1): el mismo texto que el motivo del formulario de asignación. */
@@ -635,6 +640,51 @@ export class ProtocolWorkspaceComponent implements OnInit {
       const target = stage.code === 'ASIGNACION' ? this.assignmentPath() : STAGE_PATHS[stage.code];
       // Relativa al espacio; si la ruta no existe, el espacio se queda donde está.
       void this.router.navigate([target], { relativeTo: this.route, replaceUrl: true }).catch(() => false);
+    });
+  });
+
+  /** Aviso flotante (tipo «info», se cierra solo) de una etapa que el protocolo aún no alcanza. */
+  private notifyNotReached(stage: StageCode): void {
+    this.notifications.notify(stageNotReachedMessage(Stage.fromBackend(stage).label), 'info');
+  }
+
+  /** Clic en una etapa posterior a la actual de la barra: no navega, solo avisa (F11-41). */
+  onNotReachedStage(stage: StageCode): void {
+    this.notifyNotReached(stage);
+  }
+
+  /**
+   * Etapa posterior a la actual abierta por URL: va a la etapa actual (replaceUrl) con el mismo aviso
+   * (F11-43). Sin etapa del backend no se bloquea nada. Una vez por intento, aunque la señal cambie.
+   */
+  private blockedHandled: StageCode | null = null;
+  private readonly redirectNotReachedStage = effect(() => {
+    const current = this.workspaceStage();
+    const selected = this.selectedStage();
+    const loaded = !!this.protocol();
+    if (!loaded || !current || !selected) {
+      return;
+    }
+    const target = Stage.all().find((s) => s.code === selected);
+    const blocked = !!target && isStageNotReached(current, this.stageStates()[selected], target);
+    if (!blocked) {
+      this.blockedHandled = null;
+      return;
+    }
+    // Quien asigna espera a saber si hay evaluadores: de eso depende formulario o historial.
+    const gate = this.activeAssignments().kind;
+    if (this.needsAssignmentGate() && (gate === 'idle' || gate === 'loading')) return;
+    if (this.blockedHandled === selected) return;
+    this.blockedHandled = selected;
+    untracked(() => {
+      const path =
+        current.code === 'ASIGNACION'
+          ? this.assignmentPath()
+          : current.code === 'RECEPCION'
+            ? 'info'
+            : STAGE_PATHS[current.code];
+      this.notifyNotReached(selected);
+      void this.router.navigate([path], { relativeTo: this.route, replaceUrl: true }).catch(() => false);
     });
   });
 

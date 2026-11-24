@@ -91,4 +91,16 @@ describe('ProtocolWorkspaceStagePage - F-01 adversarial isolation', () => {
 
     expect(pending.observed).toBeFalse();
   });
+
+  it('con la etapa ya alcanzada pero sin pantalla muestra «Esta sección todavía no está disponible en el sistema.», distinto de «aún no llega» (F11-44)', () => {
+    create(of([]));
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(fixture.componentInstance.screenMissingMessage).toBe(
+      'Esta sección todavía no está disponible en el sistema.',
+    );
+    expect(text).toContain('Esta sección todavía no está disponible en el sistema.');
+    expect(text).not.toContain('aún no está en la etapa');
+    expect(text).not.toContain('Consulta disponible dentro del workspace');
+  });
 });

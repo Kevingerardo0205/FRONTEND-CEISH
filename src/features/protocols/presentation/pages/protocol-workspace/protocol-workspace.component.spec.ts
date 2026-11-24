@@ -4,6 +4,11 @@ import { Component, signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router, UrlTree } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '@infrastructure/services/notification.service';
+import {
+  STAGE_SCREEN_MISSING_MESSAGE,
+  stageNotReachedMessage,
+} from '../../../domain/workspace-stage-messages';
 import { map, Observable, of, Subject, throwError } from 'rxjs';
 
 import { ProtocolWorkspaceComponent } from './protocol-workspace.component';
@@ -804,10 +809,10 @@ describe('ProtocolWorkspaceComponent - template real', () => {
 
     expect(hidden('RECEPCION')).toBe(', completada');
     expect(hidden('ASIGNACION')).toBe(', etapa actual');
-    expect(hidden('EVALUACION')).toBe(', pendiente');
-    expect(hidden('RESOLUCION')).toBe(', pendiente');
-    expect(hidden('SEGUIMIENTO')).toBe(', no disponible');
-    expect(hidden('RENOVACION')).toBe(', no disponible');
+    expect(hidden('EVALUACION')).toBe(', etapa pendiente, aún no disponible');
+    expect(hidden('RESOLUCION')).toBe(', etapa pendiente, aún no disponible');
+    expect(hidden('SEGUIMIENTO')).toBe(', etapa pendiente, aún no disponible');
+    expect(hidden('RENOVACION')).toBe(', etapa pendiente, aún no disponible');
   });
 
   it('ep2c §3.4: protocolo RECHAZADO cierra la etapa donde se detuvo y las posteriores no aplican', () => {
@@ -1325,6 +1330,7 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
   let pending: Subject<ProtocolEntity>[];
   let activeResponse: Observable<ActiveAssignmentsResult>;
   let getActiveAssignments: jasmine.Spy;
+  let notify: jasmine.Spy;
 
   const root = () => harness.fixture.nativeElement as HTMLElement;
   const tabLabels = () =>
@@ -1347,6 +1353,7 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
     backendStage = 'ASIGNACION';
     activeResponse = of(ACTIVE_RESULT(0));
     getActiveAssignments = jasmine.createSpy('getActiveAssignments').and.callFake(() => activeResponse);
+    notify = jasmine.createSpy('notify');
     activeRole = signal<RoleCode | null>('PRESIDENTE');
     const getById = jasmine.createSpy('getById').and.callFake(() => {
       const response = new Subject<ProtocolEntity>();
@@ -1395,6 +1402,7 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
         },
         { provide: AuthFacade, useValue: { currentUser: () => ({ rol: 'PRESIDENTE', roles: ['PRESIDENTE'] }) } },
         { provide: ActiveRoleFacade, useValue: { activeRole } },
+        { provide: NotificationService, useValue: { notify } },
         { provide: RoleHome, useValue: { urlTree: () => 'inicio-del-rol-activo' } },
       ],
     });
@@ -1403,6 +1411,101 @@ describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (
     });
     harness = await RouterTestingHarness.create();
     router = TestBed.inject(Router);
+  });
+
+  describe('etapas posteriores a la actual (F11-41 a F11-43, 24/11/2026)', () => {
+    const barItem = (code: string) =>
+      root().querySelector(`app-stage-bar li[data-stage="${code}"]`) as HTMLElement;
+    it('el texto del aviso es el pedido para cada etapa', () => {
+      expect(stageNotReachedMessage('Evaluación')).toBe(
+        'El protocolo aún no está en la etapa Evaluación. Podrá verla cuando llegue a ella.',
+      );
+      expect(stageNotReachedMessage('Resolución')).toContain('etapa Resolución.');
+    });
+
+    for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`${role}: el clic en una etapa posterior no navega y muestra el aviso «info» (F11-41)`, async () => {
+        activeRole.set(role);
+        await open('/workspace/5/info');
+        const before = router.url;
+        notify.calls.reset();
+
+        (barItem('EVALUACION').querySelector('button') as HTMLButtonElement).click();
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+
+        expect(router.url).toBe(before);
+        expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+      });
+    }
+
+    it('la barra anuncia las posteriores como pendientes y sin aria-current (F11-42)', async () => {
+      await open('/workspace/5/info');
+
+      for (const code of ['EVALUACION', 'RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
+        expect(barItem(code).hasAttribute('aria-current')).withContext(code).toBeFalse();
+        expect(barItem(code).querySelector('.visually-hidden')?.textContent?.trim())
+          .withContext(code)
+          .toBe(', etapa pendiente, aún no disponible');
+        expect(barItem(code).querySelector('a')).withContext(code).toBeNull();
+      }
+    });
+
+    it('la etapa actual y las completadas siguen siendo navegables y el aviso no sale', async () => {
+      await open('/workspace/5/info');
+
+      expect(barItem('RECEPCION').querySelector('a')).not.toBeNull();
+      expect(barItem('ASIGNACION').querySelector('a')).not.toBeNull();
+      expect(barItem('ASIGNACION').getAttribute('aria-current')).toBe('step');
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`${role}: abrir por URL una etapa posterior redirige a la etapa actual con replaceUrl y el mismo aviso (F11-43)`, async () => {
+        activeRole.set(role);
+        const replace = spyOn(router, 'navigate').and.callThrough();
+
+        await open('/workspace/5/evaluation');
+
+        expect(router.url).toBe(
+          role === 'PRESIDENTE' ? '/workspace/5/assignment' : '/workspace/5/assignment-history',
+        );
+        expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+        expect(replace.calls.allArgs().some(([, extras]) => (extras as { replaceUrl?: boolean })?.replaceUrl === true))
+          .toBeTrue();
+      });
+    }
+
+    it('sin etapa del backend no se bloquea ni se avisa (F11-43)', async () => {
+      backendStage = null;
+
+      await open('/workspace/5/evaluation');
+
+      expect(router.url).toBe('/workspace/5/evaluation');
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('abrir por URL la etapa actual o una anterior no avisa ni redirige', async () => {
+      await open('/workspace/5/assignment-history');
+
+      expect(router.url).toBe('/workspace/5/assignment-history');
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('con el protocolo en RECEPCION la URL de Evaluación vuelve al Resumen con el aviso', async () => {
+      backendStage = 'RECEPCION';
+
+      await open('/workspace/5/evaluation');
+
+      expect(router.url).toBe('/workspace/5/info');
+      expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+    });
+
+    it('el aviso de «aún no llega» y el de «no existe todavía» son mensajes distintos (F11-44)', () => {
+      expect(STAGE_SCREEN_MISSING_MESSAGE).toBe('Esta sección todavía no está disponible en el sistema.');
+      expect(stageNotReachedMessage('Evaluación')).not.toBe(STAGE_SCREEN_MISSING_MESSAGE);
+      expect(stageNotReachedMessage('Evaluación')).not.toContain(STAGE_SCREEN_MISSING_MESSAGE);
+    });
   });
 
   it('PRESIDENTE abre en ASIGNACION: va al formulario, solo ve la pestaña Asignación y no ve Asignar Pares', async () => {

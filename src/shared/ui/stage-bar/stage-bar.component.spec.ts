@@ -116,14 +116,91 @@ describe('StageBarComponent', () => {
     expect(el.querySelector('[aria-current="step"]')?.getAttribute('data-stage')).toBe('SEGUIMIENTO');
   });
 
-  it('anuncia con texto oculto "completada", "etapa actual" o "pendiente"', () => {
+  it('anuncia con texto oculto "completada", "etapa actual" o "etapa pendiente, aún no disponible"', () => {
     const el = render('ASIGNACION');
 
     expect(hiddenText(item(el, 'RECEPCION'))).toBe(', completada');
     expect(hiddenText(item(el, 'ASIGNACION'))).toBe(', etapa actual');
     for (const code of ['EVALUACION', 'RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
-      expect(hiddenText(item(el, code))).withContext(code).toBe(', pendiente');
+      expect(hiddenText(item(el, code))).withContext(code).toBe(', etapa pendiente, aún no disponible');
     }
+  });
+
+  describe('etapas posteriores a la actual (F11-41, F11-42)', () => {
+    const LINKS = Object.fromEntries(
+      Stage.all().map((s) => [s.code, '/dashboard/protocols/workspace/5/' + s.code.toLowerCase()]),
+    );
+
+    function withLinks(code: string): HTMLElement {
+      fixture.componentRef.setInput('links', LINKS);
+      return render(code);
+    }
+
+    it('las posteriores no tienen enlace: son un botón sin aria-current y con texto oculto de pendiente', () => {
+      const el = withLinks('ASIGNACION');
+
+      for (const code of ['EVALUACION', 'RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
+        const li = item(el, code);
+        expect(li.querySelector('a')).withContext(code).toBeNull();
+        expect(li.querySelector('button')).withContext(code).not.toBeNull();
+        expect(li.hasAttribute('aria-current')).withContext(code).toBeFalse();
+        expect(hiddenText(li)).withContext(code).toBe(', etapa pendiente, aún no disponible');
+      }
+    });
+
+    it('las completadas y la actual siguen con enlace', () => {
+      const el = withLinks('RESOLUCION');
+
+      for (const code of ['RECEPCION', 'ASIGNACION', 'EVALUACION', 'RESOLUCION']) {
+        expect(item(el, code).querySelector('a')).withContext(code).not.toBeNull();
+        expect(item(el, code).querySelector('button')).withContext(code).toBeNull();
+      }
+    });
+
+    it('el clic en una posterior emite su código y no hay enlace que navegue', () => {
+      const clicks: string[] = [];
+      fixture.componentInstance.notReachedClick.subscribe((c) => clicks.push(c));
+      const el = withLinks('ASIGNACION');
+
+      (item(el, 'RESOLUCION').querySelector('button') as HTMLButtonElement).click();
+
+      expect(clicks).toEqual(['RESOLUCION']);
+    });
+
+    it('aunque esté seleccionada, una posterior no lleva aria-current', () => {
+      fixture.componentRef.setInput('links', LINKS);
+      render('ASIGNACION');
+      fixture.componentRef.setInput('selectedStage', 'EVALUACION');
+      fixture.detectChanges();
+
+      expect(item(fixture.nativeElement, 'EVALUACION').hasAttribute('aria-current')).toBeFalse();
+    });
+
+    it('sin etapa del backend no se bloquea ninguna', () => {
+      fixture.componentRef.setInput('links', LINKS);
+      fixture.componentRef.setInput('stageStates', {});
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('button').length).toBe(0);
+    });
+
+    it('con el protocolo cerrado las posteriores (no aplica) no se tratan como pendientes', () => {
+      fixture.componentRef.setInput('links', LINKS);
+      fixture.componentRef.setInput('stage', Stage.fromBackend('EVALUACION'));
+      fixture.componentRef.setInput('stageStates', {
+        RECEPCION: { kind: 'determined', status: 'COMPLETADA' },
+        ASIGNACION: { kind: 'determined', status: 'COMPLETADA' },
+        EVALUACION: { kind: 'determined', status: 'CERRADA' },
+        RESOLUCION: { kind: 'determined', status: 'NO_APLICA' },
+        SEGUIMIENTO: { kind: 'determined', status: 'NO_APLICA' },
+        RENOVACION: { kind: 'determined', status: 'NO_APLICA' },
+      });
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelectorAll('button').length).toBe(0);
+      expect(hiddenText(item(el, 'RESOLUCION'))).toBe(', no aplica');
+    });
   });
 
   it('con RECEPCION ninguna etapa está completada', () => {
@@ -218,9 +295,8 @@ describe('StageBarComponent', () => {
       expect(hiddenText(item(el, 'EVALUACION'))).toBe(', cerrada');
     });
 
-    it('anuncia "no disponible" para una etapa unavailable y no la marca como pendiente', () => {
-      const el = setStates('EVALUACION', {
-        RESOLUCION: { kind: 'determined', status: 'PENDIENTE' },
+    it('anuncia "no disponible" para una etapa unavailable que no es posterior a la actual', () => {
+      const el = setStates('RENOVACION', {
         SEGUIMIENTO: { kind: 'unavailable' },
         RENOVACION: { kind: 'unavailable' },
       });
@@ -228,7 +304,19 @@ describe('StageBarComponent', () => {
       expect(hiddenText(item(el, 'SEGUIMIENTO'))).toBe(', no disponible');
       expect(item(el, 'SEGUIMIENTO').classList).toContain('step--unavailable');
       expect(item(el, 'SEGUIMIENTO').classList).not.toContain('step--pending');
-      expect(hiddenText(item(el, 'RESOLUCION'))).toBe(', pendiente');
+    });
+
+    it('una etapa unavailable posterior a la actual se anuncia como pendiente y no es navegable', () => {
+      const el = setStates('EVALUACION', {
+        RESOLUCION: { kind: 'determined', status: 'PENDIENTE' },
+        SEGUIMIENTO: { kind: 'unavailable' },
+        RENOVACION: { kind: 'unavailable' },
+      });
+
+      for (const code of ['RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
+        expect(hiddenText(item(el, code))).withContext(code).toBe(', etapa pendiente, aún no disponible');
+        expect(item(el, code).querySelector('button')).withContext(code).not.toBeNull();
+      }
     });
 
     it('sin estado para una etapa sigue anunciando "estado no determinado"', () => {

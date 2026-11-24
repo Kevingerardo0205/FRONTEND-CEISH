@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Stage } from '@domain/value-objects/stage.vo';
 import { StageBarComponent } from '../stage-bar/stage-bar.component';
 import { StageCode } from '@domain/value-objects/stage.vo';
@@ -42,6 +42,8 @@ export class ProtocolHeaderComponent {
   readonly selectedStage = input<StageCode | null>(null);
   readonly stageStates = input<Readonly<Partial<Record<StageCode, WorkspaceStageState>>> >({});
   readonly stageLinks = input<Readonly<Partial<Record<StageCode, string>>>>({});
+  /** Clic en una etapa que el protocolo aún no alcanza (la pantalla muestra el aviso). */
+  readonly notReachedStageClick = output<StageCode>();
 
   /** Chip neutro: código y versión que existan, unidos por "·"; sin ninguno, no hay chip. */
   readonly identity = computed(() => {
