@@ -308,4 +308,31 @@ describe('ProtocolValidationDetailPage - solo lectura de la PRESIDENTE (F11 EP2)
     expect(el.querySelectorAll('.btn-finalize').length).toBe(1);
     expect(el.querySelectorAll('.btn-cert').length).toBe(1);
   });
+
+  describe('aviso «Consulta en solo lectura» (d5ed5bb, condición !canValidate() && !isInvestigador())', () => {
+    const BANNER = '.president-readonly-banner';
+
+    it('la PRESIDENTE lo ve, con su texto', async () => {
+      const { el } = await render('PRESIDENTE', false);
+
+      const banner = el.querySelector(BANNER);
+      expect(banner).not.toBeNull();
+      expect(banner?.textContent).toContain('Consulta en solo lectura');
+      expect(banner?.textContent).toContain('esta vista no permite modificarlos');
+    });
+
+    for (const finalized of [false, true]) {
+      it(`la SECRETARIA no lo ve (${finalized ? 'con la recepción validada' : 'en revisión'})`, async () => {
+        const { el } = await render('SECRETARIA', finalized);
+
+        expect(el.querySelector(BANNER)).toBeNull();
+      });
+    }
+
+    it('el INVESTIGADOR no lo ve', async () => {
+      const { el } = await render('INVESTIGADOR', false);
+
+      expect(el.querySelector(BANNER)).toBeNull();
+    });
+  });
 });
