@@ -2,22 +2,57 @@
   @for (step of steps(); track step.stage.code) {
     <li
       class="step"
-      [class.step--done]="step.status === 'done'"
-      [class.step--current]="step.status === 'current'"
+      [class.step--done]="step.status === 'completed'"
+      [class.step--completed]="step.status === 'completed'"
+      [class.step--in-progress]="step.status === 'in-progress'"
       [class.step--pending]="step.status === 'pending'"
-      [attr.aria-current]="step.status === 'current' ? 'step' : null"
+      [class.step--closed]="step.status === 'closed'"
+      [class.step--not-applicable]="step.status === 'not-applicable'"
+      [class.step--unavailable]="step.status === 'unavailable'"
+      [class.step--undetermined]="step.status === 'undetermined'"
+      [class.step--not-reached]="step.notReached"
+      [class.step--current]="step.current"
+      [class.step--selected]="step.selected"
+      [attr.aria-current]="step.selected ? 'step' : null"
       [attr.data-stage]="step.stage.code"
     >
       <span class="step__bar" aria-hidden="true"></span>
-      <!-- El estado de cada etapa se dice con texto oculto (F00 §5, como F09 D19) -->
-      <span class="step__name">
-        <span class="step__label">{{ step.stage.label }}</span>
-        @if (step.status === 'done') {
-          <span class="step__check" aria-hidden="true">✓</span>
-        }
-        <span class="visually-hidden">, {{ statusText[step.status] }}</span>
-      </span>
-      @if (step.status === 'current' && detail()) {
+      @if (step.notReached) {
+        <button
+          type="button"
+          class="step__name step__link step__link--not-reached"
+          (click)="notReachedClick.emit(step.stage.code)"
+        >
+          <span class="step__label">{{ step.stage.label }}</span>
+          <span class="visually-hidden">, {{ step.announce }}</span>
+        </button>
+      } @else if (step.notApplicable) {
+        <button
+          type="button"
+          class="step__name step__link step__link--not-reached"
+          (click)="notApplicableClick.emit(step.stage.code)"
+        >
+          <span class="step__label">{{ step.stage.label }}</span>
+          <span class="visually-hidden">, {{ step.announce }}</span>
+        </button>
+      } @else if (step.link; as link) {
+        <a class="step__name step__link" [routerLink]="link">
+          <span class="step__label">{{ step.stage.label }}</span>
+          @if (step.status === 'completed') {
+            <span class="step__check" aria-hidden="true">✓</span>
+          }
+          <span class="visually-hidden">, {{ step.announce }}</span>
+        </a>
+      } @else {
+        <span class="step__name">
+          <span class="step__label">{{ step.stage.label }}</span>
+          @if (step.status === 'completed') {
+            <span class="step__check" aria-hidden="true">✓</span>
+          }
+          <span class="visually-hidden">, {{ step.announce }}</span>
+        </span>
+      }
+      @if (step.current && detail()) {
         <span class="step__detail">{{ detail() }}</span>
       }
     </li>

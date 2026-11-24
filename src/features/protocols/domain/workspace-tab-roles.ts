@@ -4,13 +4,21 @@ import { RoleCode } from '@domain/value-objects/role.vo';
  * F10 D10: acceso a cada pestaña del espacio según el rol activo.
  * F11 EP2 (20/11/2026): PRESIDENTE abre `validation` en solo lectura (F11 §4).
  */
-export type WorkspaceTab = 'info' | 'validation' | 'follow-up';
+export type WorkspaceTab = 'info' | 'assignment' | 'validation' | 'follow-up';
 
 export const WORKSPACE_TAB_ROLES: Readonly<Record<WorkspaceTab, readonly RoleCode[]>> = {
   info: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+  assignment: ['PRESIDENTE'],
   validation: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
   'follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
 };
+
+/** Roles que ya pueden entrar al workspace mediante alguna pestaña existente. */
+export const WORKSPACE_ACCESS_ROLES: readonly RoleCode[] = [
+  'SECRETARIA',
+  'PRESIDENTE',
+  'INVESTIGADOR',
+];
 
 /**
  * F10 D11 (S-1c): primera pestaña que abre el rol, en el orden de `WORKSPACE_TAB_ROLES`.
@@ -35,6 +43,12 @@ export type WorkspaceAction =
  * `VALIDATE_ALL` también decide la vista de validar de la pestaña Validación (F11 EP2): sin ella
  * y sin `SUBMIT_CORRECTIONS`, la pestaña es de solo lectura.
  */
+/**
+ * Quién puede ver a las personas asignadas en la pestaña de la etapa Asignación (F11-39, F11-40):
+ * el comité. El INVESTIGADOR abre la etapa pero no ve evaluadores (F11: sin nombres, ids ni correos).
+ */
+export const ASSIGNMENT_EVALUATORS_VIEW_ROLES: readonly RoleCode[] = ['SECRETARIA', 'PRESIDENTE'];
+
 export const WORKSPACE_ACTION_ROLES: Readonly<Record<WorkspaceAction, readonly RoleCode[]>> = {
   EDIT_PROTOCOL: ['INVESTIGADOR'],
   VALIDATE_ALL: ['SECRETARIA'],

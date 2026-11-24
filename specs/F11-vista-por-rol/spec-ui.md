@@ -153,3 +153,80 @@ EP4:
 - Qué edita la SECRETARIA en Evaluación, Seguimiento y Renovación (§3, «por precisar»).
 - FALTA 3 (B2), FALTA 4 (B8) y FALTA 5 (B12) (§6).
 - Tareas aparte del Paso 0 de EP4 (decisión de la usuaria del 20/11/2026), en `tasks.md` §1: notificaciones inventadas; pestaña Seguimiento con eventos adversos inventados; eventos adversos y renovaciones con éxito falso; `downloadConsolidatedPdf` con la ruta armada a mano; saludo de tú del asistente de IA; inventario de pantallas y adaptadores con datos simulados en todo el frontend.
+## 4a. EP2b - La PRESIDENTA consulta antes de asignar
+
+EP2b documenta el acceso a la documentacion desde las pantallas existentes de F03, sin crear una vista paralela ni cambiar los permisos. El rol de negocio es PRESIDENTA y el codigo de rol existente es `PRESIDENTE`.
+
+**Camino principal:** `F03 Lista de asignacion -> Ver protocolo -> Workspace EP2 -> Validacion -> Asignar Pares -> Formulario F03`.
+
+**Camino alternativo:** `F03 Lista de asignacion -> Asignar -> Formulario F03 -> Revisar documentacion -> Validacion`.
+
+**EP2b-01 - Consultar protocolo desde la lista.** La PRESIDENTA puede usar una accion independiente denominada «Ver protocolo» para abrir el workspace del protocolo. La accion no reemplaza, deshabilita ni modifica «Asignar».
+
+**EP2b-02 - Revisar documentacion desde el formulario.** La PRESIDENTA puede usar «Revisar documentacion» en el formulario de asignacion para abrir la pestana Validacion del mismo protocolo.
+
+**EP2b-03 - Reutilizacion del workspace.** El flujo reutiliza las rutas, componentes y funcionalidades existentes de EP2: `ProtocolWorkspaceComponent`, `ProtocolValidationDetailPage`, `ProtocolWorkspaceService` y `/dashboard/protocols/workspace/:id/validation`. No se crea una vista paralela.
+
+**EP2b-04 - Consulta de solo lectura.** La revision documental conserva las restricciones actuales de la PRESIDENTA. No habilita aprobar, rechazar, validar requisitos, cambiar paginas, finalizar, subsanar ni otra operacion que no este permitida por EP2.
+
+**EP2b-05 - Conservacion del contexto.** La navegacion conserva el `protocolId` y permite retornar al origen correspondiente. Los unicos origenes permitidos son `assignment-list` y `assignment-form`; no se aceptan URL arbitrarias de retorno.
+
+**EP2b-06 - Continuidad de asignacion.** La accion existente «Asignar Pares» de F10 D20 se mantiene y continua conduciendo al formulario de asignacion. EP2b no duplica ni reemplaza esa accion.
+
+## 7a. Criterios de aceptacion de EP2b
+
+18. **F11-18:** Mientras el rol activo sea PRESIDENTE, la lista de asignacion debe mostrar «Ver protocolo» como accion independiente de «Asignar» para cada fila.
+19. **F11-19:** Al seleccionar «Ver protocolo» desde la lista, debe abrirse el workspace del protocolo cuyo identificador corresponde a la fila seleccionada.
+20. **F11-20:** «Asignar» debe conservar su comportamiento y continuar abriendo `/dashboard/evaluations/assignment/:protocolId` de forma independiente.
+21. **F11-21:** Mientras el rol activo sea PRESIDENTE, el formulario debe ofrecer «Revisar documentacion» para el protocolo identificado por `protocolId`.
+22. **F11-22:** Al seleccionar «Revisar documentacion», debe abrirse `/dashboard/protocols/workspace/:protocolId/validation` para el mismo protocolo.
+23. **F11-23:** El flujo debe conservar el `protocolId` y un origen interno cuyo valor solo puede ser `assignment-list` o `assignment-form`.
+24. **F11-24:** Al retornar desde Validacion, `assignment-list` debe llevar a la lista y `assignment-form` al formulario del mismo protocolo.
+25. **F11-25:** Validacion debe conservar las restricciones de solo lectura de F11-1 a F11-7 para PRESIDENTA.
+26. **F11-26:** «Asignar Pares» de F10 D20 debe seguir abriendo el formulario y conservarse como accion independiente.
+27. **F11-27:** EP2b no debe cambiar el acceso, las pestanas ni las acciones de SECRETARIA, INVESTIGADOR o EVALUADOR definidos en F11 y F10.
+## 7b. Criterios de EP2c: pestañas por etapa y formulario en el espacio (24/11/2026)
+
+Decisión de la usuaria del 24/11/2026 (detalle en `ep2c.md` §3.6).
+
+28. **F11-28:** Mientras la etapa seleccionada en la barra sea RECEPCIÓN, el workspace debe mostrar solo las pestañas Resumen y Validación Técnica, esta última con los roles de F11-1 a F11-7.
+29. **F11-29:** Mientras la etapa seleccionada sea ASIGNACIÓN, el workspace debe mostrar solo la pestaña Asignación: el formulario de asignación para la PRESIDENTE mientras el protocolo esté en COMPLETO, y el historial en los demás casos y para los demás roles.
+30. **F11-30:** Mientras la etapa seleccionada sea EVALUACIÓN, RESOLUCIÓN o RENOVACIÓN, el workspace no debe mostrar pestañas y la página debe mostrar el estado «no disponible» de EP2c; con SEGUIMIENTO debe mostrar su pestaña solo cuando exista.
+31. **F11-31:** Cuando se abra el espacio por su entrada por defecto, la etapa seleccionada debe ser la etapa actual del protocolo.
+32. **F11-32:** Mientras el formulario de asignación esté dentro del espacio, no debe mostrar «Revisar documentación» ni «Volver a la lista».
+33. **F11-33:** Mientras no se haya elegido el tipo de revisión, el formulario dentro del espacio debe mostrar solo el título, el código y título del protocolo y «Tipo de revisión»; el botón «Asignar evaluadores» y su motivo deben aparecer después de elegir el tipo, debajo de las filas de evaluadores.
+34. **F11-34:** Mientras la pestaña Asignación esté abierta, el encabezado del workspace no debe mostrar «Asignar Pares» ni el aviso de tiempos sin aceptar.
+
+## 7c. Criterios de EP2c: protocolo ya asignado e INVESTIGADOR en Asignación (24/11/2026)
+
+Decisión de la usuaria del 24/11/2026 tras la validación en el navegador (detalle en `ep2c.md` §3.7).
+
+35. **F11-35:** Mientras el protocolo tenga al menos una asignación activa (`GET /evaluations/protocol/:id/active-assignments`), la pestaña de la etapa Asignación debe mostrar el historial y nunca el formulario.
+36. **F11-36:** Mientras el protocolo tenga al menos una asignación activa, el encabezado no debe mostrar «Asignar Pares».
+37. **F11-37:** Cuando la PRESIDENTE abra `workspace/:id/assignment` y el protocolo tenga asignaciones activas, el sistema debe mostrar «Este protocolo ya tiene evaluadores asignados.» con el enlace al historial, sin formulario ni botón.
+38. **F11-38:** Si la consulta de asignaciones activas falla, el formulario debe mostrar el estado de error con «Reintentar» y no debe mostrar el formulario por defecto.
+39. **F11-39:** Mientras el rol activo sea INVESTIGADOR, la etapa Asignación debe abrirse sin rebote al inicio ni aviso de acceso denegado y debe mostrar «La asignación de evaluadores es reservada del comité. Podrá ver el avance de su protocolo en la barra de etapas.» en lugar del historial.
+40. **F11-40:** Mientras el rol activo sea INVESTIGADOR, la pestaña Asignación no debe pedir asignaciones activas ni historial de reasignaciones ni mostrar nombres, ids o correos de evaluadores.
+
+Pendiente del backend: la lista de asignación de la PRESIDENTE debe excluir los protocolos con asignación activa (TSK-002-N54); mientras tanto se apoya en el aviso del formulario y en el 409.
+
+## 7d. Criterios de EP2c: etapas posteriores a la actual (24/11/2026)
+
+Decisión de la usuaria del 24/11/2026 (detalle en `ep2c.md` §3.8).
+
+41. **F11-41:** Cuando el usuario haga clic en una etapa posterior a la etapa actual del protocolo en la barra de etapas, el sistema no debe navegar y debe mostrar un aviso flotante de tipo «info» con el texto «El protocolo aún no está en la etapa {nombre}. Podrá verla cuando llegue a ella.».
+42. **F11-42:** Mientras una etapa sea posterior a la etapa actual, la barra debe anunciarla con texto oculto «etapa pendiente, aún no disponible» y no debe asignarle `aria-current` ni enlace.
+43. **F11-43:** Cuando se abra por URL una etapa posterior a la etapa actual, el sistema debe redirigir a la etapa actual con `replaceUrl` y mostrar el mismo aviso; si el backend no envía etapa, no debe bloquear ninguna.
+44. **F11-44:** Cuando la etapa ya se haya alcanzado y su pantalla aún no exista, el sistema debe mantener la página y mostrar «Esta sección todavía no está disponible en el sistema.», distinto del aviso de F11-41.
+45. **F11-45:** Las etapas completadas, las cerradas y la etapa actual deben seguir siendo navegables.
+46. **F11-46:** Los criterios F11-41 a F11-48 deben aplicar a la SECRETARIA, la PRESIDENTE y el INVESTIGADOR; el EVALUADOR debe seguir redirigido a «Mis evaluaciones».
+47. **F11-47:** Cuando el protocolo esté cerrado (RECHAZADO o ARCHIVADO_VENCIMIENTO) y el usuario haga clic en una etapa «no aplica», el sistema no debe navegar y debe mostrar un aviso flotante de tipo «info» con el texto «El protocolo se cerró en la etapa {etapa}; esta etapa no aplica.», con la etapa donde se cerró.
+48. **F11-48:** Cuando el protocolo esté cerrado y se abra por URL una etapa «no aplica», el sistema debe redirigir a la etapa cerrada con `replaceUrl` y mostrar el mismo aviso.
+
+## EP2b v0.2 — Asignación integrada en el workspace (22/11/2026)
+
+La decisión anterior de mantener «Ver protocolo» como acción independiente queda reemplazada por esta revisión. La única acción principal de cada fila es «Asignar» y abre directamente `/dashboard/protocols/workspace/:protocolId/assignment` con `origin=assignment-list`.
+
+El workspace conserva su encabezado y barra de módulos; para la PRESIDENTA, durante la etapa `COMPLETO`, «Asignación» es la segunda pestaña y renderiza el `PeerAssignmentFormPage` existente. El formulario conserva sus casos de uso, validaciones, restricciones de rol y comportamiento de envío. La ruta `/dashboard/evaluations/assignment/:protocolId` se mantiene solo por compatibilidad con usos previos y deja de ser el destino principal.
+
+La recarga y la navegación directa a `/dashboard/protocols/workspace/:protocolId/assignment` reconstruyen el formulario usando el `:id` del workspace. Las demás pestañas y sus permisos permanecen sin cambios; no se modifican guards, contratos API ni políticas de autorización.

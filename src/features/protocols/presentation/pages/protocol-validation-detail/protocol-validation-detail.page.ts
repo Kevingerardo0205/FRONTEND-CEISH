@@ -73,6 +73,18 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
       </div>
 
       <div *ngIf="(!isLoading() && !protocolNotFound()) || isInsideWorkspace()">
+        <div
+          *ngIf="!canValidate() && !isInvestigador()"
+          class="president-readonly-banner"
+          role="status"
+        >
+          <mat-icon aria-hidden="true">visibility</mat-icon>
+          <div>
+            <strong>Consulta en solo lectura</strong>
+            <span>Puede revisar los documentos y su estado; esta vista no permite modificarlos.</span>
+          </div>
+        </div>
+
         <!-- ENCABEZADO ESTILO OFICIAL PET 2023 - Solo si no es Workspace -->
         <header class="official-header shadow-sm" *ngIf="!isInsideWorkspace()">
           <div class="top-row">
@@ -534,6 +546,35 @@ import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pip
         padding: 0;
         max-width: 100%;
         min-height: auto;
+      }
+
+      .president-readonly-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin: 0 0 16px;
+        padding: 12px 16px;
+        border: 1px solid var(--c-border);
+        border-left: 4px solid var(--c-primary);
+        border-radius: var(--radius-control);
+        background: var(--c-primary-soft);
+        color: var(--c-text);
+
+        mat-icon {
+          flex: 0 0 auto;
+          color: var(--c-primary-dark);
+        }
+
+        div {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        span {
+          color: var(--c-text-2);
+          font-size: 0.875rem;
+        }
       }
       .loading-overlay {
         display: flex;

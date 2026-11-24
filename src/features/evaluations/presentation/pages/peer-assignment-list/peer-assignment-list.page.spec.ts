@@ -109,7 +109,7 @@ describe('PeerAssignmentListPage (F03 D2)', () => {
     expect(row.querySelector('.asignacion__codigo')).toBeNull();
   });
 
-  it('«Asignar» abre el formulario de ese protocolo (EARS 3)', () => {
+  it('«Asignar» abre el workspace en el módulo Asignación (EP2b)', () => {
     setup(of([FULL]));
     const button = root.querySelector('tbody button') as HTMLButtonElement;
     expect(text(button)).toBe('Asignar');
@@ -117,7 +117,10 @@ describe('PeerAssignmentListPage (F03 D2)', () => {
 
     button.click();
 
-    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/evaluations/assignment', 15]);
+    expect(navigate).toHaveBeenCalledOnceWith(
+      ['/dashboard/protocols/workspace', 15, 'assignment'],
+      { queryParams: { origin: 'assignment-list' } },
+    );
   });
 
   it('sin los tiempos aceptados, «Asignar» está deshabilitado con el motivo enlazado (D10 (3))', () => {
@@ -139,5 +142,11 @@ describe('PeerAssignmentListPage (F03 D2)', () => {
     expect(button.disabled).toBeFalse();
     expect(button.getAttribute('aria-describedby')).toBeNull();
     expect(root.querySelector('.asignacion__motivo')).toBeNull();
+  });
+
+  it('la lista no muestra la acción independiente «Ver protocolo» (EP2b)', () => {
+    setup(of([FULL]));
+    expect(text(root)).not.toContain('Ver protocolo');
+    expect(root.querySelectorAll('tbody button').length).toBe(1);
   });
 });

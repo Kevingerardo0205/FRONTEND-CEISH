@@ -5,7 +5,10 @@ import { ProtocolValidationDetailPage } from './presentation/pages/protocol-vali
 import { ProtocolReceptionNewPage } from './presentation/pages/protocol-reception-new/protocol-reception-new.page';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
-import { redirectToFirstWorkspaceTab } from '@infrastructure/guards/workspace-entry.redirect';
+import {
+  redirectEvaluatorToMyEvaluations,
+  redirectToFirstWorkspaceTab,
+} from '@infrastructure/guards/workspace-entry.redirect';
 
 import { ProtocolWorkspaceComponent } from './presentation/pages/protocol-workspace/protocol-workspace.component';
 import { WORKSPACE_TAB_ROLES } from './domain/workspace-tab-roles';
@@ -29,12 +32,45 @@ export const PROTOCOL_ROUTES: Routes = [
         providers: PROTOCOL_HEADER_PROVIDERS,
         children: [
           {
+            path: 'reception',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/tabs/protocol-detail-tab.component').then(
+                (m) => m.ProtocolDetailTabPage,
+              ),
+            canActivate: [redirectEvaluatorToMyEvaluations, RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info] },
+          },
+          {
             path: 'info',
             loadComponent: () =>
               import('./presentation/pages/protocol-workspace/tabs/protocol-detail-tab.component').then(
                 (m) => m.ProtocolDetailTabPage,
               ),
             canActivate: [RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info] },
+          },
+          {
+            // EP2b: FORMULARIO de asignación (PeerAssignmentFormPage en modo espacio). Es el único
+            // formulario: /dashboard/evaluations/assignment/:protocolId redirige aquí.
+            path: 'assignment',
+            loadComponent: () =>
+              import('../evaluations/presentation/pages/peer-assignment-form/peer-assignment-form.page').then(
+                (m) => m.PeerAssignmentFormPage,
+              ),
+            // canMatch: corre antes de activar la ruta; así AuthGuard no avisa al EVALUADOR, que va a
+            // «Mis evaluaciones» sin aviso (los canActivate de una ruta corren en paralelo).
+            canMatch: [redirectEvaluatorToMyEvaluations],
+            canActivate: [RoleGuard, AuthGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.assignment], permissions: ['EVALUACION_ASIGNAR'] },
+          },
+          {
+            // EP2c: HISTORIAL de asignaciones (consulta), con los roles de consulta.
+            path: 'assignment-history',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-assignment-history.page').then(
+                (m) => m.ProtocolAssignmentHistoryPage,
+              ),
+            canActivate: [redirectEvaluatorToMyEvaluations, RoleGuard],
             data: { roles: [...WORKSPACE_TAB_ROLES.info] },
           },
           {
@@ -47,17 +83,39 @@ export const PROTOCOL_ROUTES: Routes = [
             // F10 D11 (S-1c, actualizada en S-1f): la evaluación ya no está en el espacio; los enlaces
             // viejos van al mismo destino que la ruta sin pestaña (EVALUADOR: Mis evaluaciones).
             path: 'evaluation',
-            redirectTo: redirectToFirstWorkspaceTab,
-            pathMatch: 'full',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
+              ),
+            canActivate: [redirectEvaluatorToMyEvaluations, RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'EVALUACION' },
+          },
+          {
+            path: 'resolution',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
+              ),
+            canActivate: [redirectEvaluatorToMyEvaluations, RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'RESOLUCION' },
           },
           {
             path: 'follow-up',
             loadComponent: () =>
-              import('../follow-up/presentation/pages/adverse-events/adverse-events-list.page').then(
-                (m) => m.AdverseEventsListPage,
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
               ),
-            canActivate: [RoleGuard],
-            data: { roles: [...WORKSPACE_TAB_ROLES['follow-up']] },
+            canActivate: [redirectEvaluatorToMyEvaluations, RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'SEGUIMIENTO' },
+          },
+          {
+            path: 'renewal',
+            loadComponent: () =>
+              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
+                (m) => m.ProtocolWorkspaceStagePage,
+              ),
+            canActivate: [redirectEvaluatorToMyEvaluations, RoleGuard],
+            data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'RENOVACION' },
           },
           {
             path: '',

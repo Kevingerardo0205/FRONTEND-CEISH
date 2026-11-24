@@ -35,7 +35,15 @@
     </div>
     <div class="protocol-header__action"><ng-content select="[protocolHeaderAction]" /></div>
   </div>
-  @if (stage(); as etapa) {
-    <app-stage-bar class="protocol-header__stages" [stage]="etapa" />
+  @if (stage()) {
+    <app-stage-bar
+      class="protocol-header__stages"
+      [stage]="stage()"
+      [selectedStage]="selectedStage()"
+      [stageStates]="stageStates()"
+      [links]="stageLinks()"
+      (notReachedClick)="notReachedStageClick.emit($event)"
+      (notApplicableClick)="notApplicableStageClick.emit($event)"
+    />
   }
 </header>

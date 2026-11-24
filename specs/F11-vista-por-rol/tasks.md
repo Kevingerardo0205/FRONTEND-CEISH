@@ -83,6 +83,55 @@
 
 - **Pendiente:** revisión en el navegador con la PRESIDENTE y la SECRETARIA (la hace la usuaria).
 
+### Hallazgos de auditoría frontend (24/11/2026)
+
+Identificadores asignados por la usuaria. No existen en ninguna otra spec; F-03 y F-05 no existen.
+
+| Hallazgo | Alcance | Rama |
+|---|---|---|
+| **F-01** | Reactividad del `protocolId` y recuperación de errores en el formulario de asignación (`peer-assignment-form`), el historial de asignación (`protocol-assignment-history`) y la página de etapa (`protocol-workspace-stage`). Un error no debe terminar la suscripción ni dejar datos del protocolo anterior. | `feat/ep2b-presidenta-revisar-antes-de-asignar` |
+| **F-02** | Eventos adversos sin datos simulados ni éxito falso (`adverse-event-form`, `adverse-events-list`). | `feat/f02-f04-sin-simulados` |
+| **F-04** | Renovación sin éxito falso (`renewal-request`). | `feat/f02-f04-sin-simulados` |
+| **F-06** | Conservar el contexto de origen (`origin`) al volver del espacio del protocolo a la asignación (`protocol-workspace.component`). | `feat/ep2b-presidenta-revisar-antes-de-asignar` |
+
+### Resultados de la verificación (24/11/2026)
+
+- `tsc -p tsconfig.app.json --noEmit` y `tsc -p tsconfig.spec.json --noEmit`: exit 0.
+- `ng test` completo, tres veces: 1662 de 1662 SUCCESS cada vez (sin pruebas fallidas).
+- `ng build --configuration production`: exit 0.
+- `npx eslint "src/**/*.ts"`: 0 errores, 64 avisos (línea base 64, sin cambio).
+
+**Mutaciones** (se aplica cada una, se corren las suites afectadas, se revierte y se comprueba por hash que el archivo quedó idéntico).
+
+| Id | Mutación | Resultado | Pruebas que fallan | Revertida e idéntica |
+|---|---|---|---|---|
+| M1 | deriveStageStates sin la rama de cierre (RECHAZADO/ARCHIVADO) | 6 FAILED, 113 SUCCESS | deriveStageStates: RECHAZADO en EVALUACION: anteriores completadas, EVALUACION cerrada, posteriores no aplica; deriveStageStates: cada etapa recibe exactamente un estado y nunca una etapa cerrada sin ser la actual; deriveStageStates: ARCHIVADO_VENCIMIENTO en RECEPCION: la recepción cerrada y todas las demás no aplica; deriveStageStates: protocolo cerrado gana a no disponible: RECHAZADO en SEGUIMIENTO cierra SEGUIMIENTO; Workspace: template real ep2c §3.4: protocolo ARCHIVADO cierra la etapa actual y las posteriores no aplican; Workspace: template real ep2c §3.4: protocolo RECHAZADO cierra la etapa donde se detuvo y las posteriores no aplican | Sí |
+| M2 | etapas posteriores como «completada» | 3 FAILED, 116 SUCCESS | Workspace: template real ep2c §3.4: los estados de la barra se derivan de la etapa actual y SEGUIMIENTO y RENOVACION son no disponibles; deriveStageStates: protocolo en curso en ASIGNACION: anterior completada, actual en curso, posteriores pendientes; deriveStageStates: protocolo en curso en RECEPCION: ninguna completada | Sí |
+| M3 | protocol-header renderiza la barra con stage null | 2 FAILED, 76 SUCCESS | Workspace: template real D19: sin etapa del backend (null o desconocida) no muestra la barra, aunque el estado se reconozca; ProtocolHeader: sin etapa no hay barra | Sí |
+| M4 | «Asignar Pares» navega a /dashboard/evaluations/assignment/:id | 3 FAILED, 61 SUCCESS | Workspace: carga y errores (F10 D14, S-1g) Asignar Pares lleva al formulario del espacio (workspace/:id/assignment), sin abrir un modal (F10 D20 (2)); Workspace: acciones contextuales conserva el origen al ejecutar Asignar Pares desde el workspace; Workspace: acciones contextuales Asignar Pares sin origen navega al formulario del espacio sin queryParams y con id numérico | Sí |
+| M5 | sin la redirección del EVALUADOR en evaluation | 3 FAILED, 63 SUCCESS | S-1a: declara las seis rutas consultivas dentro del workspace; S-1a: EVALUADOR en workspace/1/evaluation va a Mis evaluaciones, sin aviso (D11 actualizada en S-1f, EARS 16); S-1a: EVALUADOR en workspace/1/evaluation va a Mis evaluaciones, sin aviso (ep2c) | Sí |
+| M6 | el id vuelve a ser string | 4 FAILED, 60 SUCCESS | Workspace: carga y errores (F10 D14, S-1g) Asignar Pares lleva al formulario del espacio (workspace/:id/assignment), sin abrir un modal (F10 D20 (2)); Workspace: acciones contextuales conserva el origen al ejecutar Asignar Pares desde el workspace; Workspace: acciones contextuales Asignar Pares sin origen navega al formulario del espacio sin queryParams y con id numérico; Workspace: acciones contextuales Editar y Aprobar Todo navegan con el id numérico del protocolo | Sí |
+| M7 | la ruta vieja de F03 deja de redirigir | 3 FAILED, 127 SUCCESS | T13d: la ruta vieja del formulario redirige al formulario del espacio del protocolo (EP2b); S-1a: la ruta vieja /dashboard/evaluations/assignment/1 redirige al formulario del espacio para la PRESIDENTE; EVALUATION_ROUTES: assignment/:protocolId ya no carga un formulario: redirige al formulario del espacio (EP2b) | Sí |
+
+### Pestañas por etapa y formulario en el espacio (24/11/2026)
+
+Decisiones de la usuaria en `ep2c.md` §3.6 y EARS F11-28 a F11-34 (`spec-ui.md` §7b): pestañas según la etapa seleccionada, apertura en la etapa actual, formulario del espacio sin «Revisar documentación» ni «Volver a la lista», botón «Asignar evaluadores» después de elegir el tipo y «Asignar Pares» oculto con la pestaña Asignación abierta.
+
+- `tsc -p tsconfig.app.json --noEmit` y `tsc -p tsconfig.spec.json --noEmit`: exit 0.
+- `ng test` completo, tres veces: 1687 de 1687 SUCCESS cada vez (sin pruebas fallidas).
+- `ng build --configuration production`: exit 0.
+- `npx eslint "src/**/*.ts"`: 0 errores, 64 avisos (línea base 64, sin cambio).
+
+**Mutaciones** (se aplica, se corren las suites afectadas, se revierte y se comprueba por hash que el archivo quedó idéntico).
+
+| Id | Mutación | Resultado | Pruebas que fallan | Revertida e idéntica |
+|---|---|---|---|---|
+| M8 | pestañas de Recepción (Resumen y Validación Técnica) visibles con Asignación seleccionada | 26 FAILED, 56 SUCCESS | Workspace: estado real EN_EVALUACION: etiqueta, pestañas y acciones (Paso 0 de S-1f); Workspace: PRESIDENTE ve Resumen, Validación (solo lectura, F11 EP2) y Seguimiento aprobado, sin Evaluación; su única acción es Asignar Pares con los tiempos aceptados (D20); Workspace: estado real RECHAZADO: etiqueta, pestañas y acciones (Paso 0 de S-1f); … (26 en total) | Sí |
+| M9 | botón «Asignar evaluadores» visible antes de elegir el tipo de revisión (en el espacio) | 2 FAILED, 42 SUCCESS | Formulario en el espacio: en pleno también muestra el botón solo después de elegir el tipo; Formulario en el espacio: antes de elegir el tipo solo hay título, código y título del protocolo y «Tipo de revisión» | Sí |
+| M10 | «Asignar Pares» visible con la pestaña Asignación abierta | 3 FAILED, 79 SUCCESS | Workspace: Asignar Pares: con los tiempos sin aceptar, el aviso y el botón deshabilitado tampoco salen en ASIGNACION; Workspace: Asignar Pares: se muestra en las demás etapas y no en ASIGNACION; Apertura: PRESIDENTE abre en ASIGNACION: va al formulario, solo ve la pestaña Asignación y no ve Asignar Pares | Sí |
+| M11 | «Revisar documentación» visible dentro del espacio | 1 FAILED, 43 SUCCESS | Formulario en el espacio: no ofrece «Revisar documentación» ni «Volver a la lista», con o sin tipo elegido | Sí |
+| M12 | al abrir el espacio no se selecciona la etapa actual del protocolo | 4 FAILED, 78 SUCCESS | Apertura: en EVALUACION no hay pestañas todavía: ninguna del espacio; Apertura: PRESIDENTE abre en ASIGNACION: va al formulario, solo ve la pestaña Asignación y no ve Asignar Pares; Apertura: ASIGNACION con una asignación ya hecha abre el historial; … (4 en total) | Sí |
+
 ## 2. Backend (las hace otra sesión en el repo del backend)
 
 - **Registrar en spec-001 HU-001** V2, V5, V6 y V7 (README §3, regla 1).
@@ -99,3 +148,97 @@
 - **B9:** `GET /resolutions/protocol/:id` con la regla del lector y un mapper.
 - **B10:** sacar de la respuesta al investigador los campos internos (`isPresidentNotified`, `presidentNotificationDate`, `timelineTermsAcceptedIp`, `versionLock`); `riskLevel` y `reviewType` solo una vez fijados (V5).
 - **B11:** endpoint para subir la resolución firmada y su estado (V7).
+### EP2b - La PRESIDENTA revisa antes de asignar
+
+Estado general: **Implementacion realizada; pruebas de navegador pendientes**. La ejecucion de ChromeHeadless queda bloqueada por el entorno local.
+
+#### Documentacion
+
+| Identificador | Descripcion | Criterio verificable | Dependencias | Estado |
+|---|---|---|---|---|
+| EP2b-DOC-01 | Incorporar EP2b-01 a EP2b-06 en `spec-ui.md`. | Cada requisito describe el flujo, el contexto y las restricciones sin introducir backend. | F03, EP2, F10 D20. | Pendiente de aprobacion |
+| EP2b-DOC-02 | Registrar D21 a D26 en `plan.md`. | Cada decision contiene contexto, decision, justificacion y consecuencias tecnicas. | F11, F10 D20. | Pendiente de aprobacion |
+| EP2b-DOC-03 | Incorporar F11-18 a F11-27 y referencias cruzadas. | Todos los requisitos EP2b tienen al menos un criterio verificable. | `spec-ui.md`. | Pendiente de aprobacion |
+
+#### Implementacion
+
+| Identificador | Descripcion | Criterio verificable | Dependencias | Estado |
+|---|---|---|---|---|
+| EP2b-IMP-01 | Incorporar «Ver protocolo» en `PeerAssignmentListPage`. | PRESIDENTA ve la accion y «Asignar» permanece disponible con su comportamiento actual. | EP2b-DOC-01; F03. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-02 | Navegar desde la lista al workspace con el identificador y origen permitido. | Se abre el protocolo seleccionado y el origen solo admite `assignment-list`. | EP2b-IMP-01; EP2. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-03 | Incorporar «Revisar documentacion» en `PeerAssignmentFormPage`. | La accion usa el `protocolId` que recibe el formulario. | EP2b-DOC-01; F03. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-04 | Navegar desde el formulario a Validacion con contexto permitido. | Se abre `/dashboard/protocols/workspace/:protocolId/validation` para el mismo protocolo. | EP2b-IMP-03; EP2. | Implementada; TypeScript de aplicacion OK |
+| EP2b-IMP-05 | Resolver el retorno seguro a lista o formulario. | Cada origen vuelve a su destino correspondiente sin aceptar URL arbitraria. | EP2b-IMP-02, EP2b-IMP-04. | Implementada; origen validado y fallback seguro |
+| EP2b-IMP-06 | Conservar F10 D20 y «Asignar Pares». | La accion sigue conduciendo al formulario sin duplicarse ni perder el contexto permitido. | F10 D20; EP2. | Implementada; regresion cubierta en pruebas |
+
+#### Pruebas
+
+| Identificador | Descripcion | Criterio verificable | Dependencias | Estado |
+|---|---|---|---|---|
+| EP2b-TEST-01 | Probar la navegacion desde la lista. | «Ver protocolo» abre el `protocolId` correcto. | EP2b-IMP-01, EP2b-IMP-02. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-02 | Probar la navegacion desde el formulario. | «Revisar documentacion» abre Validacion del mismo protocolo. | EP2b-IMP-03, EP2b-IMP-04. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-03 | Probar el origen permitido y el retorno. | `assignment-list` vuelve a la lista y `assignment-form` vuelve al formulario correcto. | EP2b-IMP-05. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-04 | Probar las restricciones de solo lectura. | PRESIDENTA no ve ni ejecuta controles no permitidos por F11. | EP2. | Pendiente; requiere ejecución de suite |
+| EP2b-TEST-05 | Probar regresion de «Asignar». | «Asignar» conserva su ruta, estado deshabilitado y comportamiento actuales. | EP2b-IMP-01. | Cobertura existente; ejecución ChromeHeadless bloqueada |
+| EP2b-TEST-06 | Probar regresion de «Asignar Pares». | F10 D20 sigue navegando al formulario. | EP2b-IMP-06. | Prueba añadida; ejecución ChromeHeadless bloqueada |
+### EP2b — cierre de integración (22/11/2026)
+
+- **Hecho:** la lista usa «Asignar» como única acción y abre `/dashboard/protocols/workspace/:id/assignment`.
+- **Hecho:** el segundo módulo del workspace reutiliza `PeerAssignmentFormPage`, conservando carga, validaciones y envío.
+- **Hecho:** el contexto `protocolId`, la recarga, la restricción de `PRESIDENTE` y la navegación entre módulos quedan representados en rutas y specs.
+- **Verificación:** `npx tsc -p tsconfig.app.json --noEmit` y `npx tsc -p tsconfig.spec.json --noEmit` exit 0. Karma no pudo ejecutar las specs porque Chrome no inicia en el entorno local; se registran los errores reales en el cierre de la tarea.
+
+## EP2c — Protocolo ya asignado e INVESTIGADOR en Asignación (24/11/2026)
+
+Decisión de la usuaria tras la validación en el navegador; detalle en `ep2c.md` §3.7 y criterios F11-35 a F11-40 en `spec-ui.md` §7c.
+
+- **Hecho:** `ProtocolWorkspaceService` guarda el estado de las asignaciones activas (`idle | loading | none | has | error`) con una petición por protocolo (`ensureActiveAssignments`, `retryActiveAssignments`).
+- **Hecho:** con asignación activa la pestaña Asignación lleva al historial, «Asignar Pares» no se muestra y el formulario muestra el aviso «Este protocolo ya tiene evaluadores asignados.» con enlace al historial. Si la consulta falla: error con «Reintentar», nunca el formulario.
+- **Hecho:** el INVESTIGADOR abre la etapa Asignación y ve «La asignación de evaluadores es reservada del comité…»; esa página no hace ninguna petición de asignaciones ni de reasignaciones.
+- **Pendiente del backend (N54):** la lista de asignación de la PRESIDENTE (`pending-peer-assignment`) no trae asignaciones activas, por lo que «Asignar» no se puede marcar o quitar por fila sin una consulta por cada una. La lista debe excluir los protocolos con asignación activa; mientras tanto rigen el aviso del formulario y el 409 del backend.
+- **Mutaciones (cada una restaurada con hash idéntico):**
+
+| # | Mutación | Pruebas que fallan |
+|---|---|---|
+| M13 | Formulario visible con asignación activa | 2 (formulario) |
+| M14 | «Asignar Pares» visible con asignación activa | 3 (espacio) |
+| M15 | `assignment-history` sin el rol INVESTIGADOR (rebote al inicio) | 4 (rutas) |
+| M16 | El INVESTIGADOR ve el historial con evaluadores | 3 (historial) |
+| M17 | Si falla la consulta, formulario por defecto | 1 (formulario) |
+
+### Aviso «Consulta en solo lectura» (d5ed5bb, revisado 24/11/2026)
+
+- **Revisión:** aceptada; el commit se queda en esta rama. Añade un banner en `protocol-validation-detail.page.ts` (12 líneas de template y 29 de SCSS) y estilos del formulario y de la lista de asignación; no cambia lógica ni permisos.
+- **Condición:** `!canValidate() && !isInvestigador()`, es decir, cualquier rol que no valide y no sea investigador. Hoy solo la PRESIDENTE, por las rutas (EVALUADOR no abre la pestaña).
+- **Pruebas (`protocol-validation-detail.page.spec.ts`):** la PRESIDENTE lo ve con su texto; la SECRETARIA no lo ve (en revisión y con la recepción validada); el INVESTIGADOR no lo ve.
+- **Mutación M18:** condición del aviso siempre verdadera → fallan 3 pruebas (las dos de la SECRETARIA y la del INVESTIGADOR); archivo restaurado con hash idéntico.
+
+## EP2c — Etapas posteriores a la actual (24/11/2026)
+
+Decisión de la usuaria; detalle en `ep2c.md` §3.8 y criterios F11-41 a F11-46 en `spec-ui.md` §7d.
+
+- **Hecho:** regla única `isStageNotReached` (dominio). La barra convierte las etapas posteriores a la actual en un botón sin enlace ni `aria-current`, con texto oculto «etapa pendiente, aún no disponible»; el clic avisa con `NotificationService` (tipo «info») y no navega.
+- **Hecho:** la URL de una etapa posterior redirige a la etapa actual con `replaceUrl` y el mismo aviso; sin etapa del backend no se bloquea nada. La página de etapa sin pantalla muestra «Esta sección todavía no está disponible en el sistema.».
+- **Decisión (reemplazada el 24/11/2026, ver abajo):** con el protocolo cerrado las posteriores eran «no aplica» y esta regla no las bloqueaba. Los textos «completada», «etapa actual», «cerrada» y «no aplica» no cambian; «pendiente» pasó a «etapa pendiente, aún no disponible» y «no disponible» solo queda para SEGUIMIENTO/RENOVACION que no son posteriores a la actual.
+- **Mutaciones (cada una restaurada con hash idéntico):**
+
+| # | Mutación | Pruebas que fallan |
+|---|---|---|
+| M19 | Etapa pendiente navegable por clic | 10 |
+| M20 | Sin aviso al hacer clic | 3 |
+| M21 | URL de etapa pendiente sin redirección | 4 |
+| M22 | Mismo mensaje para «aún no llega» y «no existe todavía» | 2 |
+| M23 | La etapa actual también queda bloqueada | 1 (prueba nueva del VO; la primera versión era un mutante equivalente) |
+
+### Protocolo cerrado: etapas «no aplica» (24/11/2026)
+
+- **Decisión de la usuaria:** con RECHAZADO o ARCHIVADO_VENCIMIENTO las etapas «no aplica» tampoco se abren. Clic: aviso «El protocolo se cerró en la etapa {etapa}; esta etapa no aplica.»; URL: redirección a la etapa cerrada con el mismo aviso. Detalle en `ep2c.md` §3.8; EARS F11-47 y F11-48.
+- **Hecho:** `isStageNotApplicable` (dominio); la barra las convierte en botón (sin enlace ni `aria-current`, texto oculto «no aplica») con salida `notApplicableClick`; el espacio nombra la etapa donde se cerró y redirige por URL.
+- **Mutaciones (cada una restaurada con hash idéntico):**
+
+| # | Mutación | Pruebas que fallan |
+|---|---|---|
+| M25 | Etapa «no aplica» navegable por clic | 5 |
+| M26 | Clic en «no aplica» con el aviso de «aún no llega» | 7 |
+| M27 | URL de etapa «no aplica» sin redirección | 4 |
+| M28 | El aviso nombra la etapa clicada y no donde se cerró | 7 |

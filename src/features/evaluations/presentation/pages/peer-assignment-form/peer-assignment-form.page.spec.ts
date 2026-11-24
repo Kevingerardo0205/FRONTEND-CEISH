@@ -1,6 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
+import { signal, WritableSignal } from '@angular/core';
+import {
+  ActiveAssignmentsState,
+  ProtocolWorkspaceService,
+} from '@features/protocols/application/services/protocol-workspace.service';
 import {
   AssignEvaluatorsResponse,
   AssignmentMember,
@@ -11,7 +16,7 @@ import {
   AssignmentProtocolSummary,
   LoadAssignmentProtocolUseCase,
 } from '../../../application/load-assignment-protocol.use-case';
-import { PeerAssignmentFormPage } from './peer-assignment-form.page';
+import { ALREADY_ASSIGNED_NOTICE, PeerAssignmentFormPage } from './peer-assignment-form.page';
 
 /** Datos de prueba (personas y protocolo que no existen). Nadie tiene el perfil Bioético. */
 const MEMBERS: AssignmentMember[] = [
@@ -28,6 +33,19 @@ const PROTOCOL: AssignmentProtocolSummary = {
   isTimelineTermsAccepted: true,
 };
 
+const PROTOCOL_B: AssignmentProtocolSummary = {
+  ...PROTOCOL,
+  id: 16,
+  code: 'CEISH-PRUEBA-016',
+  title: 'Estudio de prueba dieciséis',
+};
+
+const MEMBERS_B: AssignmentMember[] = [
+  { id: 21, fullName: 'Evaluadora B', profiles: ['METODOLOGICO'] },
+  { id: 22, fullName: 'Evaluador B sociedad civil', profiles: ['SOCIEDAD_CIVIL'] },
+  { id: 23, fullName: 'Evaluador B jurídico', profiles: ['JURIDICO'] },
+];
+
 const httpError = (status: number, message?: string) =>
   Object.assign(new Error(message ?? ''), { status, message: message ?? '' });
 
@@ -36,19 +54,42 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
   let loadProtocol: jasmine.Spy;
   let loadMembers: jasmine.Spy;
   let assign: jasmine.Spy;
+  let navigate: jasmine.Spy;
+  let gate: WritableSignal<ActiveAssignmentsState>;
+  let ensureActive: jasmine.Spy;
+  let retryActive: jasmine.Spy;
 
   function setup(
     options: {
+      /** Estado de asignaciones activas del espacio; sin él no hay servicio del espacio. */
+      gate?: ActiveAssignmentsState;
       id?: string;
+      workspaceId?: string;
+      workspaceIds?: Subject<ReturnType<typeof convertToParamMap>>;
       protocol?: Observable<AssignmentProtocolSummary>[];
       members?: Observable<AssignmentMember[]>[];
       assign?: Observable<AssignEvaluatorsResponse>;
     } = {},
   ): HTMLElement {
     loadProtocol = jasmine.createSpy('loadProtocol');
-    loadProtocol.and.returnValues(...(options.protocol ?? [of(PROTOCOL)]));
+    const protocolReturns = options.protocol ?? [of(PROTOCOL)];
+    if (protocolReturns.length === 1) {
+      loadProtocol.and.returnValue(protocolReturns[0]);
+    } else {
+      loadProtocol.and.returnValues(...protocolReturns);
+    }
+
     loadMembers = jasmine.createSpy('loadMembers');
-    loadMembers.and.returnValues(...(options.members ?? [of(MEMBERS)]));
+    const membersReturns = options.members ?? [of(MEMBERS)];
+    if (membersReturns.length === 1) {
+      loadMembers.and.returnValue(membersReturns[0]);
+    } else {
+      loadMembers.and.returnValues(...membersReturns);
+    }
+
+    gate = signal<ActiveAssignmentsState>(options.gate ?? { kind: 'none' });
+    ensureActive = jasmine.createSpy('ensureActiveAssignments');
+    retryActive = jasmine.createSpy('retryActiveAssignments');
     assign = jasmine
       .createSpy('assign')
       .and.returnValue(options.assign ?? of({ assignments: [] }));
@@ -58,8 +99,28 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
         provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ protocolId: options.id ?? '15' }) } },
+          useValue: {
+            snapshot: { paramMap: convertToParamMap(options.workspaceId ? {} : { protocolId: options.id ?? '15' }) },
+            parent: options.workspaceId
+              ? {
+                  paramMap: options.workspaceIds,
+                  snapshot: { paramMap: convertToParamMap({ id: options.workspaceId }) },
+                }
+              : undefined,
+          },
         },
+        ...(options.gate
+          ? [
+              {
+                provide: ProtocolWorkspaceService,
+                useValue: {
+                  activeAssignments: gate,
+                  ensureActiveAssignments: ensureActive,
+                  retryActiveAssignments: retryActive,
+                },
+              },
+            ]
+          : []),
         { provide: LoadAssignmentProtocolUseCase, useValue: { execute: loadProtocol } },
         { provide: LoadAssignmentMembersUseCase, useValue: { execute: loadMembers } },
         { provide: AssignPeerEvaluatorsUseCase, useValue: { execute: assign } },
@@ -67,6 +128,7 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
     });
     fixture = TestBed.createComponent(PeerAssignmentFormPage);
     fixture.detectChanges();
+    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     return root();
   }
 
@@ -105,6 +167,363 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
     (root().querySelector(`[data-profile="${profile}"] button`) as HTMLButtonElement).click();
     fixture.detectChanges();
   }
+
+  it('Revisar documentacion abre Validacion con el protocolId y origen del formulario (F11-22, F11-23)', () => {
+    setup();
+
+    click('Revisar documentación');
+
+    expect(navigate).toHaveBeenCalledOnceWith(
+      ['/dashboard/protocols/workspace', 15, 'validation'],
+      { queryParams: { origin: 'assignment-form' } },
+    );
+  });
+
+  it('en el workspace reutiliza el id de la ruta padre al cargar el protocolo (EP2b)', () => {
+    setup({ workspaceId: '15' });
+
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-015');
+  });
+
+  describe('dentro del espacio del protocolo (F11-32, F11-33)', () => {
+    const actions = () => root().querySelector('.formulario__acciones');
+
+    it('antes de elegir el tipo solo hay título, código y título del protocolo y «Tipo de revisión»', () => {
+      setup({ workspaceId: '15' });
+
+      expect(text(root().querySelector('app-page-header'))).toContain('Asignar evaluadores');
+      expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-015');
+      expect(text(root().querySelector('app-page-header'))).toContain('Estudio de prueba quince');
+      expect(text(root().querySelector('.formulario__tipo'))).toContain('Tipo de revisión');
+      expect(text(root().querySelector('.formulario__tipo'))).toContain('Expedita');
+      expect(text(root().querySelector('.formulario__tipo'))).toContain('En pleno');
+      expect(actions()).toBeNull();
+      expect(submit()).toBeNull();
+      expect(root().querySelector('#motivo-asignacion')).toBeNull();
+      expect(buttonByText('Asignar evaluadores')).toBeUndefined();
+    });
+
+    it('el botón y su motivo aparecen después de elegir el tipo, debajo de las filas', () => {
+      setup({ workspaceId: '15' });
+
+      chooseType('EXPEDITA');
+
+      expect(submit()).not.toBeNull();
+      expect(reason()).not.toBe('');
+      const rows = root().querySelector('[data-testid="filas-expedita"]') as Element;
+      expect(rows.compareDocumentPosition(submit()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('en pleno también muestra el botón solo después de elegir el tipo', () => {
+      setup({ workspaceId: '15' });
+      expect(submit()).toBeNull();
+
+      chooseType('PLENO');
+
+      expect(submit()).not.toBeNull();
+    });
+
+    it('no ofrece «Revisar documentación» ni «Volver a la lista», con o sin tipo elegido', () => {
+      setup({ workspaceId: '15' });
+      expect(buttonByText('Revisar documentación')).toBeUndefined();
+      expect(text(root())).not.toContain('Volver a la lista');
+
+      chooseType('EXPEDITA');
+      expect(buttonByText('Revisar documentación')).toBeUndefined();
+      expect(text(root())).not.toContain('Volver a la lista');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('tras asignar tampoco ofrece «Volver a la lista»', () => {
+      setup({ workspaceId: '15' });
+      fillValidExpedited();
+
+      click('Asignar evaluadores');
+
+      expect(root().querySelector('.formulario__exito')).not.toBeNull();
+      expect(text(root())).not.toContain('Volver a la lista');
+    });
+
+    it('sin evaluadores activos o sin protocolo tampoco ofrece «Volver a la lista»', () => {
+      setup({ workspaceId: '15', members: [of([])] });
+      expect(text(root())).toContain('No hay evaluadores activos para asignar.');
+      expect(text(root())).not.toContain('Volver a la lista');
+    });
+  });
+
+  describe('con evaluadores ya asignados o sin poder consultarlo (F11-35, F11-37, F11-38)', () => {
+    const noForm = () => {
+      expect(root().querySelector('form')).toBeNull();
+      expect(root().querySelector('input[name="reviewType"]')).toBeNull();
+      expect(submit()).toBeNull();
+      expect(buttonByText('Asignar evaluadores')).toBeUndefined();
+    };
+
+    it('pide las asignaciones activas del protocolo al abrir', () => {
+      setup({ workspaceId: '15', gate: { kind: 'none' } });
+
+      expect(ensureActive).toHaveBeenCalledWith(15);
+    });
+
+    it('sin asignaciones activas muestra el formulario', () => {
+      setup({ workspaceId: '15', gate: { kind: 'none' } });
+
+      expect(root().querySelector('input[name="reviewType"]')).not.toBeNull();
+    });
+
+    it('con una asignación activa muestra el aviso y el enlace al historial, sin formulario ni botón', () => {
+      setup({ workspaceId: '15', gate: { kind: 'has', count: 1 } });
+
+      expect(text(root())).toContain(ALREADY_ASSIGNED_NOTICE);
+      expect(ALREADY_ASSIGNED_NOTICE).toBe('Este protocolo ya tiene evaluadores asignados.');
+      const link = root().querySelector('a.formulario__enlace') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toBe('/dashboard/protocols/workspace/15/assignment-history');
+      noForm();
+    });
+
+    it('si falla la consulta muestra el error con Reintentar, nunca el formulario por defecto', () => {
+      setup({ workspaceId: '15', gate: { kind: 'error' } });
+
+      expect(text(root())).toContain('No pudimos consultar las asignaciones del protocolo.');
+      noForm();
+
+      click('Reintentar');
+      expect(retryActive).toHaveBeenCalledTimes(1);
+    });
+
+    it('mientras consulta muestra la carga y no el formulario', () => {
+      for (const kind of ['loading', 'idle'] as const) {
+        TestBed.resetTestingModule();
+        setup({ workspaceId: '15', gate: { kind } });
+
+        expect(text(root())).withContext(kind).toContain('Consultando las asignaciones del protocolo…');
+        noForm();
+      }
+    });
+
+    it('al resolverse la consulta el formulario aparece o se reemplaza por el aviso', () => {
+      setup({ workspaceId: '15', gate: { kind: 'loading' } });
+      noForm();
+
+      gate.set({ kind: 'none' });
+      fixture.detectChanges();
+      expect(root().querySelector('input[name="reviewType"]')).not.toBeNull();
+
+      gate.set({ kind: 'has', count: 3 });
+      fixture.detectChanges();
+      expect(text(root())).toContain(ALREADY_ASSIGNED_NOTICE);
+      noForm();
+    });
+
+    it('tras asignar muestra el resultado aunque el estado pase a «con evaluadores», y refresca el estado', () => {
+      setup({ workspaceId: '15', gate: { kind: 'none' } });
+      fillValidExpedited();
+
+      click('Asignar evaluadores');
+      expect(ensureActive).toHaveBeenCalledWith(15, true);
+      gate.set({ kind: 'has', count: 2 });
+      fixture.detectChanges();
+
+      expect(root().querySelector('.formulario__exito')).not.toBeNull();
+      expect(text(root())).not.toContain(ALREADY_ASSIGNED_NOTICE);
+    });
+
+    it('fuera del espacio no consulta las asignaciones activas', () => {
+      setup({ gate: { kind: 'has', count: 1 } });
+
+      expect(ensureActive).not.toHaveBeenCalled();
+      expect(root().querySelector('input[name="reviewType"]')).not.toBeNull();
+    });
+  });
+
+  describe('fuera del espacio conserva sus acciones', () => {
+    it('muestra «Revisar documentación» y «Volver a la lista» y el botón antes de elegir el tipo', () => {
+      setup();
+
+      expect(buttonByText('Revisar documentación')).toBeDefined();
+      expect(text(root())).toContain('Volver a la lista');
+      expect(submit()).not.toBeNull();
+    });
+  });
+
+  it('recarga el protocolo vigente y limpia el anterior cuando cambia el id sin destruirse', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), of(PROTOCOL_B)],
+      members: [of(MEMBERS), of(MEMBERS_B)],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledWith(16);
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-016');
+    expect(text(root().querySelector('app-page-header'))).not.toContain('CEISH-PRUEBA-015');
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    chooseType('EXPEDITA');
+    expect(text(root())).toContain('Evaluadora B');
+    expect(text(root())).not.toContain('Andrés Prueba');
+  });
+
+  it('ignora una respuesta tardía del protocolo A después de que B respondió', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    const protocolA = new Subject<AssignmentProtocolSummary>();
+    const protocolB = new Subject<AssignmentProtocolSummary>();
+    const membersA = new Subject<AssignmentMember[]>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [protocolA, protocolB],
+      members: [membersA, of(MEMBERS_B)],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    protocolB.next(PROTOCOL_B);
+    protocolB.complete();
+    protocolA.next(PROTOCOL);
+    protocolA.complete();
+    membersA.next(MEMBERS);
+    membersA.complete();
+    fixture.detectChanges();
+
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-016');
+    expect(text(root().querySelector('app-page-header'))).not.toContain('CEISH-PRUEBA-015');
+    expect(fixture.componentInstance.protocol()?.id).toBe(16);
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    chooseType('EXPEDITA');
+    expect(text(root())).toContain('Evaluadora B');
+    expect(text(root())).not.toContain('Andrés Prueba');
+  });
+
+  it('un error de A no termina la escucha de ruta y permite cargar B', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    const protocolA = new Subject<AssignmentProtocolSummary>();
+    const protocolB = new Subject<AssignmentProtocolSummary>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [protocolA, protocolB],
+      members: [of(MEMBERS), of(MEMBERS_B)],
+    });
+
+    protocolA.error(httpError(500));
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    protocolB.next(PROTOCOL_B);
+    protocolB.complete();
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledWith(16);
+    expect(fixture.componentInstance.protocol()?.id).toBe(16);
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    expect(text(root())).not.toContain('No pudimos cargar los datos de la asignación.');
+  });
+
+  it('si loadMembers falla en A, B puede cargar y reemplaza el estado de error', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), of(PROTOCOL_B)],
+      members: [throwError(() => httpError(500)), of(MEMBERS_B)],
+    });
+
+    expect(text(root())).toContain('No pudimos cargar los datos de la asignación.');
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledWith(16);
+    expect(loadMembers).toHaveBeenCalledTimes(2);
+    expect(text(root())).not.toContain('No pudimos cargar los datos de la asignación.');
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-016');
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    chooseType('EXPEDITA');
+    expect(text(root())).toContain('Evaluadora B');
+    expect(text(root())).not.toContain('Andrés Prueba');
+  });
+
+  it('un error de loadProtocol en B no conserva la información visible de A', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), throwError(() => httpError(500))],
+      members: [of(MEMBERS), of(MEMBERS_B)],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.protocol()).toBeNull();
+    expect(fixture.componentInstance.members()).toEqual([]);
+    expect(text(root())).not.toContain('CEISH-PRUEBA-015');
+    expect(text(root())).not.toContain('Andrés Prueba');
+    expect(text(root())).toContain('No pudimos cargar los datos de la asignación.');
+  });
+
+  it('un error de loadMembers en B no conserva la información visible de A', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), of(PROTOCOL_B)],
+      members: [of(MEMBERS), throwError(() => httpError(500))],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.protocol()).toBeNull();
+    expect(fixture.componentInstance.members()).toEqual([]);
+    expect(text(root())).not.toContain('CEISH-PRUEBA-015');
+    expect(text(root())).not.toContain('Andrés Prueba');
+    expect(text(root())).toContain('No pudimos cargar los datos de la asignación.');
+  });
+
+  it('destruir el componente cancela la ruta y las consultas pendientes', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    const pendingProtocol = new Subject<AssignmentProtocolSummary>();
+    const pendingMembers = new Subject<AssignmentMember[]>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [pendingProtocol],
+      members: [pendingMembers],
+    });
+
+    fixture.destroy();
+    pendingProtocol.next(PROTOCOL);
+    pendingMembers.next(MEMBERS);
+
+    expect(workspaceIds.observers.length).toBe(0);
+    expect(pendingProtocol.observers.length).toBe(0);
+    expect(pendingMembers.observers.length).toBe(0);
+  });
+
+  it('un id inválido limpia A y no ejecuta una consulta para el valor inválido', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({ workspaceId: '15', workspaceIds });
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+
+    workspaceIds.next(convertToParamMap({ id: '1.5' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+    expect(fixture.componentInstance.protocol()).toBeNull();
+    expect(text(root())).toContain('No encontramos este protocolo. Revise el enlace.');
+  });
+
+  it('una emisión duplicada del mismo id no duplica las consultas', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({ workspaceId: '15', workspaceIds });
+    workspaceIds.next(convertToParamMap({ id: '15' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+    expect(loadMembers).toHaveBeenCalledOnceWith();
+  });
 
   /** Expedita válida: Metodológico (Andrés) y Sociedad Civil (Beatriz). */
   function fillValidExpedited(): void {

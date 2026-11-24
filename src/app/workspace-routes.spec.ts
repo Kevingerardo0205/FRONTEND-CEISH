@@ -12,6 +12,7 @@ import { MENU_ITEMS } from '@features/shell/infrastructure/menu.config';
 import { appConfig } from './app.config';
 import { NotificationService } from '@infrastructure/services/notification.service';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
+import { redirectEvaluatorToMyEvaluations } from '@infrastructure/guards/workspace-entry.redirect';
 import { TokenStoreAdapter } from '@infrastructure/storage/token-store.adapter';
 
 const ROLE_KEY = 'ceish.activeRole';
@@ -23,9 +24,18 @@ const EVALUATOR_LIST = '/dashboard/evaluations/list';
 /** Tabla aprobada por la usuaria (F10 spec-ui D10, 11/11/2026; `validation` con PRESIDENTE desde F11 EP2, 20/11/2026). Es la referencia de la prueba: no se deriva del código. */
 const EXPECTED_TAB_ROLES: Record<WorkspaceTab, RoleCode[]> = {
   info: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+  assignment: ['PRESIDENTE'],
   validation: ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
   'follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
 };
+
+/**
+ * Rutas de etapa del espacio (ep2c): la etapa Asignación vive en `assignment-history` (historial,
+ * roles de consulta); `assignment` es el formulario de EP2b y solo es de PRESIDENTE. EVALUADOR no ve el
+ * espacio ni la barra: en todas ellas va a «Mis evaluaciones» sin aviso.
+ */
+const STAGE_ROUTES = ['reception', 'assignment-history', 'evaluation', 'resolution', 'follow-up', 'renewal'] as const;
+const EVALUATOR_REDIRECTED = [...STAGE_ROUTES, 'assignment'] as readonly string[];
 
 /**
  * Permisos por rol de la matriz fija del backend (dev: migraciones 1880000000000-FixedRolesMatrix
@@ -50,7 +60,7 @@ const ROLE_PERMISSIONS: Record<RoleCode, string[]> = {
     'RESOLUCION_NOTIF', 'RESOLUCION_HISTORIAL', 'RESOLUCION_CONVOCATORIAS', 'RESOLUCION_FIRMAR',
     'SEGUIMIENTO_AVANCE', 'SEGUIMIENTO_FINAL', 'SEGUIMIENTO_EVENTOS', 'SEGUIMIENTO_RENOVACIONES',
     'SEGUIMIENTO_SUSPENSION', 'REPORTES_CARGA', 'REPORTES_EXPORTAR', 'REPORTES_AUDITORIA',
-    'AUDITORIA_ACCESOS', 'PROTOCOLOS_LISTAR',
+    'AUDITORIA_ACCESOS', 'PROTOCOLOS_LISTAR', 'EVALUACION_ASIGNAR',
   ],
   EVALUADOR: [
     'DASHBOARD_RESUMEN', 'DASHBOARD_NOTIF', 'EVALUACION_RIESGO', 'EVALUACION_EXPEDITA',
@@ -126,10 +136,15 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
   for (const tab of Object.keys(EXPECTED_TAB_ROLES) as WorkspaceTab[]) {
     for (const role of Role.all()) {
       const allowed = EXPECTED_TAB_ROLES[tab].includes(role.code);
+      const toMyEvaluations =
+        !allowed && role.code === 'EVALUADOR' && EVALUATOR_REDIRECTED.includes(tab);
       const url = WORKSPACE_ROOT + '/' + tab;
 
       it(
-        role.code + (allowed ? ' abre ' : ' rebota en ') + tab + (allowed ? '' : ' con aviso'),
+        role.code +
+          (allowed ? ' abre ' : toMyEvaluations ? ' va a Mis evaluaciones, sin aviso, desde ' : ' rebota en ') +
+          tab +
+          (allowed || toMyEvaluations ? '' : ' con aviso'),
         async () => {
           await start([role.code], role.code, ROLE_PERMISSIONS[role.code]);
 
@@ -138,6 +153,9 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
           if (allowed) {
             expect(router.url).toBe(url);
             expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
+          } else if (toMyEvaluations) {
+            expect(router.url).toBe(EVALUATOR_LIST);
+            expect(notify).not.toHaveBeenCalled();
           } else {
             expect(router.url.startsWith(WORKSPACE_ROOT)).toBeFalse();
             expect(notify).toHaveBeenCalledOnceWith(ACCESS_DENIED_MESSAGE, 'info');
@@ -146,6 +164,47 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
       );
     }
   }
+
+  // ep2c: cada ruta de etapa del espacio, para cada rol de consulta y para el EVALUADOR.
+  for (const stageRoute of STAGE_ROUTES) {
+    for (const role of ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'] as RoleCode[]) {
+      it(role + ' abre workspace/1/' + stageRoute + ' sin aviso (ep2c)', async () => {
+        await start([role], role, ROLE_PERMISSIONS[role]);
+
+        await harness.navigateByUrl(WORKSPACE_ROOT + '/' + stageRoute);
+
+        expect(router.url).toBe(WORKSPACE_ROOT + '/' + stageRoute);
+        expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
+      });
+    }
+
+    it('EVALUADOR en workspace/1/' + stageRoute + ' va a Mis evaluaciones, sin aviso (ep2c)', async () => {
+      await start(['EVALUADOR'], 'EVALUADOR', ROLE_PERMISSIONS.EVALUADOR);
+
+      await harness.navigateByUrl(WORKSPACE_ROOT + '/' + stageRoute);
+
+      expect(router.url).toBe(EVALUATOR_LIST);
+      expect(notify).not.toHaveBeenCalled();
+    });
+  }
+
+  it('EVALUADOR en workspace/1/assignment (formulario de EP2b) va a Mis evaluaciones, sin aviso', async () => {
+    await start(['EVALUADOR'], 'EVALUADOR', ROLE_PERMISSIONS.EVALUADOR);
+
+    await harness.navigateByUrl(WORKSPACE_ROOT + '/assignment');
+
+    expect(router.url).toBe(EVALUATOR_LIST);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('la ruta vieja /dashboard/evaluations/assignment/1 redirige al formulario del espacio para la PRESIDENTE', async () => {
+    await start(['PRESIDENTE'], 'PRESIDENTE', ROLE_PERMISSIONS.PRESIDENTE);
+
+    await harness.navigateByUrl('/dashboard/evaluations/assignment/1');
+
+    expect(router.url).toBe(WORKSPACE_ROOT + '/assignment');
+    expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
+  });
 
   it('decide con el rol activo entre PRESIDENTE y EVALUADOR', async () => {
     await start(
@@ -259,12 +318,12 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
   });
 
   for (const role of ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'] as RoleCode[]) {
-    it(role + ' en workspace/1/evaluation llega a info (S-1c, D11)', async () => {
+    it(role + ' conserva workspace/1/evaluation (EP2c.3-C)', async () => {
       await start([role], role, ROLE_PERMISSIONS[role]);
 
       await harness.navigateByUrl(WORKSPACE_ROOT + '/evaluation');
 
-      expect(router.url).toBe(WORKSPACE_ROOT + '/info');
+      expect(router.url).toBe(WORKSPACE_ROOT + '/evaluation');
       expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
     });
   }
@@ -335,8 +394,8 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
     expect(notify).not.toHaveBeenCalledWith(ACCESS_DENIED_MESSAGE, 'info');
   });
 
-  it('WORKSPACE_TAB_ROLES y PROTOCOL_ROUTES contienen las mismas tres filas con RoleGuard', () => {
-    expect(Object.keys(WORKSPACE_TAB_ROLES)).toEqual(['info', 'validation', 'follow-up']);
+  it('WORKSPACE_TAB_ROLES y PROTOCOL_ROUTES contienen las filas esperadas con RoleGuard', () => {
+    expect(Object.keys(WORKSPACE_TAB_ROLES)).toEqual(['info', 'assignment', 'validation', 'follow-up']);
     expect(WORKSPACE_TAB_ROLES).toEqual(EXPECTED_TAB_ROLES);
 
     const validRoles = new Set(Role.all().map((role) => role.code));
@@ -356,5 +415,35 @@ describe('S-1a: pestañas del espacio del protocolo por rol activo (F10 D10)', (
       expect(tabRoute?.canActivate).toContain(RoleGuard);
       expect(tabRoute?.data?.['roles']).toEqual([...WORKSPACE_TAB_ROLES[tab]]);
     }
+  });
+
+  it('declara las seis rutas consultivas dentro del workspace', () => {
+    const workspaceRoute = PROTOCOL_ROUTES[0]?.children?.find(
+      (route) => route.path === 'workspace/:id',
+    );
+    const children = workspaceRoute?.children ?? [];
+    expect(STAGE_ROUTES.every((path) => children.some((route) => route.path === path))).toBeTrue();
+    for (const path of STAGE_ROUTES) {
+      const route = children.find((child) => child.path === path);
+      expect(route?.canActivate).withContext(path).toContain(RoleGuard);
+      expect(route?.canActivate).withContext(path).toContain(redirectEvaluatorToMyEvaluations);
+      expect(route?.data?.['roles']).withContext(path).toEqual(['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR']);
+    }
+  });
+
+  it('assignment (formulario) y assignment-history (historial) son páginas distintas, ambas con el guard del evaluador', () => {
+    const workspaceRoute = PROTOCOL_ROUTES[0]?.children?.find(
+      (route) => route.path === 'workspace/:id',
+    );
+    const form = workspaceRoute?.children?.find((route) => route.path === 'assignment');
+    const history = workspaceRoute?.children?.find((route) => route.path === 'assignment-history');
+
+    expect(form?.redirectTo).toBeUndefined();
+    expect(history?.redirectTo).toBeUndefined();
+    expect(form?.loadComponent).toBeDefined();
+    expect(history?.loadComponent).toBeDefined();
+    expect(form?.canMatch).toContain(redirectEvaluatorToMyEvaluations);
+    expect(form?.data?.['roles']).toEqual(['PRESIDENTE']);
+    expect(form?.data?.['permissions']).toEqual(['EVALUACION_ASIGNAR']);
   });
 });

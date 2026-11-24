@@ -1,14 +1,48 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { Stage } from '@domain/value-objects/stage.vo';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { Stage, StageCode } from '@domain/value-objects/stage.vo';
+import {
+  WorkspaceStageState,
+  isStageNotApplicable,
+  isStageNotReached,
+} from '@domain/value-objects/workspace-stage-state.vo';
 
-export type StageStatus = 'done' | 'current' | 'pending';
+export type StageStatus =
+  | 'completed'
+  | 'in-progress'
+  | 'pending'
+  | 'closed'
+  | 'not-applicable'
+  | 'unavailable'
+  | 'undetermined';
 
-/** Texto oculto con el estado de cada etapa (F00 §5, EP1). */
+/** Texto oculto con el estado de cada etapa (F00 §5, EP1; ep2c §3.4). */
 const STATUS_TEXT: Readonly<Record<StageStatus, string>> = {
-  done: 'completada',
-  current: 'etapa actual',
+  completed: 'completada',
+  'in-progress': 'en curso',
   pending: 'pendiente',
+  closed: 'cerrada',
+  'not-applicable': 'no aplica',
+  unavailable: 'no disponible',
+  undetermined: 'estado no determinado',
 };
+
+function toStageStatus(state: WorkspaceStageState | undefined): StageStatus {
+  if (state?.kind === 'unavailable') return 'unavailable';
+  if (state?.kind !== 'determined') return 'undetermined';
+  switch (state.status) {
+    case 'COMPLETADA':
+      return 'completed';
+    case 'EN_CURSO':
+      return 'in-progress';
+    case 'CERRADA':
+      return 'closed';
+    case 'NO_APLICA':
+      return 'not-applicable';
+    default:
+      return 'pending';
+  }
+}
 
 /**
  * Barra de las 6 etapas del protocolo (spec-ui F00 §5; aspecto del canvas desde EP1).
@@ -18,25 +52,52 @@ const STATUS_TEXT: Readonly<Record<StageStatus, string>> = {
   selector: 'app-stage-bar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink],
   templateUrl: './stage-bar.component.html',
   styleUrl: './stage-bar.component.scss',
 })
 export class StageBarComponent {
-  readonly stage = input.required<Stage>();
+  readonly stage = input<Stage | null>(null);
+  readonly selectedStage = input<StageCode | null>(null);
+  readonly stageStates = input<Readonly<Partial<Record<StageCode, WorkspaceStageState>>> >({});
+  readonly links = input<Readonly<Partial<Record<StageCode, string>>>>({});
   /** Texto corto bajo la etapa actual, por ejemplo "Riesgo fijado · 3 de 4 dictámenes". */
   readonly detail = input<string>();
-
-  protected readonly statusText = STATUS_TEXT;
+  /** Clic en una etapa posterior a la actual: no navega; la pantalla muestra el aviso (F11-41). */
+  readonly notReachedClick = output<StageCode>();
+  /** Clic en una etapa «no aplica» de un protocolo cerrado: tampoco navega (F11-47). */
+  readonly notApplicableClick = output<StageCode>();
 
   readonly steps = computed(() => {
-    const current = this.stage().order;
-    return Stage.all().map((stage) => ({
-      stage,
-      status: (stage.order < current
-        ? 'done'
-        : stage.order === current
-          ? 'current'
-          : 'pending') as StageStatus,
-    }));
+    const current = this.stage();
+    const selected = this.selectedStage() ?? (Object.keys(this.links()).length ? null : current?.code ?? null);
+    const states = this.stageStates();
+    const links = this.links();
+
+    return Stage.all().map((stage) => {
+      const status = toStageStatus(states[stage.code]);
+
+      const isCurrent = current?.code === stage.code;
+      const notReached = isStageNotReached(current, states[stage.code], stage);
+      const notApplicable = isStageNotApplicable(states[stage.code]);
+
+      return {
+        stage,
+        status,
+        /** Texto oculto: la etapa actual no pierde que esté cerrada (ep2c §4.2). */
+        announce: isCurrent
+          ? status === 'closed'
+            ? 'etapa actual, cerrada'
+            : 'etapa actual'
+          : notReached
+            ? 'etapa pendiente, aún no disponible'
+            : STATUS_TEXT[status],
+        notReached,
+        notApplicable,
+        current: isCurrent,
+        selected: !notReached && !notApplicable && selected === stage.code,
+        link: notReached || notApplicable ? null : (links[stage.code] ?? null),
+      };
+    });
   });
 }

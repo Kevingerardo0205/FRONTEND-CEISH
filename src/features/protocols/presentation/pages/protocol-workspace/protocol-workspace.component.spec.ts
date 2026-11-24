@@ -1,13 +1,23 @@
-import { Stage } from '@domain/value-objects/stage.vo';
+import { Stage, StageCode } from '@domain/value-objects/stage.vo';
 import { TestBed } from '@angular/core/testing';
 import { Component, signal, WritableSignal } from '@angular/core';
-import { ActivatedRoute, provideRouter, Router, UrlTree } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router, UrlTree } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { map, of, Subject } from 'rxjs';
+import { NotificationService } from '@infrastructure/services/notification.service';
+import {
+  STAGE_SCREEN_MISSING_MESSAGE,
+  stageClosedMessage,
+  stageNotReachedMessage,
+} from '../../../domain/workspace-stage-messages';
+import { map, Observable, of, Subject, throwError } from 'rxjs';
 
 import { ProtocolWorkspaceComponent } from './protocol-workspace.component';
-import { ProtocolWorkspaceService } from '../../../application/services/protocol-workspace.service';
+import {
+  ActiveAssignmentsState,
+  ProtocolWorkspaceService,
+} from '../../../application/services/protocol-workspace.service';
+import { ActiveAssignmentsResult } from '@domain/entities/peer-evaluation.entity';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
@@ -116,14 +126,37 @@ function workspaceMock(
     error: signal<string | null>(null),
     loadProtocol: jasmine.createSpy('loadProtocol').and.returnValue(of(null)),
     updateProtocol: jasmine.createSpy('updateProtocol'),
+    activeAssignments: signal<ActiveAssignmentsState>({ kind: 'none' }),
+    ensureActiveAssignments: jasmine.createSpy('ensureActiveAssignments'),
+    retryActiveAssignments: jasmine.createSpy('retryActiveAssignments'),
   };
 }
 
+const ACTIVE_RESULT = (count: number): ActiveAssignmentsResult => ({
+  protocolId: 5,
+  ceishCode: 'CEISH-PRUEBA-005',
+  versionId: 1,
+  versionNumber: 1,
+  assignments: Array.from({ length: count }, (_, i) => ({
+    assignmentId: i + 1,
+    evaluatorId: i + 10,
+    evaluatorFullName: 'Evaluador de prueba ' + (i + 1),
+    evaluatorProfile: 'SALUD' as const,
+    status: 'ASSIGNED' as const,
+    isAssignedForAnnex10: false,
+    assignedAt: null,
+    deadlineDate: null,
+    submittedAt: null,
+  })),
+});
+
 describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
   let page: ProtocolWorkspaceComponent;
+  let workspaceStub: ReturnType<typeof workspaceMock>;
   let protocolSignal: WritableSignal<ProtocolEntity | null>;
   let activeRoleSignal: WritableSignal<RoleCode | null>;
   let currentUserRoles: RoleCode[];
+  let queryParamMap: Subject<ParamMap>;
   /** Campo antiguo `rol` (un solo rol); en las pruebas de varios roles lleva el rol NO activo. */
   let currentUserRol: RoleCode | null;
 
@@ -131,8 +164,10 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     protocolSignal = signal<ProtocolEntity | null>(null);
     activeRoleSignal = signal<RoleCode | null>('INVESTIGADOR');
     currentUserRoles = ['INVESTIGADOR'];
+    queryParamMap = new Subject<ParamMap>();
     currentUserRol = null;
     const workspace = workspaceMock(protocolSignal);
+    workspaceStub = workspace;
 
     await TestBed.configureTestingModule({
       imports: [ProtocolWorkspaceComponent],
@@ -148,8 +183,15 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
           },
         },
         { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
-        { provide: ActivatedRoute, useValue: { params: of({}) } },
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            params: of({}),
+            queryParamMap,
+            snapshot: { paramMap: convertToParamMap({ id: '42' }) },
+          },
+        },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), events: of(), url: '/' } },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
@@ -174,6 +216,32 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     return page.tabConfig().map((tab) => tab.path);
   }
 
+  /** Pestañas con la etapa dada seleccionada en la barra (F11-28 a F11-30). */
+  function tabsIn(stage: StageCode): string[] {
+    page.selectedStage.set(stage);
+    return tabPaths();
+  }
+
+  it('construye enlaces absolutos de las seis etapas con el id del workspace', () => {
+    expect(page.stageLinks()).toEqual({
+      RECEPCION: '/dashboard/protocols/workspace/42/reception',
+      ASIGNACION: '/dashboard/protocols/workspace/42/assignment-history',
+      EVALUACION: '/dashboard/protocols/workspace/42/evaluation',
+      RESOLUCION: '/dashboard/protocols/workspace/42/resolution',
+      SEGUIMIENTO: '/dashboard/protocols/workspace/42/follow-up',
+      RENOVACION: '/dashboard/protocols/workspace/42/renewal',
+    });
+  });
+
+  it('actualiza el origen validado cuando cambia queryParamMap sin destruir el workspace', () => {
+    queryParamMap.next(convertToParamMap({ origin: 'assignment-form' }));
+    expect(page.returnOrigin()).toBe('assignment-form');
+
+    queryParamMap.next(convertToParamMap({ origin: 'origen-desconocido' }));
+    expect(page.returnOrigin()).toBeNull();
+    expect(page.stageLinks().ASIGNACION).toBe('/dashboard/protocols/workspace/42/assignment-history');
+  });
+
   function actionIds(): string[] {
     return page.contextualActions().map((action) => action.id);
   }
@@ -195,16 +263,15 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     const expected = EXPECTED[name];
 
     it('estado real ' + name + ': etiqueta, pestañas y acciones (Paso 0 de S-1f)', () => {
-      const stateTabs = [
-        ...(expected.validation ? ['validation'] : []),
-        ...(expected.followUp ? ['follow-up'] : []),
-      ];
+      const receptionTabs = ['info', ...(expected.validation ? ['validation'] : [])];
+      const followUpTabs = expected.followUp ? ['follow-up'] : [];
 
       // Con los tiempos aceptados: "Asignar Pares" los exige desde S-1h (D15) y es de PRESIDENTE (D20).
       activeRoleSignal.set('SECRETARIA');
       setState(name, true);
       expect(page.statusLabel()).toBe(expected.label);
-      expect(tabPaths()).toEqual(['info', ...stateTabs]);
+      expect(tabsIn('RECEPCION')).toEqual(receptionTabs);
+      expect(tabsIn('SEGUIMIENTO')).toEqual(followUpTabs);
       expect(actionIds()).toEqual(expected.secretaria);
 
       activeRoleSignal.set('PRESIDENTE');
@@ -212,7 +279,8 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
 
       activeRoleSignal.set('INVESTIGADOR');
       setState(name);
-      expect(tabPaths()).toEqual(['info', ...stateTabs]);
+      expect(tabsIn('RECEPCION')).toEqual(receptionTabs);
+      expect(tabsIn('SEGUIMIENTO')).toEqual(followUpTabs);
       expect(actionIds()).toEqual(expected.investigador);
       expect(page.showAcceptanceModal()).toBe(expected.modal);
 
@@ -271,24 +339,25 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     activeRoleSignal.set('SECRETARIA');
 
     setState('ENVIADO');
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual(['VALIDATE_ALL']);
 
     // F10 D20 (2): la Secretaría ya no asigna.
     setState('RECEPCION_APROBADA', true);
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual([]);
 
     setState('CON_OBSERVACIONES');
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual([]);
 
     setState('EN_EVALUACION');
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual([]);
 
     setState('APROBADO');
-    expect(tabPaths()).toEqual(['info', 'validation', 'follow-up']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
+    expect(tabsIn('SEGUIMIENTO')).toEqual(['follow-up']);
     expect(actionIds()).toEqual([]);
   });
 
@@ -296,22 +365,188 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     activeRoleSignal.set('PRESIDENTE');
 
     setState('RECEPCION_APROBADA', true);
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
+    expect(tabsIn('ASIGNACION')).toEqual(['assignment']);
     expect(actionIds()).toEqual(['ASSIGN_EVALUATORS']);
 
     setState('APROBADO');
-    expect(tabPaths()).toEqual(['info', 'validation', 'follow-up']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
+    expect(tabsIn('ASIGNACION')).toEqual(['assignment-history']);
+    expect(tabsIn('SEGUIMIENTO')).toEqual(['follow-up']);
     expect(actionIds()).toEqual([]);
 
     for (const name of ACTION_STATES) {
       setState(name);
-      expect(tabPaths()).toEqual(['info', 'validation']);
+      // La pestaña Asignación se ve con COMPLETO aunque los tiempos no estén aceptados
+      // (decisión del 24/11/2026); lo que espera la aceptación es el botón «Asignar Pares».
+      expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
+      expect(tabsIn('ASIGNACION')).toEqual([name === 'RECEPCION_APROBADA' ? 'assignment' : 'assignment-history']);
       expect(actionIds()).toEqual([]);
     }
 
     // Borrador: sin Validación, como para los demás roles.
     setState('BORRADOR');
-    expect(tabPaths()).toEqual(['info']);
+    expect(tabsIn('RECEPCION')).toEqual(['info']);
+  });
+
+  describe('pestañas por etapa seleccionada (F11-28 a F11-30, 24/11/2026)', () => {
+    beforeEach(() => {
+      activeRoleSignal.set('PRESIDENTE');
+      setState('RECEPCION_APROBADA', true);
+    });
+
+    it('RECEPCION muestra solo Resumen y Validación Técnica, sin Asignación (F11-28)', () => {
+      expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
+    });
+
+    it('ASIGNACION muestra solo Asignación: sin Resumen ni Validación Técnica (F11-29)', () => {
+      const paths = tabsIn('ASIGNACION');
+
+      expect(paths).toEqual(['assignment']);
+      expect(paths).not.toContain('info');
+      expect(paths).not.toContain('validation');
+    });
+
+    it('ASIGNACION: el formulario para PRESIDENTE mientras no haya asignación; el historial después (F11-29)', () => {
+      expect(tabsIn('ASIGNACION')).toEqual(['assignment']);
+      expect(page.stageLinks().ASIGNACION).toMatch(/\/workspace\/\d+\/assignment$/);
+
+      setState('EN_EVALUACION', true);
+      expect(tabsIn('ASIGNACION')).toEqual(['assignment-history']);
+      expect(page.stageLinks().ASIGNACION).toMatch(/\/workspace\/\d+\/assignment-history$/);
+    });
+
+    it('SECRETARIA e INVESTIGADOR ven en ASIGNACION solo la pestaña del historial (F11-29)', () => {
+      for (const role of ['SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+        activeRoleSignal.set(role);
+        expect(tabsIn('ASIGNACION')).withContext(role).toEqual(['assignment-history']);
+      }
+    });
+
+    it('EVALUACION, RESOLUCION y RENOVACION no tienen pestañas todavía (F11-30)', () => {
+      for (const stage of ['EVALUACION', 'RESOLUCION', 'RENOVACION'] as StageCode[]) {
+        expect(tabsIn(stage)).withContext(stage).toEqual([]);
+      }
+    });
+
+    it('SEGUIMIENTO muestra su pestaña cuando existe y ninguna si el protocolo no está aprobado (F11-30)', () => {
+      expect(tabsIn('SEGUIMIENTO')).toEqual([]);
+
+      setState('APROBADO');
+      expect(tabsIn('SEGUIMIENTO')).toEqual(['follow-up']);
+    });
+
+    it('sin etapa seleccionada sigue la etapa actual del backend (ASIGNACION en estas pruebas)', () => {
+      page.selectedStage.set(null);
+
+      expect(tabPaths()).toEqual(['assignment']);
+    });
+
+    it('con COMPLETO la PRESIDENTE sigue viendo la pestaña Asignación con los tiempos sin aceptar', () => {
+      setState('RECEPCION_APROBADA', false);
+
+      expect(tabsIn('ASIGNACION')).toEqual(['assignment']);
+    });
+  });
+
+  describe('protocolo con evaluadores ya asignados (F11-35, F11-36, F11-38)', () => {
+    beforeEach(() => {
+      activeRoleSignal.set('PRESIDENTE');
+      setState('RECEPCION_APROBADA', true);
+    });
+
+    it('sin asignaciones activas, la pestaña Asignación lleva al formulario', () => {
+      workspaceStub.activeAssignments.set({ kind: 'none' });
+
+      expect(tabsIn('ASIGNACION')).toEqual(['assignment']);
+    });
+
+    it('con una asignación activa, la pestaña y el enlace de la barra llevan al historial, nunca al formulario (F11-35)', () => {
+      workspaceStub.activeAssignments.set({ kind: 'has', count: 1 });
+
+      expect(tabsIn('ASIGNACION')).toEqual(['assignment-history']);
+      expect(page.stageLinks().ASIGNACION).toMatch(/\/assignment-history$/);
+    });
+
+    it('mientras se consulta o si la consulta falla, la pestaña lleva al formulario, que muestra la carga o el error (F11-38)', () => {
+      for (const kind of ['idle', 'loading', 'error'] as const) {
+        workspaceStub.activeAssignments.set({ kind });
+        expect(tabsIn('ASIGNACION')).withContext(kind).toEqual(['assignment']);
+      }
+    });
+
+    it('con una asignación activa «Asignar Pares» no se muestra en ninguna etapa (F11-36)', () => {
+      workspaceStub.activeAssignments.set({ kind: 'has', count: 2 });
+
+      for (const stage of ['RECEPCION', 'EVALUACION', 'SEGUIMIENTO'] as StageCode[]) {
+        page.selectedStage.set(stage);
+        expect(page.visibleActions().map((a) => a.id)).withContext(stage).not.toContain('ASSIGN_EVALUATORS');
+      }
+    });
+
+    it('«Asignar Pares» espera a la consulta y se ofrece sin asignaciones o si la consulta falló', () => {
+      page.selectedStage.set('RECEPCION');
+      const ids = () => page.visibleActions().map((a) => a.id);
+
+      workspaceStub.activeAssignments.set({ kind: 'idle' });
+      expect(ids()).not.toContain('ASSIGN_EVALUATORS');
+      workspaceStub.activeAssignments.set({ kind: 'loading' });
+      expect(ids()).not.toContain('ASSIGN_EVALUATORS');
+      workspaceStub.activeAssignments.set({ kind: 'none' });
+      expect(ids()).toContain('ASSIGN_EVALUATORS');
+      workspaceStub.activeAssignments.set({ kind: 'error' });
+      expect(ids()).toContain('ASSIGN_EVALUATORS');
+    });
+
+    it('pide las asignaciones activas solo a quien puede asignar y con el protocolo en COMPLETO', () => {
+      TestBed.tick();
+      expect(workspaceStub.ensureActiveAssignments).toHaveBeenCalledOnceWith(5);
+
+      workspaceStub.ensureActiveAssignments.calls.reset();
+      for (const role of ['SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+        activeRoleSignal.set(role);
+        TestBed.tick();
+      }
+      setState('APROBADO');
+      activeRoleSignal.set('PRESIDENTE');
+      TestBed.tick();
+
+      expect(workspaceStub.ensureActiveAssignments).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('«Asignar Pares» con la pestaña Asignación abierta (F11-34)', () => {
+    beforeEach(() => {
+      activeRoleSignal.set('PRESIDENTE');
+    });
+
+    it('se muestra en las demás etapas y no en ASIGNACION', () => {
+      setState('RECEPCION_APROBADA', true);
+
+      page.selectedStage.set('RECEPCION');
+      expect(page.visibleActions().map((a) => a.id)).toEqual(['ASSIGN_EVALUATORS']);
+
+      page.selectedStage.set('ASIGNACION');
+      expect(page.visibleActions().map((a) => a.id)).toEqual([]);
+    });
+
+    it('con los tiempos sin aceptar, el aviso y el botón deshabilitado tampoco salen en ASIGNACION', () => {
+      setState('RECEPCION_APROBADA', false);
+
+      page.selectedStage.set('RECEPCION');
+      expect(page.showTermsNotice()).toBeTrue();
+
+      page.selectedStage.set('ASIGNACION');
+      expect(page.showTermsNotice()).toBeFalse();
+    });
+
+    it('el resto de acciones sigue visible en ASIGNACION', () => {
+      activeRoleSignal.set('SECRETARIA');
+      setState('ENVIADO');
+
+      page.selectedStage.set('ASIGNACION');
+      expect(page.visibleActions().map((a) => a.id)).toEqual(['VALIDATE_ALL']);
+    });
   });
 
   it('EVALUADOR no ve ninguna pestaña del espacio, ni acciones ni ventana de aceptación', () => {
@@ -329,15 +564,16 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     activeRoleSignal.set('INVESTIGADOR');
 
     setState('APROBADO');
-    expect(tabPaths()).toEqual(['info', 'validation', 'follow-up']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
+    expect(tabsIn('SEGUIMIENTO')).toEqual(['follow-up']);
     expect(actionIds()).toEqual([]);
 
     setState('CON_OBSERVACIONES');
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual(['EDIT_PROTOCOL']);
 
     setState('RECEPCION_APROBADA');
-    expect(tabPaths()).toEqual(['info', 'validation']);
+    expect(tabsIn('RECEPCION')).toEqual(['info', 'validation']);
     expect(actionIds()).toEqual([]);
     expect(page.showAcceptanceModal()).toBeTrue();
 
@@ -382,6 +618,71 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     setState('RECEPCION_APROBADA');
     expect(page.showAcceptanceModal()).toBeTrue();
   });
+
+  it('retorna a la lista para assignment-list y usa el inicio como fallback', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    activeRoleSignal.set('PRESIDENTE');
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set('assignment-list');
+
+    page.returnToAssignmentContext();
+
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/evaluations/assignment']);
+
+    navigate.calls.reset();
+    page.returnOrigin.set(null);
+    const goHome = spyOn(page, 'goHome');
+    page.returnToAssignmentContext();
+    expect(goHome).toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('retorna al formulario del espacio del mismo protocolo, con id numérico, para assignment-form', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set('assignment-form');
+
+    page.returnToAssignmentContext();
+
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/protocols/workspace', 5, 'assignment']);
+  });
+
+  it('conserva el origen al ejecutar Asignar Pares desde el workspace', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    activeRoleSignal.set('PRESIDENTE');
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set('assignment-list');
+
+    page.onExecuteAction('ASSIGN_EVALUATORS');
+
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/protocols/workspace', 5, 'assignment'], {
+      queryParams: { origin: 'assignment-list' },
+    });
+  });
+
+  it('Asignar Pares sin origen navega al formulario del espacio sin queryParams y con id numérico', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    activeRoleSignal.set('PRESIDENTE');
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set(null);
+
+    page.onExecuteAction('ASSIGN_EVALUATORS');
+
+    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/protocols/workspace', 5, 'assignment']);
+  });
+
+  it('Editar y Aprobar Todo navegan con el id numérico del protocolo', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    setState('ENVIADO');
+
+    page.onExecuteAction('EDIT_PROTOCOL');
+    page.onExecuteAction('VALIDATE_ALL');
+
+    expect(navigate.calls.allArgs()).toEqual([
+      [['/investigador/protocolo', 5, 'editar']],
+      [['/dashboard/protocols/workspace', 5, 'validation']],
+    ]);
+  });
 });
 
 describe('ProtocolWorkspaceComponent - sin pestaña Evaluación (F10 D11, S-1c)', () => {
@@ -394,8 +695,15 @@ describe('ProtocolWorkspaceComponent - sin pestaña Evaluación (F10 D11, S-1c)'
       providers: [
         { provide: AuthFacade, useValue: { currentUser: () => ({ rol: activeRoleSignal(), roles: [] }) } },
         { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
-        { provide: ActivatedRoute, useValue: { params: of({}) } },
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            params: of({}),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: { paramMap: convertToParamMap({ id: '42' }), queryParamMap: convertToParamMap({}) },
+          },
+        },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), events: of(), url: '/' } },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
@@ -438,7 +746,14 @@ describe('ProtocolWorkspaceComponent - template real', () => {
           useValue: { currentUser: () => ({ rol: 'SECRETARIA', roles: ['SECRETARIA'] }) },
         },
         { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
-        { provide: ActivatedRoute, useValue: { params: of({}) } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            params: of({}),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: { paramMap: convertToParamMap({ id: '42' }), queryParamMap: convertToParamMap({}) },
+          },
+        },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
@@ -478,9 +793,58 @@ describe('ProtocolWorkspaceComponent - template real', () => {
       'Recepción aprobada',
     );
     expect(root.querySelectorAll('app-stage-bar li').length).toBe(6);
-    expect(root.querySelector('app-stage-bar [aria-current="step"]')?.getAttribute('data-stage')).toBe(
-      'ASIGNACION',
-    );
+    // ep2c §4.2: la etapa actual del backend se distingue por estructura y texto, no por aria-current
+    // (que es de la etapa seleccionada por la ruta).
+    const current = root.querySelector('app-stage-bar li.step--current');
+    expect(current?.getAttribute('data-stage')).toBe('ASIGNACION');
+    expect(current?.querySelector('.visually-hidden')?.textContent?.trim()).toBe(', etapa actual');
+    expect(root.querySelectorAll('app-stage-bar li.step--current').length).toBe(1);
+  });
+
+  it('ep2c §3.4: los estados de la barra se derivan de la etapa actual y SEGUIMIENTO y RENOVACION son no disponibles', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const hidden = (code: string) =>
+      root.querySelector(`app-stage-bar li[data-stage="${code}"] .visually-hidden`)?.textContent?.trim();
+
+    expect(hidden('RECEPCION')).toBe(', completada');
+    expect(hidden('ASIGNACION')).toBe(', etapa actual');
+    expect(hidden('EVALUACION')).toBe(', etapa pendiente, aún no disponible');
+    expect(hidden('RESOLUCION')).toBe(', etapa pendiente, aún no disponible');
+    expect(hidden('SEGUIMIENTO')).toBe(', etapa pendiente, aún no disponible');
+    expect(hidden('RENOVACION')).toBe(', etapa pendiente, aún no disponible');
+  });
+
+  it('ep2c §3.4: protocolo RECHAZADO cierra la etapa donde se detuvo y las posteriores no aplican', () => {
+    protocolSignal.set(createProtocol(STATE.RECHAZADO, true));
+    headerSignal.set({ ...HEADER, stage: Stage.fromBackend('EVALUACION') });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const hidden = (code: string) =>
+      root.querySelector(`app-stage-bar li[data-stage="${code}"] .visually-hidden`)?.textContent?.trim();
+
+    expect(hidden('RECEPCION')).toBe(', completada');
+    expect(hidden('ASIGNACION')).toBe(', completada');
+    expect(hidden('EVALUACION')).toBe(', etapa actual, cerrada');
+    expect(hidden('RESOLUCION')).toBe(', no aplica');
+    expect(hidden('SEGUIMIENTO')).toBe(', no aplica');
+    expect(hidden('RENOVACION')).toBe(', no aplica');
+  });
+
+  it('ep2c §3.4: protocolo ARCHIVADO cierra la etapa actual y las posteriores no aplican', () => {
+    protocolSignal.set(createProtocol(STATE.ARCHIVADO, true));
+    headerSignal.set({ ...HEADER, stage: Stage.fromBackend('RECEPCION') });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const hidden = (code: string) =>
+      root.querySelector(`app-stage-bar li[data-stage="${code}"] .visually-hidden`)?.textContent?.trim();
+
+    expect(hidden('RECEPCION')).toBe(', etapa actual, cerrada');
+    expect(hidden('ASIGNACION')).toBe(', no aplica');
+    expect(hidden('RENOVACION')).toBe(', no aplica');
   });
 
   it('D19: APROBADO con etapa SEGUIMIENTO del backend marca Seguimiento (sin cálculo desde el estado)', () => {
@@ -490,7 +854,8 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('app-stage-bar [aria-current="step"]')?.getAttribute('data-stage')).toBe(
+    // SEGUIMIENTO no existe como apartado con datos: la etapa actual se marca igual que las demás.
+    expect(root.querySelector('app-stage-bar li.step--current')?.getAttribute('data-stage')).toBe(
       'SEGUIMIENTO',
     );
   });
@@ -740,7 +1105,10 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
         { provide: ProtocolHeaderPort, useValue: { get: headerFromLastRequest } },
         {
           provide: IEvaluationRepositoryPort,
-          useValue: { getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])) },
+          useValue: {
+            getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])),
+            getActiveAssignments: jasmine.createSpy('getActiveAssignments').and.returnValue(of(ACTIVE_RESULT(0))),
+          },
         },
         {
           provide: AuthFacade,
@@ -860,12 +1228,18 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(TabPruebaComponent.created).toBe(1);
   });
 
-  it('PRESIDENTE sin aceptación de tiempos no ve Asignar Pares y la cabecera dice que falta (F10 D20 (3))', async () => {
+  it('PRESIDENTE sin aceptación de tiempos ve Asignar Pares deshabilitado y con su motivo (F10 D20 (3))', async () => {
     activeRole.set('PRESIDENTE');
     await harness.navigateByUrl('/workspace/5/info');
     respond(0, { ...protocolWith('5', 'Estudio de prueba cinco'), isTimelineTermsAccepted: false });
 
-    expect(button('person_addAsignar Pares')).toBeUndefined();
+    const blocked = button('person_addAsignar Pares');
+    expect(blocked).toBeDefined();
+    expect(blocked?.disabled).toBeTrue();
+    expect(blocked?.getAttribute('aria-describedby')).toBe('assign-peers-blocked-reason');
+    expect(root().querySelector('#assign-peers-blocked-reason')?.textContent?.trim()).toBe(
+      'El investigador aún no acepta los tiempos del comité.',
+    );
     expect(root().querySelector('.header-notice')?.textContent?.trim()).toBe(
       'El investigador aún no acepta los tiempos del comité.',
     );
@@ -874,7 +1248,19 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     await harness.navigateByUrl('/workspace/6/info');
     respond(1, protocolWith('6', 'Estudio de prueba seis'));
     expect(button('person_addAsignar Pares')).toBeDefined();
+    expect(button('person_addAsignar Pares')?.disabled).toBeFalse();
     expect(root().querySelector('.header-notice')).toBeNull();
+  });
+
+  it('un clic en Asignar Pares deshabilitado no navega', async () => {
+    activeRole.set('PRESIDENTE');
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, { ...protocolWith('5', 'Estudio de prueba cinco'), isTimelineTermsAccepted: false });
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+
+    button('person_addAsignar Pares')?.click();
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('si falla la recarga del mismo :id conserva los datos y avisa "No pudimos actualizar el protocolo."; Reintentar vuelve a pedirlo (F10 D15)', async () => {
@@ -899,7 +1285,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(TabPruebaComponent.created).toBe(1);
   });
 
-  it('Asignar Pares lleva al formulario de F03 del protocolo, sin abrir un modal (F10 D20 (2))', async () => {
+  it('Asignar Pares lleva al formulario del espacio (workspace/:id/assignment), sin abrir un modal (F10 D20 (2))', async () => {
     activeRole.set('PRESIDENTE');
     await harness.navigateByUrl('/workspace/5/info');
     respond(0, protocolWith('5', 'Estudio de prueba cinco'));
@@ -907,7 +1293,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
 
     button('person_addAsignar Pares')?.click();
 
-    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/evaluations/assignment', '5']);
+    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/protocols/workspace', 5, 'assignment']);
     expect(requests.length).toBe(1);
   });
 
@@ -929,5 +1315,374 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(header.textContent).not.toContain('Investigador Prueba');
     expect(header.textContent).not.toContain('Cargando...');
     expect(root().querySelector('.owner-chip')).toBeNull();
+  });
+});
+
+/**
+ * F11-31 y F11-34 (24/11/2026): al abrir el espacio la etapa seleccionada es la actual del protocolo,
+ * las pestañas dependen de ella y «Asignar Pares» no se ofrece con la pestaña Asignación abierta.
+ * Router real, con las rutas de las pestañas como páginas de prueba.
+ */
+describe('ProtocolWorkspaceComponent - apertura en la etapa actual y pestañas (F11-28 a F11-34)', () => {
+  let harness: RouterTestingHarness;
+  let router: Router;
+  let activeRole: WritableSignal<RoleCode | null>;
+  let backendStage: StageCode | null;
+  let pending: Subject<ProtocolEntity>[];
+  let activeResponse: Observable<ActiveAssignmentsResult>;
+  let getActiveAssignments: jasmine.Spy;
+  let notify: jasmine.Spy;
+
+  const root = () => harness.fixture.nativeElement as HTMLElement;
+  const tabLabels = () =>
+    Array.from(root().querySelectorAll('.tab-strip .tab-item span'), (s) => s.textContent?.trim());
+  const hasButton = (label: string) =>
+    Array.from(root().querySelectorAll('button')).some((b) => b.textContent?.includes(label));
+
+  async function open(url: string, status: keyof typeof STATE = 'RECEPCION_APROBADA'): Promise<void> {
+    await harness.navigateByUrl(url);
+    const response = pending[pending.length - 1];
+    response.next({ ...createProtocol(STATE[status], true), id: '5', title: 'Estudio de prueba cinco' });
+    response.complete();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+  }
+
+  beforeEach(async () => {
+    pending = [];
+    backendStage = 'ASIGNACION';
+    activeResponse = of(ACTIVE_RESULT(0));
+    getActiveAssignments = jasmine.createSpy('getActiveAssignments').and.callFake(() => activeResponse);
+    notify = jasmine.createSpy('notify');
+    activeRole = signal<RoleCode | null>('PRESIDENTE');
+    const getById = jasmine.createSpy('getById').and.callFake(() => {
+      const response = new Subject<ProtocolEntity>();
+      pending.push(response);
+      return response;
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            path: 'workspace/:id',
+            component: ProtocolWorkspaceComponent,
+            children: [
+              { path: 'info', component: TabPruebaComponent },
+              { path: 'validation', component: TabPruebaComponent },
+              { path: 'assignment', component: TabPruebaComponent },
+              { path: 'assignment-history', component: TabPruebaComponent },
+              { path: 'evaluation', component: TabPruebaComponent },
+            ],
+          },
+        ]),
+        { provide: IProtocolRepositoryPort, useValue: { getById } },
+        {
+          provide: ProtocolHeaderPort,
+          useValue: {
+            get: () =>
+              pending[pending.length - 1].pipe(
+                map(
+                  (p): ProtocolHeaderData => ({
+                    code: p.code || null,
+                    version: '1.0',
+                    title: p.title,
+                    riskLevel: undefined,
+                    stage: backendStage ? Stage.fromBackend(backendStage) : null,
+                  }),
+                ),
+              ),
+          },
+        },
+        {
+          provide: IEvaluationRepositoryPort,
+          useValue: {
+            getByProtocolId: jasmine.createSpy('getByProtocolId').and.returnValue(of([])),
+            getActiveAssignments,
+          },
+        },
+        { provide: AuthFacade, useValue: { currentUser: () => ({ rol: 'PRESIDENTE', roles: ['PRESIDENTE'] }) } },
+        { provide: ActiveRoleFacade, useValue: { activeRole } },
+        { provide: NotificationService, useValue: { notify } },
+        { provide: RoleHome, useValue: { urlTree: () => 'inicio-del-rol-activo' } },
+      ],
+    });
+    TestBed.overrideComponent(ProtocolWorkspaceComponent, {
+      add: { providers: [{ provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } }] },
+    });
+    harness = await RouterTestingHarness.create();
+    router = TestBed.inject(Router);
+  });
+
+  describe('etapas posteriores a la actual (F11-41 a F11-43, 24/11/2026)', () => {
+    const barItem = (code: string) =>
+      root().querySelector(`app-stage-bar li[data-stage="${code}"]`) as HTMLElement;
+    it('el texto del aviso es el pedido para cada etapa', () => {
+      expect(stageNotReachedMessage('Evaluación')).toBe(
+        'El protocolo aún no está en la etapa Evaluación. Podrá verla cuando llegue a ella.',
+      );
+      expect(stageNotReachedMessage('Resolución')).toContain('etapa Resolución.');
+    });
+
+    for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`${role}: el clic en una etapa posterior no navega y muestra el aviso «info» (F11-41)`, async () => {
+        activeRole.set(role);
+        await open('/workspace/5/info');
+        const before = router.url;
+        notify.calls.reset();
+
+        (barItem('EVALUACION').querySelector('button') as HTMLButtonElement).click();
+        harness.detectChanges();
+        await harness.fixture.whenStable();
+
+        expect(router.url).toBe(before);
+        expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+      });
+    }
+
+    it('la barra anuncia las posteriores como pendientes y sin aria-current (F11-42)', async () => {
+      await open('/workspace/5/info');
+
+      for (const code of ['EVALUACION', 'RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
+        expect(barItem(code).hasAttribute('aria-current')).withContext(code).toBeFalse();
+        expect(barItem(code).querySelector('.visually-hidden')?.textContent?.trim())
+          .withContext(code)
+          .toBe(', etapa pendiente, aún no disponible');
+        expect(barItem(code).querySelector('a')).withContext(code).toBeNull();
+      }
+    });
+
+    it('la etapa actual y las completadas siguen siendo navegables y el aviso no sale', async () => {
+      await open('/workspace/5/info');
+
+      expect(barItem('RECEPCION').querySelector('a')).not.toBeNull();
+      expect(barItem('ASIGNACION').querySelector('a')).not.toBeNull();
+      expect(barItem('ASIGNACION').getAttribute('aria-current')).toBe('step');
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+      it(`${role}: abrir por URL una etapa posterior redirige a la etapa actual con replaceUrl y el mismo aviso (F11-43)`, async () => {
+        activeRole.set(role);
+        const replace = spyOn(router, 'navigate').and.callThrough();
+
+        await open('/workspace/5/evaluation');
+
+        expect(router.url).toBe(
+          role === 'PRESIDENTE' ? '/workspace/5/assignment' : '/workspace/5/assignment-history',
+        );
+        expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+        expect(replace.calls.allArgs().some(([, extras]) => (extras as { replaceUrl?: boolean })?.replaceUrl === true))
+          .toBeTrue();
+      });
+    }
+
+    it('sin etapa del backend no se bloquea ni se avisa (F11-43)', async () => {
+      backendStage = null;
+
+      await open('/workspace/5/evaluation');
+
+      expect(router.url).toBe('/workspace/5/evaluation');
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('abrir por URL la etapa actual o una anterior no avisa ni redirige', async () => {
+      await open('/workspace/5/assignment-history');
+
+      expect(router.url).toBe('/workspace/5/assignment-history');
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('con el protocolo en RECEPCION la URL de Evaluación vuelve al Resumen con el aviso', async () => {
+      backendStage = 'RECEPCION';
+
+      await open('/workspace/5/evaluation');
+
+      expect(router.url).toBe('/workspace/5/info');
+      expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+    });
+
+    describe('protocolo cerrado: las etapas «no aplica» tampoco se abren (F11-47, F11-48)', () => {
+      it('el texto del aviso es el pedido', () => {
+        expect(stageClosedMessage('Evaluación')).toBe(
+          'El protocolo se cerró en la etapa Evaluación; esta etapa no aplica.',
+        );
+        expect(stageClosedMessage('Evaluación')).not.toBe(stageNotReachedMessage('Resolución'));
+      });
+
+      for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+        it(`${role}: el clic en una etapa «no aplica» no navega y avisa dónde se cerró (F11-47)`, async () => {
+          activeRole.set(role);
+          backendStage = 'EVALUACION';
+          await open('/workspace/5/evaluation', 'RECHAZADO');
+          const before = router.url;
+          notify.calls.reset();
+
+          (barItem('RESOLUCION').querySelector('button') as HTMLButtonElement).click();
+          harness.detectChanges();
+          await harness.fixture.whenStable();
+
+          expect(router.url).toBe(before);
+          expect(notify).toHaveBeenCalledOnceWith(stageClosedMessage('Evaluación'), 'info');
+        });
+      }
+
+      it('la etapa cerrada y las completadas siguen navegables', async () => {
+        backendStage = 'EVALUACION';
+        await open('/workspace/5/evaluation', 'RECHAZADO');
+
+        expect(barItem('EVALUACION').querySelector('a')).not.toBeNull();
+        expect(barItem('RECEPCION').querySelector('a')).not.toBeNull();
+        expect(barItem('ASIGNACION').querySelector('a')).not.toBeNull();
+        expect(notify).not.toHaveBeenCalled();
+      });
+
+      for (const role of ['PRESIDENTE', 'SECRETARIA', 'INVESTIGADOR'] as RoleCode[]) {
+        it(`${role}: por URL una etapa «no aplica» redirige a la etapa cerrada con el mismo aviso (F11-48)`, async () => {
+          activeRole.set(role);
+          backendStage = 'ASIGNACION';
+          const nav = spyOn(router, 'navigate').and.callThrough();
+
+          await open('/workspace/5/evaluation', 'RECHAZADO');
+
+          expect(router.url).toBe('/workspace/5/assignment-history');
+          expect(notify).toHaveBeenCalledOnceWith(stageClosedMessage('Asignación'), 'info');
+          expect(nav.calls.allArgs().some(([, x]) => (x as { replaceUrl?: boolean })?.replaceUrl === true)).toBeTrue();
+        });
+      }
+
+      it('ARCHIVADO_VENCIMIENTO en Recepción: la URL de Asignación vuelve al Resumen con el aviso', async () => {
+        backendStage = 'RECEPCION';
+
+        await open('/workspace/5/assignment-history', 'ARCHIVADO');
+
+        expect(router.url).toBe('/workspace/5/info');
+        expect(notify).toHaveBeenCalledOnceWith(stageClosedMessage('Recepción'), 'info');
+      });
+
+      it('con el protocolo abierto no sale el aviso de cierre', async () => {
+        await open('/workspace/5/evaluation');
+
+        expect(notify).toHaveBeenCalledOnceWith(stageNotReachedMessage('Evaluación'), 'info');
+      });
+    });
+
+    it('el aviso de «aún no llega» y el de «no existe todavía» son mensajes distintos (F11-44)', () => {
+      expect(STAGE_SCREEN_MISSING_MESSAGE).toBe('Esta sección todavía no está disponible en el sistema.');
+      expect(stageNotReachedMessage('Evaluación')).not.toBe(STAGE_SCREEN_MISSING_MESSAGE);
+      expect(stageNotReachedMessage('Evaluación')).not.toContain(STAGE_SCREEN_MISSING_MESSAGE);
+    });
+  });
+
+  it('PRESIDENTE abre en ASIGNACION: va al formulario, solo ve la pestaña Asignación y no ve Asignar Pares', async () => {
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment');
+    expect(tabLabels()).toEqual(['Asignación']);
+    expect(hasButton('Asignar Pares')).toBeFalse();
+  });
+
+  it('ASIGNACION con una asignación ya hecha abre el historial', async () => {
+    await open('/workspace/5/info', 'EN_EVALUACION');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(tabLabels()).toEqual(['Asignación']);
+  });
+
+  it('SECRETARIA abre en ASIGNACION: va al historial y solo ve la pestaña Asignación', async () => {
+    activeRole.set('SECRETARIA');
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(tabLabels()).toEqual(['Asignación']);
+  });
+
+  it('en RECEPCION se queda en el Resumen con Resumen y Validación Técnica, y PRESIDENTE ve Asignar Pares', async () => {
+    backendStage = 'RECEPCION';
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/info');
+    expect(tabLabels()).toEqual(['Resumen', 'Validación Técnica']);
+    expect(hasButton('Asignar Pares')).toBeTrue();
+  });
+
+  it('la Validación Técnica abierta explícitamente conserva las pestañas de Recepción aunque la etapa actual sea otra', async () => {
+    await open('/workspace/5/validation');
+
+    expect(router.url).toBe('/workspace/5/validation');
+    expect(tabLabels()).toEqual(['Resumen', 'Validación Técnica']);
+    expect(hasButton('Asignar Pares')).toBeTrue();
+  });
+
+  it('en EVALUACION no hay pestañas todavía: ninguna del espacio', async () => {
+    backendStage = 'EVALUACION';
+
+    await open('/workspace/5/info', 'EN_EVALUACION');
+
+    expect(router.url).toBe('/workspace/5/evaluation');
+    expect(tabLabels()).toEqual([]);
+  });
+
+  it('PRESIDENTE con evaluadores ya asignados abre en el historial, no en el formulario (F11-35)', async () => {
+    activeResponse = of(ACTIVE_RESULT(2));
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(tabLabels()).toEqual(['Asignación']);
+    expect(getActiveAssignments).toHaveBeenCalledOnceWith(5);
+  });
+
+  it('con evaluadores ya asignados «Asignar Pares» no se muestra en Recepción (F11-36)', async () => {
+    activeResponse = of(ACTIVE_RESULT(1));
+
+    await open('/workspace/5/validation');
+
+    expect(router.url).toBe('/workspace/5/validation');
+    expect(hasButton('Asignar Pares')).toBeFalse();
+  });
+
+  it('sin evaluadores asignados «Asignar Pares» sí se muestra en Recepción', async () => {
+    await open('/workspace/5/validation');
+
+    expect(hasButton('Asignar Pares')).toBeTrue();
+  });
+
+  it('si falla la consulta abre el formulario (que muestra el error con Reintentar) y no el historial (F11-38)', async () => {
+    activeResponse = throwError(() => new Error('falla'));
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment');
+  });
+
+  it('INVESTIGADOR abre la etapa Asignación sin rebote y sin pedir asignaciones activas (F11-39, F11-40)', async () => {
+    activeRole.set('INVESTIGADOR');
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(tabLabels()).toEqual(['Asignación']);
+    expect(getActiveAssignments).not.toHaveBeenCalled();
+  });
+
+  it('SECRETARIA tampoco consulta las asignaciones desde el espacio: las ve en el historial', async () => {
+    activeRole.set('SECRETARIA');
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/assignment-history');
+    expect(getActiveAssignments).not.toHaveBeenCalled();
+  });
+
+  it('sin etapa del backend no redirige: el Resumen sigue siendo de Recepción', async () => {
+    backendStage = null;
+
+    await open('/workspace/5/info');
+
+    expect(router.url).toBe('/workspace/5/info');
+    expect(tabLabels()).toEqual(['Resumen', 'Validación Técnica']);
   });
 });

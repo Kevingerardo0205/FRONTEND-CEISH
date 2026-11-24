@@ -22,13 +22,11 @@ export const EVALUATION_ROUTES: Routes = [
         data: { roles: ['PRESIDENTE'], permissions: ['EVALUACION_ASIGNAR'] },
       },
       {
+        // EP2b: un solo formulario, el del espacio del protocolo. Esta ruta vieja redirige; los guards
+        // (PRESIDENTE y EVALUACION_ASIGNAR) los aplica la ruta de destino.
         path: 'assignment/:protocolId',
-        loadComponent: () =>
-          import('./presentation/pages/peer-assignment-form/peer-assignment-form.page').then(
-            (m) => m.PeerAssignmentFormPage,
-          ),
-        canActivate: [RoleGuard, AuthGuard],
-        data: { roles: ['PRESIDENTE'], permissions: ['EVALUACION_ASIGNAR'] },
+        redirectTo: '/dashboard/protocols/workspace/:protocolId/assignment',
+        pathMatch: 'full',
       },
       {
         path: 'reassignment/:protocolId',

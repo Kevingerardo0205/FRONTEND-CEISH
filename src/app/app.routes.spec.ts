@@ -338,13 +338,13 @@ describe('Rutas por rol activo (T13d)', () => {
       expect(notify).not.toHaveBeenCalled();
     });
 
-    it('PRESIDENTE abre el formulario de un protocolo', async () => {
+    it('la ruta vieja del formulario redirige al formulario del espacio del protocolo (EP2b)', async () => {
       await start(['PRESIDENTE'], undefined, ASSIGN_PERMISSIONS);
 
       await harness.navigateByUrl('/dashboard/evaluations/assignment/15');
 
-      expect(router.url).toBe('/dashboard/evaluations/assignment/15');
-      expect(has('app-shell app-peer-assignment-form-page')).toBeTrue();
+      expect(router.url).toBe('/dashboard/protocols/workspace/15/assignment');
+      expect(notify).not.toHaveBeenCalled();
     });
 
     it('SECRETARIA, aunque tenga EVALUACION_ASIGNAR, vuelve a /pendientes con aviso', async () => {

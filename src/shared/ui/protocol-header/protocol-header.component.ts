@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Stage } from '@domain/value-objects/stage.vo';
 import { StageBarComponent } from '../stage-bar/stage-bar.component';
+import { StageCode } from '@domain/value-objects/stage.vo';
+import { WorkspaceStageState } from '@domain/value-objects/workspace-stage-state.vo';
 import { StatusChipComponent, StatusTone } from '../status-chip/status-chip.component';
 
 /** Estado del protocolo para el chip: texto y tono (el color siempre va con texto). */
@@ -37,6 +39,13 @@ export class ProtocolHeaderComponent {
   readonly heading = input.required<string>();
   readonly facts = input<readonly ProtocolHeaderFact[]>([]);
   readonly stage = input<Stage | null>(null);
+  readonly selectedStage = input<StageCode | null>(null);
+  readonly stageStates = input<Readonly<Partial<Record<StageCode, WorkspaceStageState>>> >({});
+  readonly stageLinks = input<Readonly<Partial<Record<StageCode, string>>>>({});
+  /** Clic en una etapa que el protocolo aún no alcanza (la pantalla muestra el aviso). */
+  readonly notReachedStageClick = output<StageCode>();
+  /** Clic en una etapa «no aplica» de un protocolo cerrado. */
+  readonly notApplicableStageClick = output<StageCode>();
 
   /** Chip neutro: código y versión que existan, unidos por "·"; sin ninguno, no hay chip. */
   readonly identity = computed(() => {

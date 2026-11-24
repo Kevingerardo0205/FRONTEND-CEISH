@@ -47,3 +47,47 @@
 **Pruebas:** `audit-repository.adapter.spec.ts` (nuevo, `HttpTestingController`), `evaluation-api.adapter.spec.ts`, `protocol-detail-tab.component.spec.ts`, `protocol-trail.page.spec.ts`, `audit-logs.page.spec.ts`, `audit-feed.component.spec.ts` (si no existe, nuevo), `subsanacion.page.spec.ts`, `audit.use-case.spec.ts` (sin la huella). Nombres de prueba ficticios (`ZZ_TEST_`), nunca de personas reales.
 
 **Se retira:** los datos de respaldo de `audit-repository.adapter.ts` (`mockLogs`, `getMockTrail`) y la huella; no los usa nadie más (`git grep`).
+## EP2b - Revisar documentacion antes de asignar
+
+**Alcance:** permitir que la PRESIDENTA consulte la documentacion de un protocolo antes de asignar evaluadores, reutilizando F03 y EP2. Esta etapa documenta el diseno; no implementa codigo ni cambia permisos.
+
+**Piezas existentes que se reutilizan**
+- `PeerAssignmentListPage` en `/dashboard/evaluations/assignment`.
+- `PeerAssignmentFormPage` en `/dashboard/evaluations/assignment/:protocolId`.
+- `ProtocolWorkspaceComponent` y `ProtocolWorkspaceService`.
+- `ProtocolValidationDetailPage` en `/dashboard/protocols/workspace/:id/validation`.
+- `WORKSPACE_TAB_ROLES`, `WORKSPACE_ACTION_ROLES` y la accion `ASSIGN_EVALUATORS` de F10.
+
+**Navegacion propuesta**
+- Navegacion SPA en la misma pestana.
+- El identificador se conserva en el parametro de ruta `:id` o `:protocolId` segun el destino existente.
+- El contexto se conserva mediante un origen interno limitado a `assignment-list` o `assignment-form`.
+- El retorno se resuelve mediante destinos conocidos; no se acepta una URL arbitraria ni una redireccion abierta.
+- Desde `assignment-list`, el retorno vuelve a la lista.
+- Desde `assignment-form`, el retorno vuelve al formulario del mismo protocolo.
+- La accion `Asignar Pares` conserva su destino actual al formulario.
+
+**Decisiones EP2b propuestas**
+
+| # | Contexto | Decision | Justificacion | Consecuencias tecnicas |
+|---|---|---|---|---|
+| D21 | F03 necesita abrir el detalle sin abandonar el flujo institucional. | «Ver protocolo» abre el workspace existente en la misma pestana. | Reutiliza EP2 y evita duplicar la vista documental. | Se anade una navegacion desde la lista hacia el workspace. |
+| D22 | El retorno debe identificar de donde partio la PRESIDENTA. | Se conserva el identificador y un origen interno permitido. | Mantiene el protocolo seleccionado y evita retornos arbitrarios. | Se propaga un contexto limitado a `assignment-list` o `assignment-form`. |
+| D23 | F03 ya tiene una accion de asignacion. | «Ver protocolo» es independiente de «Asignar». | Consultar documentacion no debe alterar la accion existente. | Se mantienen dos acciones y sus destinos independientes. |
+| D24 | EP2 ya define el modo de consulta de PRESIDENTA. | Se conserva el acceso de solo lectura y no se cambian guards ni permisos. | La ocultacion visual no sustituye la autorizacion existente. | Se reutilizan `RoleGuard`, `WORKSPACE_TAB_ROLES` y `WORKSPACE_ACTION_ROLES`. |
+| D25 | La lista y el formulario requieren retornos distintos. | El retorno depende del origen de navegacion. | Evita perder el contexto de F03. | Se implementan destinos de retorno permitidos y deterministas. |
+| D26 | EP2 ya contiene Validacion y F10 D20 ya contiene la asignacion. | Se reutilizan el workspace y Validacion, sin vista paralela. | Reduce duplicacion y conserva la trazabilidad de F11/F10. | No se crean componentes, endpoints ni servicios nuevos salvo evidencia posterior. |
+
+**Restricciones**
+- Sin cambios de backend ni nuevos endpoints.
+- Sin cambios en dependencias, environments, guards o permisos.
+- Sin duplicar componentes de F03 o EP2.
+- Sin modificar la logica de asignacion existente.
+- La seguridad de solo lectura sigue dependiendo de la autorizacion existente; el frontend no es la unica barrera.
+
+**Pruebas previstas:** navegacion desde la lista, navegacion desde el formulario, `protocolId`, origen permitido, retorno, solo lectura, regresion de «Asignar» y regresion de «Asignar Pares». La verificacion de que las acciones del workspace conservan realmente el contexto queda pendiente de la implementacion.
+## Revisión EP2b — flujo integrado de asignación (22/11/2026)
+
+Implementado dentro del alcance de F11: `PeerAssignmentListPage` navega a la pestaña `assignment` del workspace y ya no ofrece «Ver protocolo». La ruta hija reutiliza `PeerAssignmentFormPage`; el formulario acepta el identificador del parámetro padre `workspace/:id` y conserva la ruta independiente existente para compatibilidad. `ProtocolWorkspaceComponent` añade la pestaña solo para `PRESIDENTE` en el estado de asignación y `Asignar Pares` usa el mismo destino integrado.
+
+Pruebas actualizadas: lista de asignaciones, roles/rutas del workspace y acciones contextuales. `tsc` de aplicación y specs pasan; la ejecución de Karma quedó bloqueada porque Chrome no inicia en el entorno local por errores de GPU/OS encryption.

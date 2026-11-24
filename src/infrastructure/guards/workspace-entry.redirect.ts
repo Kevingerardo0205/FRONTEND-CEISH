@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { RedirectFunction, Router } from '@angular/router';
+import { CanActivateFn, CanMatchFn, RedirectFunction, Router } from '@angular/router';
 import { firstWorkspaceTab } from '@features/protocols/domain/workspace-tab-roles';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import { MENU_ITEMS } from '@features/shell/infrastructure/menu.config';
@@ -7,6 +7,22 @@ import { RoleHome } from './role-home.guard';
 
 /** Opción "Mis evaluaciones" de `MENU_ITEMS`: destino de EVALUADOR, que no tiene pestañas en el espacio (F10 D11). */
 export const EVALUATOR_MENU_ITEM_ID = 'evaluador-evaluaciones';
+
+/**
+ * Enlaces viejos a `workspace/:id/evaluation` (F10 D11 / S-1f): el EVALUADOR no ve el espacio ni
+ * la barra de etapas (F11); va a "Mis evaluaciones" del menú, sin el aviso de "No tiene acceso".
+ * Cualquier otro rol pasa y lo decide `RoleGuard`.
+ */
+export const redirectEvaluatorToMyEvaluations: CanActivateFn & CanMatchFn = () => {
+  const role = inject(ActiveRoleFacade).activeRole();
+  if (!role || firstWorkspaceTab(role)) return true;
+
+  const evaluatorItem = MENU_ITEMS.find((item) => item.id === EVALUATOR_MENU_ITEM_ID);
+  if (evaluatorItem?.roles.includes(role)) {
+    return inject(Router).parseUrl(evaluatorItem.route);
+  }
+  return true;
+};
 
 /**
  * Ruta sin pestaña `workspace/:id` (F10 D11, S-1c): la primera pestaña que abre el rol activo.

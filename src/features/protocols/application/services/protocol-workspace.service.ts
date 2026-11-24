@@ -6,6 +6,7 @@ import { EvaluationEntity } from '@domain/entities/evaluation.entity';
 import { apiErrorStatus } from '@shared/utils/api-error-message.util';
 import { ProtocolHeaderData, ProtocolHeaderPort } from '../../domain/protocol-header';
 import { defer, finalize, forkJoin, map, tap, Observable, Subscription } from 'rxjs';
+import { LoadActiveAssignmentsUseCase } from '@features/evaluations/application/load-active-assignments.use-case';
 
 /** Error de carga del espacio del protocolo (F10 D14): no encontrado (404 y 400) o cualquier otro. */
 export type WorkspaceLoadError = 'not-found' | 'failed';
@@ -13,11 +14,25 @@ export type WorkspaceLoadError = 'not-found' | 'failed';
 /** 404 del protocolo y 400 de un id que no es número (backend `protocols.service.ts:73-78`). */
 const NOT_FOUND_STATUSES: readonly number[] = [400, 404];
 
+/**
+ * Asignaciones activas del protocolo (GET /evaluations/protocol/:id/active-assignments, solo
+ * SECRETARIA y PRESIDENTE). Asignar no cambia el estado (sigue COMPLETO hasta fijar el riesgo, N52),
+ * así que «ya tiene evaluadores» sale de aquí y no del estado (F11-35 a F11-38).
+ * `idle`: aún no se pidió; `error`: la consulta falló (nunca se toma como «sin asignaciones»).
+ */
+export type ActiveAssignmentsState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'none' }
+  | { kind: 'has'; count: number }
+  | { kind: 'error' };
+
 @Injectable()
 export class ProtocolWorkspaceService {
   private repository = inject(IProtocolRepositoryPort);
   private evaluationRepo = inject(IEvaluationRepositoryPort);
   private headerPort = inject(ProtocolHeaderPort);
+  private loadActiveAssignments = inject(LoadActiveAssignmentsUseCase);
 
   private protocolSignal = signal<ProtocolEntity | null>(null);
   /** Encabezado sin rellenos (F10 D18), del mismo `:id` que `protocol`. */
@@ -27,6 +42,9 @@ export class ProtocolWorkspaceService {
   private errorSignal = signal<WorkspaceLoadError | null>(null);
   private evaluationsLoadingSignal = signal<boolean>(false);
   private evaluationsErrorSignal = signal<boolean>(false);
+  private activeAssignmentsSignal = signal<ActiveAssignmentsState>({ kind: 'idle' });
+  private activeAssignmentsFor: number | null = null;
+  private activeAssignmentsSub: Subscription | null = null;
 
   /** `:id` de la última carga pedida; si cambia, no se muestra nada del anterior (D14). */
   private currentId: string | null = null;
@@ -40,6 +58,7 @@ export class ProtocolWorkspaceService {
   public error = this.errorSignal.asReadonly();
   public evaluationsLoading = this.evaluationsLoadingSignal.asReadonly();
   public evaluationsError = this.evaluationsErrorSignal.asReadonly();
+  public activeAssignments = this.activeAssignmentsSignal.asReadonly();
 
   // Derived state
   public protocolId = computed(() => this.protocol()?.id);
@@ -62,6 +81,7 @@ export class ProtocolWorkspaceService {
         this.evaluationsSignal.set([]);
         this.evaluationsLoadingSignal.set(false);
         this.evaluationsErrorSignal.set(false);
+        this.resetActiveAssignments();
       }
       this.loadingSignal.set(true);
       this.errorSignal.set(null);
@@ -103,6 +123,41 @@ export class ProtocolWorkspaceService {
       });
   }
 
+  /**
+   * Pide las asignaciones activas una sola vez por protocolo (con `force`, o tras un error, de
+   * nuevo). El espacio y el formulario la llaman; la que llega segunda no repite la petición.
+   */
+  public ensureActiveAssignments(protocolId: number, force = false): void {
+    const state = this.activeAssignmentsSignal().kind;
+    if (!force && this.activeAssignmentsFor === protocolId && state !== 'idle' && state !== 'error') {
+      return;
+    }
+    this.activeAssignmentsSub?.unsubscribe();
+    this.activeAssignmentsFor = protocolId;
+    this.activeAssignmentsSignal.set({ kind: 'loading' });
+    this.activeAssignmentsSub = this.loadActiveAssignments.execute(protocolId).subscribe({
+      next: (result) =>
+        this.activeAssignmentsSignal.set(
+          result.assignments.length > 0
+            ? { kind: 'has', count: result.assignments.length }
+            : { kind: 'none' },
+        ),
+      error: () => this.activeAssignmentsSignal.set({ kind: 'error' }),
+    });
+  }
+
+  /** «Reintentar» de la consulta de asignaciones activas. */
+  public retryActiveAssignments(): void {
+    if (this.activeAssignmentsFor !== null) this.ensureActiveAssignments(this.activeAssignmentsFor, true);
+  }
+
+  private resetActiveAssignments(): void {
+    this.activeAssignmentsSub?.unsubscribe();
+    this.activeAssignmentsSub = null;
+    this.activeAssignmentsFor = null;
+    this.activeAssignmentsSignal.set({ kind: 'idle' });
+  }
+
   public updateProtocol(data: Partial<ProtocolEntity>) {
     const current = this.protocolSignal();
     if (current) {
@@ -117,6 +172,7 @@ export class ProtocolWorkspaceService {
 
   public clear() {
     this.currentId = null;
+    this.resetActiveAssignments();
     this.evaluationsSub?.unsubscribe();
     this.protocolSignal.set(null);
     this.evaluationsSignal.set([]);

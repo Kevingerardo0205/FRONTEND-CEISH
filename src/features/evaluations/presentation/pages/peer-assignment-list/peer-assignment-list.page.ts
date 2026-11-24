@@ -24,6 +24,7 @@ type EstadoCarga = 'cargando' | 'listo' | 'error';
 
 /** Ruta de la lista; el formulario de un protocolo es `{ruta}/{protocolId}` (F03 §3). */
 export const ASSIGNMENT_LIST_ROUTE = '/dashboard/evaluations/assignment';
+export const PROTOCOL_WORKSPACE_ASSIGNMENT_ROUTE = '/dashboard/protocols/workspace';
 
 interface Fila {
   id: number;
@@ -94,6 +95,8 @@ export class PeerAssignmentListPage implements OnInit {
 
   asignar(fila: Fila): void {
     if (fila.motivo) return;
-    void this.router.navigate([ASSIGNMENT_LIST_ROUTE, fila.id]);
+    void this.router.navigate([PROTOCOL_WORKSPACE_ASSIGNMENT_ROUTE, fila.id, 'assignment'], {
+      queryParams: { origin: 'assignment-list' },
+    });
   }
 }

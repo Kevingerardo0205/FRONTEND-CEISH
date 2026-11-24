@@ -7,6 +7,7 @@
 .formulario__cuerpo,
 .formulario__aviso,
 .formulario__exito {
+  width: min(100%, 58rem);
   margin-top: 1.5rem;
   padding: 1.5rem;
   border: 1px solid var(--c-border);
@@ -51,7 +52,10 @@
   gap: 0.75rem 1.5rem;
   margin: 0 0 1.5rem;
   padding: 0;
-  border: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-control);
+  padding: 1rem;
+  background: var(--c-bg);
 
   legend {
     width: 100%;
@@ -84,6 +88,10 @@
   gap: 0.5rem 1rem;
   padding: 0.75rem 0;
   border-bottom: 1px solid var(--c-border);
+
+  &:first-child {
+    border-top: 1px solid var(--c-border);
+  }
 
   @media (max-width: 599px) {
     grid-template-columns: minmax(0, 1fr);
@@ -195,6 +203,25 @@
   align-items: center;
   gap: 0.75rem 1rem;
   margin-top: 1.5rem;
+}
+
+@media (max-width: 599px) {
+  .formulario__cuerpo,
+  .formulario__aviso,
+  .formulario__exito {
+    padding: 1rem;
+  }
+
+  .formulario__acciones {
+    align-items: stretch;
+    flex-direction: column;
+
+    button,
+    .formulario__enlace {
+      width: 100%;
+      text-align: center;
+    }
+  }
 }
 
 .formulario__motivo {
