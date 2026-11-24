@@ -94,6 +94,25 @@ Identificadores asignados por la usuaria. No existen en ninguna otra spec; F-03 
 | **F-04** | Renovación sin éxito falso (`renewal-request`). | `feat/f02-f04-sin-simulados` |
 | **F-06** | Conservar el contexto de origen (`origin`) al volver del espacio del protocolo a la asignación (`protocol-workspace.component`). | `feat/ep2b-presidenta-revisar-antes-de-asignar` |
 
+### Resultados de la verificación (24/11/2026)
+
+- `tsc -p tsconfig.app.json --noEmit` y `tsc -p tsconfig.spec.json --noEmit`: exit 0.
+- `ng test` completo, tres veces: 1662 de 1662 SUCCESS cada vez (sin pruebas fallidas).
+- `ng build --configuration production`: exit 0.
+- `npx eslint "src/**/*.ts"`: 0 errores, 64 avisos (línea base 64, sin cambio).
+
+**Mutaciones** (se aplica cada una, se corren las suites afectadas, se revierte y se comprueba por hash que el archivo quedó idéntico).
+
+| Id | Mutación | Resultado | Pruebas que fallan | Revertida e idéntica |
+|---|---|---|---|---|
+| M1 | deriveStageStates sin la rama de cierre (RECHAZADO/ARCHIVADO) | 6 FAILED, 113 SUCCESS | deriveStageStates: RECHAZADO en EVALUACION: anteriores completadas, EVALUACION cerrada, posteriores no aplica; deriveStageStates: cada etapa recibe exactamente un estado y nunca una etapa cerrada sin ser la actual; deriveStageStates: ARCHIVADO_VENCIMIENTO en RECEPCION: la recepción cerrada y todas las demás no aplica; deriveStageStates: protocolo cerrado gana a no disponible: RECHAZADO en SEGUIMIENTO cierra SEGUIMIENTO; Workspace: template real ep2c §3.4: protocolo ARCHIVADO cierra la etapa actual y las posteriores no aplican; Workspace: template real ep2c §3.4: protocolo RECHAZADO cierra la etapa donde se detuvo y las posteriores no aplican | Sí |
+| M2 | etapas posteriores como «completada» | 3 FAILED, 116 SUCCESS | Workspace: template real ep2c §3.4: los estados de la barra se derivan de la etapa actual y SEGUIMIENTO y RENOVACION son no disponibles; deriveStageStates: protocolo en curso en ASIGNACION: anterior completada, actual en curso, posteriores pendientes; deriveStageStates: protocolo en curso en RECEPCION: ninguna completada | Sí |
+| M3 | protocol-header renderiza la barra con stage null | 2 FAILED, 76 SUCCESS | Workspace: template real D19: sin etapa del backend (null o desconocida) no muestra la barra, aunque el estado se reconozca; ProtocolHeader: sin etapa no hay barra | Sí |
+| M4 | «Asignar Pares» navega a /dashboard/evaluations/assignment/:id | 3 FAILED, 61 SUCCESS | Workspace: carga y errores (F10 D14, S-1g) Asignar Pares lleva al formulario del espacio (workspace/:id/assignment), sin abrir un modal (F10 D20 (2)); Workspace: acciones contextuales conserva el origen al ejecutar Asignar Pares desde el workspace; Workspace: acciones contextuales Asignar Pares sin origen navega al formulario del espacio sin queryParams y con id numérico | Sí |
+| M5 | sin la redirección del EVALUADOR en evaluation | 3 FAILED, 63 SUCCESS | S-1a: declara las seis rutas consultivas dentro del workspace; S-1a: EVALUADOR en workspace/1/evaluation va a Mis evaluaciones, sin aviso (D11 actualizada en S-1f, EARS 16); S-1a: EVALUADOR en workspace/1/evaluation va a Mis evaluaciones, sin aviso (ep2c) | Sí |
+| M6 | el id vuelve a ser string | 4 FAILED, 60 SUCCESS | Workspace: carga y errores (F10 D14, S-1g) Asignar Pares lleva al formulario del espacio (workspace/:id/assignment), sin abrir un modal (F10 D20 (2)); Workspace: acciones contextuales conserva el origen al ejecutar Asignar Pares desde el workspace; Workspace: acciones contextuales Asignar Pares sin origen navega al formulario del espacio sin queryParams y con id numérico; Workspace: acciones contextuales Editar y Aprobar Todo navegan con el id numérico del protocolo | Sí |
+| M7 | la ruta vieja de F03 deja de redirigir | 3 FAILED, 127 SUCCESS | T13d: la ruta vieja del formulario redirige al formulario del espacio del protocolo (EP2b); S-1a: la ruta vieja /dashboard/evaluations/assignment/1 redirige al formulario del espacio para la PRESIDENTE; EVALUATION_ROUTES: assignment/:protocolId ya no carga un formulario: redirige al formulario del espacio (EP2b) | Sí |
+
 ## 2. Backend (las hace otra sesión en el repo del backend)
 
 - **Registrar en spec-001 HU-001** V2, V5, V6 y V7 (README §3, regla 1).
