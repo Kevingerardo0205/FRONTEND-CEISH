@@ -214,6 +214,19 @@ La consulta la hace el espacio solo para quien puede asignar y con el protocolo 
 
 Criterios EARS: F11-35 a F11-40 (`spec-ui.md` §7c).
 
+### 3.8. Etapas posteriores a la actual (decisión de la usuaria, 24/11/2026)
+
+Una etapa **posterior a la etapa actual** del protocolo (estado «pendiente»; también SEGUIMIENTO y RENOVACION cuando son posteriores a la actual) todavía no se puede abrir. La regla es única (`isStageNotReached`, dominio) y la usan la barra y el espacio. Sin etapa del backend no se bloquea nada.
+
+- **Clic en la barra:** no navega. Muestra un aviso flotante con el servicio de avisos que ya usan los guards (`NotificationService`, tipo «info», se cierra solo): «El protocolo aún no está en la etapa {nombre}. Podrá verla cuando llegue a ella.».
+- **Barra:** esas etapas se anuncian con texto oculto «etapa pendiente, aún no disponible» y no tienen `aria-current` ni enlace (son un botón que solo muestra el aviso).
+- **Navegables, como hasta ahora:** etapas completadas, cerradas y la etapa actual. Con el protocolo cerrado (RECHAZADO, ARCHIVADO_VENCIMIENTO) las posteriores son «no aplica» y esta regla no las toca.
+- **URL:** abrir por URL una etapa posterior a la actual redirige a la etapa actual (`replaceUrl`) y muestra el mismo aviso, una sola vez por intento. Si el backend no manda etapa, no se bloquea nada.
+- **Etapa alcanzada sin pantalla:** si el protocolo ya está en Evaluación o Resolución (o en otra etapa cuya pantalla aún no existe), el espacio se mantiene en la página con otro mensaje: «Esta sección todavía no está disponible en el sistema.», para no confundirlo con «aún no llega».
+- **Roles:** aplica a SECRETARIA, PRESIDENTE e INVESTIGADOR. El EVALUADOR sigue redirigido a «Mis evaluaciones» (sin cambio).
+
+Criterios EARS: F11-41 a F11-46 (`spec-ui.md` §7d).
+
 ### 3.5. Estado de información
 
 Cada apartado debe diferenciar explícitamente:
@@ -339,6 +352,15 @@ El historial debe distinguir entre una fuente que confirmó `Sin registros`, una
 34. Si falla la consulta de asignaciones activas, se muestra el error con «Reintentar» y no el formulario (F11-38).
 35. El INVESTIGADOR abre la etapa Asignación sin rebote ni aviso de acceso denegado y ve el mensaje reservado del comité en lugar del historial (F11-39).
 36. En la pestaña Asignación del INVESTIGADOR no hay peticiones de asignaciones ni se muestran nombres, ids ni correos de evaluadores (F11-40).
+
+### Etapas posteriores a la actual (24/11/2026, §3.8)
+
+37. El clic en una etapa posterior a la actual no navega y muestra el aviso «info» con su nombre (F11-41).
+38. La barra anuncia esas etapas como «etapa pendiente, aún no disponible», sin `aria-current` ni enlace (F11-42).
+39. La URL de una etapa posterior a la actual redirige a la etapa actual con `replaceUrl` y el mismo aviso; sin etapa del backend no se bloquea nada (F11-43).
+40. Una etapa alcanzada cuya pantalla no existe muestra «Esta sección todavía no está disponible en el sistema.», distinto del aviso de «aún no llega» (F11-44).
+41. Completadas, cerradas y la etapa actual siguen navegables (F11-45).
+42. Aplica a SECRETARIA, PRESIDENTE e INVESTIGADOR; el EVALUADOR sigue redirigido (F11-46).
 
 ## 7. Plan de pruebas
 

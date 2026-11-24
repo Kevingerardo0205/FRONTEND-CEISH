@@ -212,3 +212,20 @@ Decisión de la usuaria tras la validación en el navegador; detalle en `ep2c.md
 - **Condición:** `!canValidate() && !isInvestigador()`, es decir, cualquier rol que no valide y no sea investigador. Hoy solo la PRESIDENTE, por las rutas (EVALUADOR no abre la pestaña).
 - **Pruebas (`protocol-validation-detail.page.spec.ts`):** la PRESIDENTE lo ve con su texto; la SECRETARIA no lo ve (en revisión y con la recepción validada); el INVESTIGADOR no lo ve.
 - **Mutación M18:** condición del aviso siempre verdadera → fallan 3 pruebas (las dos de la SECRETARIA y la del INVESTIGADOR); archivo restaurado con hash idéntico.
+
+## EP2c — Etapas posteriores a la actual (24/11/2026)
+
+Decisión de la usuaria; detalle en `ep2c.md` §3.8 y criterios F11-41 a F11-46 en `spec-ui.md` §7d.
+
+- **Hecho:** regla única `isStageNotReached` (dominio). La barra convierte las etapas posteriores a la actual en un botón sin enlace ni `aria-current`, con texto oculto «etapa pendiente, aún no disponible»; el clic avisa con `NotificationService` (tipo «info») y no navega.
+- **Hecho:** la URL de una etapa posterior redirige a la etapa actual con `replaceUrl` y el mismo aviso; sin etapa del backend no se bloquea nada. La página de etapa sin pantalla muestra «Esta sección todavía no está disponible en el sistema.».
+- **Decisión:** con el protocolo cerrado las posteriores son «no aplica» y esta regla no las bloquea (no se pidió). Los textos «completada», «etapa actual», «cerrada» y «no aplica» no cambian; «pendiente» pasó a «etapa pendiente, aún no disponible» y «no disponible» solo queda para SEGUIMIENTO/RENOVACION que no son posteriores a la actual.
+- **Mutaciones (cada una restaurada con hash idéntico):**
+
+| # | Mutación | Pruebas que fallan |
+|---|---|---|
+| M19 | Etapa pendiente navegable por clic | 10 |
+| M20 | Sin aviso al hacer clic | 3 |
+| M21 | URL de etapa pendiente sin redirección | 4 |
+| M22 | Mismo mensaje para «aún no llega» y «no existe todavía» | 2 |
+| M23 | La etapa actual también queda bloqueada | 1 (prueba nueva del VO; la primera versión era un mutante equivalente) |

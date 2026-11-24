@@ -210,6 +210,17 @@ Decisión de la usuaria del 24/11/2026 tras la validación en el navegador (deta
 
 Pendiente del backend: la lista de asignación de la PRESIDENTE debe excluir los protocolos con asignación activa (TSK-002-N54); mientras tanto se apoya en el aviso del formulario y en el 409.
 
+## 7d. Criterios de EP2c: etapas posteriores a la actual (24/11/2026)
+
+Decisión de la usuaria del 24/11/2026 (detalle en `ep2c.md` §3.8).
+
+41. **F11-41:** Cuando el usuario haga clic en una etapa posterior a la etapa actual del protocolo en la barra de etapas, el sistema no debe navegar y debe mostrar un aviso flotante de tipo «info» con el texto «El protocolo aún no está en la etapa {nombre}. Podrá verla cuando llegue a ella.».
+42. **F11-42:** Mientras una etapa sea posterior a la etapa actual, la barra debe anunciarla con texto oculto «etapa pendiente, aún no disponible» y no debe asignarle `aria-current` ni enlace.
+43. **F11-43:** Cuando se abra por URL una etapa posterior a la etapa actual, el sistema debe redirigir a la etapa actual con `replaceUrl` y mostrar el mismo aviso; si el backend no envía etapa, no debe bloquear ninguna.
+44. **F11-44:** Cuando la etapa ya se haya alcanzado y su pantalla aún no exista, el sistema debe mantener la página y mostrar «Esta sección todavía no está disponible en el sistema.», distinto del aviso de F11-41.
+45. **F11-45:** Las etapas completadas, las cerradas y la etapa actual deben seguir siendo navegables.
+46. **F11-46:** Los criterios F11-41 a F11-45 deben aplicar a la SECRETARIA, la PRESIDENTE y el INVESTIGADOR; el EVALUADOR debe seguir redirigido a «Mis evaluaciones».
+
 ## EP2b v0.2 — Asignación integrada en el workspace (22/11/2026)
 
 La decisión anterior de mantener «Ver protocolo» como acción independiente queda reemplazada por esta revisión. La única acción principal de cada fila es «Asignar» y abre directamente `/dashboard/protocols/workspace/:protocolId/assignment` con `origin=assignment-list`.
