@@ -219,7 +219,9 @@ Decisión de la usuaria del 24/11/2026 (detalle en `ep2c.md` §3.8).
 43. **F11-43:** Cuando se abra por URL una etapa posterior a la etapa actual, el sistema debe redirigir a la etapa actual con `replaceUrl` y mostrar el mismo aviso; si el backend no envía etapa, no debe bloquear ninguna.
 44. **F11-44:** Cuando la etapa ya se haya alcanzado y su pantalla aún no exista, el sistema debe mantener la página y mostrar «Esta sección todavía no está disponible en el sistema.», distinto del aviso de F11-41.
 45. **F11-45:** Las etapas completadas, las cerradas y la etapa actual deben seguir siendo navegables.
-46. **F11-46:** Los criterios F11-41 a F11-45 deben aplicar a la SECRETARIA, la PRESIDENTE y el INVESTIGADOR; el EVALUADOR debe seguir redirigido a «Mis evaluaciones».
+46. **F11-46:** Los criterios F11-41 a F11-48 deben aplicar a la SECRETARIA, la PRESIDENTE y el INVESTIGADOR; el EVALUADOR debe seguir redirigido a «Mis evaluaciones».
+47. **F11-47:** Cuando el protocolo esté cerrado (RECHAZADO o ARCHIVADO_VENCIMIENTO) y el usuario haga clic en una etapa «no aplica», el sistema no debe navegar y debe mostrar un aviso flotante de tipo «info» con el texto «El protocolo se cerró en la etapa {etapa}; esta etapa no aplica.», con la etapa donde se cerró.
+48. **F11-48:** Cuando el protocolo esté cerrado y se abra por URL una etapa «no aplica», el sistema debe redirigir a la etapa cerrada con `replaceUrl` y mostrar el mismo aviso.
 
 ## EP2b v0.2 — Asignación integrada en el workspace (22/11/2026)
 

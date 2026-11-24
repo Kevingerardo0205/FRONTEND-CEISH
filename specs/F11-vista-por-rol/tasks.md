@@ -219,7 +219,7 @@ Decisión de la usuaria; detalle en `ep2c.md` §3.8 y criterios F11-41 a F11-46 
 
 - **Hecho:** regla única `isStageNotReached` (dominio). La barra convierte las etapas posteriores a la actual en un botón sin enlace ni `aria-current`, con texto oculto «etapa pendiente, aún no disponible»; el clic avisa con `NotificationService` (tipo «info») y no navega.
 - **Hecho:** la URL de una etapa posterior redirige a la etapa actual con `replaceUrl` y el mismo aviso; sin etapa del backend no se bloquea nada. La página de etapa sin pantalla muestra «Esta sección todavía no está disponible en el sistema.».
-- **Decisión:** con el protocolo cerrado las posteriores son «no aplica» y esta regla no las bloquea (no se pidió). Los textos «completada», «etapa actual», «cerrada» y «no aplica» no cambian; «pendiente» pasó a «etapa pendiente, aún no disponible» y «no disponible» solo queda para SEGUIMIENTO/RENOVACION que no son posteriores a la actual.
+- **Decisión (reemplazada el 24/11/2026, ver abajo):** con el protocolo cerrado las posteriores eran «no aplica» y esta regla no las bloqueaba. Los textos «completada», «etapa actual», «cerrada» y «no aplica» no cambian; «pendiente» pasó a «etapa pendiente, aún no disponible» y «no disponible» solo queda para SEGUIMIENTO/RENOVACION que no son posteriores a la actual.
 - **Mutaciones (cada una restaurada con hash idéntico):**
 
 | # | Mutación | Pruebas que fallan |
@@ -229,3 +229,16 @@ Decisión de la usuaria; detalle en `ep2c.md` §3.8 y criterios F11-41 a F11-46 
 | M21 | URL de etapa pendiente sin redirección | 4 |
 | M22 | Mismo mensaje para «aún no llega» y «no existe todavía» | 2 |
 | M23 | La etapa actual también queda bloqueada | 1 (prueba nueva del VO; la primera versión era un mutante equivalente) |
+
+### Protocolo cerrado: etapas «no aplica» (24/11/2026)
+
+- **Decisión de la usuaria:** con RECHAZADO o ARCHIVADO_VENCIMIENTO las etapas «no aplica» tampoco se abren. Clic: aviso «El protocolo se cerró en la etapa {etapa}; esta etapa no aplica.»; URL: redirección a la etapa cerrada con el mismo aviso. Detalle en `ep2c.md` §3.8; EARS F11-47 y F11-48.
+- **Hecho:** `isStageNotApplicable` (dominio); la barra las convierte en botón (sin enlace ni `aria-current`, texto oculto «no aplica») con salida `notApplicableClick`; el espacio nombra la etapa donde se cerró y redirige por URL.
+- **Mutaciones (cada una restaurada con hash idéntico):**
+
+| # | Mutación | Pruebas que fallan |
+|---|---|---|
+| M25 | Etapa «no aplica» navegable por clic | 5 |
+| M26 | Clic en «no aplica» con el aviso de «aún no llega» | 7 |
+| M27 | URL de etapa «no aplica» sin redirección | 4 |
+| M28 | El aviso nombra la etapa clicada y no donde se cerró | 7 |

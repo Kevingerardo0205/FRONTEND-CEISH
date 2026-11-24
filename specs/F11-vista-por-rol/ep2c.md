@@ -220,12 +220,13 @@ Una etapa **posterior a la etapa actual** del protocolo (estado «pendiente»; t
 
 - **Clic en la barra:** no navega. Muestra un aviso flotante con el servicio de avisos que ya usan los guards (`NotificationService`, tipo «info», se cierra solo): «El protocolo aún no está en la etapa {nombre}. Podrá verla cuando llegue a ella.».
 - **Barra:** esas etapas se anuncian con texto oculto «etapa pendiente, aún no disponible» y no tienen `aria-current` ni enlace (son un botón que solo muestra el aviso).
-- **Navegables, como hasta ahora:** etapas completadas, cerradas y la etapa actual. Con el protocolo cerrado (RECHAZADO, ARCHIVADO_VENCIMIENTO) las posteriores son «no aplica» y esta regla no las toca.
+- **Navegables, como hasta ahora:** etapas completadas, cerradas y la etapa actual.
+- **Protocolo cerrado (RECHAZADO, ARCHIVADO_VENCIMIENTO), decisión del 24/11/2026:** las etapas «no aplica» tampoco se abren. El clic no navega y avisa «El protocolo se cerró en la etapa {etapa}; esta etapa no aplica.» (la etapa donde se cerró, no la clicada); por URL se redirige a la etapa cerrada (`replaceUrl`) con el mismo aviso. La barra las sigue anunciando «no aplica» y deja de darles enlace y `aria-current`.
 - **URL:** abrir por URL una etapa posterior a la actual redirige a la etapa actual (`replaceUrl`) y muestra el mismo aviso, una sola vez por intento. Si el backend no manda etapa, no se bloquea nada.
 - **Etapa alcanzada sin pantalla:** si el protocolo ya está en Evaluación o Resolución (o en otra etapa cuya pantalla aún no existe), el espacio se mantiene en la página con otro mensaje: «Esta sección todavía no está disponible en el sistema.», para no confundirlo con «aún no llega».
 - **Roles:** aplica a SECRETARIA, PRESIDENTE e INVESTIGADOR. El EVALUADOR sigue redirigido a «Mis evaluaciones» (sin cambio).
 
-Criterios EARS: F11-41 a F11-46 (`spec-ui.md` §7d).
+Criterios EARS: F11-41 a F11-48 (`spec-ui.md` §7d).
 
 ### 3.5. Estado de información
 
@@ -361,6 +362,8 @@ El historial debe distinguir entre una fuente que confirmó `Sin registros`, una
 40. Una etapa alcanzada cuya pantalla no existe muestra «Esta sección todavía no está disponible en el sistema.», distinto del aviso de «aún no llega» (F11-44).
 41. Completadas, cerradas y la etapa actual siguen navegables (F11-45).
 42. Aplica a SECRETARIA, PRESIDENTE e INVESTIGADOR; el EVALUADOR sigue redirigido (F11-46).
+43. Con el protocolo cerrado, el clic en una etapa «no aplica» no navega y avisa dónde se cerró (F11-47).
+44. Con el protocolo cerrado, la URL de una etapa «no aplica» redirige a la etapa cerrada con `replaceUrl` y el mismo aviso (F11-48).
 
 ## 7. Plan de pruebas
 
