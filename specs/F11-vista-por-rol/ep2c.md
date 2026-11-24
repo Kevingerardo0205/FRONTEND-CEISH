@@ -197,6 +197,23 @@ Las pestañas inferiores del workspace dependen de la etapa seleccionada en la b
 
 Criterios EARS: F11-28 a F11-34 (`spec-ui.md` §7b).
 
+### 3.7. Protocolo ya asignado e INVESTIGADOR en Asignación (decisión de la usuaria, 24/11/2026)
+
+**Evaluadores ya asignados.** Asignar no cambia el estado (sigue COMPLETO hasta fijar el riesgo, N52), así que la condición no es el estado sino las asignaciones activas: `GET /evaluations/protocol/:id/active-assignments` (SECRETARIA y PRESIDENTE). Con al menos una asignación activa:
+
+- la pestaña de la etapa Asignación muestra el historial, nunca el formulario;
+- «Asignar Pares» no se muestra;
+- si la PRESIDENTE abre `workspace/:id/assignment` por URL, ve «Este protocolo ya tiene evaluadores asignados.» con el enlace al historial, sin formulario ni botón;
+- si falla la consulta, el formulario muestra el estado de error con «Reintentar» y nunca el formulario por defecto; mientras consulta, la carga.
+
+La consulta la hace el espacio solo para quien puede asignar y con el protocolo en COMPLETO, y el formulario la reutiliza (una petición por protocolo). Tras asignar, el estado se refresca y la pestaña pasa al historial.
+
+**Lista de asignación de la PRESIDENTE.** `GET /evaluations/protocols/pending-peer-assignment` no trae asignaciones activas ni su conteo; marcar o quitar «Asignar» obligaría a una consulta por fila, y no se hace. **Pendiente del backend:** que la lista excluya los protocolos con asignación activa (TSK-002-N54). Mientras tanto el control está en el aviso del formulario y en el 409 del backend, que el formulario muestra tal cual.
+
+**INVESTIGADOR en Asignación.** Puede abrir la etapa (sin rebote al inicio ni aviso de acceso denegado), pero no ve evaluadores: en lugar del historial ve «La asignación de evaluadores es reservada del comité. Podrá ver el avance de su protocolo en la barra de etapas.». En esa pestaña no se hace ninguna petición de asignaciones activas ni de reasignaciones, así que no llegan ni se muestran nombres, ids ni correos de evaluadores (F11: el investigador no ve nombres). Para la SECRETARIA no cambia: ve el historial.
+
+Criterios EARS: F11-35 a F11-40 (`spec-ui.md` §7c).
+
 ### 3.5. Estado de información
 
 Cada apartado debe diferenciar explícitamente:
@@ -313,6 +330,15 @@ El historial debe distinguir entre una fuente que confirmó `Sin registros`, una
 28. Dentro del espacio, el formulario no ofrece «Revisar documentación» ni «Volver a la lista» (F11-32).
 29. Antes de elegir el tipo de revisión no se ve el botón «Asignar evaluadores» ni su motivo (F11-33).
 30. Con la pestaña Asignación abierta, el encabezado no muestra «Asignar Pares» (F11-34).
+
+### Protocolo ya asignado e INVESTIGADOR (24/11/2026, §3.7)
+
+31. Con al menos una asignación activa, la pestaña Asignación muestra el historial y nunca el formulario (F11-35).
+32. Con al menos una asignación activa, «Asignar Pares» no se muestra (F11-36).
+33. Si la PRESIDENTE abre `workspace/:id/assignment` con asignaciones activas, ve el aviso con el enlace al historial, sin formulario ni botón (F11-37).
+34. Si falla la consulta de asignaciones activas, se muestra el error con «Reintentar» y no el formulario (F11-38).
+35. El INVESTIGADOR abre la etapa Asignación sin rebote ni aviso de acceso denegado y ve el mensaje reservado del comité en lugar del historial (F11-39).
+36. En la pestaña Asignación del INVESTIGADOR no hay peticiones de asignaciones ni se muestran nombres, ids ni correos de evaluadores (F11-40).
 
 ## 7. Plan de pruebas
 

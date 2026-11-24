@@ -187,3 +187,21 @@ Estado general: **Implementacion realizada; pruebas de navegador pendientes**. L
 - **Hecho:** el segundo módulo del workspace reutiliza `PeerAssignmentFormPage`, conservando carga, validaciones y envío.
 - **Hecho:** el contexto `protocolId`, la recarga, la restricción de `PRESIDENTE` y la navegación entre módulos quedan representados en rutas y specs.
 - **Verificación:** `npx tsc -p tsconfig.app.json --noEmit` y `npx tsc -p tsconfig.spec.json --noEmit` exit 0. Karma no pudo ejecutar las specs porque Chrome no inicia en el entorno local; se registran los errores reales en el cierre de la tarea.
+
+## EP2c — Protocolo ya asignado e INVESTIGADOR en Asignación (24/11/2026)
+
+Decisión de la usuaria tras la validación en el navegador; detalle en `ep2c.md` §3.7 y criterios F11-35 a F11-40 en `spec-ui.md` §7c.
+
+- **Hecho:** `ProtocolWorkspaceService` guarda el estado de las asignaciones activas (`idle | loading | none | has | error`) con una petición por protocolo (`ensureActiveAssignments`, `retryActiveAssignments`).
+- **Hecho:** con asignación activa la pestaña Asignación lleva al historial, «Asignar Pares» no se muestra y el formulario muestra el aviso «Este protocolo ya tiene evaluadores asignados.» con enlace al historial. Si la consulta falla: error con «Reintentar», nunca el formulario.
+- **Hecho:** el INVESTIGADOR abre la etapa Asignación y ve «La asignación de evaluadores es reservada del comité…»; esa página no hace ninguna petición de asignaciones ni de reasignaciones.
+- **Pendiente del backend (N54):** la lista de asignación de la PRESIDENTE (`pending-peer-assignment`) no trae asignaciones activas, por lo que «Asignar» no se puede marcar o quitar por fila sin una consulta por cada una. La lista debe excluir los protocolos con asignación activa; mientras tanto rigen el aviso del formulario y el 409 del backend.
+- **Mutaciones (cada una restaurada con hash idéntico):**
+
+| # | Mutación | Pruebas que fallan |
+|---|---|---|
+| M13 | Formulario visible con asignación activa | 2 (formulario) |
+| M14 | «Asignar Pares» visible con asignación activa | 3 (espacio) |
+| M15 | `assignment-history` sin el rol INVESTIGADOR (rebote al inicio) | 4 (rutas) |
+| M16 | El INVESTIGADOR ve el historial con evaluadores | 3 (historial) |
+| M17 | Si falla la consulta, formulario por defecto | 1 (formulario) |

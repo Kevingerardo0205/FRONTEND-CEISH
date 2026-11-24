@@ -197,6 +197,19 @@ Decisión de la usuaria del 24/11/2026 (detalle en `ep2c.md` §3.6).
 33. **F11-33:** Mientras no se haya elegido el tipo de revisión, el formulario dentro del espacio debe mostrar solo el título, el código y título del protocolo y «Tipo de revisión»; el botón «Asignar evaluadores» y su motivo deben aparecer después de elegir el tipo, debajo de las filas de evaluadores.
 34. **F11-34:** Mientras la pestaña Asignación esté abierta, el encabezado del workspace no debe mostrar «Asignar Pares» ni el aviso de tiempos sin aceptar.
 
+## 7c. Criterios de EP2c: protocolo ya asignado e INVESTIGADOR en Asignación (24/11/2026)
+
+Decisión de la usuaria del 24/11/2026 tras la validación en el navegador (detalle en `ep2c.md` §3.7).
+
+35. **F11-35:** Mientras el protocolo tenga al menos una asignación activa (`GET /evaluations/protocol/:id/active-assignments`), la pestaña de la etapa Asignación debe mostrar el historial y nunca el formulario.
+36. **F11-36:** Mientras el protocolo tenga al menos una asignación activa, el encabezado no debe mostrar «Asignar Pares».
+37. **F11-37:** Cuando la PRESIDENTE abra `workspace/:id/assignment` y el protocolo tenga asignaciones activas, el sistema debe mostrar «Este protocolo ya tiene evaluadores asignados.» con el enlace al historial, sin formulario ni botón.
+38. **F11-38:** Si la consulta de asignaciones activas falla, el formulario debe mostrar el estado de error con «Reintentar» y no debe mostrar el formulario por defecto.
+39. **F11-39:** Mientras el rol activo sea INVESTIGADOR, la etapa Asignación debe abrirse sin rebote al inicio ni aviso de acceso denegado y debe mostrar «La asignación de evaluadores es reservada del comité. Podrá ver el avance de su protocolo en la barra de etapas.» en lugar del historial.
+40. **F11-40:** Mientras el rol activo sea INVESTIGADOR, la pestaña Asignación no debe pedir asignaciones activas ni historial de reasignaciones ni mostrar nombres, ids o correos de evaluadores.
+
+Pendiente del backend: la lista de asignación de la PRESIDENTE debe excluir los protocolos con asignación activa (TSK-002-N54); mientras tanto se apoya en el aviso del formulario y en el 409.
+
 ## EP2b v0.2 — Asignación integrada en el workspace (22/11/2026)
 
 La decisión anterior de mantener «Ver protocolo» como acción independiente queda reemplazada por esta revisión. La única acción principal de cada fila es «Asignar» y abre directamente `/dashboard/protocols/workspace/:protocolId/assignment` con `origin=assignment-list`.
