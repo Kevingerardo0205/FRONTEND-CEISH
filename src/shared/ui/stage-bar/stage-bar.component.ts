@@ -3,15 +3,42 @@ import { RouterLink } from '@angular/router';
 import { Stage, StageCode } from '@domain/value-objects/stage.vo';
 import { WorkspaceStageState } from '@domain/value-objects/workspace-stage-state.vo';
 
-export type StageStatus = 'completed' | 'in-progress' | 'pending' | 'undetermined';
+export type StageStatus =
+  | 'completed'
+  | 'in-progress'
+  | 'pending'
+  | 'closed'
+  | 'not-applicable'
+  | 'unavailable'
+  | 'undetermined';
 
-/** Texto oculto con el estado de cada etapa (F00 §5, EP1). */
+/** Texto oculto con el estado de cada etapa (F00 §5, EP1; ep2c §3.4). */
 const STATUS_TEXT: Readonly<Record<StageStatus, string>> = {
   completed: 'completada',
   'in-progress': 'en curso',
   pending: 'pendiente',
+  closed: 'cerrada',
+  'not-applicable': 'no aplica',
+  unavailable: 'no disponible',
   undetermined: 'estado no determinado',
 };
+
+function toStageStatus(state: WorkspaceStageState | undefined): StageStatus {
+  if (state?.kind === 'unavailable') return 'unavailable';
+  if (state?.kind !== 'determined') return 'undetermined';
+  switch (state.status) {
+    case 'COMPLETADA':
+      return 'completed';
+    case 'EN_CURSO':
+      return 'in-progress';
+    case 'CERRADA':
+      return 'closed';
+    case 'NO_APLICA':
+      return 'not-applicable';
+    default:
+      return 'pending';
+  }
+}
 
 /**
  * Barra de las 6 etapas del protocolo (spec-ui F00 §5; aspecto del canvas desde EP1).
@@ -33,8 +60,6 @@ export class StageBarComponent {
   /** Texto corto bajo la etapa actual, por ejemplo "Riesgo fijado · 3 de 4 dictámenes". */
   readonly detail = input<string>();
 
-  protected readonly statusText = STATUS_TEXT;
-
   readonly steps = computed(() => {
     const current = this.stage();
     const selected = this.selectedStage() ?? (Object.keys(this.links()).length ? null : current?.code ?? null);
@@ -42,20 +67,20 @@ export class StageBarComponent {
     const links = this.links();
 
     return Stage.all().map((stage) => {
-      const state = states[stage.code];
-      const status: StageStatus =
-        state?.kind === 'determined'
-          ? state.status === 'COMPLETADA'
-            ? 'completed'
-            : state.status === 'EN_CURSO'
-              ? 'in-progress'
-              : 'pending'
-          : 'undetermined';
+      const status = toStageStatus(states[stage.code]);
+
+      const isCurrent = current?.code === stage.code;
 
       return {
         stage,
         status,
-        current: current?.code === stage.code,
+        /** Texto oculto: la etapa actual no pierde que esté cerrada (ep2c §4.2). */
+        announce: isCurrent
+          ? status === 'closed'
+            ? 'etapa actual, cerrada'
+            : 'etapa actual'
+          : STATUS_TEXT[status],
+        current: isCurrent,
         selected: selected === stage.code,
         link: links[stage.code] ?? null,
       };

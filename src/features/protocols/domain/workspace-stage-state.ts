@@ -4,6 +4,7 @@
  */
 export {
   currentStageFromBackend,
+  deriveStageStates,
   determinedStageState,
   informationEmpty,
   informationError,
@@ -12,6 +13,7 @@ export {
   operationAvailable,
   operationRestricted,
   selectedStageFromRoute,
+  unavailableStageState,
   undeterminedStageState,
 } from '@domain/value-objects/workspace-stage-state.vo';
 

@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, catchError, map, of } from 'rxjs';
+import { distinctUntilChanged, startWith, switchMap } from 'rxjs/operators';
 import { IEvaluationRepositoryPort } from '@domain/ports/IEvaluationRepositoryPort';
 import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
 import { WorkspaceInformationState } from '../../../domain/workspace-stage-state';
@@ -66,8 +67,7 @@ export class ProtocolWorkspaceStagePage implements OnInit {
 
   ngOnInit(): void {
     const stage = this.route.snapshot.data['stage'] as StageCode | undefined;
-    const protocolId = this.route.parent?.snapshot.paramMap.get('id');
-    if (!stage || !protocolId) {
+    if (!stage) {
       this.informationState.set({ kind: 'unavailable' });
       return;
     }
@@ -75,23 +75,38 @@ export class ProtocolWorkspaceStagePage implements OnInit {
     this.stage.set(stage);
     this.title.set(TITLES[stage]);
 
-    if (stage === 'SEGUIMIENTO' || stage === 'RENOVACION') {
-      this.informationState.set({ kind: 'unavailable' });
-      return;
-    }
-
-    const source$: Observable<readonly unknown[]> =
-      stage === 'EVALUACION'
-        ? this.evaluations.getByProtocolId(protocolId).pipe(map((records) => records as readonly unknown[]))
-        : this.resolutions
-            .getResolutionByProtocolId(protocolId)
-            .pipe(map((record) => (record ? [record] : [])));
-
-    source$
+    const parentParamMap$ = (this.route.parent?.paramMap ??
+      of(this.route.parent?.snapshot.paramMap ?? null)).pipe(
+      startWith(this.route.parent?.snapshot.paramMap ?? null),
+    );
+    parentParamMap$
       .pipe(
-        catchError(() => {
-          this.informationState.set({ kind: 'error' });
-          return of(null as readonly unknown[] | null);
+        map((params) => params?.get('id') ?? ''),
+        distinctUntilChanged(),
+        switchMap((protocolId) => {
+          this.recordCount.set(0);
+          this.hasData.set(false);
+          if (!/^\d+$/.test(protocolId)) {
+            this.informationState.set({ kind: 'unavailable' });
+            return of(null as readonly unknown[] | null);
+          }
+          if (stage === 'SEGUIMIENTO' || stage === 'RENOVACION') {
+            this.informationState.set({ kind: 'unavailable' });
+            return of(null as readonly unknown[] | null);
+          }
+          this.informationState.set({ kind: 'loading' });
+          const source$: Observable<readonly unknown[]> =
+            stage === 'EVALUACION'
+              ? this.evaluations.getByProtocolId(protocolId).pipe(map((records) => records as readonly unknown[]))
+              : this.resolutions
+                  .getResolutionByProtocolId(protocolId)
+                  .pipe(map((record) => (record ? [record] : [])));
+          return source$.pipe(
+            catchError(() => {
+              this.informationState.set({ kind: 'error' });
+              return of(null as readonly unknown[] | null);
+            }),
+          );
         }),
         takeUntilDestroyed(this.destroyRef),
       )

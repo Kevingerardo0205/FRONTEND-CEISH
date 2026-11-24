@@ -1,7 +1,7 @@
 import { Stage } from '@domain/value-objects/stage.vo';
 import { TestBed } from '@angular/core/testing';
 import { Component, signal, WritableSignal } from '@angular/core';
-import { ActivatedRoute, provideRouter, Router, UrlTree } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router, UrlTree } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { map, of, Subject } from 'rxjs';
@@ -124,6 +124,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
   let protocolSignal: WritableSignal<ProtocolEntity | null>;
   let activeRoleSignal: WritableSignal<RoleCode | null>;
   let currentUserRoles: RoleCode[];
+  let queryParamMap: Subject<ParamMap>;
   /** Campo antiguo `rol` (un solo rol); en las pruebas de varios roles lleva el rol NO activo. */
   let currentUserRol: RoleCode | null;
 
@@ -131,6 +132,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     protocolSignal = signal<ProtocolEntity | null>(null);
     activeRoleSignal = signal<RoleCode | null>('INVESTIGADOR');
     currentUserRoles = ['INVESTIGADOR'];
+    queryParamMap = new Subject<ParamMap>();
     currentUserRol = null;
     const workspace = workspaceMock(protocolSignal);
 
@@ -148,8 +150,15 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
           },
         },
         { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
-        { provide: ActivatedRoute, useValue: { params: of({}) } },
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            params: of({}),
+            queryParamMap,
+            snapshot: { paramMap: convertToParamMap({ id: '42' }) },
+          },
+        },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), events: of(), url: '/' } },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
@@ -173,6 +182,26 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
   function tabPaths(): string[] {
     return page.tabConfig().map((tab) => tab.path);
   }
+
+  it('construye enlaces absolutos de las seis etapas con el id del workspace', () => {
+    expect(page.stageLinks()).toEqual({
+      RECEPCION: '/dashboard/protocols/workspace/42/reception',
+      ASIGNACION: '/dashboard/protocols/workspace/42/assignment-history',
+      EVALUACION: '/dashboard/protocols/workspace/42/evaluation',
+      RESOLUCION: '/dashboard/protocols/workspace/42/resolution',
+      SEGUIMIENTO: '/dashboard/protocols/workspace/42/follow-up',
+      RENOVACION: '/dashboard/protocols/workspace/42/renewal',
+    });
+  });
+
+  it('actualiza el origen validado cuando cambia queryParamMap sin destruir el workspace', () => {
+    queryParamMap.next(convertToParamMap({ origin: 'assignment-form' }));
+    expect(page.returnOrigin()).toBe('assignment-form');
+
+    queryParamMap.next(convertToParamMap({ origin: 'origen-desconocido' }));
+    expect(page.returnOrigin()).toBeNull();
+    expect(page.stageLinks().ASIGNACION).toBe('/dashboard/protocols/workspace/42/assignment-history');
+  });
 
   function actionIds(): string[] {
     return page.contextualActions().map((action) => action.id);
@@ -305,7 +334,11 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
 
     for (const name of ACTION_STATES) {
       setState(name);
-      expect(tabPaths()).toEqual(['info', 'validation']);
+      // La pestaña Asignación (consulta) se ve con COMPLETO aunque los tiempos no estén aceptados
+      // (decisión del 24/11/2026); lo que espera la aceptación es el botón «Asignar Pares».
+      expect(tabPaths()).toEqual(
+        name === 'RECEPCION_APROBADA' ? ['info', 'assignment', 'validation'] : ['info', 'validation'],
+      );
       expect(actionIds()).toEqual([]);
     }
 
@@ -401,7 +434,7 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('retorna al formulario del mismo protocolo dentro del workspace para assignment-form', () => {
+  it('retorna al formulario del espacio del mismo protocolo, con id numérico, para assignment-form', () => {
     const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
     setState('RECEPCION_APROBADA', true);
     page.returnOrigin.set('assignment-form');
@@ -419,10 +452,33 @@ describe('ProtocolWorkspaceComponent - acciones contextuales', () => {
 
     page.onExecuteAction('ASSIGN_EVALUATORS');
 
-    expect(navigate).toHaveBeenCalledWith(
-      ['/dashboard/protocols/workspace', 5, 'assignment'],
-      { queryParams: { origin: 'assignment-list' } },
-    );
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/protocols/workspace', 5, 'assignment'], {
+      queryParams: { origin: 'assignment-list' },
+    });
+  });
+
+  it('Asignar Pares sin origen navega al formulario del espacio sin queryParams y con id numérico', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    activeRoleSignal.set('PRESIDENTE');
+    setState('RECEPCION_APROBADA', true);
+    page.returnOrigin.set(null);
+
+    page.onExecuteAction('ASSIGN_EVALUATORS');
+
+    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/protocols/workspace', 5, 'assignment']);
+  });
+
+  it('Editar y Aprobar Todo navegan con el id numérico del protocolo', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    setState('ENVIADO');
+
+    page.onExecuteAction('EDIT_PROTOCOL');
+    page.onExecuteAction('VALIDATE_ALL');
+
+    expect(navigate.calls.allArgs()).toEqual([
+      [['/investigador/protocolo', 5, 'editar']],
+      [['/dashboard/protocols/workspace', 5, 'validation']],
+    ]);
   });
 });
 
@@ -436,8 +492,15 @@ describe('ProtocolWorkspaceComponent - sin pestaña Evaluación (F10 D11, S-1c)'
       providers: [
         { provide: AuthFacade, useValue: { currentUser: () => ({ rol: activeRoleSignal(), roles: [] }) } },
         { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
-        { provide: ActivatedRoute, useValue: { params: of({}) } },
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            params: of({}),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: { paramMap: convertToParamMap({ id: '42' }), queryParamMap: convertToParamMap({}) },
+          },
+        },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), events: of(), url: '/' } },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
@@ -480,7 +543,14 @@ describe('ProtocolWorkspaceComponent - template real', () => {
           useValue: { currentUser: () => ({ rol: 'SECRETARIA', roles: ['SECRETARIA'] }) },
         },
         { provide: ActiveRoleFacade, useValue: { activeRole: activeRoleSignal } },
-        { provide: ActivatedRoute, useValue: { params: of({}) } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            params: of({}),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: { paramMap: convertToParamMap({ id: '42' }), queryParamMap: convertToParamMap({}) },
+          },
+        },
         { provide: MatSnackBar, useValue: { open: jasmine.createSpy('open') } },
       ],
     })
@@ -520,9 +590,58 @@ describe('ProtocolWorkspaceComponent - template real', () => {
       'Recepción aprobada',
     );
     expect(root.querySelectorAll('app-stage-bar li').length).toBe(6);
-    expect(root.querySelector('app-stage-bar [aria-current="step"]')?.getAttribute('data-stage')).toBe(
-      'ASIGNACION',
-    );
+    // ep2c §4.2: la etapa actual del backend se distingue por estructura y texto, no por aria-current
+    // (que es de la etapa seleccionada por la ruta).
+    const current = root.querySelector('app-stage-bar li.step--current');
+    expect(current?.getAttribute('data-stage')).toBe('ASIGNACION');
+    expect(current?.querySelector('.visually-hidden')?.textContent?.trim()).toBe(', etapa actual');
+    expect(root.querySelectorAll('app-stage-bar li.step--current').length).toBe(1);
+  });
+
+  it('ep2c §3.4: los estados de la barra se derivan de la etapa actual y SEGUIMIENTO y RENOVACION son no disponibles', () => {
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const hidden = (code: string) =>
+      root.querySelector(`app-stage-bar li[data-stage="${code}"] .visually-hidden`)?.textContent?.trim();
+
+    expect(hidden('RECEPCION')).toBe(', completada');
+    expect(hidden('ASIGNACION')).toBe(', etapa actual');
+    expect(hidden('EVALUACION')).toBe(', pendiente');
+    expect(hidden('RESOLUCION')).toBe(', pendiente');
+    expect(hidden('SEGUIMIENTO')).toBe(', no disponible');
+    expect(hidden('RENOVACION')).toBe(', no disponible');
+  });
+
+  it('ep2c §3.4: protocolo RECHAZADO cierra la etapa donde se detuvo y las posteriores no aplican', () => {
+    protocolSignal.set(createProtocol(STATE.RECHAZADO, true));
+    headerSignal.set({ ...HEADER, stage: Stage.fromBackend('EVALUACION') });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const hidden = (code: string) =>
+      root.querySelector(`app-stage-bar li[data-stage="${code}"] .visually-hidden`)?.textContent?.trim();
+
+    expect(hidden('RECEPCION')).toBe(', completada');
+    expect(hidden('ASIGNACION')).toBe(', completada');
+    expect(hidden('EVALUACION')).toBe(', etapa actual, cerrada');
+    expect(hidden('RESOLUCION')).toBe(', no aplica');
+    expect(hidden('SEGUIMIENTO')).toBe(', no aplica');
+    expect(hidden('RENOVACION')).toBe(', no aplica');
+  });
+
+  it('ep2c §3.4: protocolo ARCHIVADO cierra la etapa actual y las posteriores no aplican', () => {
+    protocolSignal.set(createProtocol(STATE.ARCHIVADO, true));
+    headerSignal.set({ ...HEADER, stage: Stage.fromBackend('RECEPCION') });
+    const fixture = TestBed.createComponent(ProtocolWorkspaceComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const hidden = (code: string) =>
+      root.querySelector(`app-stage-bar li[data-stage="${code}"] .visually-hidden`)?.textContent?.trim();
+
+    expect(hidden('RECEPCION')).toBe(', etapa actual, cerrada');
+    expect(hidden('ASIGNACION')).toBe(', no aplica');
+    expect(hidden('RENOVACION')).toBe(', no aplica');
   });
 
   it('D19: APROBADO con etapa SEGUIMIENTO del backend marca Seguimiento (sin cálculo desde el estado)', () => {
@@ -532,7 +651,8 @@ describe('ProtocolWorkspaceComponent - template real', () => {
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('app-stage-bar [aria-current="step"]')?.getAttribute('data-stage')).toBe(
+    // SEGUIMIENTO no existe como apartado con datos: la etapa actual se marca igual que las demás.
+    expect(root.querySelector('app-stage-bar li.step--current')?.getAttribute('data-stage')).toBe(
       'SEGUIMIENTO',
     );
   });
@@ -902,12 +1022,18 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(TabPruebaComponent.created).toBe(1);
   });
 
-  it('PRESIDENTE sin aceptación de tiempos no ve Asignar Pares y la cabecera dice que falta (F10 D20 (3))', async () => {
+  it('PRESIDENTE sin aceptación de tiempos ve Asignar Pares deshabilitado y con su motivo (F10 D20 (3))', async () => {
     activeRole.set('PRESIDENTE');
     await harness.navigateByUrl('/workspace/5/info');
     respond(0, { ...protocolWith('5', 'Estudio de prueba cinco'), isTimelineTermsAccepted: false });
 
-    expect(button('person_addAsignar Pares')).toBeUndefined();
+    const blocked = button('person_addAsignar Pares');
+    expect(blocked).toBeDefined();
+    expect(blocked?.disabled).toBeTrue();
+    expect(blocked?.getAttribute('aria-describedby')).toBe('assign-peers-blocked-reason');
+    expect(root().querySelector('#assign-peers-blocked-reason')?.textContent?.trim()).toBe(
+      'El investigador aún no acepta los tiempos del comité.',
+    );
     expect(root().querySelector('.header-notice')?.textContent?.trim()).toBe(
       'El investigador aún no acepta los tiempos del comité.',
     );
@@ -916,7 +1042,19 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     await harness.navigateByUrl('/workspace/6/info');
     respond(1, protocolWith('6', 'Estudio de prueba seis'));
     expect(button('person_addAsignar Pares')).toBeDefined();
+    expect(button('person_addAsignar Pares')?.disabled).toBeFalse();
     expect(root().querySelector('.header-notice')).toBeNull();
+  });
+
+  it('un clic en Asignar Pares deshabilitado no navega', async () => {
+    activeRole.set('PRESIDENTE');
+    await harness.navigateByUrl('/workspace/5/info');
+    respond(0, { ...protocolWith('5', 'Estudio de prueba cinco'), isTimelineTermsAccepted: false });
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+
+    button('person_addAsignar Pares')?.click();
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('si falla la recarga del mismo :id conserva los datos y avisa "No pudimos actualizar el protocolo."; Reintentar vuelve a pedirlo (F10 D15)', async () => {
@@ -941,7 +1079,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
     expect(TabPruebaComponent.created).toBe(1);
   });
 
-  it('Asignar Pares lleva al formulario de F03 del protocolo, sin abrir un modal (F10 D20 (2))', async () => {
+  it('Asignar Pares lleva al formulario del espacio (workspace/:id/assignment), sin abrir un modal (F10 D20 (2))', async () => {
     activeRole.set('PRESIDENTE');
     await harness.navigateByUrl('/workspace/5/info');
     respond(0, protocolWith('5', 'Estudio de prueba cinco'));
@@ -949,7 +1087,7 @@ describe('ProtocolWorkspaceComponent - carga y errores (F10 D14, S-1g)', () => {
 
     button('person_addAsignar Pares')?.click();
 
-    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/evaluations/assignment', '5']);
+    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard/protocols/workspace', 5, 'assignment']);
     expect(requests.length).toBe(1);
   });
 

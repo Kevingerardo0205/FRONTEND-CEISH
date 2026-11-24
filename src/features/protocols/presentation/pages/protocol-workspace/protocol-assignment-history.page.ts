@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError, distinctUntilChanged, map, startWith, switchMap } from 'rxjs/operators';
 import { AssignmentHistoryEntry, ActiveAssignmentsResult } from '@domain/entities/peer-evaluation.entity';
 import { LoadActiveAssignmentsUseCase } from '@features/evaluations/application/load-active-assignments.use-case';
 import { LoadAssignmentHistoryUseCase } from '@features/evaluations/application/load-assignment-history.use-case';
@@ -102,32 +103,46 @@ export class ProtocolAssignmentHistoryPage implements OnInit {
   readonly hasRecords = signal(false);
 
   ngOnInit(): void {
-    const rawId = this.route.parent?.snapshot.paramMap.get('id') ?? '';
-    const protocolId = /^\d+$/.test(rawId) ? Number(rawId) : 0;
-    this.protocolId.set(protocolId > 0 ? protocolId : null);
-    if (protocolId <= 0) {
-      this.informationState.set({ kind: 'unavailable' });
-      return;
-    }
-
-    forkJoin({
-      active: this.loadActiveAssignments.execute(protocolId),
-      history: this.loadHistory.execute(protocolId),
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ active, history }) => {
-          this.activeAssignments.set(active.assignments);
-          this.history.set(history);
-          this.hasRecords.set(active.assignments.length > 0 || history.length > 0);
-          this.informationState.set({ kind: 'empty' });
-        },
-        error: () => {
+    const parentParamMap$ = (this.route.parent?.paramMap ??
+      of(this.route.parent?.snapshot.paramMap ?? null)).pipe(
+      startWith(this.route.parent?.snapshot.paramMap ?? null),
+    );
+    parentParamMap$
+      .pipe(
+        map((params) => params?.get('id') ?? ''),
+        distinctUntilChanged(),
+        switchMap((rawId) => {
+          const protocolId = /^\d+$/.test(rawId) ? Number(rawId) : 0;
+          this.protocolId.set(protocolId > 0 ? protocolId : null);
           this.activeAssignments.set([]);
           this.history.set([]);
           this.hasRecords.set(false);
-          this.informationState.set({ kind: 'error' });
+          if (protocolId <= 0) {
+            this.informationState.set({ kind: 'unavailable' });
+            return of(null);
+          }
+          this.informationState.set({ kind: 'loading' });
+          return forkJoin({
+            active: this.loadActiveAssignments.execute(protocolId),
+            history: this.loadHistory.execute(protocolId),
+          }).pipe(
+            catchError(() => {
+              this.informationState.set({ kind: 'error' });
+              return of(null);
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (data) => {
+          if (!data) return;
+          this.activeAssignments.set(data.active.assignments);
+          this.history.set(data.history);
+          this.hasRecords.set(data.active.assignments.length > 0 || data.history.length > 0);
+          this.informationState.set({ kind: 'empty' });
         },
+        error: () => this.informationState.set({ kind: 'error' }),
       });
   }
 }

@@ -9,7 +9,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, forkJoin, throwError } from 'rxjs';
+import { Observable, catchError, combineLatest, forkJoin, of, throwError } from 'rxjs';
+import { distinctUntilChanged, map, startWith, switchMap } from 'rxjs/operators';
 import {
   AssignEvaluatorsResponse,
   AssignmentMember,
@@ -103,7 +104,7 @@ export class PeerAssignmentFormPage implements OnInit {
   /** Nombres de lo que la Presidenta envió, por id: el éxito los muestra (F03 D7). */
   private readonly submittedNames = signal<ReadonlyMap<number, string>>(new Map());
 
-  private protocolId = 0;
+  private readonly protocolId = signal(0);
 
   readonly subtitle = computed(() => {
     const p = this.protocol();
@@ -193,30 +194,26 @@ export class PeerAssignmentFormPage implements OnInit {
   );
 
   ngOnInit(): void {
-    const raw =
-      this.route.snapshot.paramMap.get('protocolId') ??
-      this.route.parent?.snapshot.paramMap.get('id') ??
-      '';
-    this.protocolId = /^\d+$/.test(raw) ? Number(raw) : 0;
-    this.cargar();
-  }
-
-  cargar(): void {
-    if (this.protocolId <= 0) {
-      this.estado.set('no-encontrado');
-      return;
-    }
-    this.estado.set('cargando');
-    const protocol$ = this.loadProtocol.execute(this.protocolId).pipe(
-      catchError((err: unknown) => {
-        const status = apiErrorStatus(err);
-        return throwError(() => (status === 404 || status === 400 ? PROTOCOL_NOT_FOUND : err));
-      }),
+    const routeParamMap$ = (this.route.paramMap ?? of(this.route.snapshot.paramMap)).pipe(
+      startWith(this.route.snapshot.paramMap),
     );
-    forkJoin({ protocol: protocol$, members: this.loadMembers.execute() })
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    // En el espacio (workspace/:id/assignment) el id llega por la ruta padre.
+    const parentParamMap$ = (this.route.parent?.paramMap ??
+      of(this.route.parent?.snapshot.paramMap ?? null)).pipe(
+      startWith(this.route.parent?.snapshot.paramMap ?? null),
+    );
+
+    combineLatest([routeParamMap$, parentParamMap$])
+      .pipe(
+        map(([routeParams, parentParams]) => routeParams.get('protocolId') ?? parentParams?.get('id') ?? ''),
+        map((raw) => (/^\d+$/.test(raw) ? Number(raw) : 0)),
+        distinctUntilChanged(),
+        switchMap((protocolId) => this.cargarProtocolo(protocolId)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: ({ protocol, members }) => {
+          if (!protocol) return;
           this.protocol.set(protocol);
           this.members.set(members);
           this.estado.set('listo');
@@ -224,6 +221,54 @@ export class PeerAssignmentFormPage implements OnInit {
         error: (err: unknown) =>
           this.estado.set(err === PROTOCOL_NOT_FOUND ? 'no-encontrado' : 'error'),
       });
+  }
+
+  cargar(): void {
+    this.cargarProtocolo(this.protocolId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ protocol, members }) => {
+          if (!protocol) return;
+          this.protocol.set(protocol);
+          this.members.set(members);
+          this.estado.set('listo');
+        },
+        error: (err: unknown) =>
+          this.estado.set(err === PROTOCOL_NOT_FOUND ? 'no-encontrado' : 'error'),
+      });
+  }
+
+  private cargarProtocolo(protocolId: number): Observable<{
+    protocol: AssignmentProtocolSummary | null;
+    members: AssignmentMember[];
+  }> {
+    this.protocolId.set(protocolId);
+    this.protocol.set(null);
+    this.members.set([]);
+    this.reviewType.set(null);
+    this.expeditedRows.set([]);
+    this.plenaryRows.set([]);
+    this.result.set(null);
+    this.submitError.set(null);
+
+    if (protocolId <= 0) {
+      this.estado.set('no-encontrado');
+      return of({ protocol: null, members: [] as AssignmentMember[] });
+    }
+
+    this.estado.set('cargando');
+    const protocol$ = this.loadProtocol.execute(protocolId).pipe(
+      catchError((err: unknown) => {
+        const status = apiErrorStatus(err);
+        return throwError(() => (status === 404 || status === 400 ? PROTOCOL_NOT_FOUND : err));
+      }),
+    );
+    return forkJoin({ protocol: protocol$, members: this.loadMembers.execute() }).pipe(
+      catchError((err: unknown) => {
+        this.estado.set(err === PROTOCOL_NOT_FOUND ? 'no-encontrado' : 'error');
+        return of({ protocol: null, members: [] as AssignmentMember[] });
+      }),
+    );
   }
 
   /** Al cambiar el tipo, la composición se arma desde cero (F03 §5). */
@@ -282,7 +327,7 @@ export class PeerAssignmentFormPage implements OnInit {
       ),
     );
     this.assign
-      .execute(this.protocolId, { reviewType: type, evaluators: toAssignedEvaluators(selections) })
+      .execute(this.protocolId(), { reviewType: type, evaluators: toAssignedEvaluators(selections) })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
@@ -298,8 +343,8 @@ export class PeerAssignmentFormPage implements OnInit {
   }
 
   revisarDocumentacion(): void {
-    if (this.protocolId <= 0) return;
-    void this.router.navigate(['/dashboard/protocols/workspace', this.protocolId, 'validation'], {
+    if (this.protocolId() <= 0) return;
+    void this.router.navigate(['/dashboard/protocols/workspace', this.protocolId(), 'validation'], {
       queryParams: { origin: 'assignment-form' },
     });
   }

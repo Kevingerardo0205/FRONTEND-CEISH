@@ -2,7 +2,6 @@ import { EVALUATION_ROUTES } from './routes';
 import { AuthGuard } from '@infrastructure/guards/auth.guard';
 import { RoleGuard } from '@infrastructure/guards/role.guard';
 import { PeerAssignmentListPage } from './presentation/pages/peer-assignment-list/peer-assignment-list.page';
-import { PeerAssignmentFormPage } from './presentation/pages/peer-assignment-form/peer-assignment-form.page';
 import { ReassignmentPage } from './presentation/pages/reassignment/reassignment.page';
 import { EvaluationListPage } from './presentation/pages/evaluation-list/evaluation-list.page';
 import { EvaluationFormPage } from './presentation/pages/evaluation-form/evaluation-form.page';
@@ -12,23 +11,27 @@ import { EvaluationConsolidationPage } from './presentation/pages/evaluation-con
 describe('EVALUATION_ROUTES (Routing Architecture)', () => {
   const rootChildren = EVALUATION_ROUTES[0]?.children || [];
 
-  for (const path of ['assignment', 'assignment/:protocolId']) {
-    it(`${path}: solo PRESIDENTE con EVALUACION_ASIGNAR, carga perezosa (F03 D1)`, () => {
-      const route = rootChildren.find((r) => r.path === path);
-      expect(route).toBeDefined();
-      expect(route?.loadComponent).toBeDefined();
-      expect(route?.component).toBeUndefined();
-      expect(route?.canActivate).toEqual([RoleGuard, AuthGuard]);
-      expect(route?.data?.['roles']).toEqual(['PRESIDENTE']);
-      expect(route?.data?.['permissions']).toEqual(['EVALUACION_ASIGNAR']);
-    });
-  }
+  it('assignment: solo PRESIDENTE con EVALUACION_ASIGNAR, carga perezosa (F03 D1)', () => {
+    const route = rootChildren.find((r) => r.path === 'assignment');
+    expect(route).toBeDefined();
+    expect(route?.loadComponent).toBeDefined();
+    expect(route?.component).toBeUndefined();
+    expect(route?.canActivate).toEqual([RoleGuard, AuthGuard]);
+    expect(route?.data?.['roles']).toEqual(['PRESIDENTE']);
+    expect(route?.data?.['permissions']).toEqual(['EVALUACION_ASIGNAR']);
+  });
 
-  it('assignment abre la lista y assignment/:protocolId el formulario (F03 §3)', async () => {
+  it('assignment abre la lista de la PRESIDENTE (F03 §3)', async () => {
     const list = await rootChildren.find((r) => r.path === 'assignment')?.loadComponent?.();
-    const form = await rootChildren.find((r) => r.path === 'assignment/:protocolId')?.loadComponent?.();
     expect(list).toBe(PeerAssignmentListPage);
-    expect(form).toBe(PeerAssignmentFormPage);
+  });
+
+  it('assignment/:protocolId ya no carga un formulario: redirige al formulario del espacio (EP2b)', () => {
+    const route = rootChildren.find((r) => r.path === 'assignment/:protocolId');
+    expect(route?.redirectTo).toBe('/dashboard/protocols/workspace/:protocolId/assignment');
+    expect(route?.pathMatch).toBe('full');
+    expect(route?.loadComponent).toBeUndefined();
+    expect(route?.component).toBeUndefined();
   });
 
   it('should define route for evaluator reassignment by protocolId (RF-12.3)', () => {

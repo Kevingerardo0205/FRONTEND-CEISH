@@ -28,6 +28,19 @@ const PROTOCOL: AssignmentProtocolSummary = {
   isTimelineTermsAccepted: true,
 };
 
+const PROTOCOL_B: AssignmentProtocolSummary = {
+  ...PROTOCOL,
+  id: 16,
+  code: 'CEISH-PRUEBA-016',
+  title: 'Estudio de prueba dieciséis',
+};
+
+const MEMBERS_B: AssignmentMember[] = [
+  { id: 21, fullName: 'Evaluadora B', profiles: ['METODOLOGICO'] },
+  { id: 22, fullName: 'Evaluador B sociedad civil', profiles: ['SOCIEDAD_CIVIL'] },
+  { id: 23, fullName: 'Evaluador B jurídico', profiles: ['JURIDICO'] },
+];
+
 const httpError = (status: number, message?: string) =>
   Object.assign(new Error(message ?? ''), { status, message: message ?? '' });
 
@@ -42,15 +55,28 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
     options: {
       id?: string;
       workspaceId?: string;
+      workspaceIds?: Subject<ReturnType<typeof convertToParamMap>>;
       protocol?: Observable<AssignmentProtocolSummary>[];
       members?: Observable<AssignmentMember[]>[];
       assign?: Observable<AssignEvaluatorsResponse>;
     } = {},
   ): HTMLElement {
     loadProtocol = jasmine.createSpy('loadProtocol');
-    loadProtocol.and.returnValues(...(options.protocol ?? [of(PROTOCOL)]));
+    const protocolReturns = options.protocol ?? [of(PROTOCOL)];
+    if (protocolReturns.length === 1) {
+      loadProtocol.and.returnValue(protocolReturns[0]);
+    } else {
+      loadProtocol.and.returnValues(...protocolReturns);
+    }
+
     loadMembers = jasmine.createSpy('loadMembers');
-    loadMembers.and.returnValues(...(options.members ?? [of(MEMBERS)]));
+    const membersReturns = options.members ?? [of(MEMBERS)];
+    if (membersReturns.length === 1) {
+      loadMembers.and.returnValue(membersReturns[0]);
+    } else {
+      loadMembers.and.returnValues(...membersReturns);
+    }
+
     assign = jasmine
       .createSpy('assign')
       .and.returnValue(options.assign ?? of({ assignments: [] }));
@@ -63,7 +89,10 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
           useValue: {
             snapshot: { paramMap: convertToParamMap(options.workspaceId ? {} : { protocolId: options.id ?? '15' }) },
             parent: options.workspaceId
-              ? { snapshot: { paramMap: convertToParamMap({ id: options.workspaceId }) } }
+              ? {
+                  paramMap: options.workspaceIds,
+                  snapshot: { paramMap: convertToParamMap({ id: options.workspaceId }) },
+                }
               : undefined,
           },
         },
@@ -130,6 +159,184 @@ describe('PeerAssignmentFormPage (F03 D3 a D7)', () => {
 
     expect(loadProtocol).toHaveBeenCalledOnceWith(15);
     expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-015');
+  });
+
+  it('recarga el protocolo vigente y limpia el anterior cuando cambia el id sin destruirse', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), of(PROTOCOL_B)],
+      members: [of(MEMBERS), of(MEMBERS_B)],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledWith(16);
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-016');
+    expect(text(root().querySelector('app-page-header'))).not.toContain('CEISH-PRUEBA-015');
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    chooseType('EXPEDITA');
+    expect(text(root())).toContain('Evaluadora B');
+    expect(text(root())).not.toContain('Andrés Prueba');
+  });
+
+  it('ignora una respuesta tardía del protocolo A después de que B respondió', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    const protocolA = new Subject<AssignmentProtocolSummary>();
+    const protocolB = new Subject<AssignmentProtocolSummary>();
+    const membersA = new Subject<AssignmentMember[]>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [protocolA, protocolB],
+      members: [membersA, of(MEMBERS_B)],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    protocolB.next(PROTOCOL_B);
+    protocolB.complete();
+    protocolA.next(PROTOCOL);
+    protocolA.complete();
+    membersA.next(MEMBERS);
+    membersA.complete();
+    fixture.detectChanges();
+
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-016');
+    expect(text(root().querySelector('app-page-header'))).not.toContain('CEISH-PRUEBA-015');
+    expect(fixture.componentInstance.protocol()?.id).toBe(16);
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    chooseType('EXPEDITA');
+    expect(text(root())).toContain('Evaluadora B');
+    expect(text(root())).not.toContain('Andrés Prueba');
+  });
+
+  it('un error de A no termina la escucha de ruta y permite cargar B', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    const protocolA = new Subject<AssignmentProtocolSummary>();
+    const protocolB = new Subject<AssignmentProtocolSummary>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [protocolA, protocolB],
+      members: [of(MEMBERS), of(MEMBERS_B)],
+    });
+
+    protocolA.error(httpError(500));
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    protocolB.next(PROTOCOL_B);
+    protocolB.complete();
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledWith(16);
+    expect(fixture.componentInstance.protocol()?.id).toBe(16);
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    expect(text(root())).not.toContain('No pudimos cargar los datos de la asignación.');
+  });
+
+  it('si loadMembers falla en A, B puede cargar y reemplaza el estado de error', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), of(PROTOCOL_B)],
+      members: [throwError(() => httpError(500)), of(MEMBERS_B)],
+    });
+
+    expect(text(root())).toContain('No pudimos cargar los datos de la asignación.');
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledWith(16);
+    expect(loadMembers).toHaveBeenCalledTimes(2);
+    expect(text(root())).not.toContain('No pudimos cargar los datos de la asignación.');
+    expect(text(root().querySelector('app-page-header'))).toContain('CEISH-PRUEBA-016');
+    expect(fixture.componentInstance.members()).toEqual(MEMBERS_B);
+    chooseType('EXPEDITA');
+    expect(text(root())).toContain('Evaluadora B');
+    expect(text(root())).not.toContain('Andrés Prueba');
+  });
+
+  it('un error de loadProtocol en B no conserva la información visible de A', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), throwError(() => httpError(500))],
+      members: [of(MEMBERS), of(MEMBERS_B)],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.protocol()).toBeNull();
+    expect(fixture.componentInstance.members()).toEqual([]);
+    expect(text(root())).not.toContain('CEISH-PRUEBA-015');
+    expect(text(root())).not.toContain('Andrés Prueba');
+    expect(text(root())).toContain('No pudimos cargar los datos de la asignación.');
+  });
+
+  it('un error de loadMembers en B no conserva la información visible de A', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [of(PROTOCOL), of(PROTOCOL_B)],
+      members: [of(MEMBERS), throwError(() => httpError(500))],
+    });
+
+    workspaceIds.next(convertToParamMap({ id: '16' }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.protocol()).toBeNull();
+    expect(fixture.componentInstance.members()).toEqual([]);
+    expect(text(root())).not.toContain('CEISH-PRUEBA-015');
+    expect(text(root())).not.toContain('Andrés Prueba');
+    expect(text(root())).toContain('No pudimos cargar los datos de la asignación.');
+  });
+
+  it('destruir el componente cancela la ruta y las consultas pendientes', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    const pendingProtocol = new Subject<AssignmentProtocolSummary>();
+    const pendingMembers = new Subject<AssignmentMember[]>();
+    setup({
+      workspaceId: '15',
+      workspaceIds,
+      protocol: [pendingProtocol],
+      members: [pendingMembers],
+    });
+
+    fixture.destroy();
+    pendingProtocol.next(PROTOCOL);
+    pendingMembers.next(MEMBERS);
+
+    expect(workspaceIds.observers.length).toBe(0);
+    expect(pendingProtocol.observers.length).toBe(0);
+    expect(pendingMembers.observers.length).toBe(0);
+  });
+
+  it('un id inválido limpia A y no ejecuta una consulta para el valor inválido', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({ workspaceId: '15', workspaceIds });
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+
+    workspaceIds.next(convertToParamMap({ id: '1.5' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+    expect(fixture.componentInstance.protocol()).toBeNull();
+    expect(text(root())).toContain('No encontramos este protocolo. Revise el enlace.');
+  });
+
+  it('una emisión duplicada del mismo id no duplica las consultas', () => {
+    const workspaceIds = new Subject<ReturnType<typeof convertToParamMap>>();
+    setup({ workspaceId: '15', workspaceIds });
+    workspaceIds.next(convertToParamMap({ id: '15' }));
+    fixture.detectChanges();
+
+    expect(loadProtocol).toHaveBeenCalledOnceWith(15);
+    expect(loadMembers).toHaveBeenCalledOnceWith();
   });
 
   /** Expedita válida: Metodológico (Andrés) y Sociedad Civil (Beatriz). */

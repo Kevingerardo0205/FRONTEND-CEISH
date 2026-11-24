@@ -88,6 +88,12 @@ describe('Route role codes (T13a)', () => {
       // F11 EP2 (20/11/2026): PRESIDENTE abre validation en solo lectura.
       'protocols|workspace/:id/validation': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
       'protocols|workspace/:id/follow-up': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+      // EP2c (7decb5b): etapas consultivas del espacio, mismos roles que la pestaña Información.
+      'protocols|workspace/:id/reception': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+      'protocols|workspace/:id/assignment-history': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+      'protocols|workspace/:id/evaluation': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+      'protocols|workspace/:id/resolution': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
+      'protocols|workspace/:id/renewal': ['SECRETARIA', 'PRESIDENTE', 'INVESTIGADOR'],
       'dashboard|admin/users': ['SECRETARIA'],
       // F08 D1: admin/templates es un redirect a /configuracion/formatos (app.routes.spec.ts).
       'dashboard|admin/ai-assistant': ['SECRETARIA'],
@@ -116,10 +122,8 @@ describe('Route role codes (T13a)', () => {
         guarded: (route.canActivate ?? []).includes(RoleGuard),
       }));
 
-    expect(withRoles).toEqual([
-      { path: 'assignment', roles: ['PRESIDENTE'], guarded: true },
-      { path: 'assignment/:protocolId', roles: ['PRESIDENTE'], guarded: true },
-    ]);
+    // `assignment/:protocolId` es ahora una redirección al formulario del espacio (EP2b).
+    expect(withRoles).toEqual([{ path: 'assignment', roles: ['PRESIDENTE'], guarded: true }]);
   });
 
   it('protege con RoleGuard toda ruta que declara data.roles', () => {

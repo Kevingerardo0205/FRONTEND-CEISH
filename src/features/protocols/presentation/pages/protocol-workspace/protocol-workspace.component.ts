@@ -8,7 +8,7 @@ import {
   DestroyRef,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { EMPTY, Subject, combineLatest } from 'rxjs';
+import { EMPTY, Subject, combineLatest, of } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, startWith, switchMap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
@@ -27,7 +27,7 @@ import { ErrorStateComponent, LoadingStateComponent } from '@shared/ui/states/st
 import { RoleHome } from '@infrastructure/guards/role-home.guard';
 import { WORKSPACE_ACTION_ROLES, WORKSPACE_TAB_ROLES } from '../../../domain/workspace-tab-roles';
 import { StageCode } from '@domain/value-objects/stage.vo';
-import { WorkspaceStageState } from '../../../domain/workspace-stage-state';
+import { deriveStageStates } from '../../../domain/workspace-stage-state';
 import {
   isAssignmentStatus,
   workspaceStatusCode,
@@ -110,7 +110,7 @@ const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
             [stage]="workspaceStage()"
             [selectedStage]="selectedStage()"
             [stageStates]="stageStates()"
-            [stageLinks]="stageLinks"
+            [stageLinks]="stageLinks()"
           >
             @if (contextualActions().length || awaitingTimelineAcceptance() || returnOrigin()) {
               <div protocolHeaderAction class="header-action">
@@ -134,9 +134,20 @@ const STAGE_PATHS: Readonly<Record<StageCode, string>> = {
                     <span>{{ action.label }}</span>
                   </button>
                 }
-                <!-- F10 D20 (3): la Presidenta ve que Asignar Pares espera la aceptación de tiempos -->
+                <!-- F10 D20 (3): sin la aceptación de tiempos, Asignar Pares sigue visible pero deshabilitado, con su motivo -->
                 @if (awaitingTimelineAcceptance()) {
-                  <p class="header-notice" role="status">{{ termsNotAcceptedReason }}</p>
+                  <button
+                    type="button"
+                    class="header-action__button"
+                    disabled
+                    aria-describedby="assign-peers-blocked-reason"
+                  >
+                    <mat-icon aria-hidden="true">person_add</mat-icon>
+                    <span>Asignar Pares</span>
+                  </button>
+                  <p id="assign-peers-blocked-reason" class="header-notice" role="status">
+                    {{ termsNotAcceptedReason }}
+                  </p>
                 }
               </div>
             }
@@ -356,8 +367,22 @@ export class ProtocolWorkspaceComponent implements OnInit {
 
   protocolIdNumber = computed(() => Number(this.protocol()?.id || 0));
 
-  readonly stageLinks = STAGE_PATHS;
-  readonly stageStates = signal<Readonly<Partial<Record<StageCode, WorkspaceStageState>>> >({});
+  readonly stageLinks = computed<Readonly<Partial<Record<StageCode, string>>>>(() => {
+    const protocolId = this.protocol()?.id ?? this.route.snapshot.paramMap.get('id');
+    if (!protocolId) return {};
+
+    return Object.fromEntries(
+      Object.entries(STAGE_PATHS).map(([stage, path]) => [
+        stage,
+        `/dashboard/protocols/workspace/${protocolId}/${path}`,
+      ]),
+    ) as Partial<Record<StageCode, string>>;
+  });
+  /**
+   * Estados de la barra «derivados de la etapa actual» (ep2c §3.4, excepción del 24/11/2026): solo
+   * `header.stage` y el código de estado; sin etapa del backend no se deriva nada.
+   */
+  readonly stageStates = computed(() => deriveStageStates(this.workspaceStage(), this.statusCode()));
   readonly selectedStage = signal<StageCode | null>(null);
 
   returnOrigin = signal<AssignmentOrigin | null>(null);
@@ -534,9 +559,14 @@ export class ProtocolWorkspaceComponent implements OnInit {
    * así que gana la última respuesta. El error queda en el servicio (`loadError`).
    */
   ngOnInit() {
-    this.returnOrigin.set(
-      toAssignmentOrigin(this.route.snapshot?.queryParamMap?.get('origin') ?? null),
-    );
+    (this.route.queryParamMap ?? of(this.route.snapshot?.queryParamMap ?? null))
+      .pipe(
+        startWith(this.route.snapshot?.queryParamMap ?? null),
+        map((params) => toAssignmentOrigin(params?.get('origin') ?? null)),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((origin) => this.returnOrigin.set(origin));
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -574,14 +604,16 @@ export class ProtocolWorkspaceComponent implements OnInit {
   }
 
   onExecuteAction(actionId: string) {
+    // El id va como número en toda navegación (decisión del 24/11/2026).
+    const protocolId = this.protocolIdNumber();
     if (actionId === 'EDIT_PROTOCOL') {
-      this.router.navigate(['/investigador/protocolo', this.protocol()?.id, 'editar']);
+      this.router.navigate(['/investigador/protocolo', protocolId, 'editar']);
     } else if (actionId === 'VALIDATE_ALL') {
-      this.router.navigate(['/dashboard/protocols/workspace', this.protocol()?.id, 'validation']);
+      this.router.navigate(['/dashboard/protocols/workspace', protocolId, 'validation']);
     } else if (actionId === 'ASSIGN_EVALUATORS') {
-      // F10 D20 (2): el formulario de asignación de la Presidenta (F03), no un modal.
+      // F10 D20 (2): el formulario de asignación de la Presidenta, dentro del espacio (EP2b).
       const origin = this.returnOrigin();
-      const destination = ['/dashboard/protocols/workspace', this.protocol()?.id, 'assignment'];
+      const destination = ['/dashboard/protocols/workspace', protocolId, 'assignment'];
       if (origin) {
         this.router.navigate(destination, { queryParams: { origin } });
       } else {

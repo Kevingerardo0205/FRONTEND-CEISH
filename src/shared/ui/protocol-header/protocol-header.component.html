@@ -35,11 +35,13 @@
     </div>
     <div class="protocol-header__action"><ng-content select="[protocolHeaderAction]" /></div>
   </div>
-  <app-stage-bar
-    class="protocol-header__stages"
-    [stage]="stage()"
-    [selectedStage]="selectedStage()"
-    [stageStates]="stageStates()"
-    [links]="stageLinks()"
-  />
+  @if (stage()) {
+    <app-stage-bar
+      class="protocol-header__stages"
+      [stage]="stage()"
+      [selectedStage]="selectedStage()"
+      [stageStates]="stageStates()"
+      [links]="stageLinks()"
+    />
+  }
 </header>

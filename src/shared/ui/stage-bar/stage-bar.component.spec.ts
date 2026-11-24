@@ -1,4 +1,5 @@
 import { Component, signal } from '@angular/core';
+import { provideRouter } from '@angular/router';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Stage } from '@domain/value-objects/stage.vo';
 import { StageBarComponent } from './stage-bar.component';
@@ -36,7 +37,7 @@ describe('StageBarComponent', () => {
   }
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [StageBarComponent] });
+    TestBed.configureTestingModule({ imports: [StageBarComponent], providers: [provideRouter([])] });
     fixture = TestBed.createComponent(StageBarComponent);
   });
 
@@ -54,6 +55,29 @@ describe('StageBarComponent', () => {
       'Resolución',
       'Seguimiento',
       'Renovación',
+    ]);
+  });
+
+  it('conserva el protocolId en los enlaces absolutos de las seis etapas', () => {
+    fixture.componentRef.setInput('links', {
+      RECEPCION: '/dashboard/protocols/workspace/42/reception',
+      ASIGNACION: '/dashboard/protocols/workspace/42/assignment-history',
+      EVALUACION: '/dashboard/protocols/workspace/42/evaluation',
+      RESOLUCION: '/dashboard/protocols/workspace/42/resolution',
+      SEGUIMIENTO: '/dashboard/protocols/workspace/42/follow-up',
+      RENOVACION: '/dashboard/protocols/workspace/42/renewal',
+    });
+    fixture.detectChanges();
+    const anchors = fixture.nativeElement.querySelectorAll('.step__link') as NodeListOf<HTMLAnchorElement>;
+    const links = Array.from(anchors).map((link) => link.getAttribute('href'));
+
+    expect(links).toEqual([
+      '/dashboard/protocols/workspace/42/reception',
+      '/dashboard/protocols/workspace/42/assignment-history',
+      '/dashboard/protocols/workspace/42/evaluation',
+      '/dashboard/protocols/workspace/42/resolution',
+      '/dashboard/protocols/workspace/42/follow-up',
+      '/dashboard/protocols/workspace/42/renewal',
     ]);
   });
 
@@ -141,6 +165,77 @@ describe('StageBarComponent', () => {
     expect(el.querySelectorAll('.step--done, .step--completed, .step--pending').length).toBe(0);
     expect(el.querySelectorAll('.step--undetermined').length).toBe(6);
     expect(el.querySelector('[aria-current="step"]')?.getAttribute('data-stage')).toBe('RESOLUCION');
+  });
+
+  it('marca la etapa actual con step--current y el texto "etapa actual", sin aria-current si no está seleccionada (ep2c §4.2)', () => {
+    fixture.componentRef.setInput('stage', Stage.fromBackend('ASIGNACION'));
+    fixture.componentRef.setInput('selectedStage', 'RESOLUCION');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('.step--current').length).toBe(1);
+    expect(item(el, 'ASIGNACION').classList).toContain('step--current');
+    expect(item(el, 'ASIGNACION').getAttribute('aria-current')).toBeNull();
+    expect(hiddenText(item(el, 'ASIGNACION'))).toBe(', etapa actual');
+    expect(item(el, 'RESOLUCION').getAttribute('aria-current')).toBe('step');
+  });
+
+  describe('estados cerrada, no aplica y no disponible (ep2c §3.4)', () => {
+    function setStates(
+      current: string,
+      states: Record<string, { kind: string; status?: string }>,
+    ): HTMLElement {
+      fixture.componentRef.setInput('stage', Stage.fromBackend(current));
+      fixture.componentRef.setInput('stageStates', states);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('protocolo cerrado: anuncia "etapa actual, cerrada" y "no aplica" en las posteriores', () => {
+      const el = setStates('EVALUACION', {
+        RECEPCION: { kind: 'determined', status: 'COMPLETADA' },
+        ASIGNACION: { kind: 'determined', status: 'COMPLETADA' },
+        EVALUACION: { kind: 'determined', status: 'CERRADA' },
+        RESOLUCION: { kind: 'determined', status: 'NO_APLICA' },
+        SEGUIMIENTO: { kind: 'determined', status: 'NO_APLICA' },
+        RENOVACION: { kind: 'determined', status: 'NO_APLICA' },
+      });
+
+      expect(hiddenText(item(el, 'EVALUACION'))).toBe(', etapa actual, cerrada');
+      expect(item(el, 'EVALUACION').classList).toContain('step--closed');
+      for (const code of ['RESOLUCION', 'SEGUIMIENTO', 'RENOVACION']) {
+        expect(hiddenText(item(el, code))).withContext(code).toBe(', no aplica');
+        expect(item(el, code).classList).withContext(code).toContain('step--not-applicable');
+      }
+      expect(hiddenText(item(el, 'RECEPCION'))).toBe(', completada');
+    });
+
+    it('una etapa cerrada que no es la actual anuncia solo "cerrada"', () => {
+      const el = setStates('RESOLUCION', {
+        EVALUACION: { kind: 'determined', status: 'CERRADA' },
+      });
+
+      expect(hiddenText(item(el, 'EVALUACION'))).toBe(', cerrada');
+    });
+
+    it('anuncia "no disponible" para una etapa unavailable y no la marca como pendiente', () => {
+      const el = setStates('EVALUACION', {
+        RESOLUCION: { kind: 'determined', status: 'PENDIENTE' },
+        SEGUIMIENTO: { kind: 'unavailable' },
+        RENOVACION: { kind: 'unavailable' },
+      });
+
+      expect(hiddenText(item(el, 'SEGUIMIENTO'))).toBe(', no disponible');
+      expect(item(el, 'SEGUIMIENTO').classList).toContain('step--unavailable');
+      expect(item(el, 'SEGUIMIENTO').classList).not.toContain('step--pending');
+      expect(hiddenText(item(el, 'RESOLUCION'))).toBe(', pendiente');
+    });
+
+    it('sin estado para una etapa sigue anunciando "estado no determinado"', () => {
+      const el = setStates('EVALUACION', {});
+
+      expect(hiddenText(item(el, 'RESOLUCION'))).toBe(', estado no determinado');
+    });
   });
 });
 

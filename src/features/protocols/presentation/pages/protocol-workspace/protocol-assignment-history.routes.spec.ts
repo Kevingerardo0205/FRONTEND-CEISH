@@ -1,5 +1,7 @@
 import { Route } from '@angular/router';
+import { PeerAssignmentFormPage } from '@features/evaluations/presentation/pages/peer-assignment-form/peer-assignment-form.page';
 import { PROTOCOL_ROUTES } from '../../../routes';
+import { ProtocolAssignmentHistoryPage } from './protocol-assignment-history.page';
 
 describe('workspace assignment consultation routes', () => {
   function workspaceChildren(): readonly Route[] {
@@ -8,10 +10,11 @@ describe('workspace assignment consultation routes', () => {
     return (workspace?.children ?? []) as unknown as readonly Route[];
   }
 
+  const find = (path: string) => workspaceChildren().find((route) => route['path'] === path);
+
   it('separates the read-only assignment consultation route from the EP2b operation route', () => {
-    const children = workspaceChildren();
-    const consultation = children.find((route) => route['path'] === 'assignment-history');
-    const operation = children.find((route) => route['path'] === 'assignment');
+    const consultation = find('assignment-history');
+    const operation = find('assignment');
     const consultationData = consultation?.['data'] as Record<string, unknown> | undefined;
     const operationData = operation?.['data'] as Record<string, unknown> | undefined;
 
@@ -19,5 +22,18 @@ describe('workspace assignment consultation routes', () => {
     expect(consultationData?.['permissions']).toBeUndefined();
     expect(operationData?.['roles']).toEqual(['PRESIDENTE']);
     expect(operationData?.['permissions']).toEqual(['EVALUACION_ASIGNAR']);
+  });
+
+  it('loads the assignment form on workspace/:id/assignment and the history on assignment-history', async () => {
+    const form = await (find('assignment')?.loadComponent as (() => Promise<unknown>))();
+    const history = await (find('assignment-history')?.loadComponent as (() => Promise<unknown>))();
+
+    expect(form).toBe(PeerAssignmentFormPage);
+    expect(history).toBe(ProtocolAssignmentHistoryPage);
+  });
+
+  it('does not redirect either route: both render their own page', () => {
+    expect(find('assignment')?.['redirectTo']).toBeUndefined();
+    expect(find('assignment-history')?.['redirectTo']).toBeUndefined();
   });
 });

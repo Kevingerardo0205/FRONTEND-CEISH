@@ -6,6 +6,9 @@
       [class.step--completed]="step.status === 'completed'"
       [class.step--in-progress]="step.status === 'in-progress'"
       [class.step--pending]="step.status === 'pending'"
+      [class.step--closed]="step.status === 'closed'"
+      [class.step--not-applicable]="step.status === 'not-applicable'"
+      [class.step--unavailable]="step.status === 'unavailable'"
       [class.step--undetermined]="step.status === 'undetermined'"
       [class.step--current]="step.current"
       [class.step--selected]="step.selected"
@@ -19,7 +22,7 @@
           @if (step.status === 'completed') {
             <span class="step__check" aria-hidden="true">✓</span>
           }
-          <span class="visually-hidden">, {{ step.current ? 'etapa actual' : statusText[step.status] }}</span>
+          <span class="visually-hidden">, {{ step.announce }}</span>
         </a>
       } @else {
         <span class="step__name">
@@ -27,7 +30,7 @@
           @if (step.status === 'completed') {
             <span class="step__check" aria-hidden="true">✓</span>
           }
-          <span class="visually-hidden">, {{ step.current ? 'etapa actual' : statusText[step.status] }}</span>
+          <span class="visually-hidden">, {{ step.announce }}</span>
         </span>
       }
       @if (step.current && detail()) {
