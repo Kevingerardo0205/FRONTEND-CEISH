@@ -113,6 +113,25 @@ Identificadores asignados por la usuaria. No existen en ninguna otra spec; F-03 
 | M6 | el id vuelve a ser string | 4 FAILED, 60 SUCCESS | Workspace: carga y errores (F10 D14, S-1g) Asignar Pares lleva al formulario del espacio (workspace/:id/assignment), sin abrir un modal (F10 D20 (2)); Workspace: acciones contextuales conserva el origen al ejecutar Asignar Pares desde el workspace; Workspace: acciones contextuales Asignar Pares sin origen navega al formulario del espacio sin queryParams y con id numérico; Workspace: acciones contextuales Editar y Aprobar Todo navegan con el id numérico del protocolo | Sí |
 | M7 | la ruta vieja de F03 deja de redirigir | 3 FAILED, 127 SUCCESS | T13d: la ruta vieja del formulario redirige al formulario del espacio del protocolo (EP2b); S-1a: la ruta vieja /dashboard/evaluations/assignment/1 redirige al formulario del espacio para la PRESIDENTE; EVALUATION_ROUTES: assignment/:protocolId ya no carga un formulario: redirige al formulario del espacio (EP2b) | Sí |
 
+### Pestañas por etapa y formulario en el espacio (24/11/2026)
+
+Decisiones de la usuaria en `ep2c.md` §3.6 y EARS F11-28 a F11-34 (`spec-ui.md` §7b): pestañas según la etapa seleccionada, apertura en la etapa actual, formulario del espacio sin «Revisar documentación» ni «Volver a la lista», botón «Asignar evaluadores» después de elegir el tipo y «Asignar Pares» oculto con la pestaña Asignación abierta.
+
+- `tsc -p tsconfig.app.json --noEmit` y `tsc -p tsconfig.spec.json --noEmit`: exit 0.
+- `ng test` completo, tres veces: 1687 de 1687 SUCCESS cada vez (sin pruebas fallidas).
+- `ng build --configuration production`: exit 0.
+- `npx eslint "src/**/*.ts"`: 0 errores, 64 avisos (línea base 64, sin cambio).
+
+**Mutaciones** (se aplica, se corren las suites afectadas, se revierte y se comprueba por hash que el archivo quedó idéntico).
+
+| Id | Mutación | Resultado | Pruebas que fallan | Revertida e idéntica |
+|---|---|---|---|---|
+| M8 | pestañas de Recepción (Resumen y Validación Técnica) visibles con Asignación seleccionada | 26 FAILED, 56 SUCCESS | Workspace: estado real EN_EVALUACION: etiqueta, pestañas y acciones (Paso 0 de S-1f); Workspace: PRESIDENTE ve Resumen, Validación (solo lectura, F11 EP2) y Seguimiento aprobado, sin Evaluación; su única acción es Asignar Pares con los tiempos aceptados (D20); Workspace: estado real RECHAZADO: etiqueta, pestañas y acciones (Paso 0 de S-1f); … (26 en total) | Sí |
+| M9 | botón «Asignar evaluadores» visible antes de elegir el tipo de revisión (en el espacio) | 2 FAILED, 42 SUCCESS | Formulario en el espacio: en pleno también muestra el botón solo después de elegir el tipo; Formulario en el espacio: antes de elegir el tipo solo hay título, código y título del protocolo y «Tipo de revisión» | Sí |
+| M10 | «Asignar Pares» visible con la pestaña Asignación abierta | 3 FAILED, 79 SUCCESS | Workspace: Asignar Pares: con los tiempos sin aceptar, el aviso y el botón deshabilitado tampoco salen en ASIGNACION; Workspace: Asignar Pares: se muestra en las demás etapas y no en ASIGNACION; Apertura: PRESIDENTE abre en ASIGNACION: va al formulario, solo ve la pestaña Asignación y no ve Asignar Pares | Sí |
+| M11 | «Revisar documentación» visible dentro del espacio | 1 FAILED, 43 SUCCESS | Formulario en el espacio: no ofrece «Revisar documentación» ni «Volver a la lista», con o sin tipo elegido | Sí |
+| M12 | al abrir el espacio no se selecciona la etapa actual del protocolo | 4 FAILED, 78 SUCCESS | Apertura: en EVALUACION no hay pestañas todavía: ninguna del espacio; Apertura: PRESIDENTE abre en ASIGNACION: va al formulario, solo ve la pestaña Asignación y no ve Asignar Pares; Apertura: ASIGNACION con una asignación ya hecha abre el historial; … (4 en total) | Sí |
+
 ## 2. Backend (las hace otra sesión en el repo del backend)
 
 - **Registrar en spec-001 HU-001** V2, V5, V6 y V7 (README §3, regla 1).

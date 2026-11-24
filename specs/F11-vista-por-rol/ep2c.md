@@ -179,6 +179,24 @@ Regla de derivación, en el orden de las seis etapas:
 
 Precedencia: primero la fila de protocolo cerrado (RECHAZADO o ARCHIVADO_VENCIMIENTO); si no aplica, `SEGUIMIENTO` y `RENOVACION` quedan siempre `no disponible` y las cuatro primeras etapas siguen la primera fila. `NO_APLICA` y `CERRADA` son valores nuevos de `WorkspaceStageStatus`; `no disponible` es el estado `unavailable` de `WorkspaceStageState`.
 
+### 3.6. Pestañas por etapa y formulario en el espacio (decisión de la usuaria, 24/11/2026)
+
+Las pestañas inferiores del workspace dependen de la etapa seleccionada en la barra:
+
+| Etapa seleccionada | Pestañas |
+|---|---|
+| RECEPCIÓN | Resumen y Validación Técnica (con sus roles de EP2: la PRESIDENTE en solo lectura). |
+| ASIGNACIÓN | Solo Asignación: el formulario de asignación para la PRESIDENTE mientras no haya asignación activa (protocolo en COMPLETO); el historial en los demás casos y para los demás roles. |
+| SEGUIMIENTO | Su pestaña cuando existe (protocolo aprobado); mientras tanto, ninguna. |
+| EVALUACIÓN, RESOLUCIÓN y RENOVACIÓN | Ninguna todavía; la página muestra el estado «no disponible» de EP2c. |
+
+- Al abrir el espacio (entrada por defecto en Resumen), la etapa seleccionada es la etapa actual del protocolo: si no es RECEPCIÓN, el espacio pasa a la primera pestaña de esa etapa sin añadir una entrada al historial.
+- Resumen y Validación Técnica pertenecen a RECEPCIÓN: abrirlas selecciona RECEPCIÓN. Sin etapa seleccionada, vale la etapa actual del backend; sin ninguna, se conservan todas las pestañas de siempre.
+- Formulario dentro del espacio: sin «Revisar documentación» (la documentación está en Recepción → Validación Técnica) y sin «Volver a la lista». Antes de elegir el tipo de revisión solo se ve el título, el código y título del protocolo y «Tipo de revisión: Expedita / En pleno»; el botón «Asignar evaluadores» y su motivo aparecen después de elegir el tipo, debajo de las filas de evaluadores.
+- «Asignar Pares» del encabezado no se muestra (ni su aviso de tiempos) cuando la pestaña Asignación ya está abierta.
+
+Criterios EARS: F11-28 a F11-34 (`spec-ui.md` §7b).
+
 ### 3.5. Estado de información
 
 Cada apartado debe diferenciar explícitamente:
@@ -285,6 +303,16 @@ El historial debe distinguir entre una fuente que confirmó `Sin registros`, una
 21. Los requisitos, prerrequisitos, documentos, versiones, fechas, responsables y resultados se muestran solo cuando existen fuentes reales que los respalden.
 22. Resolución, Seguimiento y Renovación documentan sus limitaciones sin inventar información.
 23. Los errores de carga no se presentan como listas vacías exitosas.
+
+### Pestañas y formulario (24/11/2026, §3.6)
+
+24. Con RECEPCIÓN seleccionada, el workspace muestra solo Resumen y Validación Técnica (F11-28).
+25. Con ASIGNACIÓN seleccionada, muestra solo la pestaña Asignación: el formulario para la PRESIDENTE mientras no haya asignación, el historial después (F11-29).
+26. Con EVALUACIÓN, RESOLUCIÓN o RENOVACIÓN seleccionadas no hay pestañas y la página muestra «no disponible»; SEGUIMIENTO muestra su pestaña cuando existe (F11-30).
+27. Al abrir el espacio, la etapa seleccionada es la etapa actual del protocolo (F11-31).
+28. Dentro del espacio, el formulario no ofrece «Revisar documentación» ni «Volver a la lista» (F11-32).
+29. Antes de elegir el tipo de revisión no se ve el botón «Asignar evaluadores» ni su motivo (F11-33).
+30. Con la pestaña Asignación abierta, el encabezado no muestra «Asignar Pares» (F11-34).
 
 ## 7. Plan de pruebas
 

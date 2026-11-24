@@ -185,6 +185,18 @@ EP2b documenta el acceso a la documentacion desde las pantallas existentes de F0
 25. **F11-25:** Validacion debe conservar las restricciones de solo lectura de F11-1 a F11-7 para PRESIDENTA.
 26. **F11-26:** «Asignar Pares» de F10 D20 debe seguir abriendo el formulario y conservarse como accion independiente.
 27. **F11-27:** EP2b no debe cambiar el acceso, las pestanas ni las acciones de SECRETARIA, INVESTIGADOR o EVALUADOR definidos en F11 y F10.
+## 7b. Criterios de EP2c: pestañas por etapa y formulario en el espacio (24/11/2026)
+
+Decisión de la usuaria del 24/11/2026 (detalle en `ep2c.md` §3.6).
+
+28. **F11-28:** Mientras la etapa seleccionada en la barra sea RECEPCIÓN, el workspace debe mostrar solo las pestañas Resumen y Validación Técnica, esta última con los roles de F11-1 a F11-7.
+29. **F11-29:** Mientras la etapa seleccionada sea ASIGNACIÓN, el workspace debe mostrar solo la pestaña Asignación: el formulario de asignación para la PRESIDENTE mientras el protocolo esté en COMPLETO, y el historial en los demás casos y para los demás roles.
+30. **F11-30:** Mientras la etapa seleccionada sea EVALUACIÓN, RESOLUCIÓN o RENOVACIÓN, el workspace no debe mostrar pestañas y la página debe mostrar el estado «no disponible» de EP2c; con SEGUIMIENTO debe mostrar su pestaña solo cuando exista.
+31. **F11-31:** Cuando se abra el espacio por su entrada por defecto, la etapa seleccionada debe ser la etapa actual del protocolo.
+32. **F11-32:** Mientras el formulario de asignación esté dentro del espacio, no debe mostrar «Revisar documentación» ni «Volver a la lista».
+33. **F11-33:** Mientras no se haya elegido el tipo de revisión, el formulario dentro del espacio debe mostrar solo el título, el código y título del protocolo y «Tipo de revisión»; el botón «Asignar evaluadores» y su motivo deben aparecer después de elegir el tipo, debajo de las filas de evaluadores.
+34. **F11-34:** Mientras la pestaña Asignación esté abierta, el encabezado del workspace no debe mostrar «Asignar Pares» ni el aviso de tiempos sin aceptar.
+
 ## EP2b v0.2 — Asignación integrada en el workspace (22/11/2026)
 
 La decisión anterior de mantener «Ver protocolo» como acción independiente queda reemplazada por esta revisión. La única acción principal de cada fila es «Asignar» y abre directamente `/dashboard/protocols/workspace/:protocolId/assignment` con `origin=assignment-list`.
