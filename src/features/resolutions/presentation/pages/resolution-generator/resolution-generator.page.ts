@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -65,15 +66,17 @@ import { ConflictDialogComponent } from '@shared/components/conflict-dialog/conf
                     <span class="badge-status-evaluado">EVALUADO</span>
                   </td>
                   <td class="text-center">
-                    <button
-                      mat-flat-button
-                      color="primary"
-                      class="emit-action-btn"
-                      (click)="onSelectProtocol(p)"
-                    >
-                      <mat-icon>gavel</mat-icon>
-                      <span>Emitir Dictamen</span>
-                    </button>
+                    @if (canCreateResolution()) {
+                      <button
+                        mat-flat-button
+                        color="primary"
+                        class="emit-action-btn"
+                        (click)="onSelectProtocol(p)"
+                      >
+                        <mat-icon>gavel</mat-icon>
+                        <span>Emitir Dictamen</span>
+                      </button>
+                    }
                   </td>
                 </tr>
                 <tr *ngIf="pendingProtocols().length === 0">
@@ -444,6 +447,10 @@ export class ResolutionGeneratorPage implements OnInit {
   private generateResolution = inject(GenerateAndSubmitResolutionUseCase);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private authFacade = inject(AuthFacade);
+
+  /** Solo quien tiene RESOLUCION_CREAR (Secretaría) puede emitir; el resto ve la lista en solo lectura. */
+  readonly canCreateResolution = computed(() => this.authFacade.hasPermission('RESOLUCION_CREAR'));
 
   isSubmitting = signal(false);
 
@@ -594,6 +601,12 @@ export class ResolutionGeneratorPage implements OnInit {
             this.isSubmitting.set(false);
             if (err?.type === 'CONCURRENCY_ERROR' || err?.status === 409) {
               this.showConflictDialog();
+            } else if (err?.status === 403) {
+              this.snackBar.open(
+                'No cuenta con permiso para emitir resoluciones. Si lo necesita, comuníquese con la Secretaría.',
+                'Cerrar',
+                { duration: 8000 },
+              );
             } else {
               this.snackBar.open(
                 `❌ Error al procesar la resolución: ${err?.message || 'Error del servidor'}`,

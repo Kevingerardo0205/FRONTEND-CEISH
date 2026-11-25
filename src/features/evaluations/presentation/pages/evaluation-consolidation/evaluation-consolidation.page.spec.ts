@@ -1,0 +1,103 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { of, throwError } from 'rxjs';
+import { EvaluationConsolidationPage } from './evaluation-consolidation.page';
+import {
+  ConsolidationResult,
+  LoadEvaluationConsolidationUseCase,
+} from '../../../application/load-evaluation-consolidation.use-case';
+import { EmitConsolidatedResolutionUseCase } from '../../../application/emit-consolidated-resolution.use-case';
+import { DownloadEvaluationDocumentUseCase } from '../../../application/download-evaluation-document.use-case';
+import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
+import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { ProtocolEntity } from '@domain/entities/protocol.entity';
+
+describe('EvaluationConsolidationPage: permisos de emisión', () => {
+  let fixture: ComponentFixture<EvaluationConsolidationPage>;
+  let component: EvaluationConsolidationPage;
+  let mockAuthFacade: jasmine.SpyObj<AuthFacade>;
+  let mockEmit: jasmine.SpyObj<EmitConsolidatedResolutionUseCase>;
+  let mockSnackBar: jasmine.SpyObj<MatSnackBar>;
+
+  beforeEach(async () => {
+    mockAuthFacade = jasmine.createSpyObj<AuthFacade>('AuthFacade', ['hasPermission']);
+    mockAuthFacade.hasPermission.and.returnValue(true);
+
+    const mockLoadConsolidation = jasmine.createSpyObj<LoadEvaluationConsolidationUseCase>(
+      'LoadEvaluationConsolidationUseCase',
+      ['execute'],
+    );
+    mockLoadConsolidation.execute.and.returnValue(
+      of({ evaluations: [], isUnanimous: true } as unknown as ConsolidationResult),
+    );
+
+    const mockLoadProtocol = jasmine.createSpyObj<LoadProtocolByIdUseCase>(
+      'LoadProtocolByIdUseCase',
+      ['execute'],
+    );
+    mockLoadProtocol.execute.and.returnValue(of({ id: '1' } as unknown as ProtocolEntity));
+
+    mockEmit = jasmine.createSpyObj<EmitConsolidatedResolutionUseCase>(
+      'EmitConsolidatedResolutionUseCase',
+      ['execute'],
+    );
+    mockSnackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
+
+    await TestBed.configureTestingModule({
+      imports: [EvaluationConsolidationPage, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { params: { id: '1' } } } },
+        { provide: AuthFacade, useValue: mockAuthFacade },
+        { provide: LoadEvaluationConsolidationUseCase, useValue: mockLoadConsolidation },
+        { provide: EmitConsolidatedResolutionUseCase, useValue: mockEmit },
+        { provide: DownloadEvaluationDocumentUseCase, useValue: {} },
+        { provide: LoadProtocolByIdUseCase, useValue: mockLoadProtocol },
+        { provide: MatSnackBar, useValue: mockSnackBar },
+      ],
+    }).compileComponents();
+  });
+
+  function createPage(): void {
+    fixture = TestBed.createComponent(EvaluationConsolidationPage);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  function emitButton(): HTMLButtonElement | null {
+    return fixture.nativeElement.querySelector('.emit-btn');
+  }
+
+  it('muestra «Firmar y Notificar» con RESOLUCION_CREAR', () => {
+    createPage();
+
+    expect(mockAuthFacade.hasPermission).toHaveBeenCalledWith('RESOLUCION_CREAR');
+    expect(emitButton()).not.toBeNull();
+  });
+
+  it('oculta «Firmar y Notificar» sin RESOLUCION_CREAR (lectura para la Presidenta)', () => {
+    mockAuthFacade.hasPermission.and.returnValue(false);
+    createPage();
+
+    expect(emitButton()).toBeNull();
+  });
+
+  it('muestra un mensaje en español con trato de usted cuando el backend responde 403', () => {
+    createPage();
+    // MatSnackBarModule (importado por el componente) provee su propia instancia: espiamos la del componente.
+    const snack = fixture.debugElement.injector.get(MatSnackBar);
+    const openSpy = spyOn(snack, 'open');
+    component.form.patchValue({ observations: 'Observaciones de prueba' });
+    mockEmit.execute.and.returnValue(throwError(() => ({ status: 403 })));
+
+    component.onEmitResolution();
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'No cuenta con permiso para emitir resoluciones. Si lo necesita, comuníquese con la Secretaría.',
+      'Cerrar',
+      jasmine.any(Object),
+    );
+  });
+});
