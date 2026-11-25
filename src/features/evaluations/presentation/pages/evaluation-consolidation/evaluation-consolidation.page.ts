@@ -1,11 +1,13 @@
 import {
   Component,
+  computed,
   inject,
   signal,
   OnInit,
   ChangeDetectionStrategy,
   DestroyRef,
 } from '@angular/core';
+import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -332,16 +334,18 @@ interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
                 </div>
 
                 <div class="col-md-5">
-                  <button
-                    type="button"
-                    mat-flat-button
-                    class="w-100 emit-btn"
-                    [disabled]="form.invalid || isSubmitting()"
-                    (click)="onEmitResolution()"
-                  >
-                    <mat-icon>draw</mat-icon>
-                    {{ isSubmitting() ? 'Procesando...' : 'Firmar y Notificar' }}
-                  </button>
+                  @if (canCreateResolution()) {
+                    <button
+                      type="button"
+                      mat-flat-button
+                      class="w-100 emit-btn"
+                      [disabled]="form.invalid || isSubmitting()"
+                      (click)="onEmitResolution()"
+                    >
+                      <mat-icon>draw</mat-icon>
+                      {{ isSubmitting() ? 'Procesando...' : 'Firmar y Notificar' }}
+                    </button>
+                  }
                 </div>
               </div>
             </form>
@@ -706,6 +710,10 @@ export class EvaluationConsolidationPage implements OnInit {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private fb = inject(FormBuilder);
+  private authFacade = inject(AuthFacade);
+
+  /** Solo quien tiene RESOLUCION_CREAR (Secretaría) puede firmar; la Presidenta consulta en solo lectura. */
+  readonly canCreateResolution = computed(() => this.authFacade.hasPermission('RESOLUCION_CREAR'));
 
   private loadConsolidation = inject(LoadEvaluationConsolidationUseCase);
   private emitResolution = inject(EmitConsolidatedResolutionUseCase);
@@ -797,6 +805,12 @@ export class EvaluationConsolidationPage implements OnInit {
             if (httpErr.status === 409) {
               this.snackBar.open(
                 '⚠️ El expediente de este protocolo ya ha sido versionado o modificado por otra transacción concurrente. Por favor, recargue la página.',
+                'Cerrar',
+                { duration: 8000 },
+              );
+            } else if (httpErr.status === 403) {
+              this.snackBar.open(
+                'No cuenta con permiso para emitir resoluciones. Si lo necesita, comuníquese con la Secretaría.',
                 'Cerrar',
                 { duration: 8000 },
               );

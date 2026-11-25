@@ -12,10 +12,14 @@ import { GenerateAndSubmitResolutionUseCase } from '../../../application/generat
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { EvaluationEntity } from '@domain/entities/evaluation.entity';
 import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
+import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { EmitResolutionEvent } from '../../components/resolution-form/resolution-form.component';
+import { throwError } from 'rxjs';
 
 describe('ResolutionGeneratorPage', () => {
   let component: ResolutionGeneratorPage;
   let fixture: ComponentFixture<ResolutionGeneratorPage>;
+  let mockAuthFacade: jasmine.SpyObj<AuthFacade>;
   let mockLoadPendingResolutions: jasmine.SpyObj<LoadPendingResolutionsUseCase>;
   let mockLoadProtocolById: jasmine.SpyObj<LoadProtocolByIdUseCase>;
   let mockLoadResolutionInsumos: jasmine.SpyObj<LoadResolutionInsumosUseCase>;
@@ -65,6 +69,8 @@ describe('ResolutionGeneratorPage', () => {
     );
     mockSnackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
     mockDialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
+    mockAuthFacade = jasmine.createSpyObj<AuthFacade>('AuthFacade', ['hasPermission']);
+    mockAuthFacade.hasPermission.and.returnValue(true);
 
     mockLoadPendingResolutions.execute.and.returnValue(of(mockProtocols));
     mockLoadProtocolById.execute.and.returnValue(of(mockProtocols[0]));
@@ -80,6 +86,7 @@ describe('ResolutionGeneratorPage', () => {
         { provide: GenerateAndSubmitResolutionUseCase, useValue: mockGenerateResolution },
         { provide: MatSnackBar, useValue: mockSnackBar },
         { provide: MatDialog, useValue: mockDialog },
+        { provide: AuthFacade, useValue: mockAuthFacade },
       ],
     }).compileComponents();
 
@@ -109,6 +116,44 @@ describe('ResolutionGeneratorPage', () => {
     component.onClearSelection();
     expect(component.selectedProtocol()).toBeNull();
     expect(component.evaluationsList().length).toBe(0);
+  });
+
+  it('should show the emit button when the user has RESOLUCION_CREAR', () => {
+    expect(mockAuthFacade.hasPermission).toHaveBeenCalledWith('RESOLUCION_CREAR');
+    const button = fixture.nativeElement.querySelector('.emit-action-btn');
+    expect(button).not.toBeNull();
+  });
+
+  it('should hide the emit button when the user lacks RESOLUCION_CREAR', () => {
+    mockAuthFacade.hasPermission.and.returnValue(false);
+    const readonlyFixture = TestBed.createComponent(ResolutionGeneratorPage);
+    readonlyFixture.detectChanges();
+
+    expect(readonlyFixture.nativeElement.querySelector('.emit-action-btn')).toBeNull();
+  });
+
+  it('should show a Spanish permission message when the backend answers 403', () => {
+    component.onSelectProtocol(mockProtocols[0]);
+    mockGenerateResolution.execute.and.returnValue(throwError(() => ({ status: 403 })));
+
+    component.onGenerate({
+      formValue: {
+        resolutionTypeId: 1,
+        validityYears: 1,
+        followUpPeriodDays: 180,
+        observations: 'x',
+        majorObservations: '',
+        minorObservations: '',
+        correctionProcedure: '',
+      },
+      file: null,
+    } as unknown as EmitResolutionEvent);
+
+    expect(mockSnackBar.open).toHaveBeenCalledWith(
+      'No cuenta con permiso para emitir resoluciones. Si lo necesita, comuníquese con la Secretaría.',
+      'Cerrar',
+      jasmine.any(Object),
+    );
   });
 
   it('should format profile labels correctly', () => {
