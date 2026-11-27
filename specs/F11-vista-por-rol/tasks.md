@@ -14,7 +14,7 @@
 | EP4 · El investigador sin datos internos | Sin la bitácora para INVESTIGADOR, sin la bitácora inventada para nadie; en Subsanaciones, perfil y dictamen de cada par sin nombres y sin los informes con nombre (V5) | B2 y B8 (la pantalla no los espera) | Hecho (`91bca59`; resultados abajo) |
 | EP5 · Pantalla del evaluador | `ProtocolHeader` (código, título, tipo), la lista de EP3 y el plazo (V6) | B4 y B6 | Pendiente |
 | EP6 · Espacio por etapas | Las 6 etapas para SECRETARIA y PRESIDENTE; las cerradas en solo lectura (V2) | — | Pendiente |
-| EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | Pendiente |
+| EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | En curso (decisiones del 27/11/2026, ver abajo) |
 | EP8 · Notificaciones reales | `notification-repository.adapter.ts` devuelve notificaciones inventadas (`of([...])`, códigos PRT-2024-00x) a todos los roles | Sí (no hay endpoint) | Pendiente (Paso 0 de EP4) |
 | EP9 · Pestaña Seguimiento sin datos inventados | `adverse-events-list.page.ts:162-180` (pestaña Seguimiento del espacio) muestra eventos adversos inventados de otros protocolos, también al investigador | Sí | Pendiente (Paso 0 de EP4) |
 | EP10 · Eventos adversos y renovaciones sin éxito falso | `eventos-adversos.page.ts`, `renovaciones.page.ts`, `renewal-request.page.ts` y `adverse-event-form.page.ts` no llaman al backend y muestran un éxito («Se notificó a Secretaría y Presidencia») | Sí | Pendiente (Paso 0 de EP4) |
@@ -53,6 +53,22 @@
 
 - **No detectable por mutación:** F11-14 (sin nombres, ids ni correos en las tarjetas). La plantilla nunca los mostró; la prueba es una guardia para cambios futuros.
 - **Pendiente:** revisión en el navegador con INVESTIGADOR, SECRETARIA y PRESIDENTE (la hace la usuaria). Backend: B2, B8 y B12.
+
+### EP7 · Resolución firmada (decisiones del 27/11/2026)
+
+- **Fuente de reglas:** backend `specs/003-flujo-mvp/spec.md` RF-17.1 (v1.6.8) y RF-17.2 (v1.6.9); contrato del backend en `GET /resolutions/protocol/:id/contexto`. El frontend no define reglas de negocio.
+- **Decisiones:**
+  1. **Convivencia con el flujo viejo.** `gestionadoPorFlujoNuevo(lista)` = `lista.some(c => c.estadoResultado !== 'RESUELTO_LEGACY')`. Con `PENDIENTE` también se oculta el flujo viejo. Lista vacía (protocolo sin convocatoria, el backend devuelve `[]`) → el flujo viejo sigue visible. Se aplica en `evaluation-consolidation` y `resolution-generator`.
+  2. **Investigador sin carta vigente** (cualquier estado distinto de `CONGELADO` con carta): no ve resultado, resumen ni motivo. Ve «El comité está resolviendo su protocolo. El resultado se publicará cuando la Secretaría suba la carta firmada.» Con carta vigente, igual que hoy. Nunca ve `resultadoCalculado` ni `resumenDictamenes`.
+  3. **Convocatoria cancelada:** si `puedeSubirCarta = false` y no se deduce el motivo de `fechaReunion` ni de `resueltoEnConvocatoria`, se muestra «Por ahora no se puede subir la carta de esta convocatoria.». Si el backend responde 409 al intentar, se muestra su mensaje tal cual.
+  4. `resolucionAnterior.tipoResolucionId` puede ser `null`.
+  5. **Bloque «Resultado del pleno» en solo lectura**, con el aviso «Calculado automáticamente a partir de los dictámenes de los evaluadores. No se puede modificar.» Textos por estado: `PENDIENTE`, `CALCULADO` (con anexo y resumen), `CONGELADO`, «Resuelto en la convocatoria <número>.» y `RESUELTO_LEGACY`. El resumen son solo conteos, nunca nombres (B8). Para reuniones futuras (hora de Ecuador): «La reunión de esta convocatoria aún no se ha realizado.».
+  6. **Sin registro de resultado desde el frontend.** Se retiran `PATCH …/meetings/:id/protocolos/:cp/resultado`, `puedeRegistrarResultado` y el formulario de la etapa.
+  7. **Sin `anexoCodigo` en las solicitudes.** `POST …/cartas/upload-url` envía `{}` y `POST …/cartas` envía `{ claveArchivo, motivoReemplazo? }`. El backend deriva el anexo y rechaza propiedades extra (ValidationPipe).
+  8. La guarda de UI de `anexoEsperado` antes de subir se conserva.
+  9. El aviso de `MatDialogModule` queda fuera de alcance.
+- **Pendiente de backend:** exponer el motivo de `puedeSubirCarta = false` (decisión 3).
+- **Mutaciones previstas:** M1 regla legacy `!==` → `===`; M2 resumen visible al investigador; M3 cuerpo de `POST cartas` con `anexoCodigo`.
 
 ### EP2 · La PRESIDENTE ve Recepción en solo lectura
 
