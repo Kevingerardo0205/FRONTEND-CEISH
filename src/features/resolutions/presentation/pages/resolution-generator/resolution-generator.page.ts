@@ -6,7 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
+import { tieneResultadoDelPleno } from '@domain/entities/resolucion-contexto.entity';
 import { LoadPendingResolutionsUseCase } from '../../../application/load-pending-resolutions.use-case';
 import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
 import { LoadResolutionInsumosUseCase } from '../../../application/load-resolution-insumos.use-case';
@@ -24,6 +26,7 @@ import { ConflictDialogComponent } from '@shared/components/conflict-dialog/conf
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
@@ -126,6 +129,12 @@ import { ConflictDialogComponent } from '@shared/components/conflict-dialog/conf
         </div>
 
         <div class="generator-layout animate-slide-up">
+          @if (resueltoEnEtapa()) {
+            <p role="status" class="small text-muted">
+              Este protocolo se resuelve desde la etapa Resolución del espacio de trabajo.
+              <a [routerLink]="['/dashboard/protocols/workspace', selectedProtocol()?.id, 'resolution']">Ir a Resolución</a>
+            </p>
+          } @else {
           <!-- Componente del Formulario Centralizado -->
           <app-resolution-form
             #resForm
@@ -134,6 +143,7 @@ import { ConflictDialogComponent } from '@shared/components/conflict-dialog/conf
             (onEmit)="onGenerate($event)"
           >
           </app-resolution-form>
+          }
 
           <!-- Barra Lateral Derecha: Insumos de Evaluadores -->
           <main class="form-section">
@@ -448,6 +458,7 @@ export class ResolutionGeneratorPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private authFacade = inject(AuthFacade);
+  private resolucionContexto = inject(IResolucionContextoPort);
 
   /** Solo quien tiene RESOLUCION_CREAR (Secretaría) puede emitir; el resto ve la lista en solo lectura. */
   readonly canCreateResolution = computed(() => this.authFacade.hasPermission('RESOLUCION_CREAR'));
@@ -457,6 +468,8 @@ export class ResolutionGeneratorPage implements OnInit {
   pendingProtocols = signal<ProtocolEntity[]>([]);
   selectedProtocol = signal<ProtocolEntity | null>(null);
   evaluationsList = signal<EvaluationEntity[]>([]);
+  /** EP7: con resultado del pleno, el dictamen se emite desde la etapa Resolución (flujo viejo oculto). */
+  resueltoEnEtapa = signal(false);
 
   ngOnInit() {
     this.route.queryParams.subscribe((params) => {
@@ -491,6 +504,12 @@ export class ResolutionGeneratorPage implements OnInit {
 
   onSelectProtocol(protocol: ProtocolEntity) {
     this.selectedProtocol.set(protocol);
+    this.resueltoEnEtapa.set(false);
+    this.resolucionContexto.obtenerContexto(String(protocol.id)).subscribe({
+      next: (lista) => this.resueltoEnEtapa.set(tieneResultadoDelPleno(lista)),
+      // Sin contexto no se puede decidir: el flujo viejo sigue como estaba.
+      error: () => this.resueltoEnEtapa.set(false),
+    });
 
     this.loadResolutionInsumos.execute(protocol.id).subscribe({
       next: (list) => {

@@ -15,6 +15,8 @@ import { ProtocolStatus } from '@domain/enums/protocol-status.enum';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { EmitResolutionEvent } from '../../components/resolution-form/resolution-form.component';
 import { throwError } from 'rxjs';
+import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
+import { ConvocatoriaContexto } from '@domain/entities/resolucion-contexto.entity';
 
 describe('ResolutionGeneratorPage', () => {
   let component: ResolutionGeneratorPage;
@@ -26,6 +28,7 @@ describe('ResolutionGeneratorPage', () => {
   let mockGenerateResolution: jasmine.SpyObj<GenerateAndSubmitResolutionUseCase>;
   let mockSnackBar: jasmine.SpyObj<MatSnackBar>;
   let mockDialog: jasmine.SpyObj<MatDialog>;
+  let mockContexto: jasmine.SpyObj<IResolucionContextoPort>;
 
   const mockProtocols: ProtocolEntity[] = [
     {
@@ -72,6 +75,8 @@ describe('ResolutionGeneratorPage', () => {
     mockAuthFacade = jasmine.createSpyObj<AuthFacade>('AuthFacade', ['hasPermission']);
     mockAuthFacade.hasPermission.and.returnValue(true);
 
+    mockContexto = jasmine.createSpyObj<IResolucionContextoPort>('IResolucionContextoPort', ['obtenerContexto']);
+    mockContexto.obtenerContexto.and.returnValue(of([]));
     mockLoadPendingResolutions.execute.and.returnValue(of(mockProtocols));
     mockLoadProtocolById.execute.and.returnValue(of(mockProtocols[0]));
     mockLoadResolutionInsumos.execute.and.returnValue(of(mockEvaluations));
@@ -87,6 +92,7 @@ describe('ResolutionGeneratorPage', () => {
         { provide: MatSnackBar, useValue: mockSnackBar },
         { provide: MatDialog, useValue: mockDialog },
         { provide: AuthFacade, useValue: mockAuthFacade },
+        { provide: IResolucionContextoPort, useValue: mockContexto },
       ],
     }).compileComponents();
 
@@ -161,5 +167,26 @@ describe('ResolutionGeneratorPage', () => {
     expect(component.getProfileLabel('BIOETICA')).toBe('de Bioética');
     expect(component.getProfileLabel('LEGAL')).toBe('de Aspectos Jurídicos');
     expect(component.getProfileLabel('CUSTOM')).toBe('CUSTOM');
+  });
+
+  it('con resultado del pleno no muestra el formulario y remite a la etapa Resolución', () => {
+    mockContexto.obtenerContexto.and.returnValue(of([{ resultado: 'NO_APROBADO' } as unknown as ConvocatoriaContexto]));
+    component.onSelectProtocol(mockProtocols[0]);
+    fixture.detectChanges();
+
+    expect(component.resueltoEnEtapa()).toBeTrue();
+    expect(fixture.nativeElement.querySelector('app-resolution-form')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Este protocolo se resuelve desde la etapa Resolución del espacio de trabajo.',
+    );
+  });
+
+  it('sin resultado del pleno muestra el formulario del flujo viejo', () => {
+    mockContexto.obtenerContexto.and.returnValue(of([{ resultado: null } as unknown as ConvocatoriaContexto]));
+    component.onSelectProtocol(mockProtocols[0]);
+    fixture.detectChanges();
+
+    expect(component.resueltoEnEtapa()).toBeFalse();
+    expect(fixture.nativeElement.querySelector('app-resolution-form')).not.toBeNull();
   });
 });

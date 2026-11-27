@@ -82,3 +82,11 @@ export class ValidacionResolucionError extends Error {
     this.name = 'ValidacionResolucionError';
   }
 }
+
+/**
+ * Regla de convivencia con el flujo viejo (EP7): si alguna convocatoria del protocolo ya tiene
+ * resultado del pleno, la resolución se hace desde la etapa Resolución y no desde el flujo viejo.
+ */
+export function tieneResultadoDelPleno(lista: readonly ConvocatoriaContexto[]): boolean {
+  return lista.some((c) => c.resultado !== null);
+}
