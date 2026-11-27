@@ -32,6 +32,8 @@ import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-c
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { NormalizedEvaluation } from '../../../application/load-evaluation-consolidation.use-case';
 import { MENSAJE_CARTA_FIRMADA_REQUERIDA } from '@shared/utils/carta-firmada.constants';
+import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
+import { tieneResultadoDelPleno } from '@domain/entities/resolucion-contexto.entity';
 
 interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
   id: number | string;
@@ -335,7 +337,13 @@ interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
                 </div>
 
                 <div class="col-md-5">
-                  @if (canCreateResolution()) {
+                  @if (resueltoEnEtapa()) {
+                    <p role="status" class="small text-muted">
+                      Este protocolo se resuelve desde la etapa Resolución del espacio de trabajo.
+                      <a [routerLink]="['/dashboard/protocols/workspace', protocolId, 'resolution']">Ir a Resolución</a>
+                    </p>
+                  }
+                  @if (canCreateResolution() && !resueltoEnEtapa()) {
                     <button
                       type="button"
                       mat-flat-button
@@ -721,6 +729,10 @@ export class EvaluationConsolidationPage implements OnInit {
   private downloadEvalDoc = inject(DownloadEvaluationDocumentUseCase);
   private loadProtocolById = inject(LoadProtocolByIdUseCase);
   private destroyRef = inject(DestroyRef);
+  private resolucionContexto = inject(IResolucionContextoPort);
+
+  /** EP7: con resultado del pleno, la resolución se hace desde la etapa Resolución (flujo viejo oculto). */
+  resueltoEnEtapa = signal(false);
 
   protocolId = '';
   protocol = signal<ProtocolEntity | null>(null);
@@ -738,6 +750,11 @@ export class EvaluationConsolidationPage implements OnInit {
   ngOnInit() {
     this.protocolId = this.route.snapshot.params['id'];
     this.loadConsolidationData();
+    this.resolucionContexto.obtenerContexto(this.protocolId).subscribe({
+      next: (lista) => this.resueltoEnEtapa.set(tieneResultadoDelPleno(lista)),
+      // Sin contexto no se puede decidir: el flujo viejo sigue como estaba.
+      error: () => this.resueltoEnEtapa.set(false),
+    });
   }
 
   loadConsolidationData() {

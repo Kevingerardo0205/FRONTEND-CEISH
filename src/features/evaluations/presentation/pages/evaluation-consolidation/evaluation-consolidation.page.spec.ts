@@ -12,6 +12,8 @@ import { EmitConsolidatedResolutionUseCase } from '../../../application/emit-con
 import { DownloadEvaluationDocumentUseCase } from '../../../application/download-evaluation-document.use-case';
 import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
+import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
+import { ConvocatoriaContexto } from '@domain/entities/resolucion-contexto.entity';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 
 describe('EvaluationConsolidationPage: permisos de emisión', () => {
@@ -20,10 +22,15 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
   let mockAuthFacade: jasmine.SpyObj<AuthFacade>;
   let mockEmit: jasmine.SpyObj<EmitConsolidatedResolutionUseCase>;
   let mockSnackBar: jasmine.SpyObj<MatSnackBar>;
+  let mockContexto: jasmine.SpyObj<IResolucionContextoPort>;
 
   beforeEach(async () => {
     mockAuthFacade = jasmine.createSpyObj<AuthFacade>('AuthFacade', ['hasPermission']);
     mockAuthFacade.hasPermission.and.returnValue(true);
+    mockContexto = jasmine.createSpyObj<IResolucionContextoPort>('IResolucionContextoPort', [
+      'obtenerContexto',
+    ]);
+    mockContexto.obtenerContexto.and.returnValue(of([]));
 
     const mockLoadConsolidation = jasmine.createSpyObj<LoadEvaluationConsolidationUseCase>(
       'LoadEvaluationConsolidationUseCase',
@@ -56,6 +63,7 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
         { provide: DownloadEvaluationDocumentUseCase, useValue: {} },
         { provide: LoadProtocolByIdUseCase, useValue: mockLoadProtocol },
         { provide: MatSnackBar, useValue: mockSnackBar },
+        { provide: IResolucionContextoPort, useValue: mockContexto },
       ],
     }).compileComponents();
   });
@@ -124,5 +132,27 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
 
     expect(titulo.textContent?.trim()).toBe('Resumen de sesión');
     expect(fixture.nativeElement.textContent).not.toContain('Anexo 12');
+  });
+
+  it('con resultado del pleno oculta «Firmar y Notificar» y remite a la etapa Resolución', () => {
+    mockContexto.obtenerContexto.and.returnValue(
+      of([{ resultado: 'APROBADO_DEFINITIVO' } as unknown as ConvocatoriaContexto]),
+    );
+    createPage();
+
+    expect(emitButton()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Este protocolo se resuelve desde la etapa Resolución del espacio de trabajo.',
+    );
+  });
+
+  it('sin resultado del pleno el flujo viejo sigue igual', () => {
+    mockContexto.obtenerContexto.and.returnValue(
+      of([{ resultado: null } as unknown as ConvocatoriaContexto]),
+    );
+    createPage();
+
+    expect(emitButton()).not.toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('se resuelve desde la etapa Resolución');
   });
 });

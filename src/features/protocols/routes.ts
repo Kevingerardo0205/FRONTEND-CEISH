@@ -93,8 +93,8 @@ export const PROTOCOL_ROUTES: Routes = [
           {
             path: 'resolution',
             loadComponent: () =>
-              import('./presentation/pages/protocol-workspace/protocol-workspace-stage.page').then(
-                (m) => m.ProtocolWorkspaceStagePage,
+              import('../resolutions/presentation/pages/resolution-stage/resolution-stage.page').then(
+                (m) => m.ResolutionStagePage,
               ),
             canActivate: [redirectEvaluatorToMyEvaluations, RoleGuard],
             data: { roles: [...WORKSPACE_TAB_ROLES.info], stage: 'RESOLUCION' },
