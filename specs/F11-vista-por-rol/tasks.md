@@ -14,7 +14,7 @@
 | EP4 · El investigador sin datos internos | Sin la bitácora para INVESTIGADOR, sin la bitácora inventada para nadie; en Subsanaciones, perfil y dictamen de cada par sin nombres y sin los informes con nombre (V5) | B2 y B8 (la pantalla no los espera) | Hecho (`91bca59`; resultados abajo) |
 | EP5 · Pantalla del evaluador | `ProtocolHeader` (código, título, tipo), la lista de EP3 y el plazo (V6) | B4 y B6 | Pendiente |
 | EP6 · Espacio por etapas | Las 6 etapas para SECRETARIA y PRESIDENTE; las cerradas en solo lectura (V2) | — | Pendiente |
-| EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | En curso (decisiones del 27/11/2026, ver abajo) |
+| EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | Frontend hecho (`b85fc19`, `fc9a5d0`, `d976f42`, `1b5a254`); pendiente de backend: motivo de `puedeSubirCarta` |
 | EP8 · Notificaciones reales | `notification-repository.adapter.ts` devuelve notificaciones inventadas (`of([...])`, códigos PRT-2024-00x) a todos los roles | Sí (no hay endpoint) | Pendiente (Paso 0 de EP4) |
 | EP9 · Pestaña Seguimiento sin datos inventados | `adverse-events-list.page.ts:162-180` (pestaña Seguimiento del espacio) muestra eventos adversos inventados de otros protocolos, también al investigador | Sí | Pendiente (Paso 0 de EP4) |
 | EP10 · Eventos adversos y renovaciones sin éxito falso | `eventos-adversos.page.ts`, `renovaciones.page.ts`, `renewal-request.page.ts` y `adverse-event-form.page.ts` no llaman al backend y muestran un éxito («Se notificó a Secretaría y Presidencia») | Sí | Pendiente (Paso 0 de EP4) |
@@ -68,7 +68,22 @@
   8. La guarda de UI de `anexoEsperado` antes de subir se conserva.
   9. El aviso de `MatDialogModule` queda fuera de alcance.
 - **Pendiente de backend:** exponer el motivo de `puedeSubirCarta = false` (decisión 3).
-- **Mutaciones previstas:** M1 regla legacy `!==` → `===`; M2 resumen visible al investigador; M3 cuerpo de `POST cartas` con `anexoCodigo`.
+- **Commits del frontend:** `b85fc19` docs · `fc9a5d0` dominio y mapper (campos nuevos, aditivo) · `d976f42` retiro del registro de resultado y subida sin `anexoCodigo` · `1b5a254` presentación (bloque de solo lectura, textos por estado, regla de convivencia).
+- **Resultados (27/11/2026, rama `feat/ep7-resolucion-etapa`):**
+  - Línea base antes de EP7: `tsc` app y spec exit 0; `ng test`: 1862 SUCCESS; `eslint` en los archivos de resolución: 1 warning preexistente (`MatDialogModule`, fuera de alcance).
+  - Después: `tsc` app y spec exit 0 (dos veces); `ng test`: **1868 SUCCESS**, 0 FAILED (dos veces); `ng build --configuration production` exit 0; `eslint` sobre los archivos tocados: 0 errores, sin warnings nuevos (los de specs son «archivo ignorado» por la configuración).
+  - Ruido `NG0101 ApplicationRef.tick is called recursively` en la consola: 36 líneas antes y después; preexistente.
+- **Mutaciones (backup + `cmp` tras cada reversión):**
+
+| Mutación | Qué se rompió | Prueba que falla | Resultado |
+|---|---|---|---|
+| M1 | regla legacy `!==` → `===` en `gestionadoPorFlujoNuevo` | «gestionadoPorFlujoNuevo … PENDIENTE oculta el flujo viejo» (y 7 más) | `TOTAL: 8 FAILED, 1860 SUCCESS` |
+| M2 | resumen visible al investigador (se quita `puedeVerHistorial()` en `resumenVisible`) | «ResolutionStagePage INVESTIGADOR sin carta vigente … nunca el resumen ni el cálculo» | `TOTAL: 1 FAILED, 1867 SUCCESS` |
+| M3 | cuerpo de `POST cartas` con `anexoCodigo` (valor fijo `'ANEXO_13'`) | «ResolucionContextoAdapter registrarCarta: POST cartas con claveArchivo y motivo, sin anexoCodigo» | `TOTAL: 1 FAILED, 1867 SUCCESS` |
+
+- **Nota de M3:** el valor es fijo; la prueba verifica la presencia de la clave `anexoCodigo`, no su valor.
+- **Lint:** se usó `npx eslint <archivos>` sin `--fix`. `npm run lint` no se ejecutó porque tiene `--fix`.
+- **Pendiente de backend:** motivo de `puedeSubirCarta = false` (decisión 3).
 
 ### EP2 · La PRESIDENTE ve Recepción en solo lectura
 
