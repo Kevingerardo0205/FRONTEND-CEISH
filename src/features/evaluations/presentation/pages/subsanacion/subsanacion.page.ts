@@ -31,7 +31,8 @@ import { LoadReceptionProtocolsUseCase } from '@features/protocols/application/u
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { abrirEnPestana } from '@shared/utils/descarga-en-pestana.util';
-import { apiErrorStatus } from '@shared/utils/api-error-message.util';
+import { apiErrorStatus, extractApiErrorMessage } from '@shared/utils/api-error-message.util';
+import { puedeSubirDocumentoSubsanacion } from '@features/investigador/domain/subsanacion-upload.rules';
 import {
   MENSAJE_CARTA_CONSULTA_FALLIDA,
   MENSAJE_CARTA_NO_ENCONTRADA,
@@ -289,7 +290,7 @@ interface ProtocolDocument {
                               mat-stroked-button
                               color="primary"
                               class="btn-upload btn-sm"
-                              [disabled]="uploadingRequirementId() > 0"
+                              [disabled]="uploadingRequirementId() > 0 || !puedeSubirDocumentos()"
                               (click)="fileInput.click()"
                             >
                               <mat-icon>cloud_upload</mat-icon>
@@ -1058,6 +1059,8 @@ export class SubsanacionPage implements OnInit {
 
   isSubmitting = signal(false);
   uploadingRequirementId = signal<number>(0);
+  /** TSK-015-N24: el botón «Subir» solo se habilita en los estados que permite la regla (ver el dominio). */
+  readonly puedeSubirDocumentos = signal(false);
 
   isRequirementLocked(req: ChecklistRequirement): boolean {
     if (['APROBADO', 'VALIDADO', 'NO_APLICA'].includes(req.status as RequirementStatus)) {
@@ -1154,6 +1157,13 @@ export class SubsanacionPage implements OnInit {
           this.protocolVersion.set(
             (rawP['versionNumber'] as number) || (rawP['version'] as number) || 1,
           );
+          this.puedeSubirDocumentos.set(
+            puedeSubirDocumentoSubsanacion({
+              statusId: result.protocol.statusId,
+              receptionStatus: result.protocol.receptionStatus,
+              version: result.protocol.version,
+            }),
+          );
           this.observations.set(result.observations);
           this.checklist.set((result.checklist || []) as unknown as ChecklistRequirement[]);
           this.protocolDocuments.set(result.documents || []);
@@ -1198,9 +1208,12 @@ export class SubsanacionPage implements OnInit {
         error: (err) => {
           console.error('Error uploading correction:', err);
           this.uploadingRequirementId.set(0);
-          this.snackBar.open('❌ Error al subir documento de subsanación.', 'Cerrar', {
-            duration: 4000,
-          });
+          // TSK-015-N24: el 409 del backend (estado no admite subsanación) se muestra tal cual.
+          const mensaje =
+            apiErrorStatus(err) === 409
+              ? extractApiErrorMessage(err)
+              : '❌ Error al subir documento de subsanación.';
+          this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
         },
       });
   }

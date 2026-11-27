@@ -484,6 +484,104 @@ describe('SubsanacionPage', () => {
     });
   });
 
+  describe('botón Subir de requisitos según el estado del protocolo (TSK-015-N24)', () => {
+    const REQUISITO = {
+      id: 7,
+      requirementCode: 'anexo2_formulario',
+      requirementName: 'Formulario de presentación',
+      status: 'NO_PRESENTADO',
+    };
+
+    /** Carga el detalle con un protocolo concreto y devuelve el botón «Subir» de la fila. */
+    function cargarConEstado(datos: Record<string, unknown>): HTMLButtonElement | null {
+      mockProtocoloService.obtenerProtocolo.and.returnValue(
+        of({ id: 123, codigoCeish: 'CEISH-123', titulo: 'T', estado: 'X', ...datos } as any),
+      );
+      mockProtocoloService.getChecklist.and.returnValue(of([REQUISITO] as any));
+      component.loadProtocolDetail();
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('.btn-upload') as HTMLButtonElement | null;
+    }
+
+    it('v1 en BORRADOR: el botón Subir está habilitado', () => {
+      const boton = cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+
+      expect(boton).not.toBeNull();
+      expect(boton!.disabled).toBeFalse();
+    });
+
+    it('v1 con recepción completa: el botón Subir está deshabilitado', () => {
+      const boton = cargarConEstado({ statusId: 10, receptionStatus: 'COMPLETO', version: '1.0' });
+
+      expect(boton!.disabled).toBeTrue();
+    });
+
+    it('v2 con protocolo en 19 y recepción en subsanación: habilitado', () => {
+      const boton = cargarConEstado({
+        statusId: 19,
+        receptionStatus: 'EVALUACION_SUBSANACIONES',
+        version: '2.0',
+      });
+
+      expect(boton!.disabled).toBeFalse();
+    });
+
+    it('v2 con protocolo fuera de 19 y 21: deshabilitado', () => {
+      const boton = cargarConEstado({
+        statusId: 17,
+        receptionStatus: 'EVALUACION_SUBSANACIONES',
+        version: '2.0',
+      });
+
+      expect(boton!.disabled).toBeTrue();
+    });
+
+    it('sin datos de estado (respuesta incompleta): deshabilitado', () => {
+      const boton = cargarConEstado({});
+
+      expect(boton!.disabled).toBeTrue();
+    });
+
+    it('un 409 del backend se muestra tal cual', () => {
+      cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+      const snack = fixture.debugElement.injector.get(MatSnackBar);
+      const openSpy = spyOn(snack, 'open');
+      const mensaje = 'El protocolo no admite documentos de subsanación en su estado actual.';
+      spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(
+        throwError(() => Object.assign(new Error(mensaje), { status: 409 })),
+      );
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(openSpy).toHaveBeenCalledWith(mensaje, 'Cerrar', jasmine.any(Object));
+    });
+
+    it('otro error de subida muestra el mensaje genérico', () => {
+      cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+      const snack = fixture.debugElement.injector.get(MatSnackBar);
+      const openSpy = spyOn(snack, 'open');
+      spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(
+        throwError(() => Object.assign(new Error('boom'), { status: 500 })),
+      );
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(openSpy).toHaveBeenCalledWith(
+        '❌ Error al subir documento de subsanación.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+  });
+
   describe('rótulo de la carta consolidada', () => {
     it('la carta de aprobación con condición se rotula con el Anexo 15, no con el Anexo 12', () => {
       const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
