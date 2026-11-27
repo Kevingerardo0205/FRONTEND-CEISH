@@ -25,6 +25,8 @@ import { IDocumentRepositoryPort } from '@domain/ports/IDocumentRepositoryPort';
 import { DocumentApiAdapter } from '@infrastructure/adapters/document-api.adapter';
 import { IResolutionRepositoryPort } from '@domain/ports/IResolutionRepositoryPort';
 import { ResolutionApiAdapter } from '@infrastructure/adapters/resolution-api.adapter';
+import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
+import { ResolucionContextoAdapter } from '@infrastructure/adapters/resolucion-contexto.adapter';
 import { ISecurityRepositoryPort } from '@domain/ports/ISecurityRepositoryPort';
 import { SecurityApiAdapter } from '@infrastructure/adapters/security-api.adapter';
 import { IAiAssistantRepositoryPort } from '@domain/ports/IAiAssistantRepositoryPort';
@@ -65,6 +67,7 @@ export const appConfig: ApplicationConfig = {
     { provide: IProtocolRepositoryPort, useClass: ProtocolApiAdapter },
     { provide: IDocumentRepositoryPort, useClass: DocumentApiAdapter },
     { provide: IResolutionRepositoryPort, useClass: ResolutionApiAdapter },
+    { provide: IResolucionContextoPort, useClass: ResolucionContextoAdapter },
     { provide: ISecurityRepositoryPort, useClass: SecurityApiAdapter },
     { provide: IAiAssistantRepositoryPort, useClass: AiAssistantApiAdapter },
     { provide: IAiAssistantAdminRepositoryPort, useClass: AiAssistantAdminApiAdapter },
