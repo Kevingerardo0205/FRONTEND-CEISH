@@ -21,7 +21,6 @@ function convocatoria(overrides: Partial<ConvocatoriaContexto> = {}): Convocator
     resultado: null,
     anexoEsperado: null,
     cartaVigente: null,
-    puedeRegistrarResultado: false,
     puedeSubirCarta: false,
     estadoResultado: 'PENDIENTE',
     resultadoCalculado: null,
@@ -50,7 +49,6 @@ function montar(
     'obtenerContexto',
     'listarCartas',
     'urlDescargaCarta',
-    'registrarResultado',
     'solicitarSubida',
     'subirArchivo',
     'registrarCarta',
@@ -95,16 +93,6 @@ describe('ResolutionStagePage', () => {
     expect(port.listarCartas).not.toHaveBeenCalled();
   });
 
-  it('SECRETARIA sin puedeRegistrarResultado no ve el formulario de resultado', () => {
-    const { fixture } = montar(of([convocatoria({ puedeRegistrarResultado: false })]), 'SECRETARIA');
-    expect(existe(fixture, '[data-testid="select-resultado"]')).toBeFalse();
-  });
-
-  it('SECRETARIA con puedeRegistrarResultado ve el formulario de resultado', () => {
-    const { fixture } = montar(of([convocatoria({ puedeRegistrarResultado: true })]), 'SECRETARIA');
-    expect(existe(fixture, '[data-testid="select-resultado"]')).toBeTrue();
-  });
-
   it('SECRETARIA sin puedeSubirCarta no ve el formulario de carta', () => {
     const { fixture } = montar(of([convocatoria({ puedeSubirCarta: false, anexoEsperado: 'ANEXO_13' })]), 'SECRETARIA');
     expect(existe(fixture, '[data-testid="input-archivo"]')).toBeFalse();
@@ -134,7 +122,6 @@ describe('ResolutionStagePage', () => {
     const { fixture, port } = montar(
       of([
         convocatoria({
-          puedeRegistrarResultado: true,
           puedeSubirCarta: true,
           resultado: 'NO_APROBADO',
           anexoEsperado: 'ANEXO_13',
@@ -155,7 +142,6 @@ describe('ResolutionStagePage', () => {
     const { fixture, port } = montar(
       of([
         convocatoria({
-          puedeRegistrarResultado: true,
           puedeSubirCarta: true,
           resultado: 'NO_APROBADO',
           motivo: 'Dato interno',

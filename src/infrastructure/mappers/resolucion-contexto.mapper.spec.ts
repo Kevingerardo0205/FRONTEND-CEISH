@@ -23,7 +23,6 @@ const convocatoriaBase: ConvocatoriaApi = {
     subidoEn: '2026-11-21T10:00:00.000Z',
     claveArchivo: 'cartas/7/v1/clave.pdf',
   },
-  puedeRegistrarResultado: false,
   puedeSubirCarta: true,
   estadoResultado: 'CONGELADO',
   resultadoCalculado: 'APROBADO_CON_CONDICION',
@@ -38,7 +37,6 @@ describe('mapConvocatoriasContexto', () => {
 
     expect(resultado.map((c) => c.numeroConvocatoria)).toEqual(['C-2026-01', 'C-2025-09']);
     expect(resultado[0].puedeSubirCarta).toBeTrue();
-    expect(resultado[0].puedeRegistrarResultado).toBeFalse();
     expect(resultado[0].cartaVigente?.claveArchivo).toBe('cartas/7/v1/clave.pdf');
   });
 

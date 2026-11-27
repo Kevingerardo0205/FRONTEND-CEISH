@@ -22,7 +22,6 @@ function entrada(overrides: Partial<SubirCartaEntrada> = {}): SubirCartaEntrada 
   return {
     convocatoriaId: CONV,
     convocatoriaProtocoloId: CP,
-    anexoEsperado: 'ANEXO_13',
     archivo: pdf(),
     hayCartaVigente: false,
     ...overrides,
@@ -90,24 +89,21 @@ describe('SubirCartaFirmadaUseCase', () => {
 
     expect(orden).toEqual(['upload-url', 'put', 'registro']);
     expect(port.subirArchivo).toHaveBeenCalledWith('https://s3/x', jasmine.any(File));
-    expect(port.registrarCarta).toHaveBeenCalledWith(CONV, CP, {
-      claveArchivo: 'cartas/7/v1/x.pdf',
-      anexoCodigo: 'ANEXO_13',
-    });
+    expect(port.registrarCarta).toHaveBeenCalledWith(CONV, CP, { claveArchivo: 'cartas/7/v1/x.pdf' });
   });
 
-  it('usa anexoEsperado y no envía motivo si no hay carta vigente', () => {
-    useCase.execute(entrada({ anexoEsperado: 'ANEXO_15' })).subscribe();
-    expect(port.solicitarSubida).toHaveBeenCalledWith(CONV, CP, 'ANEXO_15');
+  it('no envía anexo: upload-url sin anexo y registro sin anexoCodigo ni motivo si no hay carta vigente', () => {
+    useCase.execute(entrada()).subscribe();
+    expect(port.solicitarSubida).toHaveBeenCalledWith(CONV, CP);
     const cuerpo = port.registrarCarta.calls.mostRecent().args[2];
+    expect('anexoCodigo' in cuerpo).toBeFalse();
     expect('motivoReemplazo' in cuerpo).toBeFalse();
   });
 
-  it('con carta vigente envía el motivo de reemplazo', () => {
+  it('con carta vigente envía el motivo de reemplazo y sigue sin anexoCodigo', () => {
     useCase.execute(entrada({ hayCartaVigente: true, motivoReemplazo: '  Firma nueva  ' })).subscribe();
     expect(port.registrarCarta).toHaveBeenCalledWith(CONV, CP, {
       claveArchivo: 'cartas/7/v1/x.pdf',
-      anexoCodigo: 'ANEXO_13',
       motivoReemplazo: 'Firma nueva',
     });
   });

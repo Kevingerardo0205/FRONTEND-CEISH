@@ -43,7 +43,6 @@ export interface ConvocatoriaContexto {
   resultado: ResultadoPleno | null;
   anexoEsperado: AnexoCarta | null;
   cartaVigente: CartaVigente | null;
-  puedeRegistrarResultado: boolean;
   puedeSubirCarta: boolean;
   /** Calculado en el backend. Nunca se muestra en la etapa salvo a quien tiene RESOLUCION_HISTORIAL. */
   estadoResultado: EstadoResultado;
@@ -80,16 +79,9 @@ export interface SubidaCarta {
   numeroVersion: number;
 }
 
-export interface RegistrarResultadoBody {
-  resultado: ResultadoPleno;
-  motivo?: string;
-  observaciones?: string;
-  motivoCorreccion?: string;
-}
-
+/** Cuerpo de POST …/cartas. El anexo lo deriva el backend: el cliente no lo envía. */
 export interface RegistrarCartaBody {
   claveArchivo: string;
-  anexoCodigo: AnexoCarta;
   motivoReemplazo?: string;
 }
 

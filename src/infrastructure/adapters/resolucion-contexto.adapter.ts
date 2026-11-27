@@ -9,11 +9,9 @@ import {
 import { Observable } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import {
-  AnexoCarta,
   CartaVersion,
   ConvocatoriaContexto,
   RegistrarCartaBody,
-  RegistrarResultadoBody,
   SubidaCarta,
 } from '@domain/entities/resolucion-contexto.entity';
 import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
@@ -44,25 +42,12 @@ export class ResolucionContextoAdapter extends IResolucionContextoPort {
       .pipe(map((res) => mapConvocatoriasContexto(desenvolver<ConvocatoriaApi[]>(res))));
   }
 
-  registrarResultado(
-    convocatoriaId: string,
-    convocatoriaProtocoloId: string,
-    cuerpo: RegistrarResultadoBody,
-  ): Observable<void> {
-    return this.api
-      .patch<unknown>(ENDPOINTS.MEETINGS.RESULTADO(convocatoriaId, convocatoriaProtocoloId), cuerpo)
-      .pipe(map(() => undefined));
-  }
-
-  solicitarSubida(
-    convocatoriaId: string,
-    convocatoriaProtocoloId: string,
-    anexoCodigo: AnexoCarta,
-  ): Observable<SubidaCarta> {
+  solicitarSubida(convocatoriaId: string, convocatoriaProtocoloId: string): Observable<SubidaCarta> {
+    // Cuerpo vacío: el ValidationPipe del backend rechaza cualquier propiedad (p. ej. anexoCodigo).
     return this.api
       .post<{ data?: SubidaCarta } | SubidaCarta>(
         `${ENDPOINTS.RESOLUTIONS.CARTAS(convocatoriaId, convocatoriaProtocoloId)}/upload-url`,
-        { anexoCodigo },
+        {},
       )
       .pipe(map((res) => mapSubidaCarta(desenvolver<SubidaCarta>(res))));
   }

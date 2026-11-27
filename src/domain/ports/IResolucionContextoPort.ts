@@ -1,29 +1,17 @@
 import { Observable } from 'rxjs';
 import {
-  AnexoCarta,
   CartaVersion,
   ConvocatoriaContexto,
   RegistrarCartaBody,
-  RegistrarResultadoBody,
   SubidaCarta,
 } from '../entities/resolucion-contexto.entity';
 
-/** Etapa Resolución: contexto, resultado del pleno y cartas firmadas (EP7). */
+/** Etapa Resolución: contexto y cartas firmadas (EP7). El resultado del pleno lo calcula el backend. */
 export abstract class IResolucionContextoPort {
   /** GET /resolutions/protocol/:id/contexto. Lista ordenada: la primera es la convocatoria más reciente. */
   abstract obtenerContexto(protocolId: string): Observable<ConvocatoriaContexto[]>;
-  /** PATCH …/meetings/:convocatoriaId/protocolos/:cpId/resultado. */
-  abstract registrarResultado(
-    convocatoriaId: string,
-    convocatoriaProtocoloId: string,
-    cuerpo: RegistrarResultadoBody,
-  ): Observable<void>;
-  /** POST …/cartas/upload-url: emite la URL firmada y la clave. No registra nada. */
-  abstract solicitarSubida(
-    convocatoriaId: string,
-    convocatoriaProtocoloId: string,
-    anexoCodigo: AnexoCarta,
-  ): Observable<SubidaCarta>;
+  /** POST …/cartas/upload-url: emite la URL firmada y la clave. No registra nada. Sin cuerpo: el anexo lo deriva el backend. */
+  abstract solicitarSubida(convocatoriaId: string, convocatoriaProtocoloId: string): Observable<SubidaCarta>;
   /** PUT a la URL firmada, sin token de la sesión y con Content-Type application/pdf. */
   abstract subirArchivo(uploadUrl: string, archivo: File): Observable<void>;
   /** POST …/cartas: registra la versión subida. */

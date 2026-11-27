@@ -80,8 +80,6 @@ export const ENDPOINTS = {
     CALCULATE_EVAL_DATE: '/evaluations/meetings/calculate-eval-date',
     PDF: (id: string) => `/evaluations/meetings/${id}/pdf`,
     NEXT: '/evaluations/meetings/next', // spec-003 RF-ALR.f.7 (F01 T01-4)
-    RESULTADO: (id: string, convocatoriaProtocoloId: string) =>
-      `/evaluations/meetings/${id}/protocolos/${convocatoriaProtocoloId}/resultado`, // EP7 (TSK-015-N08)
   },
   SECRETARIA: {
     PENDIENTES: '/secretaria/pendientes', // spec-003 v1.5.2, RF-ALR.f.5 (?filtro=todos|vencidos|hoy|semana)

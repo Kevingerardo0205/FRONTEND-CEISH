@@ -1,9 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { defer, Observable, switchMap, throwError } from 'rxjs';
-import {
-  AnexoCarta,
-  ValidacionResolucionError,
-} from '@domain/entities/resolucion-contexto.entity';
+import { ValidacionResolucionError } from '@domain/entities/resolucion-contexto.entity';
 import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
 
 /** Tamaño máximo de la carta: 10 MB (ayuda del cliente; el backend decide). */
@@ -12,8 +9,6 @@ export const TAMANO_MAXIMO_CARTA_BYTES = 10 * 1024 * 1024;
 export interface SubirCartaEntrada {
   convocatoriaId: string;
   convocatoriaProtocoloId: string;
-  /** anexoEsperado del contexto. El cliente no calcula el anexo. */
-  anexoEsperado: AnexoCarta;
   archivo: File;
   /** true si la convocatoria ya tiene carta vigente: el reemplazo exige motivo. */
   hayCartaVigente: boolean;
@@ -49,14 +44,13 @@ export class SubirCartaFirmadaUseCase {
         );
       }
 
-      const { convocatoriaId, convocatoriaProtocoloId, anexoEsperado, archivo } = entrada;
-      return this.port.solicitarSubida(convocatoriaId, convocatoriaProtocoloId, anexoEsperado).pipe(
+      const { convocatoriaId, convocatoriaProtocoloId, archivo } = entrada;
+      return this.port.solicitarSubida(convocatoriaId, convocatoriaProtocoloId).pipe(
         switchMap((subida) =>
           this.port.subirArchivo(subida.uploadUrl, archivo).pipe(
             switchMap(() =>
               this.port.registrarCarta(convocatoriaId, convocatoriaProtocoloId, {
                 claveArchivo: subida.claveArchivo,
-                anexoCodigo: anexoEsperado,
                 ...(entrada.hayCartaVigente ? { motivoReemplazo: motivo } : {}),
               }),
             ),

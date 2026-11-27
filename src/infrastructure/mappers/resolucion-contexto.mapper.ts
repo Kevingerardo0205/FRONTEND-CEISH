@@ -31,7 +31,6 @@ export interface ConvocatoriaApi {
   resultado: ResultadoPleno | null;
   anexoEsperado: AnexoCarta | null;
   cartaVigente: CartaVigenteApi | null;
-  puedeRegistrarResultado: boolean;
   puedeSubirCarta: boolean;
   estadoResultado: EstadoResultado;
   resultadoCalculado: ResultadoPleno | null;
@@ -70,7 +69,6 @@ export function mapConvocatoriasContexto(raw: readonly ConvocatoriaApi[]): Convo
             claveArchivo: c.cartaVigente.claveArchivo,
           }
         : null,
-      puedeRegistrarResultado: c.puedeRegistrarResultado === true,
       puedeSubirCarta: c.puedeSubirCarta === true,
       estadoResultado: c.estadoResultado,
       resultadoCalculado: c.resultadoCalculado,

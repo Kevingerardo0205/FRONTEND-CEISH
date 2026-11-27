@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ActiveRoleFacade } from '@features/shell/application/active-role.facade';
 import {
@@ -19,7 +19,6 @@ import {
 } from '@domain/entities/resolucion-contexto.entity';
 import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
 import { mensajeDeErrorResolucion } from '@infrastructure/mappers/resolucion-contexto.mapper';
-import { RegistrarResultadoPlenoUseCase } from '../../../application/registrar-resultado-pleno.use-case';
 import {
   SubirCartaFirmadaUseCase,
   validarArchivoCarta,
@@ -43,7 +42,8 @@ interface Aviso {
 
 /**
  * Etapa Resolución del espacio de trabajo (EP7). Lee el contexto del backend y muestra solo
- * lo que el backend permite: los botones dependen de `puedeRegistrarResultado` y `puedeSubirCarta`.
+ * lo que el backend permite: el botón de subir depende de `puedeSubirCarta`. El resultado del pleno
+ * es de solo lectura: lo calcula el backend.
  * Trabaja con la convocatoria más reciente; las anteriores son historial de pleno (solo lectura).
  */
 @Component({
@@ -106,42 +106,6 @@ interface Aviso {
                 </div>
               } @else {
                 <p class="resolucion-etapa__texto">Sin carta firmada vigente.</p>
-              }
-
-              @if (esSecretaria() && c.puedeRegistrarResultado) {
-                <form class="resolucion-etapa__form" [formGroup]="resultadoForm" (ngSubmit)="registrarResultado(c)">
-                  <h4>{{ c.resultado ? 'Corregir resultado del pleno' : 'Registrar resultado del pleno' }}</h4>
-                  <label>
-                    Resultado
-                    <select formControlName="resultado" data-testid="select-resultado">
-                      <option value="">Seleccione un resultado</option>
-                      <option value="APROBADO_DEFINITIVO">Aprobado definitivo</option>
-                      <option value="APROBADO_CON_CONDICION">Aprobado con condición</option>
-                      <option value="NO_APROBADO">No aprobado</option>
-                    </select>
-                  </label>
-                  @if (resultadoSeleccionado() === 'NO_APROBADO') {
-                    <label>
-                      Motivo (obligatorio)
-                      <textarea formControlName="motivo" rows="3" maxlength="2000"></textarea>
-                    </label>
-                  }
-                  @if (resultadoSeleccionado() === 'APROBADO_CON_CONDICION') {
-                    <label>
-                      Observaciones (obligatorias)
-                      <textarea formControlName="observaciones" rows="3" maxlength="2000"></textarea>
-                    </label>
-                  }
-                  @if (c.resultado) {
-                    <label>
-                      Motivo de la corrección (obligatorio)
-                      <textarea formControlName="motivoCorreccion" rows="3" maxlength="2000"></textarea>
-                    </label>
-                  }
-                  <button type="submit" class="resolucion-etapa__boton" [disabled]="ocupado()">
-                    {{ ocupado() ? 'Guardando…' : 'Guardar resultado' }}
-                  </button>
-                </form>
               }
 
               @if (esSecretaria() && c.puedeSubirCarta) {
@@ -247,7 +211,6 @@ export class ResolutionStagePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly port = inject(IResolucionContextoPort);
   private readonly activeRole = inject(ActiveRoleFacade);
-  private readonly registrarUseCase = inject(RegistrarResultadoPlenoUseCase);
   private readonly subirUseCase = inject(SubirCartaFirmadaUseCase);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -274,20 +237,9 @@ export class ResolutionStagePage implements OnInit {
   });
   readonly puedeVerMotivo = this.puedeVerHistorial;
 
-  readonly resultadoForm = new FormGroup({
-    resultado: new FormControl<ResultadoPleno | ''>('', { nonNullable: true }),
-    motivo: new FormControl('', { nonNullable: true }),
-    observaciones: new FormControl('', { nonNullable: true }),
-    motivoCorreccion: new FormControl('', { nonNullable: true }),
-  });
   readonly motivoReemplazo = new FormControl('', { nonNullable: true });
-  readonly resultadoSeleccionado = signal<ResultadoPleno | ''>('');
 
   ngOnInit(): void {
-    this.resultadoForm.controls.resultado.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((valor) => this.resultadoSeleccionado.set(valor));
-
     const parent = this.route.parent;
     (parent?.paramMap ?? this.route.paramMap)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -304,38 +256,6 @@ export class ResolutionStagePage implements OnInit {
   seleccionarArchivo(evento: Event): void {
     const input = evento.target as HTMLInputElement;
     this.archivo = input.files?.[0] ?? null;
-  }
-
-  registrarResultado(c: ConvocatoriaContexto): void {
-    const valor = this.resultadoForm.getRawValue();
-    if (!valor.resultado) {
-      this.aviso.set({ tipo: 'error', texto: 'Seleccione un resultado.' });
-      return;
-    }
-    this.ocupado.set(true);
-    this.aviso.set(null);
-    this.registrarUseCase
-      .execute({
-        convocatoriaId: c.convocatoriaId,
-        convocatoriaProtocoloId: c.convocatoriaProtocoloId,
-        resultado: valor.resultado,
-        motivo: valor.motivo,
-        observaciones: valor.observaciones,
-        yaTieneResultado: c.resultado !== null,
-        motivoCorreccion: valor.motivoCorreccion,
-      })
-      .subscribe({
-        next: () => {
-          this.ocupado.set(false);
-          this.resultadoForm.reset();
-          this.aviso.set({ tipo: 'ok', texto: 'El resultado se registró correctamente.' });
-          this.cargarContexto();
-        },
-        error: (error: unknown) => {
-          this.ocupado.set(false);
-          this.aviso.set({ tipo: 'error', texto: mensajeDeErrorResolucion(error) });
-        },
-      });
   }
 
   subirCarta(c: ConvocatoriaContexto): void {
@@ -358,7 +278,6 @@ export class ResolutionStagePage implements OnInit {
       .execute({
         convocatoriaId: c.convocatoriaId,
         convocatoriaProtocoloId: c.convocatoriaProtocoloId,
-        anexoEsperado: c.anexoEsperado,
         archivo: this.archivo,
         hayCartaVigente: c.cartaVigente !== null,
         motivoReemplazo: this.motivoReemplazo.value,
@@ -396,7 +315,6 @@ export class ResolutionStagePage implements OnInit {
       next: (lista) => {
         this.convocatorias.set(lista);
         this.estado.set(lista.length === 0 ? 'vacio' : 'listo');
-        this.resultadoForm.reset();
         this.cargarHistorial();
       },
       error: (error: unknown) => {
