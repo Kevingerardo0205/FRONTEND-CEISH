@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, switchMap, filter, map } from 'rxjs';
+import { Observable, switchMap, filter, map, throwError } from 'rxjs';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
 import { CreateResolutionUseCase } from './create-resolution.use-case';
 import { ResolutionEntity } from '@domain/entities/resolution.entity';
+import { MENSAJE_CARTA_FIRMADA_REQUERIDA } from '@shared/utils/carta-firmada.constants';
 
 export interface ResolutionPayload {
   protocolId: number;
@@ -22,14 +23,12 @@ export class GenerateAndSubmitResolutionUseCase {
   private createResolution = inject(CreateResolutionUseCase);
 
   execute(payload: ResolutionPayload): Observable<ResolutionEntity> {
+    // TSK-015-N23: sin carta real no se sube nada ni se crea la resolución.
+    if (!payload.file) {
+      return throwError(() => new Error(MENSAJE_CARTA_FIRMADA_REQUERIDA));
+    }
     const s3Key = `protocols/${payload.protocolId}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-    const fileToUpload =
-      payload.file ||
-      new File(
-        [new Blob(['Acta de Resolución'], { type: 'application/pdf' })],
-        'Carta_Resolucion_Consolidada.pdf',
-        { type: 'application/pdf' },
-      );
+    const fileToUpload = payload.file;
 
     return this.s3Storage.getUploadUrl(s3Key, 'application/pdf').pipe(
       switchMap((urlRes) =>

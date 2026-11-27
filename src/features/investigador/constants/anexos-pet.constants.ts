@@ -31,10 +31,7 @@ export const REQUISITOS_DOCUMENTOS: RequisitoDocumento[] = [
     anexo: 'Anexo 2',
     obligatorioPara: [TipoEstudio.OBSERVACIONAL, TipoEstudio.INTERVENCION],
     maxSizeMB: 10,
-    formatosAceptados: [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ],
+    formatosAceptados: ['application/pdf'],
   },
   {
     id: 'anexo3_consentimiento',

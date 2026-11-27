@@ -31,6 +31,15 @@ import { LoadReceptionProtocolsUseCase } from '@features/protocols/application/u
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { abrirEnPestana } from '@shared/utils/descarga-en-pestana.util';
+import { apiErrorStatus, extractApiErrorMessage } from '@shared/utils/api-error-message.util';
+import {
+  numeroVersionProtocolo,
+  puedeSubirDocumentoSubsanacion,
+} from '@features/investigador/domain/subsanacion-upload.rules';
+import {
+  MENSAJE_CARTA_CONSULTA_FALLIDA,
+  MENSAJE_CARTA_NO_ENCONTRADA,
+} from '@shared/utils/carta-firmada.constants';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 import {
@@ -284,7 +293,7 @@ interface ProtocolDocument {
                               mat-stroked-button
                               color="primary"
                               class="btn-upload btn-sm"
-                              [disabled]="uploadingRequirementId() > 0"
+                              [disabled]="uploadingRequirementId() > 0 || !puedeSubirDocumentos()"
                               (click)="fileInput.click()"
                             >
                               <mat-icon>cloud_upload</mat-icon>
@@ -436,7 +445,7 @@ interface ProtocolDocument {
                     <mat-icon class="text-danger" style="margin-top: 2px;">picture_as_pdf</mat-icon>
                     <div class="d-flex flex-column align-items-start" style="flex: 1;">
                       <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;"
-                        >Anexo 12: Carta de Observaciones Consolidadas</span
+                        >Carta de aprobación con condición (Anexo 15)</span
                       >
                       <span
                         class="text-muted small"
@@ -1053,6 +1062,8 @@ export class SubsanacionPage implements OnInit {
 
   isSubmitting = signal(false);
   uploadingRequirementId = signal<number>(0);
+  /** TSK-015-N24: el botón «Subir» solo se habilita en los estados que permite la regla (ver el dominio). */
+  readonly puedeSubirDocumentos = signal(false);
 
   isRequirementLocked(req: ChecklistRequirement): boolean {
     if (['APROBADO', 'VALIDADO', 'NO_APLICA'].includes(req.status as RequirementStatus)) {
@@ -1146,8 +1157,18 @@ export class SubsanacionPage implements OnInit {
           this.protocolTitle.set(result.protocol.titulo || 'Protocolo de Investigación');
           this.protocolStatus.set(result.protocol.estado || '');
           const rawP = result.protocol as unknown as Record<string, unknown>;
+          // Entero siempre: «2.0» llega como texto y la clave de subsanación exige v{n} (TSK-015-N24).
           this.protocolVersion.set(
-            (rawP['versionNumber'] as number) || (rawP['version'] as number) || 1,
+            numeroVersionProtocolo(rawP['versionNumber'] as number | string | undefined) ??
+              numeroVersionProtocolo(rawP['version'] as string | undefined) ??
+              1,
+          );
+          this.puedeSubirDocumentos.set(
+            puedeSubirDocumentoSubsanacion({
+              statusId: result.protocol.statusId,
+              receptionStatus: result.protocol.receptionStatus,
+              version: result.protocol.version,
+            }),
           );
           this.observations.set(result.observations);
           this.checklist.set((result.checklist || []) as unknown as ChecklistRequirement[]);
@@ -1193,9 +1214,12 @@ export class SubsanacionPage implements OnInit {
         error: (err) => {
           console.error('Error uploading correction:', err);
           this.uploadingRequirementId.set(0);
-          this.snackBar.open('❌ Error al subir documento de subsanación.', 'Cerrar', {
-            duration: 4000,
-          });
+          // TSK-015-N24: el 409 del backend (estado no admite subsanación) se muestra tal cual.
+          const mensaje =
+            apiErrorStatus(err) === 409
+              ? extractApiErrorMessage(err)
+              : '❌ Error al subir documento de subsanación.';
+          this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
         },
       });
   }
@@ -1346,28 +1370,34 @@ export class SubsanacionPage implements OnInit {
     const protocolIdVal = this.protocolId();
     if (!protocolIdVal) return;
 
+    // TSK-015-N23: sin la ruta que devuelve el backend no se adivina una clave fija (esa clave
+    // podía apuntar a un PDF falso o de otro protocolo); se avisa y no se descarga nada.
     this.downloadConsolidatedPdfUC.execute(String(protocolIdVal)).subscribe({
       next: (res) => {
         const resolutionData = (Array.isArray(res) ? res[0] : res) as
-          Record<string, unknown> | undefined;
+          Record<string, unknown> | null | undefined;
         const letterPath = (resolutionData?.['letterFilePath'] ||
           resolutionData?.['pdfLetterPath']) as string | undefined;
 
-        // Si el backend retornó un path de carta específico, lo usamos; de lo contrario fallback al key por defecto
-        const s3Key =
-          letterPath || `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-
-        this.downloadFile(s3Key);
+        if (!letterPath) {
+          this.avisarCartaNoEncontrada();
+          return;
+        }
+        this.downloadFile(letterPath);
       },
       error: (err) => {
-        console.warn(
-          '[SubsanacionPage] Falló consulta de resolución, usando key por defecto:',
-          err,
-        );
-        const s3Key = `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-        this.downloadFile(s3Key);
+        console.warn('[SubsanacionPage] Falló consulta de la carta de resolución:', err);
+        if (apiErrorStatus(err) === 404) {
+          this.avisarCartaNoEncontrada();
+        } else {
+          this.snackBar.open(MENSAJE_CARTA_CONSULTA_FALLIDA, 'Cerrar', { duration: 5000 });
+        }
       },
     });
+  }
+
+  private avisarCartaNoEncontrada(): void {
+    this.snackBar.open(MENSAJE_CARTA_NO_ENCONTRADA, 'Cerrar', { duration: 5000 });
   }
 
   getChecklistDetails(obs: ObservationEntry): readonly ChecklistDetailObservation[] {

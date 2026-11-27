@@ -65,7 +65,6 @@ import { CrearProtocoloDto } from '../../../domain/dtos/crear-protocolo.dto';
               <p class="text-muted small mb-0">O haga clic para explorar en su ordenador</p>
               <div class="mt-3 formats-badges">
                 <span class="badge bg-light text-dark border">PDF</span>
-                <span class="badge bg-light text-dark border">DOCX</span>
                 <span class="badge bg-light text-dark border">MÁX 10MB</span>
               </div>
             </div>
@@ -415,10 +414,9 @@ export class UploadDocumentosComponent {
     if (!extension) return false;
 
     // Mapeo simple de mimetypes a extensiones comunes para validación extra
+    // N24: los requisitos se suben solo en PDF.
     const mimeToExt: Record<string, string[]> = {
       'application/pdf': ['pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
-      'application/msword': ['doc'],
     };
 
     return acceptedTypes.some((type) => mimeToExt[type]?.includes(extension));

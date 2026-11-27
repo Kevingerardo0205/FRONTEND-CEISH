@@ -9,6 +9,7 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
   let useCase: GenerateAndSubmitResolutionUseCase;
   let mockS3: jasmine.SpyObj<S3StorageService>;
   let mockCreateResolution: jasmine.SpyObj<CreateResolutionUseCase>;
+  let carta: File;
 
   const mockResolution: ResolutionEntity = {
     id: 1,
@@ -20,6 +21,7 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
   };
 
   beforeEach(() => {
+    carta = new File(['%PDF-1.4'], 'carta.pdf', { type: 'application/pdf' });
     mockS3 = jasmine.createSpyObj('S3StorageService', ['getUploadUrl', 'uploadFileToS3']);
     mockCreateResolution = jasmine.createSpyObj('CreateResolutionUseCase', ['execute']);
 
@@ -51,6 +53,7 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
         resolutionTypeId: 1,
         validityYears: 1,
         observations: 'Approved',
+        file: carta,
       })
       .subscribe((result) => {
         expect(mockS3.getUploadUrl).toHaveBeenCalled();
@@ -61,7 +64,7 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
       });
   });
 
-  it('should use default file when none provided', (done) => {
+  it('no sube ni crea la resolución cuando no hay carta firmada (TSK-015-N23)', (done) => {
     useCase
       .execute({
         protocolId: 100,
@@ -69,9 +72,29 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
         validityYears: 1,
         observations: 'Test',
       })
+      .subscribe({
+        error: (err: Error) => {
+          expect(err.message).toBe('Debe adjuntar la carta firmada en PDF.');
+          expect(mockS3.getUploadUrl).not.toHaveBeenCalled();
+          expect(mockS3.uploadFileToS3).not.toHaveBeenCalled();
+          expect(mockCreateResolution.execute).not.toHaveBeenCalled();
+          done();
+        },
+      });
+  });
+
+  it('sube exactamente el archivo recibido, sin sustituirlo', (done) => {
+    useCase
+      .execute({
+        protocolId: 100,
+        resolutionTypeId: 1,
+        validityYears: 1,
+        observations: 'Test',
+        file: carta,
+      })
       .subscribe(() => {
         const uploadCall = mockS3.uploadFileToS3.calls.mostRecent();
-        expect(uploadCall.args[1] instanceof File).toBeTrue();
+        expect(uploadCall.args[1]).toBe(carta);
         done();
       });
   });
@@ -83,6 +106,7 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
         resolutionTypeId: 3,
         validityYears: 5,
         majorObservations: 'Rejection reason with at least 20 characters',
+        file: carta,
       })
       .subscribe(() => {
         const createCall = mockCreateResolution.execute.calls.mostRecent().args[0];
@@ -100,6 +124,7 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
         resolutionTypeId: 1,
         validityYears: 1,
         observations: 'Test',
+        file: carta,
       })
       .subscribe({
         error: (err) => {
@@ -118,6 +143,7 @@ describe('GenerateAndSubmitResolutionUseCase', () => {
         resolutionTypeId: 1,
         validityYears: 1,
         observations: 'Test',
+        file: carta,
       })
       .subscribe({
         error: (err) => {

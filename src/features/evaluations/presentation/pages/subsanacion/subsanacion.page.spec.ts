@@ -395,4 +395,227 @@ describe('SubsanacionPage', () => {
       expect(el().querySelector('.obs-list')?.textContent).not.toContain('NO_APROBADO');
     });
   });
+
+  describe('descarga de la carta consolidada (TSK-015-N23)', () => {
+    const CARTA_REAL = 'protocols/123/resolutions/carta-real-2026.pdf';
+    let getEvaluationDocumentUrl: jasmine.Spy;
+    let openSpy: jasmine.Spy;
+    let windowOpenSpy: jasmine.Spy;
+
+    beforeEach(() => {
+      getEvaluationDocumentUrl = jasmine
+        .createSpy('getEvaluationDocumentUrl')
+        .and.returnValue(of({ downloadUrl: 'https://zz-test.invalid/carta.pdf' }));
+      (mockS3StorageService as unknown as { getEvaluationDocumentUrl: jasmine.Spy }).getEvaluationDocumentUrl =
+        getEvaluationDocumentUrl;
+      const snack = fixture.debugElement.injector.get(MatSnackBar);
+      openSpy = spyOn(snack, 'open');
+      windowOpenSpy = spyOn(window, 'open');
+    });
+
+    it('sin ruta de carta no descarga nada y avisa', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(of(null));
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(windowOpenSpy).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No se encontró la carta de resolución de este protocolo.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('la respuesta sin letterFilePath tampoco usa la clave fija', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(of({ id: 1 } as any));
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No se encontró la carta de resolución de este protocolo.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('404 del backend: mensaje de carta no encontrada y ninguna descarga', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(
+        throwError(() => ({ status: 404, message: 'Not found' })),
+      );
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No se encontró la carta de resolución de este protocolo.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('otro error: mensaje de consulta fallida y ninguna descarga', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(
+        throwError(() => ({ status: 500, message: 'boom' })),
+      );
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No pudimos consultar la carta de resolución de este protocolo. Intente nuevamente.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('con ruta de carta descarga esa clave, no la fija del protocolo', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(
+        of({ id: 1, letterFilePath: CARTA_REAL } as any),
+      );
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).toHaveBeenCalledWith(CARTA_REAL);
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalledWith(
+        'protocols/123/resolutions/Carta_Resolucion_Consolidada.pdf',
+      );
+    });
+  });
+
+  describe('botón Subir de requisitos según el estado del protocolo (TSK-015-N24)', () => {
+    const REQUISITO = {
+      id: 7,
+      requirementCode: 'anexo2_formulario',
+      requirementName: 'Formulario de presentación',
+      status: 'NO_PRESENTADO',
+    };
+
+    /** Carga el detalle con un protocolo concreto y devuelve el botón «Subir» de la fila. */
+    function cargarConEstado(datos: Record<string, unknown>): HTMLButtonElement | null {
+      mockProtocoloService.obtenerProtocolo.and.returnValue(
+        of({ id: 123, codigoCeish: 'CEISH-123', titulo: 'T', estado: 'X', ...datos } as any),
+      );
+      mockProtocoloService.getChecklist.and.returnValue(of([REQUISITO] as any));
+      component.loadProtocolDetail();
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('.btn-upload') as HTMLButtonElement | null;
+    }
+
+    it('v1 en BORRADOR: el botón Subir está habilitado', () => {
+      const boton = cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+
+      expect(boton).not.toBeNull();
+      expect(boton!.disabled).toBeFalse();
+    });
+
+    it('v1 con recepción completa: el botón Subir está deshabilitado', () => {
+      const boton = cargarConEstado({ statusId: 10, receptionStatus: 'COMPLETO', version: '1.0' });
+
+      expect(boton!.disabled).toBeTrue();
+    });
+
+    it('v2 con protocolo en 19 y recepción en subsanación: habilitado', () => {
+      const boton = cargarConEstado({
+        statusId: 19,
+        receptionStatus: 'EVALUACION_SUBSANACIONES',
+        version: '2.0',
+      });
+
+      expect(boton!.disabled).toBeFalse();
+    });
+
+    it('v2 con protocolo fuera de 19 y 21: deshabilitado', () => {
+      const boton = cargarConEstado({
+        statusId: 17,
+        receptionStatus: 'EVALUACION_SUBSANACIONES',
+        version: '2.0',
+      });
+
+      expect(boton!.disabled).toBeTrue();
+    });
+
+    it('sin datos de estado (respuesta incompleta): deshabilitado', () => {
+      const boton = cargarConEstado({});
+
+      expect(boton!.disabled).toBeTrue();
+    });
+
+    it('la versión «2.0» llega a la subida como entero 2 (clave v2, no v2.0)', () => {
+      cargarConEstado({ statusId: 19, receptionStatus: 'EVALUACION_SUBSANACIONES', version: '2.0' });
+      const spy = spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(of([]));
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(component.protocolVersion()).toBe(2);
+      expect(spy.calls.mostRecent().args[0].versionNumber).toBe(2);
+    });
+
+    it('la versión «1.0» llega a la subida como entero 1', () => {
+      cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+      const spy = spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(of([]));
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(component.protocolVersion()).toBe(1);
+      expect(spy.calls.mostRecent().args[0].versionNumber).toBe(1);
+    });
+
+    it('un 409 del backend se muestra tal cual', () => {
+      cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+      const snack = fixture.debugElement.injector.get(MatSnackBar);
+      const openSpy = spyOn(snack, 'open');
+      const mensaje = 'El protocolo no admite documentos de subsanación en su estado actual.';
+      spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(
+        throwError(() => Object.assign(new Error(mensaje), { status: 409 })),
+      );
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(openSpy).toHaveBeenCalledWith(mensaje, 'Cerrar', jasmine.any(Object));
+    });
+
+    it('otro error de subida muestra el mensaje genérico', () => {
+      cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+      const snack = fixture.debugElement.injector.get(MatSnackBar);
+      const openSpy = spyOn(snack, 'open');
+      spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(
+        throwError(() => Object.assign(new Error('boom'), { status: 500 })),
+      );
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(openSpy).toHaveBeenCalledWith(
+        '❌ Error al subir documento de subsanación.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+  });
+
+  describe('rótulo de la carta consolidada', () => {
+    it('la carta de aprobación con condición se rotula con el Anexo 15, no con el Anexo 12', () => {
+      const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+      expect(texto).toContain('Carta de aprobación con condición (Anexo 15)');
+      expect(texto).not.toContain('Anexo 12');
+    });
+  });
 });

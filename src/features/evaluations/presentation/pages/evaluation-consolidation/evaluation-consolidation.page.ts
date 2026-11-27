@@ -31,6 +31,7 @@ import { DownloadEvaluationDocumentUseCase } from '../../../application/download
 import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { NormalizedEvaluation } from '../../../application/load-evaluation-consolidation.use-case';
+import { MENSAJE_CARTA_FIRMADA_REQUERIDA } from '@shared/utils/carta-firmada.constants';
 
 interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
   id: number | string;
@@ -72,7 +73,7 @@ interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
           </button>
           <div class="title-section">
             <div class="breadcrumb">Evaluación / Consolidación de Dictámenes</div>
-            <h1 class="page-title">Resumen de Sesión (Anexo 12)</h1>
+            <h1 class="page-title">Resumen de sesión</h1>
             <p class="page-subtitle">{{ protocol()?.title }}</p>
           </div>
         </div>
@@ -304,7 +305,7 @@ interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
                       *ngIf="!selectedFile()"
                       style="font-size: 0.75rem;"
                     >
-                      Cargue el Acta PDF Firmada (Anexo 12/Anexo 15)
+                      Cargue la carta firmada en PDF
                     </p>
                     <p
                       class="small text-success fw-bold mb-2"
@@ -779,6 +780,11 @@ export class EvaluationConsolidationPage implements OnInit {
   }
 
   onEmitResolution() {
+    // TSK-015-N23: sin carta firmada en PDF no se emite; se avisa antes de cualquier envío.
+    if (!this.selectedFile()) {
+      this.snackBar.open(MENSAJE_CARTA_FIRMADA_REQUERIDA, 'Cerrar', { duration: 5000 });
+      return;
+    }
     if (this.form.valid) {
       this.isSubmitting.set(true);
       const formValue = this.form.value;

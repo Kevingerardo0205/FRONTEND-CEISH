@@ -135,4 +135,10 @@ export interface ProtocoloDetalle extends CrearProtocoloDto {
   isTimelineTermsAccepted?: boolean;
   timelineTermsAcceptedAt?: string | null;
   timelineTermsAcceptedIp?: string | null;
+  /** TSK-015-N24: estado del protocolo (19, 21…) de GET /protocols/:id (protocol.mapper.ts). */
+  statusId?: number | null;
+  /** TSK-015-N24: estado de recepción derivado por el backend (protocol.entity.orm.ts). */
+  receptionStatus?: string;
+  /** TSK-015-N24: versión del protocolo, «N.0» (protocol.entity.orm.ts `version`). */
+  version?: string;
 }
