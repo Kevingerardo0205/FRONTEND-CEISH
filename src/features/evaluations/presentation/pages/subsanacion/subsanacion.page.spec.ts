@@ -395,4 +395,13 @@ describe('SubsanacionPage', () => {
       expect(el().querySelector('.obs-list')?.textContent).not.toContain('NO_APROBADO');
     });
   });
+
+  describe('rótulo de la carta consolidada', () => {
+    it('la carta de aprobación con condición se rotula con el Anexo 15, no con el Anexo 12', () => {
+      const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+      expect(texto).toContain('Carta de aprobación con condición (Anexo 15)');
+      expect(texto).not.toContain('Anexo 12');
+    });
+  });
 });

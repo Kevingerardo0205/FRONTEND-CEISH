@@ -118,4 +118,11 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
     );
   });
 
+  it('el título de la pantalla no lleva rótulo de anexo (Anexo 12 no aplica a la sesión)', () => {
+    createPage();
+    const titulo = fixture.nativeElement.querySelector('h1.page-title') as HTMLElement;
+
+    expect(titulo.textContent?.trim()).toBe('Resumen de sesión');
+    expect(fixture.nativeElement.textContent).not.toContain('Anexo 12');
+  });
 });

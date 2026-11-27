@@ -73,7 +73,7 @@ interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
           </button>
           <div class="title-section">
             <div class="breadcrumb">Evaluación / Consolidación de Dictámenes</div>
-            <h1 class="page-title">Resumen de Sesión (Anexo 12)</h1>
+            <h1 class="page-title">Resumen de sesión</h1>
             <p class="page-subtitle">{{ protocol()?.title }}</p>
           </div>
         </div>
@@ -305,7 +305,7 @@ interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
                       *ngIf="!selectedFile()"
                       style="font-size: 0.75rem;"
                     >
-                      Cargue el Acta PDF Firmada (Anexo 12/Anexo 15)
+                      Cargue la carta firmada en PDF
                     </p>
                     <p
                       class="small text-success fw-bold mb-2"

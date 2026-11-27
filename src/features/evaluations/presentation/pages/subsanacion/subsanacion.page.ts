@@ -436,7 +436,7 @@ interface ProtocolDocument {
                     <mat-icon class="text-danger" style="margin-top: 2px;">picture_as_pdf</mat-icon>
                     <div class="d-flex flex-column align-items-start" style="flex: 1;">
                       <span class="doc-title-text fw-bold" style="font-size: 14px; color: #1e3a8a;"
-                        >Anexo 12: Carta de Observaciones Consolidadas</span
+                        >Carta de aprobación con condición (Anexo 15)</span
                       >
                       <span
                         class="text-muted small"
