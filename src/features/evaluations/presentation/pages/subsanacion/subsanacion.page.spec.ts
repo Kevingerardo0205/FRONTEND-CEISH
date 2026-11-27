@@ -396,6 +396,94 @@ describe('SubsanacionPage', () => {
     });
   });
 
+  describe('descarga de la carta consolidada (TSK-015-N23)', () => {
+    const CARTA_REAL = 'protocols/123/resolutions/carta-real-2026.pdf';
+    let getEvaluationDocumentUrl: jasmine.Spy;
+    let openSpy: jasmine.Spy;
+    let windowOpenSpy: jasmine.Spy;
+
+    beforeEach(() => {
+      getEvaluationDocumentUrl = jasmine
+        .createSpy('getEvaluationDocumentUrl')
+        .and.returnValue(of({ downloadUrl: 'https://zz-test.invalid/carta.pdf' }));
+      (mockS3StorageService as unknown as { getEvaluationDocumentUrl: jasmine.Spy }).getEvaluationDocumentUrl =
+        getEvaluationDocumentUrl;
+      const snack = fixture.debugElement.injector.get(MatSnackBar);
+      openSpy = spyOn(snack, 'open');
+      windowOpenSpy = spyOn(window, 'open');
+    });
+
+    it('sin ruta de carta no descarga nada y avisa', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(of(null));
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(windowOpenSpy).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No se encontró la carta de resolución de este protocolo.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('la respuesta sin letterFilePath tampoco usa la clave fija', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(of({ id: 1 } as any));
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No se encontró la carta de resolución de este protocolo.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('404 del backend: mensaje de carta no encontrada y ninguna descarga', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(
+        throwError(() => ({ status: 404, message: 'Not found' })),
+      );
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No se encontró la carta de resolución de este protocolo.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('otro error: mensaje de consulta fallida y ninguna descarga', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(
+        throwError(() => ({ status: 500, message: 'boom' })),
+      );
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(
+        'No pudimos consultar la carta de resolución de este protocolo. Intente nuevamente.',
+        'Cerrar',
+        jasmine.any(Object),
+      );
+    });
+
+    it('con ruta de carta descarga esa clave, no la fija del protocolo', () => {
+      mockResolutionRepo.getResolutionByProtocolId.and.returnValue(
+        of({ id: 1, letterFilePath: CARTA_REAL } as any),
+      );
+
+      component.downloadConsolidatedPdf();
+
+      expect(getEvaluationDocumentUrl).toHaveBeenCalledWith(CARTA_REAL);
+      expect(getEvaluationDocumentUrl).not.toHaveBeenCalledWith(
+        'protocols/123/resolutions/Carta_Resolucion_Consolidada.pdf',
+      );
+    });
+  });
+
   describe('rótulo de la carta consolidada', () => {
     it('la carta de aprobación con condición se rotula con el Anexo 15, no con el Anexo 12', () => {
       const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';

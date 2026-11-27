@@ -31,6 +31,11 @@ import { LoadReceptionProtocolsUseCase } from '@features/protocols/application/u
 import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { abrirEnPestana } from '@shared/utils/descarga-en-pestana.util';
+import { apiErrorStatus } from '@shared/utils/api-error-message.util';
+import {
+  MENSAJE_CARTA_CONSULTA_FALLIDA,
+  MENSAJE_CARTA_NO_ENCONTRADA,
+} from '@shared/utils/carta-firmada.constants';
 import { ProtocolStatusLabelPipe } from '@shared/pipes/protocol-status-label.pipe';
 import { ProtocolStatusClassPipe } from '@shared/pipes/protocol-status-class.pipe';
 import {
@@ -1346,28 +1351,34 @@ export class SubsanacionPage implements OnInit {
     const protocolIdVal = this.protocolId();
     if (!protocolIdVal) return;
 
+    // TSK-015-N23: sin la ruta que devuelve el backend no se adivina una clave fija (esa clave
+    // podía apuntar a un PDF falso o de otro protocolo); se avisa y no se descarga nada.
     this.downloadConsolidatedPdfUC.execute(String(protocolIdVal)).subscribe({
       next: (res) => {
         const resolutionData = (Array.isArray(res) ? res[0] : res) as
-          Record<string, unknown> | undefined;
+          Record<string, unknown> | null | undefined;
         const letterPath = (resolutionData?.['letterFilePath'] ||
           resolutionData?.['pdfLetterPath']) as string | undefined;
 
-        // Si el backend retornó un path de carta específico, lo usamos; de lo contrario fallback al key por defecto
-        const s3Key =
-          letterPath || `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-
-        this.downloadFile(s3Key);
+        if (!letterPath) {
+          this.avisarCartaNoEncontrada();
+          return;
+        }
+        this.downloadFile(letterPath);
       },
       error: (err) => {
-        console.warn(
-          '[SubsanacionPage] Falló consulta de resolución, usando key por defecto:',
-          err,
-        );
-        const s3Key = `protocols/${protocolIdVal}/resolutions/Carta_Resolucion_Consolidada.pdf`;
-        this.downloadFile(s3Key);
+        console.warn('[SubsanacionPage] Falló consulta de la carta de resolución:', err);
+        if (apiErrorStatus(err) === 404) {
+          this.avisarCartaNoEncontrada();
+        } else {
+          this.snackBar.open(MENSAJE_CARTA_CONSULTA_FALLIDA, 'Cerrar', { duration: 5000 });
+        }
       },
     });
+  }
+
+  private avisarCartaNoEncontrada(): void {
+    this.snackBar.open(MENSAJE_CARTA_NO_ENCONTRADA, 'Cerrar', { duration: 5000 });
   }
 
   getChecklistDetails(obs: ObservationEntry): readonly ChecklistDetailObservation[] {
