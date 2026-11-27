@@ -16,6 +16,7 @@ import {
   CartaVersion,
   ConvocatoriaContexto,
   ResultadoPleno,
+  ResumenDictamenes,
 } from '@domain/entities/resolucion-contexto.entity';
 import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
 import { mensajeDeErrorResolucion } from '@infrastructure/mappers/resolucion-contexto.mapper';
@@ -32,6 +33,18 @@ const ETIQUETAS_RESULTADO: Readonly<Record<ResultadoPleno, string>> = {
   APROBADO_CON_CONDICION: 'Aprobado con condición',
   NO_APROBADO: 'No aprobado',
 };
+
+/** Textos de la etapa (decisiones del 27/11/2026, ver specs/F11-vista-por-rol/tasks.md, EP7). */
+export const TEXTO_RESOLVIENDO =
+  'El comité está resolviendo su protocolo. El resultado se publicará cuando la Secretaría suba la carta firmada.';
+export const TEXTO_PENDIENTE =
+  'El resultado del pleno aún no está disponible: hay evaluaciones pendientes de dictamen.';
+export const TEXTO_LEGACY =
+  'Este protocolo ya tiene una resolución emitida con el flujo anterior y no admite una carta firmada nueva.';
+export const TEXTO_NO_SUBIDA = 'Por ahora no se puede subir la carta de esta convocatoria.';
+export const AVISO_INMUTABLE =
+  'Calculado automáticamente a partir de los dictámenes de los evaluadores. No se puede modificar.';
+export const TEXTO_REUNION_FUTURA = 'La reunión de esta convocatoria aún no se ha realizado.';
 
 type EstadoCarga = 'cargando' | 'listo' | 'vacio' | 'error';
 
@@ -77,13 +90,27 @@ interface Aviso {
                 <dd>{{ (c.fechaReunion | date: 'dd/MM/yyyy' : 'America/Guayaquil') ?? 'Sin fecha' }}</dd>
                 <dt>Versión evaluada</dt>
                 <dd>{{ c.versionEvaluada }}</dd>
-                <dt>Resultado del pleno</dt>
-                <dd data-testid="resultado">{{ etiquetaResultado(c.resultado) }}</dd>
-                @if (c.anexoEsperado) {
-                  <dt>Anexo de la carta</dt>
-                  <dd data-testid="anexo-esperado">{{ c.anexoEsperado }}</dd>
-                }
               </dl>
+
+              <section class="resolucion-etapa__resultado">
+                <h4>Resultado del pleno</h4>
+                @if (puedeVerHistorial()) {
+                  <p class="resolucion-etapa__texto" data-testid="aviso-inmutable"><em>{{ avisoInmutable }}</em></p>
+                }
+                <p data-testid="resultado">{{ textoResultado(c) }}</p>
+                @if (c.anexoEsperado) {
+                  <p data-testid="anexo-esperado">Anexo de la carta: <strong>{{ c.anexoEsperado }}</strong></p>
+                }
+                @if (resumenVisible(c); as r) {
+                  <p data-testid="resumen-dictamenes">
+                    Dictámenes: {{ r.aprobado }} aprobados · {{ r.conCondicion }} con condición ·
+                    {{ r.noAprobado }} no aprobados · {{ r.pendientes }} pendientes.
+                  </p>
+                }
+                @if (reunionFutura(c)) {
+                  <p class="resolucion-etapa__texto" data-testid="reunion-pendiente">{{ textoReunionFutura }}</p>
+                }
+              </section>
 
               @if (puedeVerMotivo()) {
                 @if (c.resultado && c.motivo) {
@@ -128,6 +155,8 @@ interface Aviso {
                     {{ ocupado() ? 'Subiendo…' : 'Subir carta' }}
                   </button>
                 </form>
+              } @else if (esSecretaria() && !motivoSubidaVisible(c)) {
+                <p class="resolucion-etapa__texto" data-testid="sin-subida">{{ textoNoSubida }}</p>
               }
 
               @if (aviso(); as a) {
@@ -175,7 +204,10 @@ interface Aviso {
                 <ul>
                   @for (a of anteriores(); track a.convocatoriaProtocoloId) {
                     <li>
-                      Convocatoria {{ a.numeroConvocatoria }} · {{ etiquetaResultado(a.resultado) }}
+                      Convocatoria {{ a.numeroConvocatoria }}
+                      @if (a.resultado) {
+                        · {{ etiquetaResultado(a.resultado) }}
+                      }
                     </li>
                   }
                 </ul>
@@ -197,6 +229,8 @@ interface Aviso {
     .resolucion-etapa__datos dd { margin: 0; }
     .resolucion-etapa__texto { color: var(--c-text-2); }
     .resolucion-etapa__carta { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1rem; }
+    .resolucion-etapa__resultado { margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid var(--c-border); border-radius: var(--radius-card); }
+    .resolucion-etapa__resultado p { margin: 0 0 .5rem; }
     .resolucion-etapa__form { display: grid; gap: .75rem; margin: 1rem 0; padding: 1rem; border: 1px solid var(--c-border); border-radius: var(--radius-card); }
     .resolucion-etapa__form label { display: grid; gap: .25rem; }
     .resolucion-etapa__boton { justify-self: start; padding: .5rem 1rem; border: 1px solid var(--c-primary); border-radius: var(--radius-card); background: var(--c-primary); color: var(--c-surface); cursor: pointer; }
@@ -249,8 +283,48 @@ export class ResolutionStagePage implements OnInit {
       });
   }
 
+  readonly avisoInmutable = AVISO_INMUTABLE;
+  readonly textoNoSubida = TEXTO_NO_SUBIDA;
+  readonly textoReunionFutura = TEXTO_REUNION_FUTURA;
+
   etiquetaResultado(resultado: ResultadoPleno | null | undefined): string {
     return resultado ? ETIQUETAS_RESULTADO[resultado] : 'Sin resultado registrado';
+  }
+
+  /**
+   * Texto del resultado según el estado y el rol. El investigador nunca ve el cálculo ni el resumen:
+   * sin carta vigente ve solo que el comité está resolviendo.
+   */
+  textoResultado(c: ConvocatoriaContexto): string {
+    if (!this.puedeVerHistorial()) {
+      return c.cartaVigente && c.resultado ? `Resultado: ${ETIQUETAS_RESULTADO[c.resultado]}.` : TEXTO_RESOLVIENDO;
+    }
+    if (c.estadoResultado === 'RESUELTO_LEGACY') return TEXTO_LEGACY;
+    if (c.estadoResultado === 'CONGELADO' && c.cartaVigente === null) {
+      return c.resueltoEnConvocatoria
+        ? `Resuelto en la convocatoria ${c.resueltoEnConvocatoria}.`
+        : 'Resultado congelado.';
+    }
+    if (!c.resultado) return TEXTO_PENDIENTE;
+    const etiqueta = ETIQUETAS_RESULTADO[c.resultado];
+    return c.estadoResultado === 'CONGELADO'
+      ? `Resultado congelado: ${etiqueta}.`
+      : `Resultado calculado: ${etiqueta}.`;
+  }
+
+  /** Resumen por conteos (B8): solo con cálculo listo y para quien tiene RESOLUCION_HISTORIAL. */
+  resumenVisible(c: ConvocatoriaContexto): ResumenDictamenes | null {
+    return this.puedeVerHistorial() && c.estadoResultado === 'CALCULADO' ? (c.resumenDictamenes ?? null) : null;
+  }
+
+  /** La reunión aún no se ha realizado. Se compara el instante con la hora actual, válido para Ecuador. */
+  reunionFutura(c: ConvocatoriaContexto): boolean {
+    return c.fechaReunion !== null && Date.parse(c.fechaReunion) > Date.now();
+  }
+
+  /** Sin subida permitida, el mensaje genérico solo se muestra si el motivo no se ve ya en la etapa. */
+  motivoSubidaVisible(c: ConvocatoriaContexto): boolean {
+    return this.reunionFutura(c) || (c.resueltoEnConvocatoria !== null && c.cartaVigente === null);
   }
 
   seleccionarArchivo(evento: Event): void {

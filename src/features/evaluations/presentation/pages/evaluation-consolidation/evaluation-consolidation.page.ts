@@ -33,7 +33,7 @@ import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { NormalizedEvaluation } from '../../../application/load-evaluation-consolidation.use-case';
 import { MENSAJE_CARTA_FIRMADA_REQUERIDA } from '@shared/utils/carta-firmada.constants';
 import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
-import { tieneResultadoDelPleno } from '@domain/entities/resolucion-contexto.entity';
+import { gestionadoPorFlujoNuevo } from '@domain/entities/resolucion-contexto.entity';
 
 interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
   id: number | string;
@@ -731,7 +731,7 @@ export class EvaluationConsolidationPage implements OnInit {
   private destroyRef = inject(DestroyRef);
   private resolucionContexto = inject(IResolucionContextoPort);
 
-  /** EP7: con resultado del pleno, la resolución se hace desde la etapa Resolución (flujo viejo oculto). */
+  /** EP7: si la etapa Resolución gestiona el protocolo, la resolución se hace desde ella (flujo viejo oculto). */
   resueltoEnEtapa = signal(false);
 
   protocolId = '';
@@ -751,7 +751,7 @@ export class EvaluationConsolidationPage implements OnInit {
     this.protocolId = this.route.snapshot.params['id'];
     this.loadConsolidationData();
     this.resolucionContexto.obtenerContexto(this.protocolId).subscribe({
-      next: (lista) => this.resueltoEnEtapa.set(tieneResultadoDelPleno(lista)),
+      next: (lista) => this.resueltoEnEtapa.set(gestionadoPorFlujoNuevo(lista)),
       // Sin contexto no se puede decidir: el flujo viejo sigue como estaba.
       error: () => this.resueltoEnEtapa.set(false),
     });

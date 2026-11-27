@@ -97,9 +97,10 @@ export class ValidacionResolucionError extends Error {
 }
 
 /**
- * Regla de convivencia con el flujo viejo (EP7): si alguna convocatoria del protocolo ya tiene
- * resultado del pleno, la resolución se hace desde la etapa Resolución y no desde el flujo viejo.
+ * Regla de convivencia con el flujo viejo (EP7, decisión del 27/11/2026): el flujo viejo se oculta
+ * si alguna convocatoria del protocolo está gestionada por la etapa Resolución, es decir, si su
+ * estado no es RESUELTO_LEGACY (PENDIENTE también oculta el flujo viejo). Lista vacía: flujo viejo visible.
  */
-export function tieneResultadoDelPleno(lista: readonly ConvocatoriaContexto[]): boolean {
-  return lista.some((c) => c.resultado !== null);
+export function gestionadoPorFlujoNuevo(lista: readonly ConvocatoriaContexto[]): boolean {
+  return lista.some((c) => c.estadoResultado !== 'RESUELTO_LEGACY');
 }
