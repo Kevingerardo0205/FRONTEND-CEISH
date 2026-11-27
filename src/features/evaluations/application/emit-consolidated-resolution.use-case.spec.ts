@@ -35,6 +35,26 @@ describe('EmitConsolidatedResolutionUseCase', () => {
     ) as jasmine.SpyObj<NotificationBrokerService>;
   });
 
+  it('no sube ni emite cuando no hay carta firmada (TSK-015-N23)', (done) => {
+    useCase
+      .execute({
+        protocolId: 1,
+        validityYears: 2,
+        followUpPeriodDays: 90,
+        observations: 'Test observations',
+      })
+      .subscribe({
+        next: () => fail('no debía emitir sin archivo'),
+        error: (err: Error) => {
+          expect(err.message).toBe('Debe adjuntar la carta firmada en PDF.');
+          expect(s3Spy.getUploadUrl).not.toHaveBeenCalled();
+          expect(resolutionSpy.submitResolution).not.toHaveBeenCalled();
+          expect(notificationSpy.publish).not.toHaveBeenCalled();
+          done();
+        },
+      });
+  });
+
   it('debe subir archivo y emitir resolución con notificación', (done) => {
     s3Spy.getUploadUrl.and.returnValue(
       of({ uploadUrl: 'https://s3/upload', key: 'protocols/1/resolutions/file.pdf' }),

@@ -31,6 +31,7 @@ import { DownloadEvaluationDocumentUseCase } from '../../../application/download
 import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
 import { ProtocolEntity } from '@domain/entities/protocol.entity';
 import { NormalizedEvaluation } from '../../../application/load-evaluation-consolidation.use-case';
+import { MENSAJE_CARTA_FIRMADA_REQUERIDA } from '@shared/utils/carta-firmada.constants';
 
 interface ConsolidatedEvaluationRow extends NormalizedEvaluation {
   id: number | string;
@@ -779,6 +780,11 @@ export class EvaluationConsolidationPage implements OnInit {
   }
 
   onEmitResolution() {
+    // TSK-015-N23: sin carta firmada en PDF no se emite; se avisa antes de cualquier envío.
+    if (!this.selectedFile()) {
+      this.snackBar.open(MENSAJE_CARTA_FIRMADA_REQUERIDA, 'Cerrar', { duration: 5000 });
+      return;
+    }
     if (this.form.valid) {
       this.isSubmitting.set(true);
       const formValue = this.form.value;

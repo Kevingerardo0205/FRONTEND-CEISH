@@ -90,6 +90,7 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
     const snack = fixture.debugElement.injector.get(MatSnackBar);
     const openSpy = spyOn(snack, 'open');
     component.form.patchValue({ observations: 'Observaciones de prueba' });
+    component.selectedFile.set(new File(['%PDF-1.4'], 'carta.pdf', { type: 'application/pdf' }));
     mockEmit.execute.and.returnValue(throwError(() => ({ status: 403 })));
 
     component.onEmitResolution();
@@ -100,4 +101,21 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
       jasmine.any(Object),
     );
   });
+
+  it('no emite y avisa cuando no hay carta firmada en PDF (TSK-015-N23)', () => {
+    createPage();
+    const snack = fixture.debugElement.injector.get(MatSnackBar);
+    const openSpy = spyOn(snack, 'open');
+    component.form.patchValue({ observations: 'Observaciones de prueba' });
+
+    component.onEmitResolution();
+
+    expect(mockEmit.execute).not.toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledWith(
+      'Debe adjuntar la carta firmada en PDF.',
+      'Cerrar',
+      jasmine.any(Object),
+    );
+  });
+
 });
