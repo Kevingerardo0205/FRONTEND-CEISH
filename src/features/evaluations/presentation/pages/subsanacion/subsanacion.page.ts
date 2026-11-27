@@ -32,7 +32,10 @@ import { ProtocolCodePipe } from '@shared/pipes/protocol-code.pipe';
 import { resolveEstado } from '@shared/utils/estado.resolver';
 import { abrirEnPestana } from '@shared/utils/descarga-en-pestana.util';
 import { apiErrorStatus, extractApiErrorMessage } from '@shared/utils/api-error-message.util';
-import { puedeSubirDocumentoSubsanacion } from '@features/investigador/domain/subsanacion-upload.rules';
+import {
+  numeroVersionProtocolo,
+  puedeSubirDocumentoSubsanacion,
+} from '@features/investigador/domain/subsanacion-upload.rules';
 import {
   MENSAJE_CARTA_CONSULTA_FALLIDA,
   MENSAJE_CARTA_NO_ENCONTRADA,
@@ -1154,8 +1157,11 @@ export class SubsanacionPage implements OnInit {
           this.protocolTitle.set(result.protocol.titulo || 'Protocolo de Investigación');
           this.protocolStatus.set(result.protocol.estado || '');
           const rawP = result.protocol as unknown as Record<string, unknown>;
+          // Entero siempre: «2.0» llega como texto y la clave de subsanación exige v{n} (TSK-015-N24).
           this.protocolVersion.set(
-            (rawP['versionNumber'] as number) || (rawP['version'] as number) || 1,
+            numeroVersionProtocolo(rawP['versionNumber'] as number | string | undefined) ??
+              numeroVersionProtocolo(rawP['version'] as string | undefined) ??
+              1,
           );
           this.puedeSubirDocumentos.set(
             puedeSubirDocumentoSubsanacion({

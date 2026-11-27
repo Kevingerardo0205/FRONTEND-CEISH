@@ -542,6 +542,34 @@ describe('SubsanacionPage', () => {
       expect(boton!.disabled).toBeTrue();
     });
 
+    it('la versión «2.0» llega a la subida como entero 2 (clave v2, no v2.0)', () => {
+      cargarConEstado({ statusId: 19, receptionStatus: 'EVALUACION_SUBSANACIONES', version: '2.0' });
+      const spy = spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(of([]));
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(component.protocolVersion()).toBe(2);
+      expect(spy.calls.mostRecent().args[0].versionNumber).toBe(2);
+    });
+
+    it('la versión «1.0» llega a la subida como entero 1', () => {
+      cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
+      const spy = spyOn(component['uploadCorrectionUC'], 'execute').and.returnValue(of([]));
+
+      component.onUploadFile(
+        { target: { files: [new File(['%PDF-1.4'], 'a.pdf', { type: 'application/pdf' })] } } as unknown as Event,
+        REQUISITO.id,
+        REQUISITO.requirementCode,
+      );
+
+      expect(component.protocolVersion()).toBe(1);
+      expect(spy.calls.mostRecent().args[0].versionNumber).toBe(1);
+    });
+
     it('un 409 del backend se muestra tal cual', () => {
       cargarConEstado({ statusId: 9, receptionStatus: 'BORRADOR', version: '1.0' });
       const snack = fixture.debugElement.injector.get(MatSnackBar);

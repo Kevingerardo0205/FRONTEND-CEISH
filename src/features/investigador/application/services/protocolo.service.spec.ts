@@ -2,10 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { of } from 'rxjs';
 
 import { ProtocoloService } from './protocolo.service';
 import { AuthFacade } from '@features/auth/facades/auth.facade';
 import { S3StorageService } from '@infrastructure/services/s3-storage.service';
+import { numeroVersionProtocolo } from '../../domain/subsanacion-upload.rules';
 
 describe('ProtocoloService — checklist del protocolo (F09 D16, C3)', () => {
   let service: ProtocoloService;
@@ -199,4 +201,55 @@ describe('ProtocoloService — Mis protocolos (F09 D18, C4)', () => {
       }),
     ]);
   });
+});
+
+describe('ProtocoloService.subirDocumento: clave de la subsanación de versión (TSK-015-N24)', () => {
+  let service: ProtocoloService;
+  let getUploadUrl: jasmine.Spy;
+
+  beforeEach(() => {
+    getUploadUrl = jasmine.createSpy('getUploadUrl').and.returnValue(
+      of({ uploadUrl: 'https://zz-test.invalid/put', key: 'k' }),
+    );
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthFacade, useValue: { currentUser: () => ({ id: 30, rol: 'INVESTIGADOR' }) } },
+        { provide: MatSnackBar, useValue: { open: () => undefined } },
+        {
+          provide: S3StorageService,
+          useValue: {
+            getUploadUrl,
+            uploadFileToS3: () => of({ success: true, progress: 100 }),
+          },
+        },
+      ],
+    });
+    service = TestBed.inject(ProtocoloService);
+  });
+
+  const pdf = () => new File(['%PDF-1.4'], 'formulario.pdf', { type: 'application/pdf' });
+  /** La clave se construye al llamar a subirDocumento; no hace falta suscribirse. */
+  const claveCon = (versionNumber: number) => {
+    service.subirDocumento(pdf(), 123, 7, 'anexo2_formulario', versionNumber);
+    return getUploadUrl.calls.mostRecent().args[0] as string;
+  };
+
+  it('versión 2 (entero) construye v2/requirements', () => {
+    expect(claveCon(2)).toBe('protocols/123/v2/requirements/7/formulario.pdf');
+  });
+
+  it('versión «2.0» convertida con numeroVersionProtocolo construye v2/requirements', () => {
+    expect(claveCon(numeroVersionProtocolo('2.0') ?? 1)).toBe(
+      'protocols/123/v2/requirements/7/formulario.pdf',
+    );
+  });
+
+  it('versión «1.0» convertida construye la clave sin carpeta de versión', () => {
+    expect(claveCon(numeroVersionProtocolo('1.0') ?? 1)).toBe(
+      'protocols/123/requirements/7/formulario.pdf',
+    );
+  });
+
 });
