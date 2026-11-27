@@ -2,7 +2,9 @@ import {
   AnexoCarta,
   CartaVersion,
   ConvocatoriaContexto,
+  EstadoResultado,
   ResultadoPleno,
+  ResumenDictamenes,
   SubidaCarta,
   ValidacionResolucionError,
 } from '@domain/entities/resolucion-contexto.entity';
@@ -31,8 +33,13 @@ export interface ConvocatoriaApi {
   cartaVigente: CartaVigenteApi | null;
   puedeRegistrarResultado: boolean;
   puedeSubirCarta: boolean;
+  estadoResultado: EstadoResultado;
+  resultadoCalculado: ResultadoPleno | null;
+  resolucionAnterior: { tipoResolucionId: number | null } | null;
+  resueltoEnConvocatoria: string | null;
   motivo?: string | null;
   observaciones?: string | null;
+  resumenDictamenes?: ResumenDictamenes;
 }
 
 /** La respuesta llega envuelta en `data` por el ResponseInterceptor, o sin envoltura. */
@@ -65,10 +72,24 @@ export function mapConvocatoriasContexto(raw: readonly ConvocatoriaApi[]): Convo
         : null,
       puedeRegistrarResultado: c.puedeRegistrarResultado === true,
       puedeSubirCarta: c.puedeSubirCarta === true,
+      estadoResultado: c.estadoResultado,
+      resultadoCalculado: c.resultadoCalculado,
+      resolucionAnterior: c.resolucionAnterior
+        ? { tipoResolucionId: c.resolucionAnterior.tipoResolucionId }
+        : null,
+      resueltoEnConvocatoria: c.resueltoEnConvocatoria,
     };
-    // motivo y observaciones solo existen para quien tiene RESOLUCION_HISTORIAL.
+    // motivo, observaciones y resumen solo existen para quien tiene RESOLUCION_HISTORIAL.
     if ('motivo' in c) base.motivo = c.motivo ?? null;
     if ('observaciones' in c) base.observaciones = c.observaciones ?? null;
+    if (c.resumenDictamenes) {
+      base.resumenDictamenes = {
+        aprobado: c.resumenDictamenes.aprobado,
+        conCondicion: c.resumenDictamenes.conCondicion,
+        noAprobado: c.resumenDictamenes.noAprobado,
+        pendientes: c.resumenDictamenes.pendientes,
+      };
+    }
     return base;
   });
 }

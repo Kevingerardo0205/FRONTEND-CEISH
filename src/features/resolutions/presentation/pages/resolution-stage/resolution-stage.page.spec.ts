@@ -23,6 +23,10 @@ function convocatoria(overrides: Partial<ConvocatoriaContexto> = {}): Convocator
     cartaVigente: null,
     puedeRegistrarResultado: false,
     puedeSubirCarta: false,
+    estadoResultado: 'PENDIENTE',
+    resultadoCalculado: null,
+    resolucionAnterior: null,
+    resueltoEnConvocatoria: null,
     ...overrides,
   };
 }
