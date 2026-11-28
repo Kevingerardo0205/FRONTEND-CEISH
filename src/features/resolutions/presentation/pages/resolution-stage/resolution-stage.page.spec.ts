@@ -6,7 +6,22 @@ import { ActiveRoleFacade } from '@features/shell/application/active-role.facade
 import { RoleCode } from '@domain/value-objects/role.vo';
 import { CartaVersion, ConvocatoriaContexto } from '@domain/entities/resolucion-contexto.entity';
 import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
-import { ResolutionStagePage, SIN_SESION_PLENO } from './resolution-stage.page';
+import {
+  AVISO_INMUTABLE,
+  ResolutionStagePage,
+  SIN_SESION_PLENO,
+  TEXTO_LEGACY,
+  TEXTO_LEGACY_INVESTIGADOR,
+  TEXTO_NO_SUBIDA,
+  TEXTO_PENDIENTE,
+  TEXTO_RESOLVIENDO,
+  TEXTO_REUNION_FUTURA,
+} from './resolution-stage.page';
+
+/** Fechas fijas lejanas: la prueba no depende del reloj del equipo. */
+const REUNION_PASADA = '2020-01-01T15:00:00.000Z';
+const REUNION_FUTURA = '2999-01-01T15:00:00.000Z';
+const RESUMEN = { aprobado: 2, conCondicion: 1, noAprobado: 0, pendientes: 0 };
 
 const CONV = '11111111-1111-4111-8111-111111111111';
 const CP = '22222222-2222-4222-8222-222222222222';
@@ -21,8 +36,11 @@ function convocatoria(overrides: Partial<ConvocatoriaContexto> = {}): Convocator
     resultado: null,
     anexoEsperado: null,
     cartaVigente: null,
-    puedeRegistrarResultado: false,
     puedeSubirCarta: false,
+    estadoResultado: 'PENDIENTE',
+    resultadoCalculado: null,
+    resolucionAnterior: null,
+    resueltoEnConvocatoria: null,
     ...overrides,
   };
 }
@@ -46,7 +64,6 @@ function montar(
     'obtenerContexto',
     'listarCartas',
     'urlDescargaCarta',
-    'registrarResultado',
     'solicitarSubida',
     'subirArchivo',
     'registrarCarta',
@@ -91,16 +108,6 @@ describe('ResolutionStagePage', () => {
     expect(port.listarCartas).not.toHaveBeenCalled();
   });
 
-  it('SECRETARIA sin puedeRegistrarResultado no ve el formulario de resultado', () => {
-    const { fixture } = montar(of([convocatoria({ puedeRegistrarResultado: false })]), 'SECRETARIA');
-    expect(existe(fixture, '[data-testid="select-resultado"]')).toBeFalse();
-  });
-
-  it('SECRETARIA con puedeRegistrarResultado ve el formulario de resultado', () => {
-    const { fixture } = montar(of([convocatoria({ puedeRegistrarResultado: true })]), 'SECRETARIA');
-    expect(existe(fixture, '[data-testid="select-resultado"]')).toBeTrue();
-  });
-
   it('SECRETARIA sin puedeSubirCarta no ve el formulario de carta', () => {
     const { fixture } = montar(of([convocatoria({ puedeSubirCarta: false, anexoEsperado: 'ANEXO_13' })]), 'SECRETARIA');
     expect(existe(fixture, '[data-testid="input-archivo"]')).toBeFalse();
@@ -130,7 +137,6 @@ describe('ResolutionStagePage', () => {
     const { fixture, port } = montar(
       of([
         convocatoria({
-          puedeRegistrarResultado: true,
           puedeSubirCarta: true,
           resultado: 'NO_APROBADO',
           anexoEsperado: 'ANEXO_13',
@@ -151,7 +157,6 @@ describe('ResolutionStagePage', () => {
     const { fixture, port } = montar(
       of([
         convocatoria({
-          puedeRegistrarResultado: true,
           puedeSubirCarta: true,
           resultado: 'NO_APROBADO',
           motivo: 'Dato interno',
@@ -189,5 +194,126 @@ describe('ResolutionStagePage', () => {
       'SECRETARIA',
     );
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Protocolo no encontrado.');
+  });
+
+  it('SECRETARIA no ve formulario de resultado: ni selector ni botón de guardar resultado', () => {
+    const { fixture } = montar(
+      of([convocatoria({ fechaReunion: REUNION_PASADA, estadoResultado: 'CALCULADO', resultado: 'APROBADO_DEFINITIVO' })]),
+      'SECRETARIA',
+    );
+    expect(existe(fixture, 'select')).toBeFalse();
+    expect(texto(fixture)).not.toContain('Guardar resultado');
+    expect(texto(fixture)).not.toContain('Registrar resultado del pleno');
+  });
+
+  it('SECRETARIA ve el aviso de inmutable y el resumen solo con conteos', () => {
+    const { fixture } = montar(
+      of([
+        convocatoria({
+          fechaReunion: REUNION_PASADA,
+          estadoResultado: 'CALCULADO',
+          resultado: 'APROBADO_CON_CONDICION',
+          anexoEsperado: 'ANEXO_14',
+          resumenDictamenes: RESUMEN,
+        }),
+      ]),
+      'SECRETARIA',
+    );
+    expect(texto(fixture)).toContain(AVISO_INMUTABLE);
+    expect(texto(fixture)).toContain('Resultado calculado: Aprobado con condición.');
+    const resumen = (fixture.nativeElement.querySelector('[data-testid="resumen-dictamenes"]') as HTMLElement).textContent ?? '';
+    expect(resumen).toContain('2 aprobados');
+    expect(resumen).toContain('1 con condición');
+    expect(resumen).toContain('0 no aprobados');
+    expect(resumen).toContain('0 pendientes');
+  });
+
+  it('INVESTIGADOR sin carta vigente ve el texto de comité resolviendo y nunca el resumen ni el cálculo', () => {
+    const { fixture } = montar(
+      of([
+        convocatoria({
+          fechaReunion: REUNION_PASADA,
+          estadoResultado: 'CALCULADO',
+          resultado: null,
+          resumenDictamenes: RESUMEN,
+        }),
+      ]),
+      'INVESTIGADOR',
+    );
+    expect(texto(fixture)).toContain(TEXTO_RESOLVIENDO);
+    expect(existe(fixture, '[data-testid="resumen-dictamenes"]')).toBeFalse();
+    expect(texto(fixture)).not.toContain('2 aprobados');
+    expect(texto(fixture)).not.toContain('Resultado calculado');
+    expect(texto(fixture)).not.toContain(AVISO_INMUTABLE);
+  });
+
+  it('INVESTIGADOR con RESUELTO_LEGACY sin carta ve el texto de protocolo ya resuelto, no el de comité resolviendo', () => {
+    const { fixture } = montar(
+      of([convocatoria({ fechaReunion: REUNION_PASADA, estadoResultado: 'RESUELTO_LEGACY', resultado: null })]),
+      'INVESTIGADOR',
+    );
+    expect(texto(fixture)).toContain(TEXTO_LEGACY_INVESTIGADOR);
+    expect(texto(fixture)).not.toContain(TEXTO_RESOLVIENDO);
+  });
+
+  it('INVESTIGADOR con carta vigente ve el resultado congelado y no el resumen', () => {
+    const { fixture } = montar(
+      of([
+        convocatoria({
+          fechaReunion: REUNION_PASADA,
+          estadoResultado: 'CONGELADO',
+          resultado: 'NO_APROBADO',
+          cartaVigente: { numeroVersion: 1, anexoCodigo: 'ANEXO_13', subidoEn: '2026-11-21T10:00:00.000Z', claveArchivo: 'k' },
+        }),
+      ]),
+      'INVESTIGADOR',
+    );
+    expect(texto(fixture)).toContain('Resultado: No aprobado.');
+    expect(texto(fixture)).not.toContain(TEXTO_RESOLVIENDO);
+    expect(existe(fixture, '[data-testid="resumen-dictamenes"]')).toBeFalse();
+  });
+
+  it('SECRETARIA con puedeSubirCarta false no ve el botón de subir y ve el mensaje genérico', () => {
+    const { fixture } = montar(
+      of([convocatoria({ fechaReunion: REUNION_PASADA, puedeSubirCarta: false, estadoResultado: 'RESUELTO_LEGACY' })]),
+      'SECRETARIA',
+    );
+    expect(existe(fixture, '[data-testid="input-archivo"]')).toBeFalse();
+    expect(texto(fixture)).not.toContain('Subir carta');
+    expect(existe(fixture, '[data-testid="sin-subida"]')).toBeTrue();
+    expect(texto(fixture)).toContain(TEXTO_NO_SUBIDA);
+  });
+
+  it('reunión futura: muestra que aún no se realizó y no repite el mensaje genérico', () => {
+    const { fixture } = montar(
+      of([convocatoria({ fechaReunion: REUNION_FUTURA, puedeSubirCarta: false, estadoResultado: 'PENDIENTE' })]),
+      'SECRETARIA',
+    );
+    expect(texto(fixture)).toContain(TEXTO_REUNION_FUTURA);
+    expect(texto(fixture)).toContain(TEXTO_PENDIENTE);
+    expect(existe(fixture, '[data-testid="sin-subida"]')).toBeFalse();
+  });
+
+  it('CONGELADO en otra convocatoria: muestra «Resuelto en la convocatoria» con su número', () => {
+    const { fixture } = montar(
+      of([
+        convocatoria({
+          fechaReunion: REUNION_PASADA,
+          estadoResultado: 'CONGELADO',
+          resultado: 'APROBADO_DEFINITIVO',
+          resueltoEnConvocatoria: 'C-2025-09',
+        }),
+      ]),
+      'PRESIDENTE',
+    );
+    expect(texto(fixture)).toContain('Resuelto en la convocatoria C-2025-09.');
+  });
+
+  it('RESUELTO_LEGACY muestra el texto del flujo anterior', () => {
+    const { fixture } = montar(
+      of([convocatoria({ fechaReunion: REUNION_PASADA, estadoResultado: 'RESUELTO_LEGACY' })]),
+      'PRESIDENTE',
+    );
+    expect(texto(fixture)).toContain(TEXTO_LEGACY);
   });
 });

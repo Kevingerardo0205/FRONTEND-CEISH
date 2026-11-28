@@ -134,9 +134,9 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Anexo 12');
   });
 
-  it('con resultado del pleno oculta «Firmar y Notificar» y remite a la etapa Resolución', () => {
+  it('con la etapa Resolución gestionando el protocolo (PENDIENTE) oculta «Firmar y Notificar»', () => {
     mockContexto.obtenerContexto.and.returnValue(
-      of([{ resultado: 'APROBADO_DEFINITIVO' } as unknown as ConvocatoriaContexto]),
+      of([{ estadoResultado: 'PENDIENTE' } as unknown as ConvocatoriaContexto]),
     );
     createPage();
 
@@ -146,9 +146,21 @@ describe('EvaluationConsolidationPage: permisos de emisión', () => {
     );
   });
 
-  it('sin resultado del pleno el flujo viejo sigue igual', () => {
+  it('con resultado congelado oculta «Firmar y Notificar» y remite a la etapa Resolución', () => {
     mockContexto.obtenerContexto.and.returnValue(
-      of([{ resultado: null } as unknown as ConvocatoriaContexto]),
+      of([{ estadoResultado: 'CONGELADO' } as unknown as ConvocatoriaContexto]),
+    );
+    createPage();
+
+    expect(emitButton()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Este protocolo se resuelve desde la etapa Resolución del espacio de trabajo.',
+    );
+  });
+
+  it('solo RESUELTO_LEGACY: el flujo viejo sigue igual', () => {
+    mockContexto.obtenerContexto.and.returnValue(
+      of([{ estadoResultado: 'RESUELTO_LEGACY' } as unknown as ConvocatoriaContexto]),
     );
     createPage();
 

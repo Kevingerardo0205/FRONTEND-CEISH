@@ -8,7 +8,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { IResolucionContextoPort } from '@domain/ports/IResolucionContextoPort';
-import { tieneResultadoDelPleno } from '@domain/entities/resolucion-contexto.entity';
+import { gestionadoPorFlujoNuevo } from '@domain/entities/resolucion-contexto.entity';
 import { LoadPendingResolutionsUseCase } from '../../../application/load-pending-resolutions.use-case';
 import { LoadProtocolByIdUseCase } from '../../../../protocols/application/use-cases/load-protocol-by-id.use-case';
 import { LoadResolutionInsumosUseCase } from '../../../application/load-resolution-insumos.use-case';
@@ -468,7 +468,7 @@ export class ResolutionGeneratorPage implements OnInit {
   pendingProtocols = signal<ProtocolEntity[]>([]);
   selectedProtocol = signal<ProtocolEntity | null>(null);
   evaluationsList = signal<EvaluationEntity[]>([]);
-  /** EP7: con resultado del pleno, el dictamen se emite desde la etapa Resolución (flujo viejo oculto). */
+  /** EP7: si la etapa Resolución gestiona el protocolo, el dictamen se emite desde ella (flujo viejo oculto). */
   resueltoEnEtapa = signal(false);
 
   ngOnInit() {
@@ -506,7 +506,7 @@ export class ResolutionGeneratorPage implements OnInit {
     this.selectedProtocol.set(protocol);
     this.resueltoEnEtapa.set(false);
     this.resolucionContexto.obtenerContexto(String(protocol.id)).subscribe({
-      next: (lista) => this.resueltoEnEtapa.set(tieneResultadoDelPleno(lista)),
+      next: (lista) => this.resueltoEnEtapa.set(gestionadoPorFlujoNuevo(lista)),
       // Sin contexto no se puede decidir: el flujo viejo sigue como estaba.
       error: () => this.resueltoEnEtapa.set(false),
     });

@@ -170,7 +170,7 @@ describe('ResolutionGeneratorPage', () => {
   });
 
   it('con resultado del pleno no muestra el formulario y remite a la etapa Resolución', () => {
-    mockContexto.obtenerContexto.and.returnValue(of([{ resultado: 'NO_APROBADO' } as unknown as ConvocatoriaContexto]));
+    mockContexto.obtenerContexto.and.returnValue(of([{ estadoResultado: 'CONGELADO' } as unknown as ConvocatoriaContexto]));
     component.onSelectProtocol(mockProtocols[0]);
     fixture.detectChanges();
 
@@ -181,8 +181,8 @@ describe('ResolutionGeneratorPage', () => {
     );
   });
 
-  it('sin resultado del pleno muestra el formulario del flujo viejo', () => {
-    mockContexto.obtenerContexto.and.returnValue(of([{ resultado: null } as unknown as ConvocatoriaContexto]));
+  it('solo RESUELTO_LEGACY: muestra el formulario del flujo viejo', () => {
+    mockContexto.obtenerContexto.and.returnValue(of([{ estadoResultado: 'RESUELTO_LEGACY' } as unknown as ConvocatoriaContexto]));
     component.onSelectProtocol(mockProtocols[0]);
     fixture.detectChanges();
 

@@ -50,13 +50,16 @@ describe('ResolucionContextoAdapter', () => {
           resultado: null,
           anexoEsperado: null,
           cartaVigente: null,
-          puedeRegistrarResultado: true,
           puedeSubirCarta: false,
+          estadoResultado: 'PENDIENTE',
+          resultadoCalculado: null,
+          resolucionAnterior: null,
+          resueltoEnConvocatoria: null,
         },
       ],
     });
     expect(recibido).toEqual([
-      jasmine.objectContaining({ numeroConvocatoria: 'C-2026-01', puedeRegistrarResultado: true, cartaVigente: null }),
+      jasmine.objectContaining({ numeroConvocatoria: 'C-2026-01', estadoResultado: 'PENDIENTE', cartaVigente: null }),
     ]);
   });
 
@@ -67,22 +70,12 @@ describe('ResolucionContextoAdapter', () => {
     req.flush([]);
   });
 
-  it('registrarResultado: PATCH al endpoint de la reunión', () => {
-    adapter
-      .registrarResultado(CONV, CP, { resultado: 'NO_APROBADO', motivo: 'Incumple el anexo.' })
-      .subscribe();
-    const req = http.expectOne(`/api/evaluations/meetings/${CONV}/protocolos/${CP}/resultado`);
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ resultado: 'NO_APROBADO', motivo: 'Incumple el anexo.' });
-    req.flush({ data: {} });
-  });
-
-  it('solicitarSubida: POST upload-url con el anexo y devuelve la subida', () => {
+  it('solicitarSubida: POST upload-url con cuerpo vacío (sin anexoCodigo) y devuelve la subida', () => {
     let recibido: unknown;
-    adapter.solicitarSubida(CONV, CP, 'ANEXO_14').subscribe((v) => (recibido = v));
+    adapter.solicitarSubida(CONV, CP).subscribe((v) => (recibido = v));
     const req = http.expectOne(`/api/resolutions/convocatorias/${CONV}/protocolos/${CP}/cartas/upload-url`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ anexoCodigo: 'ANEXO_14' });
+    expect(req.request.body).toEqual({});
     req.flush({
       data: { uploadUrl: URL_S3, claveArchivo: 'cartas/7/v1/x.pdf', anexoCodigo: 'ANEXO_14', numeroVersion: 1 },
     });
@@ -116,11 +109,10 @@ describe('ResolucionContextoAdapter', () => {
     expect(errorStatus).toBe(403);
   });
 
-  it('registrarCarta: POST cartas con claveArchivo, anexo y motivo cuando aplica', () => {
+  it('registrarCarta: POST cartas con claveArchivo y motivo, sin anexoCodigo', () => {
     adapter
       .registrarCarta(CONV, CP, {
         claveArchivo: 'cartas/7/v2/y.pdf',
-        anexoCodigo: 'ANEXO_13',
         motivoReemplazo: 'Corrección de firma.',
       })
       .subscribe();
@@ -128,9 +120,9 @@ describe('ResolucionContextoAdapter', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
       claveArchivo: 'cartas/7/v2/y.pdf',
-      anexoCodigo: 'ANEXO_13',
       motivoReemplazo: 'Corrección de firma.',
     });
+    expect('anexoCodigo' in req.request.body).toBeFalse();
     req.flush({ data: {} });
   });
 

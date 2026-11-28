@@ -7,7 +7,7 @@ import {
   mapConvocatoriasContexto,
   mensajeDeErrorResolucion,
 } from './resolucion-contexto.mapper';
-import { ValidacionResolucionError } from '@domain/entities/resolucion-contexto.entity';
+import { EstadoResultado, ValidacionResolucionError } from '@domain/entities/resolucion-contexto.entity';
 
 const convocatoriaBase: ConvocatoriaApi = {
   convocatoriaId: '11111111-1111-4111-8111-111111111111',
@@ -23,8 +23,11 @@ const convocatoriaBase: ConvocatoriaApi = {
     subidoEn: '2026-11-21T10:00:00.000Z',
     claveArchivo: 'cartas/7/v1/clave.pdf',
   },
-  puedeRegistrarResultado: false,
   puedeSubirCarta: true,
+  estadoResultado: 'CONGELADO',
+  resultadoCalculado: 'APROBADO_CON_CONDICION',
+  resolucionAnterior: null,
+  resueltoEnConvocatoria: null,
 };
 
 describe('mapConvocatoriasContexto', () => {
@@ -34,7 +37,6 @@ describe('mapConvocatoriasContexto', () => {
 
     expect(resultado.map((c) => c.numeroConvocatoria)).toEqual(['C-2026-01', 'C-2025-09']);
     expect(resultado[0].puedeSubirCarta).toBeTrue();
-    expect(resultado[0].puedeRegistrarResultado).toBeFalse();
     expect(resultado[0].cartaVigente?.claveArchivo).toBe('cartas/7/v1/clave.pdf');
   });
 
@@ -65,6 +67,29 @@ describe('mapConvocatoriasContexto', () => {
 
   it('lista vacía devuelve lista vacía', () => {
     expect(mapConvocatoriasContexto([])).toEqual([]);
+  });
+
+  it('copia los cuatro estados del resultado tal como los entrega el backend', () => {
+    const estados: EstadoResultado[] = ['PENDIENTE', 'CALCULADO', 'CONGELADO', 'RESUELTO_LEGACY'];
+    const mapeados = mapConvocatoriasContexto(estados.map((estadoResultado) => ({ ...convocatoriaBase, estadoResultado })));
+    expect(mapeados.map((c) => c.estadoResultado)).toEqual(estados);
+  });
+
+  it('sin resumenDictamenes no agrega la propiedad; con conteos los copia tal cual', () => {
+    const [sin] = mapConvocatoriasContexto([convocatoriaBase]);
+    expect('resumenDictamenes' in sin).toBeFalse();
+
+    const conteos = { aprobado: 2, conCondicion: 1, noAprobado: 0, pendientes: 0 };
+    const [con] = mapConvocatoriasContexto([{ ...convocatoriaBase, resumenDictamenes: conteos }]);
+    expect(con.resumenDictamenes).toEqual(conteos);
+  });
+
+  it('resolucionAnterior conserva tipoResolucionId null y resueltoEnConvocatoria llega tal cual', () => {
+    const [c] = mapConvocatoriasContexto([
+      { ...convocatoriaBase, resolucionAnterior: { tipoResolucionId: null }, resueltoEnConvocatoria: 'C-2025-09' },
+    ]);
+    expect(c.resolucionAnterior).toEqual({ tipoResolucionId: null });
+    expect(c.resueltoEnConvocatoria).toBe('C-2025-09');
   });
 });
 

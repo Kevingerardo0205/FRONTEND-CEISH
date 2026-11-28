@@ -14,7 +14,7 @@
 | EP4 · El investigador sin datos internos | Sin la bitácora para INVESTIGADOR, sin la bitácora inventada para nadie; en Subsanaciones, perfil y dictamen de cada par sin nombres y sin los informes con nombre (V5) | B2 y B8 (la pantalla no los espera) | Hecho (`91bca59`; resultados abajo) |
 | EP5 · Pantalla del evaluador | `ProtocolHeader` (código, título, tipo), la lista de EP3 y el plazo (V6) | B4 y B6 | Pendiente |
 | EP6 · Espacio por etapas | Las 6 etapas para SECRETARIA y PRESIDENTE; las cerradas en solo lectura (V2) | — | Pendiente |
-| EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | Pendiente |
+| EP7 · Resolución firmada | La SECRETARIA la sube; INVESTIGADOR y PRESIDENTE la ven (V7) | B11 | Frontend hecho (`b85fc19`, `fc9a5d0`, `d976f42`, `1b5a254`); pendiente de backend: motivo de `puedeSubirCarta` |
 | EP8 · Notificaciones reales | `notification-repository.adapter.ts` devuelve notificaciones inventadas (`of([...])`, códigos PRT-2024-00x) a todos los roles | Sí (no hay endpoint) | Pendiente (Paso 0 de EP4) |
 | EP9 · Pestaña Seguimiento sin datos inventados | `adverse-events-list.page.ts:162-180` (pestaña Seguimiento del espacio) muestra eventos adversos inventados de otros protocolos, también al investigador | Sí | Pendiente (Paso 0 de EP4) |
 | EP10 · Eventos adversos y renovaciones sin éxito falso | `eventos-adversos.page.ts`, `renovaciones.page.ts`, `renewal-request.page.ts` y `adverse-event-form.page.ts` no llaman al backend y muestran un éxito («Se notificó a Secretaría y Presidencia») | Sí | Pendiente (Paso 0 de EP4) |
@@ -53,6 +53,41 @@
 
 - **No detectable por mutación:** F11-14 (sin nombres, ids ni correos en las tarjetas). La plantilla nunca los mostró; la prueba es una guardia para cambios futuros.
 - **Pendiente:** revisión en el navegador con INVESTIGADOR, SECRETARIA y PRESIDENTE (la hace la usuaria). Backend: B2, B8 y B12.
+
+### EP7 · Resolución firmada (decisiones del 27/11/2026)
+
+- **Fuente de reglas:** backend `specs/003-flujo-mvp/spec.md` RF-17.1 (v1.6.8) y RF-17.2 (v1.6.9); contrato del backend en `GET /resolutions/protocol/:id/contexto`. El frontend no define reglas de negocio.
+- **Decisiones:**
+  1. **Convivencia con el flujo viejo.** `gestionadoPorFlujoNuevo(lista)` = `lista.some(c => c.estadoResultado !== 'RESUELTO_LEGACY')`. Con `PENDIENTE` también se oculta el flujo viejo. Lista vacía (protocolo sin convocatoria, el backend devuelve `[]`) → el flujo viejo sigue visible. Se aplica en `evaluation-consolidation` y `resolution-generator`.
+  2. **Investigador sin carta vigente** (cualquier estado distinto de `CONGELADO` con carta): no ve resultado, resumen ni motivo. Ve «El comité está resolviendo su protocolo. El resultado se publicará cuando la Secretaría suba la carta firmada.» Con carta vigente, igual que hoy. Nunca ve `resultadoCalculado` ni `resumenDictamenes`.
+  3. **Convocatoria cancelada:** si `puedeSubirCarta = false` y no se deduce el motivo de `fechaReunion` ni de `resueltoEnConvocatoria`, se muestra «Por ahora no se puede subir la carta de esta convocatoria.». Si el backend responde 409 al intentar, se muestra su mensaje tal cual.
+  4. `resolucionAnterior.tipoResolucionId` puede ser `null`.
+  5. **Bloque «Resultado del pleno» en solo lectura**, con el aviso «Calculado automáticamente a partir de los dictámenes de los evaluadores. No se puede modificar.» Textos por estado: `PENDIENTE`, `CALCULADO` (con anexo y resumen), `CONGELADO`, «Resuelto en la convocatoria <número>.» y `RESUELTO_LEGACY`. El resumen son solo conteos, nunca nombres (B8). Para reuniones futuras (hora de Ecuador): «La reunión de esta convocatoria aún no se ha realizado.».
+  6. **Sin registro de resultado desde el frontend.** Se retiran `PATCH …/meetings/:id/protocolos/:cp/resultado`, `puedeRegistrarResultado` y el formulario de la etapa.
+  7. **Sin `anexoCodigo` en las solicitudes.** `POST …/cartas/upload-url` envía `{}` y `POST …/cartas` envía `{ claveArchivo, motivoReemplazo? }`. El backend deriva el anexo y rechaza propiedades extra (ValidationPipe).
+  8. La guarda de UI de `anexoEsperado` antes de subir se conserva.
+  9. El aviso de `MatDialogModule` queda fuera de alcance.
+- **Pendiente de backend:** exponer el motivo de `puedeSubirCarta = false` (decisión 3).
+- **Commits del frontend:** `b85fc19` docs · `fc9a5d0` dominio y mapper (campos nuevos, aditivo) · `d976f42` retiro del registro de resultado y subida sin `anexoCodigo` · `1b5a254` presentación (bloque de solo lectura, textos por estado, regla de convivencia).
+- **Resultados (27/11/2026, rama `feat/ep7-resolucion-etapa`):**
+  - Línea base antes de EP7: `tsc` app y spec exit 0; `ng test`: 1862 SUCCESS; `eslint` en los archivos de resolución: 1 warning preexistente (`MatDialogModule`, fuera de alcance).
+  - Después: `tsc` app y spec exit 0 (dos veces); `ng test`: **1868 SUCCESS**, 0 FAILED (dos veces); `ng build --configuration production` exit 0; `eslint` sobre los archivos tocados: 0 errores, sin warnings nuevos (los de specs son «archivo ignorado» por la configuración).
+  - Ruido `NG0101 ApplicationRef.tick is called recursively` en la consola: 36 líneas antes y después; preexistente.
+- **Mutaciones (backup + `cmp` tras cada reversión):**
+
+| Mutación | Qué se rompió | Prueba que falla | Resultado |
+|---|---|---|---|
+| M1 | regla legacy `!==` → `===` en `gestionadoPorFlujoNuevo` | «gestionadoPorFlujoNuevo … PENDIENTE oculta el flujo viejo» (y 7 más) | `TOTAL: 8 FAILED, 1860 SUCCESS` |
+| M2 | resumen visible al investigador (se quita `puedeVerHistorial()` en `resumenVisible`) | «ResolutionStagePage INVESTIGADOR sin carta vigente … nunca el resumen ni el cálculo» | `TOTAL: 1 FAILED, 1867 SUCCESS` |
+| M3 | cuerpo de `POST cartas` con `anexoCodigo` (valor fijo `'ANEXO_13'`) | «ResolucionContextoAdapter registrarCarta: POST cartas con claveArchivo y motivo, sin anexoCodigo» | `TOTAL: 1 FAILED, 1867 SUCCESS` |
+
+- **Nota de M3:** el valor es fijo; la prueba verifica la presencia de la clave `anexoCodigo`, no su valor.
+- **Ajuste posterior (`3987eea`):** investigador con `RESUELTO_LEGACY` y sin carta ve «Su protocolo ya fue resuelto. Consulte la resolución emitida.» (`TEXTO_LEGACY_INVESTIGADOR`), no el texto de comité resolviendo. Resto de estados sin carta: sin cambio.
+  - M4: forzar `TEXTO_RESOLVIENDO` para `RESUELTO_LEGACY` → «INVESTIGADOR con RESUELTO_LEGACY sin carta ve el texto de protocolo ya resuelto…» → `TOTAL: 1 FAILED, 1868 SUCCESS`. Revertida con backup (diff contra HEAD verificado).
+  - Después del ajuste: `tsc` app y spec exit 0 (dos veces); `ng test` **1869 SUCCESS**, 0 FAILED (dos veces); `eslint` sobre `resolution-stage.page.ts`: 0 errores, 1 warning de archivo ignorado en el spec; `ng build --configuration production` exit 0.
+- **Pendiente (no tocado en este PR):** `specs/README.md` del frontend indica `npm run lint`, que aplica `--fix`. Corregir a `npx eslint <archivos>` sin `--fix`.
+- **Lint:** se usó `npx eslint <archivos>` sin `--fix`. `npm run lint` no se ejecutó porque tiene `--fix`.
+- **Pendiente de backend:** motivo de `puedeSubirCarta = false` (decisión 3).
 
 ### EP2 · La PRESIDENTE ve Recepción en solo lectura
 
