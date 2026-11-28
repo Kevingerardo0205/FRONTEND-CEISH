@@ -82,6 +82,10 @@
 | M3 | cuerpo de `POST cartas` con `anexoCodigo` (valor fijo `'ANEXO_13'`) | «ResolucionContextoAdapter registrarCarta: POST cartas con claveArchivo y motivo, sin anexoCodigo» | `TOTAL: 1 FAILED, 1867 SUCCESS` |
 
 - **Nota de M3:** el valor es fijo; la prueba verifica la presencia de la clave `anexoCodigo`, no su valor.
+- **Ajuste posterior (`3987eea`):** investigador con `RESUELTO_LEGACY` y sin carta ve «Su protocolo ya fue resuelto. Consulte la resolución emitida.» (`TEXTO_LEGACY_INVESTIGADOR`), no el texto de comité resolviendo. Resto de estados sin carta: sin cambio.
+  - M4: forzar `TEXTO_RESOLVIENDO` para `RESUELTO_LEGACY` → «INVESTIGADOR con RESUELTO_LEGACY sin carta ve el texto de protocolo ya resuelto…» → `TOTAL: 1 FAILED, 1868 SUCCESS`. Revertida con backup (diff contra HEAD verificado).
+  - Después del ajuste: `tsc` app y spec exit 0 (dos veces); `ng test` **1869 SUCCESS**, 0 FAILED (dos veces); `eslint` sobre `resolution-stage.page.ts`: 0 errores, 1 warning de archivo ignorado en el spec; `ng build --configuration production` exit 0.
+- **Pendiente (no tocado en este PR):** `specs/README.md` del frontend indica `npm run lint`, que aplica `--fix`. Corregir a `npx eslint <archivos>` sin `--fix`.
 - **Lint:** se usó `npx eslint <archivos>` sin `--fix`. `npm run lint` no se ejecutó porque tiene `--fix`.
 - **Pendiente de backend:** motivo de `puedeSubirCarta = false` (decisión 3).
 
