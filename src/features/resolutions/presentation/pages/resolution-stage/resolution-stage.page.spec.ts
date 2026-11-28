@@ -11,6 +11,7 @@ import {
   ResolutionStagePage,
   SIN_SESION_PLENO,
   TEXTO_LEGACY,
+  TEXTO_LEGACY_INVESTIGADOR,
   TEXTO_NO_SUBIDA,
   TEXTO_PENDIENTE,
   TEXTO_RESOLVIENDO,
@@ -244,6 +245,15 @@ describe('ResolutionStagePage', () => {
     expect(texto(fixture)).not.toContain('2 aprobados');
     expect(texto(fixture)).not.toContain('Resultado calculado');
     expect(texto(fixture)).not.toContain(AVISO_INMUTABLE);
+  });
+
+  it('INVESTIGADOR con RESUELTO_LEGACY sin carta ve el texto de protocolo ya resuelto, no el de comité resolviendo', () => {
+    const { fixture } = montar(
+      of([convocatoria({ fechaReunion: REUNION_PASADA, estadoResultado: 'RESUELTO_LEGACY', resultado: null })]),
+      'INVESTIGADOR',
+    );
+    expect(texto(fixture)).toContain(TEXTO_LEGACY_INVESTIGADOR);
+    expect(texto(fixture)).not.toContain(TEXTO_RESOLVIENDO);
   });
 
   it('INVESTIGADOR con carta vigente ve el resultado congelado y no el resumen', () => {

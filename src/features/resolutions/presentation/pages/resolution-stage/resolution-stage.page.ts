@@ -41,6 +41,7 @@ export const TEXTO_PENDIENTE =
   'El resultado del pleno aún no está disponible: hay evaluaciones pendientes de dictamen.';
 export const TEXTO_LEGACY =
   'Este protocolo ya tiene una resolución emitida con el flujo anterior y no admite una carta firmada nueva.';
+export const TEXTO_LEGACY_INVESTIGADOR = 'Su protocolo ya fue resuelto. Consulte la resolución emitida.';
 export const TEXTO_NO_SUBIDA = 'Por ahora no se puede subir la carta de esta convocatoria.';
 export const AVISO_INMUTABLE =
   'Calculado automáticamente a partir de los dictámenes de los evaluadores. No se puede modificar.';
@@ -297,7 +298,8 @@ export class ResolutionStagePage implements OnInit {
    */
   textoResultado(c: ConvocatoriaContexto): string {
     if (!this.puedeVerHistorial()) {
-      return c.cartaVigente && c.resultado ? `Resultado: ${ETIQUETAS_RESULTADO[c.resultado]}.` : TEXTO_RESOLVIENDO;
+      if (c.cartaVigente && c.resultado) return `Resultado: ${ETIQUETAS_RESULTADO[c.resultado]}.`;
+      return c.estadoResultado === 'RESUELTO_LEGACY' ? TEXTO_LEGACY_INVESTIGADOR : TEXTO_RESOLVIENDO;
     }
     if (c.estadoResultado === 'RESUELTO_LEGACY') return TEXTO_LEGACY;
     if (c.estadoResultado === 'CONGELADO' && c.cartaVigente === null) {
